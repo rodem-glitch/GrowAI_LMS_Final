@@ -7,10 +7,7 @@ out/
 .DS_Store
 
 # Logs
-var/log/
-*.log
 logs/
-log/
 
 # Java build artifacts
 *.class

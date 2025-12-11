@@ -1,0 +1,29 @@
+[2025-10-27 16:25:21] {Template.readFile} path:/Users/kyounghokim/IdeaProjects/MalgnLMS/public_html/html/layout/layout_main.html
+[2025-10-27 16:25:58] {Template.readFile} path:/Users/kyounghokim/IdeaProjects/MalgnLMS/public_html/html/layout/layout_main.html
+[2025-10-27 16:27:43] at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)
+[2025-10-27 16:27:47] at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)
+[2025-10-27 16:27:48] at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)
+[2025-10-27 16:33:45] at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)at /course/course_0list.jsp
+{DB.query} SELECT * FROM TB_TAG WHERE status != -1 ORDER BY sort ASC => Table 'lms.tb_tag' doesn't exist (Table 'lms.tb_tag' doesn't exist)
+[2025-10-27 17:50:18] at /sysop/main/auth2.jsp
+{Malgn.mail} mail:kh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)at /sysop/main/auth2.jsp
+{Malgn.mail} mail:kh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)
+[2025-10-27 17:51:42] at /sysop/main/auth2.jsp
+{Malgn.mail} mail:kh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)at /sysop/main/auth2.jsp
+{Malgn.mail} mail:kh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)
+[2025-10-27 17:59:12] at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 442 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 442 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)
+[2025-10-27 17:59:59] at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 442 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 442 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)
+[2025-10-27 18:00:10] at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 441 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)at /sysop/tag/call_0tag.jsp
+{DB.query} SELECT t.id, t.tag_nm  FROM TB_TAG t  INNER JOIN TB_TAG_MODULE tm ON tm.tag_id = t.id AND tm.module = 'course' AND module_id = 441 WHERE t.status = 1  ORDER BY t.sort ASC, t.tag_nm ASC, t.id ASC LIMIT 100 => Table 'lms.tb_tag_module' doesn't exist (Table 'lms.tb_tag_module' doesn't exist)

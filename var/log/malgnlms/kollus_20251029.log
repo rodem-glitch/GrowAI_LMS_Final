@@ -1,0 +1,10 @@
+[2025-10-29 12:13:08] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+ERROR : userId=, cuid=0, lid=0, add_study_time=0, last_play_at=0
+[2025-10-29 12:13:19] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+ERROR : userId=, cuid=0, lid=0, add_study_time=0, last_play_at=0
+[2025-10-29 12:14:46] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+ERROR : userId=, cuid=0, lid=0, add_study_time=0, last_play_at=0
+[2025-10-29 12:14:57] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp?key=TLYt73vs
+ERROR : userId=, cuid=0, lid=0, add_study_time=0, last_play_at=0
+[2025-10-29 12:15:03] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp?key=TLYt73vs
+ERROR : userId=, cuid=0, lid=0, add_study_time=0, last_play_at=0

@@ -1,0 +1,60 @@
+[2025-10-29 12:13:08] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+START LOG - 1761707588 -- 2025.10.29 12:13:08
+
+KOLLUS_PROGRESS_VERSION - 2
+PARAMS - 
+
+client_user_id =  | cuid - 0 | lesson_id - 0 | chapter - 0
+start_at -  | form.play_time - 0 | last_play_at - 0
+
+END LOG - 1761707588 -- 2025.10.29 12:13:08
+
+
+[2025-10-29 12:13:19] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+START LOG - 1761707599 -- 2025.10.29 12:13:19
+
+KOLLUS_PROGRESS_VERSION - 2
+PARAMS - 
+
+client_user_id =  | cuid - 0 | lesson_id - 0 | chapter - 0
+start_at -  | form.play_time - 0 | last_play_at - 0
+
+END LOG - 1761707599 -- 2025.10.29 12:13:19
+
+
+[2025-10-29 12:14:46] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp
+START LOG - 1761707686 -- 2025.10.29 12:14:46
+
+KOLLUS_PROGRESS_VERSION - 2
+PARAMS - 
+
+client_user_id =  | cuid - 0 | lesson_id - 0 | chapter - 0
+start_at -  | form.play_time - 0 | last_play_at - 0
+
+END LOG - 1761707686 -- 2025.10.29 12:14:46
+
+
+[2025-10-29 12:14:57] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp?key=TLYt73vs
+START LOG - 1761707697 -- 2025.10.29 12:14:57
+
+KOLLUS_PROGRESS_VERSION - 2
+PARAMS - [key] => TLYt73vs | 
+
+client_user_id =  | cuid - 0 | lesson_id - 0 | chapter - 0
+start_at -  | form.play_time - 0 | last_play_at - 0
+
+END LOG - 1761707697 -- 2025.10.29 12:14:57
+
+
+[2025-10-29 12:15:03] 0:0:0:0:0:0:0:1 : /kollus/check_api.jsp?key=TLYt73vs
+START LOG - 1761707703 -- 2025.10.29 12:15:03
+
+KOLLUS_PROGRESS_VERSION - 2
+PARAMS - [key] => TLYt73vs | 
+
+client_user_id =  | cuid - 0 | lesson_id - 0 | chapter - 0
+start_at -  | form.play_time - 0 | last_play_at - 0
+
+END LOG - 1761707703 -- 2025.10.29 12:15:03
+
+
