@@ -96,14 +96,24 @@ while(list2.next()) {
 	list2.put("total_score", m.nf(list2.d("total_score"), 1).replace(".0", ""));
 	list2.put("type_conv", m.getValue(list2.s("course_type"), course.typesMsg));
 	list2.put("onoff_type_conv", m.getValue(list2.s("onoff_type"), course.onoffTypesMsg));
-	//list2.put("status_conv", list2.b("complete_yn") ? "수료" : "미수료");
-	list2.put("status_conv",
-		!"".equals(list2.s("complete_date")) ? ( "Y".equals(list2.s("complete_yn")) ? _message.get("list.course_user.etc.complete_success") : _message.get("list.course_user.etc.complete_fail") )
-		: ( !"Y".equals(list2.s("complete_auto_yn"))
-			? _message.get("list.course_user.etc.inprogress")
-			: _message.get("list.course_user.etc.complete_fail")
-		)
-	);
+
+	String status = "";
+	if("P".equals(list2.s("complete_status"))) {
+		status = "합격";
+	} else if("C".equals(list2.s("complete_status"))) {
+		status = "수료";
+	} else if("F".equals(list2.s("complete_status"))) {
+		status = "미수료";
+	} else {
+		status =
+			!"".equals(list2.s("complete_date")) ? ( "Y".equals(list2.s("complete_yn")) ? _message.get("list.course_user.etc.complete_success") : _message.get("list.course_user.etc.complete_fail") )
+			: ( !"Y".equals(list2.s("complete_auto_yn"))
+				? _message.get("list.course_user.etc.inprogress")
+				: _message.get("list.course_user.etc.complete_fail")
+			)
+		;
+	}
+	list2.put("status_conv", status);
 
 	list2.put("mobile_block", list2.b("mobile_yn"));
 

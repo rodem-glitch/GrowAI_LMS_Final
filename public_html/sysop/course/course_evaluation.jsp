@@ -59,9 +59,18 @@ f.addElement("limit_exam", cinfo.i("limit_exam"), "hname:'시험 수료기준', 
 f.addElement("limit_homework", cinfo.i("limit_homework"), "hname:'과제 수료기준', option:'number', required:'Y'");
 f.addElement("limit_forum", cinfo.i("limit_forum"), "hname:'토론 수료기준', option:'number', required:'Y'");
 f.addElement("limit_etc", cinfo.i("limit_etc"), "hname:'기타 수료기준', option:'number', required:'Y'");
+f.addElement("complete_limit_progress", cinfo.i("complete_limit_progress"), "hname:'진도 수료(완료) 기준', option:'number', required:'Y'");
+f.addElement("complete_limit_total_score", cinfo.i("complete_limit_total_score"), "hname:'총점 수료(완료) 기준', option:'number', required:'Y'");
 
 //수정
 if(m.isPost() && f.validate()) {
+
+	if(f.getInt("complete_limit_progress") > f.getInt("limit_progress")) {
+		m.jsAlert("수료(완료) 진도 기준은 합격 진도 기준을 넘을 수 없습니다."); return;
+	}
+	if(f.getInt("complete_limit_total_score") > f.getInt("limit_total_score")) {
+		m.jsAlert("수료(완료) 총점 기준은 합격 총점 기준을 넘을 수 없습니다."); return;
+	}
 
 	//과정
 	course.item("assign_progress", f.getInt("assign_progress"));
@@ -75,6 +84,8 @@ if(m.isPost() && f.validate()) {
 	course.item("limit_forum", f.getInt("limit_forum"));
 	course.item("limit_etc", f.getInt("limit_etc"));
 	course.item("limit_total_score", f.getInt("limit_total_score"));
+	course.item("complete_limit_progress", f.getInt("complete_limit_progress"));
+	course.item("complete_limit_total_score", f.getInt("complete_limit_total_score"));
 	if(!course.update("id = " + cid + "")) { m.jsAlert("수정하는 중 오류가 발생했습니다."); return; }
 
 	m.jsAlert("성공적으로 수정했습니다.");

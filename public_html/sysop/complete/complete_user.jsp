@@ -63,6 +63,7 @@ if("complete_y".equals(m.rs("mode"))) {
 
 	int cuCnt = courseUser.findCount("status IN (1,3) AND close_yn = 'N' AND id IN ( " + idx + ")");
 	courseUser.item("complete_yn", "");
+	courseUser.item("complete_status", "");
 	courseUser.item("complete_no", "");
 	courseUser.item("complete_date", "");
 	courseUser.item("fail_reason", "");
@@ -78,6 +79,7 @@ if("complete_y".equals(m.rs("mode"))) {
 
 	int cuCnt = courseUser.findCount("status IN (1,3) AND course_id = " + cid + " AND close_yn = 'N'");
 	courseUser.item("complete_yn", "");
+	courseUser.item("complete_status", "");
 	courseUser.item("complete_no", "");
 	courseUser.item("complete_date", "");
 	courseUser.item("fail_reason", "");
@@ -112,33 +114,7 @@ if("complete_y".equals(m.rs("mode"))) {
 
 	DataSet culist = courseUser.find("status IN (1,3) AND course_id = " + cid + " AND close_yn = 'N'", "*, progress_ratio progress_value");
 	while(culist.next()) {
-		if("".equals(culist.s("complete_yn"))) {
-			String completeDate = culist.s("end_date") + "235959";
-			if("A".equals(cinfo.s("course_type")) && 0 < m.diffDate("D", sysNow, completeDate)) completeDate = sysNow;
-
-			String failStr = "";
-			boolean isComplete = true;
-
-			for(int i = 0; i < courseUser.scoreFields.length; i++) {
-				if(cinfo.d("limit_" + courseUser.scoreFields[i]) > culist.d(courseUser.scoreFields[i] + "_value")) {
-					failStr = courseUser.scoreFields[i];
-					isComplete = false;
-					break;
-				}
-			}
-
-			//총점검사
-			if(cinfo.d("limit_total_score") > culist.d("total_score")) {
-				failStr = "total_score";
-				isComplete = false;
-			}
-
-			courseUser.item("complete_yn", isComplete ? "Y" : "N");
-			//courseUser.item("complete_no", cinfo.s("year") + "-" + cinfo.i("step") + "-" + culist.s("id"));
-			courseUser.item("complete_no", m.time("yyyy", completeDate) + "-" + culist.s("id"));
-			courseUser.item("complete_date", completeDate);
-			courseUser.item("fail_reason", failStr);
-		}
+		if("".equals(culist.s("complete_yn"))) courseUser.completeUser(culist.i("id"));
 
 		courseUser.item("close_yn", "Y");
 		courseUser.item("close_date", sysNow);
@@ -209,6 +185,7 @@ int totalSurveyCnt = courseModule.getOneInt(
 
 //폼체크
 f.addElement("s_complete", null, null);
+f.addElement("s_complete_status", null, null);
 f.addElement("s_close", null, null);
 f.addElement("s_field", null, null);
 f.addElement("s_keyword", null, null);
@@ -231,6 +208,7 @@ lm.addWhere("a.status IN(1, 3)");
 lm.addWhere("a.course_id = " + cid + "");
 if("none".equals(f.get("s_complete"))) lm.addWhere("(a.complete_yn = '' OR a.complete_yn IS NULL)");
 else lm.addSearch("a.complete_yn", f.get("s_complete"));
+if(!"".equals(f.get("s_complete_status"))) lm.addSearch("a.complete_status", f.get("s_complete_status"));
 lm.addSearch("a.close_yn", f.get("s_close"));
 if("C".equals(userKind)) lm.addWhere("a.course_id IN (" + manageCourses + ")");
 if(!"".equals(f.get("s_field"))) lm.addSearch(f.get("s_field"), f.get("s_keyword"), "LIKE");
@@ -246,26 +224,14 @@ while(list.next()) {
 	list.put("start_date_conv", m.time("yyyy.MM.dd", list.s("start_date")));
 	list.put("end_date_conv", m.time("yyyy.MM.dd", list.s("end_date")));
 	list.put("complete_date_conv", m.time("yyyy.MM.dd", list.s("complete_date")));
-	list.put("complete_conv",
-		!"".equals(list.s("complete_yn")) ? ( "Y".equals(list.s("complete_yn")) ? "수료" : "미수료" )
-		: "미판정"
-	);
-	// 새로 추가 Start
-	list.put("etc_value_conv",list.s("status_fullcourse"));
-	list.put("course_conv",
-			!"".equals(list.s("course_yn")) ? ( "Y".equals(list.s("course_yn")) ? "합격" : "불합격" )
-					: "미판정"
-	);
-	list.put("complete2_conv",
-			!"".equals(list.s("complete2_yn")) ? ( "Y".equals(list.s("complete2_yn")) ? "수료" : "미수료" )
-					: "미판정"
-	);
-	list.put("course2_conv",
-			!"".equals(list.s("course2_yn")) ? ( "Y".equals(list.s("course2_yn")) ? "합격" : "불합격" )
-					: "미판정"
-	);
-	// 새로 추가 End
-	list.put("complete_no_conv", "Y".equals(list.s("complete_yn")) ? list.s("complete_no") : "");
+	String statusConv = "미판정";
+	if("P".equals(list.s("complete_status"))) statusConv = "합격";
+	else if("C".equals(list.s("complete_status"))) statusConv = "수료";
+	else if("F".equals(list.s("complete_status"))) statusConv = "미수료";
+	list.put("complete_status_conv", statusConv);
+	list.put("complete_conv", statusConv);
+	// 추가 커스텀 필드는 사용하지 않음
+	list.put("complete_no_conv", ("P".equals(list.s("complete_status")) || "C".equals(list.s("complete_status"))) ? list.s("complete_no") : "");
 	list.put("close_conv", "Y".equals(list.s("close_yn")) ? "종료" : "-");
 	list.put("lecture_status_conv", "수강중");
 	if(0 > m.diffDate("D", list.s("start_date"), today)) {
@@ -283,9 +249,6 @@ while(list.next()) {
 	//list.put("certificate_block", "Y".equals(list.s("complete_yn")) && "Y".equals(list.s("close_yn")));
 	list.put("certificate_block", "Y".equals(list.s("complete_yn")));
 
-	System.out.println("asdfsadf=====>"+list.get("status_fullcourse"));
-
-
 	user.maskInfo(list);
 }
 
@@ -297,7 +260,7 @@ if("excel".equals(m.rs("mode2"))) {
 	if(list.size() > 0 && !isBlindUser) _log.add("E", Menu.menuNm, list.size(), "이러닝 운영", list);
 
 	ExcelWriter ex = new ExcelWriter(response, "과정수료관리 (" + m.time("yyyy-MM-dd") + ").xls");
-	ex.setData(list, new String[] { "__ord=>no", "id=>수강생ID", "user_id=>회원아이디", "login_id=>로그인아이디", "user_nm=>회원명", "start_date_conv=>수강시작일", "end_date_conv=>수강마감일", "lecture_status_conv=>수강상태", "total_score=>총점", "progress_score=>진도점수", "progress_ratio_conv=>진도(100%기준)", "exam_score=>시험점수", "exam_value_conv=>시험점수(100점기준)", "homework_score=>과제점수", "homework_value_conv=>과제점수(100점기준)", "forum_score=>토론점수", "forum_value_conv=>토론점수(100점기준)", "etc_score=>기타점수", "etc_value_conv=>기타점수(100점기준)", "complete_conv=>수료여부", "complete_date_conv=>수료판정일", "complete_no_conv=>수료번호", "close_conv=>마감상태" }, "과정수료관리 (" + m.time("yyyy-MM-dd") + ")");
+	ex.setData(list, new String[] { "__ord=>no", "id=>수강생ID", "user_id=>회원아이디", "login_id=>로그인아이디", "user_nm=>회원명", "start_date_conv=>수강시작일", "end_date_conv=>수강마감일", "lecture_status_conv=>수강상태", "total_score=>총점", "progress_score=>진도점수", "progress_ratio_conv=>진도(100%기준)", "exam_score=>시험점수", "exam_value_conv=>시험점수(100점기준)", "homework_score=>과제점수", "homework_value_conv=>과제점수(100점기준)", "forum_score=>토론점수", "forum_value_conv=>토론점수(100점기준)", "etc_score=>기타점수", "etc_value_conv=>기타점수(100점기준)", "complete_status_conv=>결과상태", "complete_date_conv=>수료판정일", "complete_no_conv=>수료번호", "close_conv=>마감상태" }, "과정수료관리 (" + m.time("yyyy-MM-dd") + ")");
 	ex.write();
 	return;
 }

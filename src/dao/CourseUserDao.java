@@ -123,6 +123,7 @@ public class CourseUserDao extends DataObject {
 		item("total_score", 0);
 
 		item("credit", cinfo.i("credit"));
+		item("complete_status", "");
 		item("complete_yn", "");
 		item("complete_no", "");
 		item("complete_date", "");
@@ -534,6 +535,39 @@ public class CourseUserDao extends DataObject {
 		return this.update("id = " + id + "");
 	}
 
+	private String getCompleteStatus(DataSet cuinfo, DataSet cinfo, boolean meetModulePass) {
+
+		double progress = cuinfo.d("progress_ratio");
+		double totalScore = cuinfo.d("total_score");
+
+		boolean meetProgComplete = progress >= cinfo.d("complete_limit_progress");
+		boolean meetProgPass = progress >= cinfo.d("limit_progress");
+
+		boolean meetScoreComplete = cinfo.i("complete_limit_total_score") == 0
+			|| totalScore >= cinfo.d("complete_limit_total_score");
+		boolean meetScorePass = cinfo.i("limit_total_score") == 0
+			|| totalScore >= cinfo.d("limit_total_score");
+
+		if(meetProgPass && meetScorePass && meetModulePass) return "P"; //합격
+		if(meetProgComplete && meetScoreComplete) return "C"; //수료
+		return "F"; //미수료
+	}
+
+	private String getFailReason(DataSet cuinfo, DataSet cinfo) {
+		if(cuinfo.d("progress_ratio") < cinfo.d("complete_limit_progress")) return "progress";
+		if(cinfo.i("complete_limit_total_score") > 0 && cuinfo.d("total_score") < cinfo.d("complete_limit_total_score")) return "total_score";
+
+		for(int i = 0; i < scoreFields.length; i++) {
+			if(cinfo.d("limit_" + scoreFields[i]) > cuinfo.d(scoreFields[i] + "_value")) {
+				return scoreFields[i];
+			}
+		}
+
+		if(cinfo.i("limit_total_score") > 0 && cuinfo.d("total_score") < cinfo.d("limit_total_score")) return "total_score";
+
+		return "";
+	}
+
 
 	public int closeUser(int id, int userId) {
 		return closeUser(id, userId, "N");
@@ -549,6 +583,7 @@ public class CourseUserDao extends DataObject {
 		DataSet info = query(
 			"SELECT a.*, a.progress_ratio progress_value "
 			+ ", c.assign_survey_yn, c.limit_progress, c.limit_exam, c.limit_homework, c.limit_forum, c.limit_etc, c.limit_total_score, c.complete_auto_yn "
+			+ ", c.complete_limit_progress, c.complete_limit_total_score "
 			+ ", c.year, c.step, c.course_type, c.complete_no_yn, c.complete_prefix, c.postfix_cnt, c.postfix_type, c.postfix_ord "
 			+ " FROM " + this.table + " a "
 			+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
@@ -557,22 +592,18 @@ public class CourseUserDao extends DataObject {
 		if(!info.next()) return -1;
 
 		String now = Malgn.time("yyyyMMddHHmmss");
-		String failStr = "";
-		boolean isComplete = true;
 		String completeDate = info.s("end_date") + "235959";
 		if("A".equals(info.s("course_type")) && 0 < Malgn.diffDate("D", now, completeDate)) completeDate = now;
 
-		//과정모듈검사
+		//설문검사(합격 판단에 포함)
+		boolean meetModulePass = true;
 		for(int i = 0; i < scoreFields.length; i++) {
 			if(info.d("limit_" + scoreFields[i]) > info.d(scoreFields[i] + "_value")) {
-				failStr = scoreFields[i];
-				isComplete = false;
+				meetModulePass = false;
 				break;
 			}
 		}
-		
-		//설문검사
-		if(info.b("assign_survey_yn")) {
+		if(info.b("assign_survey_yn") && meetModulePass) {
 			DataSet sulist = courseModule.query(
 				" SELECT a.module_id, su.reg_date "
 				+ " FROM " + courseModule.table + " a "
@@ -582,23 +613,18 @@ public class CourseUserDao extends DataObject {
 			);
 			while(sulist.next()) {
 				if("".equals(sulist.s("reg_date"))) {
-					failStr = "survey_" + sulist.i("module_id");
-					isComplete = false;
+					meetModulePass = false;
 					break;
 				}
 			}
 		}
+		info.put("meet_module_pass", meetModulePass);
 
-		//총점검사
-		if(info.d("limit_total_score") > info.d("total_score")) {
-			failStr = "total_score";
-			isComplete = false;
-		}
+		String status = getCompleteStatus(info, info, meetModulePass);
+		String failStr = "F".equals(status) ? getFailReason(info, info) : "";
 
-
-
-		item("complete_yn", isComplete ? "Y" : "N");
-		//item("complete_no", info.s("year") + "-" + info.i("step") + "-" + id);
+		item("complete_status", status);
+		item("complete_yn", "P".equals(status) ? "Y" : "N");
 
 		String compNo = Malgn.time("yyyy", completeDate) + "-" + id;
 		if("Y".equals(info.s("complete_no_yn"))) {
@@ -628,6 +654,7 @@ public class CourseUserDao extends DataObject {
 		DataSet info = query(
 			"SELECT a.*, a.progress_ratio progress_value "
 			+ ", c.assign_survey_yn, c.limit_progress, c.limit_exam, c.limit_homework, c.limit_forum, c.limit_etc, c.limit_total_score, c.complete_auto_yn "
+			+ ", c.complete_limit_progress, c.complete_limit_total_score "
 			+ ", c.year, c.step, c.complete_no_yn, c.complete_prefix, c.postfix_cnt, c.postfix_type, c.postfix_ord  "
 			+ " FROM " + this.table + " a "
 			+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
@@ -635,20 +662,15 @@ public class CourseUserDao extends DataObject {
 		);
 		if(!info.next()) return -1;
 
-		String failStr = "";
-		boolean isComplete = true;
-
-		//과정모듈검사
+		//과정모듈검사 + 설문검사 (합격 판단용)
+		boolean meetModulePass = true;
 		for(int i = 0; i < scoreFields.length; i++) {
 			if(info.d("limit_" + scoreFields[i]) > info.d(scoreFields[i] + "_value")) {
-				failStr = scoreFields[i];
-				isComplete = false;
+				meetModulePass = false;
 				break;
 			}
 		}
-
-		//설문검사
-		if(info.b("assign_survey_yn")) {
+		if(info.b("assign_survey_yn") && meetModulePass) {
 			DataSet sulist = courseModule.query(
 				" SELECT a.module_id, su.reg_date "
 				+ " FROM " + courseModule.table + " a "
@@ -658,18 +680,15 @@ public class CourseUserDao extends DataObject {
 			);
 			while(sulist.next()) {
 				if("".equals(sulist.s("reg_date"))) {
-					failStr = "survey_" + sulist.i("module_id");
-					isComplete = false;
+					meetModulePass = false;
 					break;
 				}
 			}
 		}
+		info.put("meet_module_pass", meetModulePass);
 
-		//총점검사
-		if(info.d("limit_total_score") > info.d("total_score")) {
-			failStr = "total_score";
-			isComplete = false;
-		}
+		String status = getCompleteStatus(info, info, meetModulePass);
+		String failStr = "F".equals(status) ? getFailReason(info, info) : "";
 
 //		boolean isEnd = "Y".equals(endYn) && isComplete ? true : (info.i("end_date") < Malgn.parseInt(Malgn.time("yyyyMMdd")));
 //		boolean isEnd = "Y".equals(endYn) ? true : (info.b("complete_auto_yn") && isComplete);
@@ -685,15 +704,17 @@ public class CourseUserDao extends DataObject {
 			}
 		}
 
-		if(!"Y".equals(endYn) && info.b("complete_auto_yn") && isComplete) {
-			item("complete_yn", isComplete ? "Y" : "N");
+		if(!"Y".equals(endYn) && info.b("complete_auto_yn") && "P".equals(status)) {
+			item("complete_status", status);
+			item("complete_yn", "P".equals(status) ? "Y" : "N");
 			item("complete_no", compNo);
 			item("complete_date", Malgn.time("yyyyMMddHHmmss"));
 			item("fail_reason", failStr);
 			if(!update("id = " + id)) { return -1; }
 		} else if("Y".equals(endYn)) {
 			item("close_yn", "Y");
-			item("complete_yn", isComplete ? "Y" : "N");
+			item("complete_status", status);
+			item("complete_yn", "P".equals(status) ? "Y" : "N");
 			item("complete_no", compNo);
 			item("complete_date", Malgn.time("yyyyMMddHHmmss"));
 			item("close_date", Malgn.time("yyyyMMddHHmmss"));

@@ -674,7 +674,7 @@ p.display();
     String resourcePath = loader.getResourcePathSpecificFirst();
     mergePath.addClassPath(resourcePath);
     com.caucho.vfs.Depend depend;
-    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/user_list.jsp"), 422433000107896234L, false);
+    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/user_list.jsp"), -6770516879088052066L, false);
     _caucho_depends.add(depend);
     loader.addDependency(depend);
     depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/init.jsp"), 4867222188672443604L, false);

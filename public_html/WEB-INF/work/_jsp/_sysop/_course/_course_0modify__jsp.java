@@ -463,9 +463,9 @@ f.addElement("review_yn", info.s("review_yn"), "hname:'\uc0ac\uc6a9\ud6c4\uae30 
 f.addElement("cert_course_yn", info.s("cert_course_yn"), "hname:'\uc218\uac15\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
 f.addElement("cert_complete_yn", info.s("cert_complete_yn"), "hname:'\uc218\ub8cc\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
 //\uc0c8\ub85c \ucd94\uac00 Start
-f.addElement("cert_course2_yn", info.s("cert_course2_yn"), "hname:'2\ud559\uae30 \ud569\uaca9\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
-f.addElement("cert_complete2_yn", info.s("cert_complete2_yn"), "hname:'2\ud559\uae30 \uc218\ub8cc\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
-f.addElement("status_fullcourse", info.s("status_fullcourse"), "hname:'\uc218\ub8cc\uc99d\ud569\uaca9\uc99d 4\ubc88\uc0ac\uc6a9\uc5ec\ubd80'");
+//f.addElement("cert_course2_yn", info.s("cert_course2_yn"), "hname:'2\ud559\uae30 \ud569\uaca9\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
+//f.addElement("cert_complete2_yn", info.s("cert_complete2_yn"), "hname:'2\ud559\uae30 \uc218\ub8cc\uc99d \uc0ac\uc6a9\uc5ec\ubd80'");
+//f.addElement("status_fullcourse", info.s("status_fullcourse"), "hname:'\uc218\ub8cc\uc99d\ud569\uaca9\uc99d 4\ubc88\uc0ac\uc6a9\uc5ec\ubd80'");
 //\uc0c8\ub85c \ucd94\uac00 End
 f.addElement("sample_lesson_nm", info.s("sample_lesson_nm"), "hname:'\uc0d8\ud50c\ub3d9\uc601\uc0c1'");
 f.addElement("before_course_nm", info.s("before_course_nm"), "hname:'\uc120\ud589\uacfc\uc815'");
@@ -485,19 +485,21 @@ f.addElement("sale_yn", info.s("sale_yn"), "hname:'\ud310\ub9e4\uc5ec\ubd80'");
 f.addElement("display_yn", info.s("display_yn"), "hname:'\ub178\ucd9c\uc5ec\ubd80'");
 f.addElement("status", info.s("status"), "hname:'\uc0c1\ud0dc'");
 
-if(!isPackage) {
-	f.addElement("assign_progress", info.i("assign_progress"), "hname:'\ucd9c\uc11d(\uc9c4\ub3c4) \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
-	f.addElement("assign_exam", info.i("assign_exam"), "hname:'\uc2dc\ud5d8 \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
+	if(!isPackage) {
+		f.addElement("assign_progress", info.i("assign_progress"), "hname:'\ucd9c\uc11d(\uc9c4\ub3c4) \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
+		f.addElement("assign_exam", info.i("assign_exam"), "hname:'\uc2dc\ud5d8 \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
 	f.addElement("assign_homework", info.i("assign_homework"), "hname:'\uacfc\uc81c \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
 	f.addElement("assign_forum", info.i("assign_forum"), "hname:'\ud1a0\ub860 \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
-	f.addElement("assign_etc", info.i("assign_etc"), "hname:'\uae30\ud0c0 \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
-	f.addElement("assign_survey_yn", info.s("assign_survey_yn"), "hname:'\uc124\ubb38\ucc38\uc5ec \ud544\uc218\uc5ec\ubd80'");
-	f.addElement("limit_total_score", info.i("limit_total_score"), "hname:'\ucd1d\uc810 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
-	f.addElement("limit_progress", info.i("limit_progress"), "hname:'\uc9c4\ub3c4 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
-	f.addElement("limit_exam", info.i("limit_exam"), "hname:'\uc2dc\ud5d8 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
-	f.addElement("limit_homework", info.i("limit_homework"), "hname:'\uacfc\uc81c \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
-	f.addElement("limit_forum", info.i("limit_forum"), "hname:'\ud1a0\ub860 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
-	f.addElement("limit_etc", info.i("limit_etc"), "hname:'\uae30\ud0c0 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("assign_etc", info.i("assign_etc"), "hname:'\uae30\ud0c0 \ubc30\uc810\ube44\uc728', option:'number', required:'Y'");
+		f.addElement("assign_survey_yn", info.s("assign_survey_yn"), "hname:'\uc124\ubb38\ucc38\uc5ec \ud544\uc218\uc5ec\ubd80'");
+		f.addElement("limit_total_score", info.i("limit_total_score"), "hname:'\ucd1d\uc810 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("limit_progress", info.i("limit_progress"), "hname:'\uc9c4\ub3c4 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("limit_exam", info.i("limit_exam"), "hname:'\uc2dc\ud5d8 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("limit_homework", info.i("limit_homework"), "hname:'\uacfc\uc81c \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("limit_forum", info.i("limit_forum"), "hname:'\ud1a0\ub860 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("limit_etc", info.i("limit_etc"), "hname:'\uae30\ud0c0 \uc218\ub8cc\uae30\uc900', option:'number', required:'Y'");
+		f.addElement("complete_limit_progress", info.i("complete_limit_progress"), "hname:'\uc9c4\ub3c4 \uc218\ub8cc(\uc644\ub8cc) \uae30\uc900', option:'number', required:'Y'");
+		f.addElement("complete_limit_total_score", info.i("complete_limit_total_score"), "hname:'\ucd1d\uc810 \uc218\ub8cc(\uc644\ub8cc) \uae30\uc900', option:'number', required:'Y'");
 	f.addElement("push_survey_yn", info.s("push_survey_yn"), "hname:'\uc124\ubb38\ucc38\uc5ec \ub3c5\ub824\uc5ec\ubd80'");
 
 	f.addElement("cert_template_id", info.i("cert_template_id"), "hname:'\uc218\ub8cc\uc99d \ud15c\ud50c\ub9bf'");
@@ -523,6 +525,13 @@ if(m.isPost() && f.validate()) {
 	if(!isPackage) {
 		if(f.get("complete_prefix").length() > 20) { m.jsAlert("\uc218\ub8cc\ubc88\ud638 \uc55e\uc790\ub9ac\ub294 20\uc790\ub97c \ucd08\uacfc\ud574 \uc124\uc815\ud558\uc2e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."); return; }
 		if(f.getInt("postfix_cnt") > 8) { m.jsAlert("\uc218\ub8cc\ubc88\ud638 \ub4b7\uc790\ub9ac\uc218\ub294 8\uac1c\ub97c \ucd08\uacfc\ud574 \uc124\uc815\ud558\uc2e4 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."); return; }
+
+		if(f.getInt("complete_limit_progress") > f.getInt("limit_progress")) {
+			m.jsAlert("\uc218\ub8cc(\uc644\ub8cc) \uc9c4\ub3c4 \uae30\uc900\uc740 \ud569\uaca9 \uc9c4\ub3c4 \uae30\uc900\uc744 \ub118\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."); return;
+		}
+		if(f.getInt("complete_limit_total_score") > f.getInt("limit_total_score")) {
+			m.jsAlert("\uc218\ub8cc(\uc644\ub8cc) \ucd1d\uc810 \uae30\uc900\uc740 \ud569\uaca9 \ucd1d\uc810 \uae30\uc900\uc744 \ub118\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."); return;
+		}
 	}
 
 
@@ -619,7 +628,7 @@ if(m.isPost() && f.validate()) {
 	course.item("sms_yn", f.get("sms_yn", "N"));
 	course.item("target_yn", f.get("target_yn", "N"));
 	course.item("complete_auto_yn", f.get("complete_auto_yn", "N"));
-	course.item("restudy_yn", f.get("restudy_yn", "N"));
+		course.item("restudy_yn", f.get("restudy_yn", "N"));
 	course.item("restudy_day", "Y".equals(f.get("restudy_yn", "N")) ? (3700 > f.getInt("restudy_day") ? f.getInt("restudy_day") : 3700) : 0);
 
 	course.item("limit_lesson_yn", f.get("limit_lesson_yn", "N"));
@@ -661,9 +670,9 @@ if(m.isPost() && f.validate()) {
 	course.item("cert_course_yn", f.get("cert_course_yn", "N"));
 	course.item("cert_complete_yn", f.get("cert_complete_yn", "N"));
 	//\uc0c8\ub85c \ucd94\uac00 Start
-	course.item("cert_course2_yn", f.get("cert_course2_yn", "N"));
-	course.item("cert_complete2_yn", f.get("cert_complete2_yn", "N"));
-	course.item("status_fullcourse", f.get("status_fullcourse", "N"));
+		//course.item("cert_course2_yn", f.get("cert_course2_yn", "N"));
+		//course.item("cert_complete2_yn", f.get("cert_complete2_yn", "N"));
+		//course.item("status_fullcourse", f.get("status_fullcourse", "N"));
 	//\uc0c8\ub85c \ucd94\uac00 End
 	course.item("subtitle", subtitle);
 	course.item("content1_title", f.get("content1_title"));
@@ -690,13 +699,8 @@ if(m.isPost() && f.validate()) {
 		course.item("limit_forum", f.getInt("limit_forum"));
 		course.item("limit_etc", f.getInt("limit_etc"));
 		course.item("limit_total_score", f.getInt("limit_total_score"));
-		// \uc0c8\ub85c \ucd94\uac00 Start
-		course.item("limit_total_score2", f.getInt("limit_total_score2"));
-		course.item("limit_total_course", f.getInt("limit_total_course"));
-		course.item("limit_total_course2", f.getInt("limit_total_course2"));
-		course.item("cert_template_id", f.getInt("template_id"));
-		course.item("complete_prefix", f.get("complete_prefix"));
-		// \uc0c8\ub85c \ucd94\uac00 Start
+		course.item("complete_limit_progress", f.getInt("complete_limit_progress"));
+		course.item("complete_limit_total_score", f.getInt("complete_limit_total_score"));
 		course.item("cert_template_id", f.getInt("cert_template_id"));
 		course.item("complete_prefix", f.get("complete_prefix"));
 		course.item("complete_no_yn", f.get("complete_no_yn"));
@@ -976,6 +980,7 @@ p.setVar("cid", id);
 p.display();
 
 
+    out.write(_jsp_string0, 0, _jsp_string0.length);
   }
 
   private com.caucho.make.DependencyContainer _caucho_depends
@@ -1035,7 +1040,7 @@ p.display();
     String resourcePath = loader.getResourcePathSpecificFirst();
     mergePath.addClassPath(resourcePath);
     com.caucho.vfs.Depend depend;
-    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/course_modify.jsp"), 4552940775372767704L, false);
+    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/course_modify.jsp"), -4449961483057009039L, false);
     _caucho_depends.add(depend);
     loader.addDependency(depend);
     depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/init.jsp"), 4867222188672443604L, false);
@@ -1072,5 +1077,10 @@ p.display();
     } catch (Exception e) {
       throw com.caucho.config.ConfigException.create(e);
     }
+  }
+
+  private final static char []_jsp_string0;
+  static {
+    _jsp_string0 = "\r\n".toCharArray();
   }
 }

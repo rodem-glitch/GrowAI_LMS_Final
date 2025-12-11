@@ -190,6 +190,8 @@ if(m.isPost() && f.validate()) {
 	course.item("limit_forum", 0);
 	course.item("limit_etc", 0);
 	course.item("limit_total_score", 60);
+	course.item("complete_limit_progress", 60);
+	course.item("complete_limit_total_score", 60);
 	course.item("class_member", 40); //고정
 
     course.item("push_survey_yn", "N");

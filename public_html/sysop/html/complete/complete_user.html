@@ -89,6 +89,29 @@ addEvent("onload", function() {
 		</table>
 	</td>
 </tr>
+<tr>
+	<td class="f_th01">수료 기준(완료)</td>
+	<td class="f_td01">
+		<table class="l_tb01" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
+		<tr>
+			<td class="l_th01">총점</td>
+			<td class="l_th03">진도</td>
+			<td class="l_th03">시험</td>
+			<td class="l_th03">과제</td>
+			<td class="l_th03">토론</td>
+			<td class="l_th03">기타</td>
+		</tr>
+		<tr align="center">
+			<td class="l_td01">{{course.complete_limit_total_score}}점 이상</td>
+			<td class="l_td01">{{course.complete_limit_progress}}% 이상</td>
+			<td class="l_td01">-</td>
+			<td class="l_td01">-</td>
+			<td class="l_td01">-</td>
+			<td class="l_td01">-</td>
+		</tr>
+		</table>
+	</td>
+</tr>
 </table>
 </div>
 
@@ -128,6 +151,15 @@ addEvent("onload", function() {
 		<label><input type="radio" name="s_close" value="" class="ipt01" checked> 전체 </label> &nbsp;
 		<label><input type="radio" name="s_close" value="Y" class="ipt01"> 종료 </label> &nbsp;
 		<label><input type="radio" name="s_close" value="N" class="ipt01"> 미종료 </label>
+	</td>
+</tr>
+<tr>
+	<td class="t_th01">결과상태</td>
+	<td class="t_td01" colspan="3">
+		<label><input type="radio" name="s_complete_status" value="" class="ipt01" checked> 전체 </label>  &nbsp;
+		<label><input type="radio" name="s_complete_status" value="P" class="ipt01"> 합격 </label>  &nbsp;
+		<label><input type="radio" name="s_complete_status" value="C" class="ipt01"> 수료 </label>  &nbsp;
+		<label><input type="radio" name="s_complete_status" value="F" class="ipt01"> 미수료 </label>
 	</td>
 </tr>
 <tr>
@@ -272,7 +304,7 @@ addEvent("onload", function() {
 
 
 
-	<td class="l_th01"><span class="l_sort01" id="CL_a.complete_yn" onclick="ListSort(this, '{{ord}}')">수료</span></td>
+	<td class="l_th01"><span class="l_sort01" id="CL_a.complete_status" onclick="ListSort(this, '{{ord}}')">결과상태</span></td>
 	<!--@if(course.cert_complete_yn)--><td class="l_th01">수료증</td><!--/if(course.cert_complete_yn)-->
 	<td class="l_th01"><span class="l_sort01" id="CL_a.close_yn" onclick="ListSort(this, '{{ord}}')">상태</span></td>
 
@@ -319,8 +351,8 @@ addEvent("onload", function() {
 		<span>{{list.survey_cnt}}</span> / {{total_survey_cnt}}개<br />
 	</td>
 	<td class="l_td01" style="line-height:20px;">
-		<!--@if(list.complete_yn)--><!--@if(list.complete_date)-->{{list.complete_date_conv}}<br /><!--/if(list.complete_date)--><!--/if(list.complete_yn)-->
-		<span class="label">{{list.complete_conv}}</span>
+		<!--@if(list.complete_status)--><!--@if(list.complete_date)-->{{list.complete_date_conv}}<br /><!--/if(list.complete_date)--><!--/if(list.complete_status)-->
+		<span class="label">{{list.complete_status_conv}}</span>
 	</td>
 	<!--@if(course.cert_complete_yn)-->
 	<td class="l_td01" style="line-height:20px;">

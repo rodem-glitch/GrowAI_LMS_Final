@@ -22,6 +22,7 @@ WEB-INF/classes/
 WEB-INF/tmp/
 public_html/WEB-INF/classes/
 public_html/WEB-INF/tmp/
+public_html/WEB-INF/work/
 tmp/
 *.tmp
 

@@ -491,6 +491,8 @@ if(m.isPost() && f.validate()) {
 	course.item("limit_forum", 0);
 	course.item("limit_etc", 0);
 	course.item("limit_total_score", 60);
+	course.item("complete_limit_progress", 60);
+	course.item("complete_limit_total_score", 60);
 	course.item("class_member", 40); //\uace0\uc815
 
     course.item("push_survey_yn", "N");
@@ -570,6 +572,7 @@ p.setVar("year", m.time("yyyy"));
 p.display();
 
 
+    out.write('\n');
   }
 
   private com.caucho.make.DependencyContainer _caucho_depends
@@ -629,7 +632,7 @@ p.display();
     String resourcePath = loader.getResourcePathSpecificFirst();
     mergePath.addClassPath(resourcePath);
     com.caucho.vfs.Depend depend;
-    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/course_insert.jsp"), 6771084476774252558L, false);
+    depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/course_insert.jsp"), 955824497136404149L, false);
     _caucho_depends.add(depend);
     loader.addDependency(depend);
     depend = new com.caucho.vfs.Depend(appDir.lookup("sysop/course/init.jsp"), 4867222188672443604L, false);

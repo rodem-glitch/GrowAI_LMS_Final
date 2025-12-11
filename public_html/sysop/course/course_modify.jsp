@@ -161,9 +161,9 @@ f.addElement("review_yn", info.s("review_yn"), "hname:'사용후기 사용여부
 f.addElement("cert_course_yn", info.s("cert_course_yn"), "hname:'수강증 사용여부'");
 f.addElement("cert_complete_yn", info.s("cert_complete_yn"), "hname:'수료증 사용여부'");
 //새로 추가 Start
-f.addElement("cert_course2_yn", info.s("cert_course2_yn"), "hname:'2학기 합격증 사용여부'");
-f.addElement("cert_complete2_yn", info.s("cert_complete2_yn"), "hname:'2학기 수료증 사용여부'");
-f.addElement("status_fullcourse", info.s("status_fullcourse"), "hname:'수료증합격증 4번사용여부'");
+//f.addElement("cert_course2_yn", info.s("cert_course2_yn"), "hname:'2학기 합격증 사용여부'");
+//f.addElement("cert_complete2_yn", info.s("cert_complete2_yn"), "hname:'2학기 수료증 사용여부'");
+//f.addElement("status_fullcourse", info.s("status_fullcourse"), "hname:'수료증합격증 4번사용여부'");
 //새로 추가 End
 f.addElement("sample_lesson_nm", info.s("sample_lesson_nm"), "hname:'샘플동영상'");
 f.addElement("before_course_nm", info.s("before_course_nm"), "hname:'선행과정'");
@@ -183,19 +183,21 @@ f.addElement("sale_yn", info.s("sale_yn"), "hname:'판매여부'");
 f.addElement("display_yn", info.s("display_yn"), "hname:'노출여부'");
 f.addElement("status", info.s("status"), "hname:'상태'");
 
-if(!isPackage) {
-	f.addElement("assign_progress", info.i("assign_progress"), "hname:'출석(진도) 배점비율', option:'number', required:'Y'");
-	f.addElement("assign_exam", info.i("assign_exam"), "hname:'시험 배점비율', option:'number', required:'Y'");
+	if(!isPackage) {
+		f.addElement("assign_progress", info.i("assign_progress"), "hname:'출석(진도) 배점비율', option:'number', required:'Y'");
+		f.addElement("assign_exam", info.i("assign_exam"), "hname:'시험 배점비율', option:'number', required:'Y'");
 	f.addElement("assign_homework", info.i("assign_homework"), "hname:'과제 배점비율', option:'number', required:'Y'");
 	f.addElement("assign_forum", info.i("assign_forum"), "hname:'토론 배점비율', option:'number', required:'Y'");
-	f.addElement("assign_etc", info.i("assign_etc"), "hname:'기타 배점비율', option:'number', required:'Y'");
-	f.addElement("assign_survey_yn", info.s("assign_survey_yn"), "hname:'설문참여 필수여부'");
-	f.addElement("limit_total_score", info.i("limit_total_score"), "hname:'총점 수료기준', option:'number', required:'Y'");
-	f.addElement("limit_progress", info.i("limit_progress"), "hname:'진도 수료기준', option:'number', required:'Y'");
-	f.addElement("limit_exam", info.i("limit_exam"), "hname:'시험 수료기준', option:'number', required:'Y'");
-	f.addElement("limit_homework", info.i("limit_homework"), "hname:'과제 수료기준', option:'number', required:'Y'");
-	f.addElement("limit_forum", info.i("limit_forum"), "hname:'토론 수료기준', option:'number', required:'Y'");
-	f.addElement("limit_etc", info.i("limit_etc"), "hname:'기타 수료기준', option:'number', required:'Y'");
+		f.addElement("assign_etc", info.i("assign_etc"), "hname:'기타 배점비율', option:'number', required:'Y'");
+		f.addElement("assign_survey_yn", info.s("assign_survey_yn"), "hname:'설문참여 필수여부'");
+		f.addElement("limit_total_score", info.i("limit_total_score"), "hname:'총점 수료기준', option:'number', required:'Y'");
+		f.addElement("limit_progress", info.i("limit_progress"), "hname:'진도 수료기준', option:'number', required:'Y'");
+		f.addElement("limit_exam", info.i("limit_exam"), "hname:'시험 수료기준', option:'number', required:'Y'");
+		f.addElement("limit_homework", info.i("limit_homework"), "hname:'과제 수료기준', option:'number', required:'Y'");
+		f.addElement("limit_forum", info.i("limit_forum"), "hname:'토론 수료기준', option:'number', required:'Y'");
+		f.addElement("limit_etc", info.i("limit_etc"), "hname:'기타 수료기준', option:'number', required:'Y'");
+		f.addElement("complete_limit_progress", info.i("complete_limit_progress"), "hname:'진도 수료(완료) 기준', option:'number', required:'Y'");
+		f.addElement("complete_limit_total_score", info.i("complete_limit_total_score"), "hname:'총점 수료(완료) 기준', option:'number', required:'Y'");
 	f.addElement("push_survey_yn", info.s("push_survey_yn"), "hname:'설문참여 독려여부'");
 
 	f.addElement("cert_template_id", info.i("cert_template_id"), "hname:'수료증 템플릿'");
@@ -221,6 +223,13 @@ if(m.isPost() && f.validate()) {
 	if(!isPackage) {
 		if(f.get("complete_prefix").length() > 20) { m.jsAlert("수료번호 앞자리는 20자를 초과해 설정하실 수 없습니다."); return; }
 		if(f.getInt("postfix_cnt") > 8) { m.jsAlert("수료번호 뒷자리수는 8개를 초과해 설정하실 수 없습니다."); return; }
+
+		if(f.getInt("complete_limit_progress") > f.getInt("limit_progress")) {
+			m.jsAlert("수료(완료) 진도 기준은 합격 진도 기준을 넘을 수 없습니다."); return;
+		}
+		if(f.getInt("complete_limit_total_score") > f.getInt("limit_total_score")) {
+			m.jsAlert("수료(완료) 총점 기준은 합격 총점 기준을 넘을 수 없습니다."); return;
+		}
 	}
 
 
@@ -317,7 +326,7 @@ if(m.isPost() && f.validate()) {
 	course.item("sms_yn", f.get("sms_yn", "N"));
 	course.item("target_yn", f.get("target_yn", "N"));
 	course.item("complete_auto_yn", f.get("complete_auto_yn", "N"));
-	course.item("restudy_yn", f.get("restudy_yn", "N"));
+		course.item("restudy_yn", f.get("restudy_yn", "N"));
 	course.item("restudy_day", "Y".equals(f.get("restudy_yn", "N")) ? (3700 > f.getInt("restudy_day") ? f.getInt("restudy_day") : 3700) : 0);
 
 	course.item("limit_lesson_yn", f.get("limit_lesson_yn", "N"));
@@ -359,9 +368,9 @@ if(m.isPost() && f.validate()) {
 	course.item("cert_course_yn", f.get("cert_course_yn", "N"));
 	course.item("cert_complete_yn", f.get("cert_complete_yn", "N"));
 	//새로 추가 Start
-	course.item("cert_course2_yn", f.get("cert_course2_yn", "N"));
-	course.item("cert_complete2_yn", f.get("cert_complete2_yn", "N"));
-	course.item("status_fullcourse", f.get("status_fullcourse", "N"));
+		//course.item("cert_course2_yn", f.get("cert_course2_yn", "N"));
+		//course.item("cert_complete2_yn", f.get("cert_complete2_yn", "N"));
+		//course.item("status_fullcourse", f.get("status_fullcourse", "N"));
 	//새로 추가 End
 	course.item("subtitle", subtitle);
 	course.item("content1_title", f.get("content1_title"));
@@ -388,13 +397,8 @@ if(m.isPost() && f.validate()) {
 		course.item("limit_forum", f.getInt("limit_forum"));
 		course.item("limit_etc", f.getInt("limit_etc"));
 		course.item("limit_total_score", f.getInt("limit_total_score"));
-		// 새로 추가 Start
-		course.item("limit_total_score2", f.getInt("limit_total_score2"));
-		course.item("limit_total_course", f.getInt("limit_total_course"));
-		course.item("limit_total_course2", f.getInt("limit_total_course2"));
-		course.item("cert_template_id", f.getInt("template_id"));
-		course.item("complete_prefix", f.get("complete_prefix"));
-		// 새로 추가 Start
+		course.item("complete_limit_progress", f.getInt("complete_limit_progress"));
+		course.item("complete_limit_total_score", f.getInt("complete_limit_total_score"));
 		course.item("cert_template_id", f.getInt("cert_template_id"));
 		course.item("complete_prefix", f.get("complete_prefix"));
 		course.item("complete_no_yn", f.get("complete_no_yn"));
