@@ -416,7 +416,7 @@ function resetCompNo() {
 }
 
 function setLabel() {
-	var progresses = { "수료" : "blue", "미판정" : "gray", "미수료" : "red" };
+	var progresses = { "합격" : "sky", "수료" : "blue", "미판정" : "gray", "미수료" : "red" };
 	$(".label").each(function() {
 		var v = $(this).html();
 		$(this).attr("class", "label " + progresses[v]);

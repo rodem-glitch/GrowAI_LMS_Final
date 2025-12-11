@@ -53,6 +53,7 @@ f.addElement("assign_exam", cinfo.i("assign_exam"), "hname:'시험 배점비율'
 f.addElement("assign_homework", cinfo.i("assign_homework"), "hname:'과제 배점비율', option:'number', required:'Y'");
 f.addElement("assign_forum", cinfo.i("assign_forum"), "hname:'토론 배점비율', option:'number', required:'Y'");
 f.addElement("assign_etc", cinfo.i("assign_etc"), "hname:'기타 배점비율', option:'number', required:'Y'");
+f.addElement("pass_yn", cinfo.s("pass_yn"), "hname:'합격 상태 사용여부'");
 f.addElement("limit_total_score", cinfo.i("limit_total_score"), "hname:'총점 수료기준', option:'number', required:'Y'");
 f.addElement("limit_progress", cinfo.i("limit_progress"), "hname:'진도 수료기준', option:'number', required:'Y'");
 f.addElement("limit_exam", cinfo.i("limit_exam"), "hname:'시험 수료기준', option:'number', required:'Y'");
@@ -78,6 +79,7 @@ if(m.isPost() && f.validate()) {
 	course.item("assign_homework", f.getInt("assign_homework"));
 	course.item("assign_forum", f.getInt("assign_forum"));
 	course.item("assign_etc", f.getInt("assign_etc"));
+	course.item("pass_yn", f.get("pass_yn", "N"));
 	course.item("limit_progress", f.getInt("limit_progress"));
 	course.item("limit_exam", f.getInt("limit_exam"));
 	course.item("limit_homework", f.getInt("limit_homework"));

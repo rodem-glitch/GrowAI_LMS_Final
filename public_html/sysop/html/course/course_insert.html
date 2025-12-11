@@ -900,12 +900,20 @@
 		</script>
 	</td>
 </tr>
+<tr>
+	<td class="f_th01">합격 상태 사용</td>
+	<td class="f_td01" colspan="3">
+		<label class="switch01"><input type="checkbox" name="pass_yn" value="Y" <!--@if(pass_yn:Y)-->checked<!--/if(pass_yn:Y)-->> 사용 </label>
+		<span class="desc01">체크 시 합격/수료/미수료 3단계로 판정합니다. 미체크 시 수료/미수료 2단계만 사용합니다.</span>
+	</td>
+</tr>
 <tr class="status_normalcourse">
 	<td class="f_th01">수료/과락 기준</td>
 	<td class="f_td01" colspan="3">
 		<div class="desc01" style="padding-bottom:3px;"> 각 항목의 수료기준을 100점(%) 기준으로 입력하세요. </div>
 		<table class="l_tb01" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
 		<tr>
+			<td class="l_th03">구분</td>
 			<td class="l_th03">진도(출석)율</td>
 			<td class="l_th01 completetitle">총점</td>
 			<!--새로 추가 Start-->
@@ -919,6 +927,7 @@
 <!--			<td class="l_th03">기타</td>-->
 		</tr>
 		<tr align="center">
+			<td class="l_th02">합격/과락 기준</td>
 			<td class="l_td01">
 				<input type="text" name="limit_progress" value="{{limit_progress}}" class="ipt_right nf_100" maxlength="3" size="3"> % 이상 / <span class="fontsmall">100%</span>
 			</td>

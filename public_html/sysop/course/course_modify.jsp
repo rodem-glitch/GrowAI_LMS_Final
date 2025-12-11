@@ -160,6 +160,7 @@ f.addElement("survey_yn", info.s("survey_yn"), "hname:'설문 사용여부'");
 f.addElement("review_yn", info.s("review_yn"), "hname:'사용후기 사용여부'");
 f.addElement("cert_course_yn", info.s("cert_course_yn"), "hname:'수강증 사용여부'");
 f.addElement("cert_complete_yn", info.s("cert_complete_yn"), "hname:'수료증 사용여부'");
+f.addElement("pass_yn", info.s("pass_yn"), "hname:'합격 상태 사용여부'");
 //새로 추가 Start
 //f.addElement("cert_course2_yn", info.s("cert_course2_yn"), "hname:'2학기 합격증 사용여부'");
 //f.addElement("cert_complete2_yn", info.s("cert_complete2_yn"), "hname:'2학기 수료증 사용여부'");
@@ -367,6 +368,7 @@ if(m.isPost() && f.validate()) {
 	course.item("review_yn", f.get("review_yn", "N"));
 	course.item("cert_course_yn", f.get("cert_course_yn", "N"));
 	course.item("cert_complete_yn", f.get("cert_complete_yn", "N"));
+	course.item("pass_yn", f.get("pass_yn", "N"));
 	//새로 추가 Start
 		//course.item("cert_course2_yn", f.get("cert_course2_yn", "N"));
 		//course.item("cert_complete2_yn", f.get("cert_complete2_yn", "N"));

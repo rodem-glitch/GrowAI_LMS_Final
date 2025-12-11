@@ -540,6 +540,8 @@ public class CourseUserDao extends DataObject {
 		double progress = cuinfo.d("progress_ratio");
 		double totalScore = cuinfo.d("total_score");
 
+		boolean usePass = cinfo.b("pass_yn");
+
 		boolean meetProgComplete = progress >= cinfo.d("complete_limit_progress");
 		boolean meetProgPass = progress >= cinfo.d("limit_progress");
 
@@ -548,7 +550,7 @@ public class CourseUserDao extends DataObject {
 		boolean meetScorePass = cinfo.i("limit_total_score") == 0
 			|| totalScore >= cinfo.d("limit_total_score");
 
-		if(meetProgPass && meetScorePass && meetModulePass) return "P"; //합격
+		if(usePass && meetProgPass && meetScorePass && meetModulePass) return "P"; //합격
 		if(meetProgComplete && meetScoreComplete) return "C"; //수료
 		return "F"; //미수료
 	}
@@ -585,6 +587,7 @@ public class CourseUserDao extends DataObject {
 			+ ", c.assign_survey_yn, c.limit_progress, c.limit_exam, c.limit_homework, c.limit_forum, c.limit_etc, c.limit_total_score, c.complete_auto_yn "
 			+ ", c.complete_limit_progress, c.complete_limit_total_score "
 			+ ", c.year, c.step, c.course_type, c.complete_no_yn, c.complete_prefix, c.postfix_cnt, c.postfix_type, c.postfix_ord "
+			+ ", c.pass_yn "
 			+ " FROM " + this.table + " a "
 			+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 			+ " WHERE a.id = " + id + " "
@@ -624,7 +627,7 @@ public class CourseUserDao extends DataObject {
 		String failStr = "F".equals(status) ? getFailReason(info, info) : "";
 
 		item("complete_status", status);
-		item("complete_yn", "P".equals(status) ? "Y" : "N");
+		item("complete_yn", "F".equals(status) ? "N" : "Y");
 
 		String compNo = Malgn.time("yyyy", completeDate) + "-" + id;
 		if("Y".equals(info.s("complete_no_yn"))) {
@@ -656,6 +659,7 @@ public class CourseUserDao extends DataObject {
 			+ ", c.assign_survey_yn, c.limit_progress, c.limit_exam, c.limit_homework, c.limit_forum, c.limit_etc, c.limit_total_score, c.complete_auto_yn "
 			+ ", c.complete_limit_progress, c.complete_limit_total_score "
 			+ ", c.year, c.step, c.complete_no_yn, c.complete_prefix, c.postfix_cnt, c.postfix_type, c.postfix_ord  "
+			+ ", c.pass_yn "
 			+ " FROM " + this.table + " a "
 			+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 			+ " WHERE a.id = " + id + " AND a.close_yn != 'Y' "
@@ -706,7 +710,7 @@ public class CourseUserDao extends DataObject {
 
 		if(!"Y".equals(endYn) && info.b("complete_auto_yn") && "P".equals(status)) {
 			item("complete_status", status);
-			item("complete_yn", "P".equals(status) ? "Y" : "N");
+			item("complete_yn", "F".equals(status) ? "N" : "Y");
 			item("complete_no", compNo);
 			item("complete_date", Malgn.time("yyyyMMddHHmmss"));
 			item("fail_reason", failStr);
@@ -714,7 +718,7 @@ public class CourseUserDao extends DataObject {
 		} else if("Y".equals(endYn)) {
 			item("close_yn", "Y");
 			item("complete_status", status);
-			item("complete_yn", "P".equals(status) ? "Y" : "N");
+			item("complete_yn", "F".equals(status) ? "N" : "Y");
 			item("complete_no", compNo);
 			item("complete_date", Malgn.time("yyyyMMddHHmmss"));
 			item("close_date", Malgn.time("yyyyMMddHHmmss"));

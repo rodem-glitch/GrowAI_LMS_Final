@@ -53,6 +53,7 @@ f.addElement("mobile_yn", "Y", "hname:'모바일 지원여부'");
 //f.addElement("evaluation_yn", "N", "hname:'수료기준 노출여부'");
 //f.addElement("top_yn", "N", "hname:'상시 상위고정'");
 f.addElement("recomm_yn", null, "hname:'추천과정'");
+f.addElement("pass_yn", "N", "hname:'합격 상태 사용여부'");
 
 f.addElement("subtitle", null, "hname:'과정목록 소개문구'");
 f.addElement("content1", null, "hname:'텍스트1', allowiframe:'Y', allowhtml:'Y'");
@@ -138,6 +139,7 @@ if(m.isPost() && f.validate()) {
 
 	course.item("lesson_day", f.getInt("lesson_day"));
 	course.item("lesson_time", f.getDouble("lesson_time"));
+	course.item("pass_yn", f.get("pass_yn", "N"));
 
 	boolean isUpload = false;
 	if(null != f.getFileName("course_file")) {
@@ -254,6 +256,7 @@ p.setBody("course.course_insert");
 p.setVar("query", m.qs());
 p.setVar("list_query", m.qs("id"));
 p.setVar("form_script", f.getScript());
+p.setVar("pass_yn", f.get("pass_yn", "N"));
 
 p.setLoop("status_list", m.arr2loop(course.statusList));
 p.setLoop("taxfree_yn", m.arr2loop(course.taxfreeYn));
