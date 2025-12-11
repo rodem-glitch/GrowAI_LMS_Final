@@ -1,0 +1,19 @@
+SMAP
+_readtest__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+board/../init.jsp
++ 2 init.jsp
+board/init.jsp
++ 3 readtest.jsp
+board/readtest.jsp
+*L
+1#1,298:59
+1#2:357,2
+1#2:359,31
+32#2:389
+1#3,42:390
+42#3:432
+*E

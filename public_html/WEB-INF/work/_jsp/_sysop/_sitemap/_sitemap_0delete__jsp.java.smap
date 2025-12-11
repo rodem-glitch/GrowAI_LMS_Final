@@ -1,0 +1,17 @@
+SMAP
+_sitemap_0delete__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/sitemap/../init.jsp
++ 2 init.jsp
+sysop/sitemap/init.jsp
++ 3 sitemap_delete.jsp
+sysop/sitemap/sitemap_delete.jsp
+*L
+1#1,227:59
+1#2,6:286
+1#3,34:292
+34#3:326
+*E

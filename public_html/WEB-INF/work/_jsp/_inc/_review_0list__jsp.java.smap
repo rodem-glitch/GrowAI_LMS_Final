@@ -1,0 +1,19 @@
+SMAP
+_review_0list__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+inc/../init.jsp
++ 2 init.jsp
+inc/init.jsp
++ 3 review_list.jsp
+inc/review_list.jsp
+*L
+1#1,298:59
+1#2:357,2
+1#2:359,4
+5#2:362
+1#3,42:363
+42#3:405
+*E

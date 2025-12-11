@@ -1,0 +1,53 @@
+<!--@include(layout/header.html)-->
+<body>
+	<div id="wrap">
+		<!--@execute(/inc/top_v5.jsp)-->
+		<div id="container" class="">
+			<div class="main_wrap">
+				<div class="left_area lnb03">
+					<h3 class="hide">lnb영역</h3>
+					<h3 class="lnb_title"><a href="/course/course_list.jsp?cid=133" target="_self">폴리텍 콘텐츠(95)</a></h3>
+					<ul id="lnb" class="lnb_list" data-code="course">
+						<!--<li id="lnb_" class="on"><a href="/course/course_list.jsp" target="_self">전체</a></li>-->
+                        <li id="lnb_M1"><a href="/course/course_list.jsp?cid=158" target="_self">기계(6)</a></li>
+                        <li id="lnb_M2"><a href="/course/course_list.jsp?cid=159" target="_self">기계설계(3)</a></li>
+                        <li id="lnb_M3"><a href="/course/course_list.jsp?cid=160" target="_self">금형(0)</a></li>
+                        <li id="lnb_M3"><a href="/course/course_list.jsp?cid=161" target="_self">전기(8)</a></li>
+                        <li id="lnb_M3"><a href="/course/course_list.jsp?cid=162" target="_self">전자(10)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=141" target="_self">정보통신 IT(13)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=164" target="_self">자동화(4)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=165" target="_self">자동차(4)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=166" target="_self">신소재(1)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=163" target="_self">산업설비(7)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=167" target="_self">미디어(5)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=143" target="_self">디자인(6)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=142" target="_self">바이오(5)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=168" target="_self">섬유패션(4)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=169" target="_self">개별특성화(3)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=140" target="_self">교양(8)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=170" target="_self">반도체(6)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=171" target="_self">로봇(0)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=172" target="_self">항공(0)</a></li>
+						<li id="lnb_M3"><a href="/course/course_list.jsp?cid=144" target="_self">기타(2)</a></li>
+                        <!--<li id="lnb_Pre"><a href="/course/course_list.jsp?cid=135" target="_self">Pre College</a></li>-->
+					</ul>
+					
+				</div>
+				<!--@include(BODY)-->
+			</div>
+		</div>
+		<!--@execute(/inc/footer.jsp)-->
+	</div>
+<script>
+$(document).ready(function() {
+	if("{{subject}}") {
+		$("#lnb > li").removeClass("on");
+		$('#lnb_{{subject}}').addClass('on');
+	} else {
+		$("#lnb > li").removeClass("on");
+		$('#lnb_').addClass('on');
+	}
+});
+</script>
+</body>
+</html>

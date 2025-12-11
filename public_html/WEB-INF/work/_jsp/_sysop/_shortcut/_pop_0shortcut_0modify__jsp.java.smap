@@ -1,0 +1,17 @@
+SMAP
+_pop_0shortcut_0modify__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/shortcut/../init.jsp
++ 2 init.jsp
+sysop/shortcut/init.jsp
++ 3 pop_shortcut_modify.jsp
+sysop/shortcut/pop_shortcut_modify.jsp
+*L
+1#1,221:60
+1#2,5:281
+1#3,63:286
+63#3:349
+*E

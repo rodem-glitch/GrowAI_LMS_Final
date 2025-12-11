@@ -1,0 +1,17 @@
+SMAP
+_pop_0mail__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/mail/../init.jsp
++ 2 init.jsp
+sysop/mail/init.jsp
++ 3 pop_mail.jsp
+sysop/mail/pop_mail.jsp
+*L
+1#1,221:59
+1#2,7:280
+1#3,149:287
+149#3:436
+*E

@@ -1,0 +1,14 @@
+SMAP
+_attach__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/webtv/../init.jsp
++ 2 attach.jsp
+sysop/webtv/attach.jsp
+*L
+1#1,221:59
+1#2,105:280
+105#2:385
+*E

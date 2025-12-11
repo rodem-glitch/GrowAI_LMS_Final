@@ -1,0 +1,14 @@
+SMAP
+_webtv_0log__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/webtv/../init.jsp
++ 2 webtv_log.jsp
+sysop/webtv/webtv_log.jsp
+*L
+1#1,221:59
+1#2,127:280
+127#2:407
+*E

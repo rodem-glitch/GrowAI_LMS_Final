@@ -1,0 +1,14 @@
+SMAP
+_forum_0insert__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/forum/../init.jsp
++ 2 forum_insert.jsp
+sysop/forum/forum_insert.jsp
+*L
+1#1,231:59
+1#2,59:290
+59#2:349
+*E

@@ -1,0 +1,19 @@
+SMAP
+_kollus_0list__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/video/init.jsp
++ 2 init.jsp
+sysop/video/../init.jsp
++ 3 kollus_list.jsp
+sysop/video/kollus_list.jsp
+*L
+5#1,42:27
+46#1:69,39
+1#2,233:107
+1#1,5:340
+1#3,204:345
+204#3:549
+*E

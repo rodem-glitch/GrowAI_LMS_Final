@@ -1,0 +1,31 @@
+# IDE / IntelliJ
+.idea/
+*.iml
+out/
+
+# OS
+.DS_Store
+
+# Logs
+var/log/
+*.log
+logs/
+log/
+
+# Java build artifacts
+*.class
+*.war
+*.ear
+
+# Web app build / temp
+WEB-INF/classes/
+WEB-INF/tmp/
+public_html/WEB-INF/classes/
+public_html/WEB-INF/tmp/
+tmp/
+*.tmp
+
+# Editor backups
+*.swp
+*.swo
+*~

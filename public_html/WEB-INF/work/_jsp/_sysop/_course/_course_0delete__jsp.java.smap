@@ -1,0 +1,17 @@
+SMAP
+_course_0delete__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/course/../init.jsp
++ 2 init.jsp
+sysop/course/init.jsp
++ 3 course_delete.jsp
+sysop/course/course_delete.jsp
+*L
+1#1,231:59
+1#2,10:290
+1#3,59:300
+59#3:359
+*E

@@ -1,0 +1,17 @@
+SMAP
+_template_0list__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/mail/../init.jsp
++ 2 init.jsp
+sysop/mail/init.jsp
++ 3 template_list.jsp
+sysop/mail/template_list.jsp
+*L
+1#1,227:59
+1#2,7:286
+1#3,58:293
+58#3:351
+*E

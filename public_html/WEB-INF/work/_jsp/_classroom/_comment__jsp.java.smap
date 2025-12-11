@@ -1,0 +1,15 @@
+SMAP
+_comment__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+classroom/../init.jsp
++ 2 comment.jsp
+classroom/comment.jsp
+*L
+1#1,298:59
+1#2:357,2
+1#2:359,150
+151#2:508,2
+*E

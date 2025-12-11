@@ -1,0 +1,14 @@
+SMAP
+_mainpage_0list__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/design/../init.jsp
++ 2 mainpage_list.jsp
+sysop/design/mainpage_list.jsp
+*L
+1#1,231:59
+1#2,43:290
+43#2:333
+*E

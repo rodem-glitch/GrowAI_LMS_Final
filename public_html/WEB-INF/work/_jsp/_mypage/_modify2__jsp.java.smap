@@ -1,0 +1,19 @@
+SMAP
+_modify2__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+mypage/../init.jsp
++ 2 init.jsp
+mypage/init.jsp
++ 3 modify2.jsp
+mypage/modify2.jsp
+*L
+1#1,306:60
+1#2:366,2
+1#2:368,14
+15#2:381
+1#3,306:382
+306#3:688
+*E

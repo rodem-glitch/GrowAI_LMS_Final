@@ -1,0 +1,19 @@
+SMAP
+_modify_0verify__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+mypage/../init.jsp
++ 2 init.jsp
+mypage/init.jsp
++ 3 modify_verify.jsp
+mypage/modify_verify.jsp
+*L
+1#1,306:60
+1#2:366,2
+1#2:368,14
+15#2:381
+1#3,36:382
+36#3:418
+*E

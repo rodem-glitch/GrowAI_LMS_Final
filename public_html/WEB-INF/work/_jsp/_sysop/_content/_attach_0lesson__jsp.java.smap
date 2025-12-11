@@ -1,0 +1,14 @@
+SMAP
+_attach_0lesson__jsp.java
+JSP
+*S JSP
+*F
++ 1 init.jsp
+sysop/content/../init.jsp
++ 2 attach_lesson.jsp
+sysop/content/attach_lesson.jsp
+*L
+1#1,233:59
+1#2,117:292
+117#2:409
+*E
