@@ -3,6 +3,7 @@
 //기본키
 int id = m.ri("cuid");
 if(id == 0) { m.jsErrClose("기본키는 반드시 지정해야 합니다."); return; }
+String certType = m.rs("type");
 
 //객체
 CourseDao course = new CourseDao();
@@ -37,6 +38,7 @@ DataSet info = courseUser.query(
 		+ " ON a.user_id = c.id " + (deptManagerBlock ? " AND c.dept_id IN (" + userDept.getSubIdx(siteId, userDeptId) + ") " : "") + " AND c.status != -1 "
 	+ " LEFT JOIN " + userDept.table + " d ON c.dept_id = d.id "
 	+ " WHERE a.id = " + id + " AND a.complete_yn = 'Y' AND a.status IN (1, 3) "
+	+ ("P".equals(certType) ? " AND a.complete_status = 'P' " : ("C".equals(certType) ? " AND a.complete_status = 'C' " : " AND a.complete_status IN ('C','P') "))
 	+ ("C".equals(userKind) ? " AND a.course_id IN (" + manageCourses + ") " : "")
 );
 if(!info.next()) { m.jsErrClose("해당 정보가 없습니다."); return; }
@@ -124,6 +126,7 @@ p.setLoop("tutors", tutors);
 p.setLoop("files", files);
 
 p.setVar("single_block", true);
+p.setVar("cert_title", "P".equals(certType) ? "합격증" : "수료증");
 String tbody = certificateTemplate.fetchTemplate(siteId, ctinfo.s("template_cd"), p);
 
 out.print(tbody);

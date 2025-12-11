@@ -306,6 +306,7 @@ addEvent("onload", function() {
 
 	<td class="l_th01"><span class="l_sort01" id="CL_a.complete_status" onclick="ListSort(this, '{{ord}}')">결과상태</span></td>
 	<!--@if(course.cert_complete_yn)--><td class="l_th01">수료증</td><!--/if(course.cert_complete_yn)-->
+	<!--@if(pass_block)--><td class="l_th01">합격증</td><!--/if(pass_block)-->
 	<td class="l_th01"><span class="l_sort01" id="CL_a.close_yn" onclick="ListSort(this, '{{ord}}')">상태</span></td>
 
 
@@ -356,7 +357,7 @@ addEvent("onload", function() {
 	</td>
 	<!--@if(course.cert_complete_yn)-->
 	<td class="l_td01" style="line-height:20px;">
-		<!--@if(list.complete_yn)-->
+		<!--@if(list.complete_only_block)-->
 		<a href="#" id="cno_{{list.id}}" onclick="OpenLayer('complete_no.jsp?cuid={{list.id}}', 'complete_no', '400', '200')">{{list.complete_no}}</a>
 		<!--@if(template_block)-->
 		<input type="button" class="btn_simp" value="수료증" onclick="OpenWindow('certificate_template.jsp?cuid={{list.id}}', '_CC01', '650', '950')">
@@ -364,10 +365,24 @@ addEvent("onload", function() {
 		<!--@nif(template_block)-->
 		<input type="button" class="btn_simp" value="수료증" onclick="OpenWindow('certificate.jsp?cuid={{list.id}}', '_CC01', '650', '950')">
 		<!--/nif(template_block)-->
-		<!--/if(list.complete_yn)-->
-		<!--@nif(list.complete_yn)-->-<!--/nif(list.complete_yn)-->
+		<!--/if(list.complete_only_block)-->
+		<!--@nif(list.complete_only_block)-->-<!--/nif(list.complete_only_block)-->
 	</td>
 	<!--/if(course.cert_complete_yn)-->
+	<!--@if(pass_block)-->
+	<td class="l_td01" style="line-height:20px;">
+		<!--@if(list.pass_block)-->
+		<a href="#" id="pno_{{list.id}}" onclick="OpenLayer('complete_no.jsp?cuid={{list.id}}', 'complete_no', '400', '200')">{{list.complete_no}}</a>
+		<!--@if(template_block)-->
+		<input type="button" class="btn_simp" value="합격증" onclick="OpenWindow('certificate_template.jsp?cuid={{list.id}}&type=P', '_CP01', '650', '950')">
+		<!--/if(template_block)-->
+		<!--@nif(template_block)-->
+		<input type="button" class="btn_simp" value="합격증" onclick="OpenWindow('certificate.jsp?cuid={{list.id}}&type=P', '_CP01', '650', '950')">
+		<!--/nif(template_block)-->
+		<!--/if(list.pass_block)-->
+		<!--@nif(list.pass_block)-->-<!--/nif(list.pass_block)-->
+	</td>
+	<!--/if(pass_block)-->
 	<td class="l_td01">{{list.close_conv}}</td>
 	<td class="l_td01"><input type="checkbox" name="idx" value="{{list.id}}"/></td>
 </tr>

@@ -248,6 +248,8 @@ while(list.next()) {
 
 	//list.put("certificate_block", "Y".equals(list.s("complete_yn")) && "Y".equals(list.s("close_yn")));
 	list.put("certificate_block", "Y".equals(list.s("complete_yn")));
+	list.put("pass_block", "P".equals(list.s("complete_status")) && list.b("complete_yn"));
+	list.put("complete_only_block", "C".equals(list.s("complete_status")) && list.b("complete_yn"));
 
 	user.maskInfo(list);
 }
@@ -277,6 +279,7 @@ p.setVar("list_total", lm.getTotalString());
 p.setVar("pagebar", lm.getPaging());
 p.setVar("template_block", 0 < cinfo.i("cert_template_id"));
 p.setVar("cert_block", "Y".equals(cinfo.s("cert_complete_yn")));
+p.setVar("pass_block", "Y".equals(cinfo.s("pass_yn")));
 p.setVar("reorder_block", "Y".equals(cinfo.s("complete_no_yn")));
 p.setVar("SITE_CONFIG", SiteConfig.getArr("user_etc_"));
 p.setVar("course", cinfo);
