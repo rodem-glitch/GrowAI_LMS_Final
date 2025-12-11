@@ -1,5 +1,7 @@
 <%@ page import="java.util.*,java.io.*,dao.*,malgnsoft.db.*,malgnsoft.util.*" %><%
 
+request.setCharacterEncoding("UTF-8");
+
 String docRoot = Config.getDocRoot();
 String jndi = Config.getJndi();
 String tplRoot = Config.getDocRoot() + "/sysop/html";

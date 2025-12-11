@@ -1,6 +1,6 @@
 <%@ page import="java.util.*,java.io.*,dao.*,malgnsoft.db.*,malgnsoft.util.*" %><%
 
-//request.setCharacterEncoding("utf-8");
+request.setCharacterEncoding("UTF-8");
 
 final String BUILDVERSION = "24.02.01";
 
