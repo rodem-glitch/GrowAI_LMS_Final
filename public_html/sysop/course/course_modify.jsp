@@ -201,7 +201,8 @@ f.addElement("status", info.s("status"), "hname:'상태'");
 		f.addElement("complete_limit_total_score", info.i("complete_limit_total_score"), "hname:'총점 수료(완료) 기준', option:'number', required:'Y'");
 	f.addElement("push_survey_yn", info.s("push_survey_yn"), "hname:'설문참여 독려여부'");
 
-	f.addElement("cert_template_id", info.i("cert_template_id"), "hname:'수료증 템플릿'");
+f.addElement("cert_template_id", info.i("cert_template_id"), "hname:'수료증 템플릿'");
+f.addElement("pass_cert_template_id", info.i("pass_cert_template_id"), "hname:'합격증 템플릿'");
 	f.addElement("complete_prefix", info.s("complete_prefix"), "hname:'수료번호'");
 	f.addElement("complete_no_yn", info.s("complete_no_yn"), "hname:'수료번호 사용여부'");
 	f.addElement("postfix_cnt", info.i("postfix_cnt"), "hname:'수료번호 뒷자리수'");
@@ -402,6 +403,7 @@ if(m.isPost() && f.validate()) {
 		course.item("complete_limit_progress", f.getInt("complete_limit_progress"));
 		course.item("complete_limit_total_score", f.getInt("complete_limit_total_score"));
 		course.item("cert_template_id", f.getInt("cert_template_id"));
+		course.item("pass_cert_template_id", f.getInt("pass_cert_template_id"));
 		course.item("complete_prefix", f.get("complete_prefix"));
 		course.item("complete_no_yn", f.get("complete_no_yn"));
 		course.item("postfix_cnt", f.getInt("postfix_cnt"));
@@ -666,7 +668,8 @@ p.setLoop("taxfree_yn", m.arr2loop(course.taxfreeYn));
 p.setLoop("status_list", m.arr2loop(course.statusList));
 p.setVar("template_block", "Y".equals(siteconfig.s("cert_template_yn")));
 p.setVar("playrate_block", usePlayrate);
-p.setLoop("template_list", certificateTemplate.getList(siteId));
+p.setLoop("template_list", certificateTemplate.getList(siteId, "C"));
+p.setLoop("pass_template_list", certificateTemplate.getList(siteId, "P"));
 p.setLoop("pf_types", m.arr2loop(course.postfixType));
 p.setLoop("pf_ord_list", m.arr2loop(course.postfixOrd));
 

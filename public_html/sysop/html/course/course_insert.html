@@ -1022,6 +1022,18 @@
 			<span class="desc01">수료증에 사용할 템플릿을 설정합니다. 지정하지 않으면 기본 수료증 양식을 사용합니다.</span>
 		</td>
 	</tr>
+	<tr>
+		<td class="f_th01">합격증 템플릿</td>
+		<td class="f_td01" colspan="3">
+			<select name="pass_cert_template_id">
+				<option value=""> - 사용하지않음 - </option>
+				<!--@loop(pass_template_list)-->
+				<option value="{{pass_template_list.id}}"> {{pass_template_list.template_nm}} </option>
+				<!--/loop(pass_template_list)-->
+			</select>
+			<span class="desc01">합격증에 사용할 템플릿을 설정합니다. 지정하지 않으면 기본 합격증 양식을 사용합니다.</span>
+		</td>
+	</tr>
 	<!--/if(template_block)-->
 	<tr>
 		<td class="f_th01">수료번호 사용여부</td>

@@ -39,7 +39,7 @@ FileDao file = new FileDao();
 //정보
 //courseUser.d(out);
 DataSet list = courseUser.query(
-	" SELECT a.*, b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.etc1 course_etc1, b.etc2 course_etc2 "
+	" SELECT a.*, b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id, b.pass_cert_template_id, b.etc1 course_etc1, b.etc2 course_etc2 "
 		+ " , c.login_id, c.dept_id, c.user_nm, c.birthday, c.zipcode, c.new_addr, c.addr_dtl, c.email, c.gender, c.etc1, c.etc2, c.etc3, c.etc4, c.etc5 "
 		+ " , d.dept_nm, o.pay_date, oi.pay_price, oi.refund_price "
 		+ " , (SELECT COUNT(*) FROM " + courseLesson.table + " WHERE course_id = a.course_id AND status = 1) lesson_cnt "
@@ -53,6 +53,15 @@ DataSet list = courseUser.query(
 		+ " AND a.user_id = " + userId + " AND a.status IN (1, 3) "
 );
 if(0 == list.size()) { m.jsErrClose(_message.get("alert.course_user.nodata_complete")); return; }
+
+//템플릿 사용여부 이동
+if(isSingle) {
+	list.first();
+	if(list.next()) {
+		int targetTemplateId = "P".equals(type) ? list.i("pass_cert_template_id") : list.i("cert_template_id");
+		if(targetTemplateId > 0) { m.jsReplace("certificate_template.jsp?" + m.qs()); return; }
+	}
+}
 
 //포맷팅
 while(list.next()) {

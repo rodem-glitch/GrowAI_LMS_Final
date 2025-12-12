@@ -24,7 +24,7 @@ FileDao file = new FileDao();
 //목록
 DataSet info = courseUser.query(
 	" SELECT a.*"
-	+ ", b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id "
+	+ ", b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id, b.pass_cert_template_id "
 	+ ", b.etc1 course_etc1, b.etc2 course_etc2 "
 	+ " , c.login_id, c.dept_id, c.user_nm, c.birthday, c.zipcode, c.new_addr, c.addr_dtl, c.gender, c.etc1, c.etc2, c.etc3, c.etc4, c.etc5 "
 	+ " , d.dept_nm, o.pay_date, oi.pay_price, oi.refund_price "
@@ -43,7 +43,8 @@ DataSet info = courseUser.query(
 if(!info.next()) { m.jsErrClose("해당 정보가 없습니다."); return; }
 
 //이동
-if(0 < info.i("cert_template_id")) { m.jsReplace("certificate_template.jsp?" + m.qs()); return; }
+int targetTemplateId = "P".equals(certType) ? info.i("pass_cert_template_id") : info.i("cert_template_id");
+if(0 < targetTemplateId) { m.jsReplace("certificate_template.jsp?" + m.qs()); return; }
 
 //포맷팅
 if(0 < info.i("dept_id")) {

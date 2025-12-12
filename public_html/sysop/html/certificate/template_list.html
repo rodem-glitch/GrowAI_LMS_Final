@@ -2,6 +2,7 @@
 <input type="hidden" name="tab" value="{{tab}}">
 <input type="hidden" name="ord" value="{{ord}}">
 <input type="hidden" name="mode" value="">
+<input type="hidden" name="type" value="{{template_type}}">
 
 <table class="t_tb01" cellpadding="0" cellspacing="0">
     <col width="120"><col>
@@ -33,7 +34,7 @@
         <td class="a_th01">{{list_total}}</td>
         <td class="a_td01">
             <button type="button" class="bttn2" onclick="document.forms['form1']['mode'].value='excel';document.forms['form1'].submit();document.forms['form1']['mode'].value='';">EXCEL</button>
-            <button type="button" class="bttn2 sky" onclick="location.href='template_insert.jsp?{{list_query}}';">등록</button>
+            <button type="button" class="bttn2 sky" onclick="location.href='template_insert.jsp?type={{template_type}}&{{list_query}}';">등록</button>
         </td>
     </tr>
 </table>
@@ -62,7 +63,7 @@
     <tr class="l_tr_{{list.ROW_CLASS}}" align="center">
         <td class="l_td01">{{list.id}}</td>
         <td class="l_td01">{{list.template_cd}}</td>
-        <td class="l_td01" align="left"><a href="template_modify.jsp?id={{list.id}}&{{list_query}}">{{list.template_nm_conv}}</a></td>
+        <td class="l_td01" align="left"><a href="template_modify.jsp?id={{list.id}}&type={{template_type}}&{{list_query}}">{{list.template_nm_conv}}</a></td>
         <td class="l_td01">{{list.reg_date_conv}}</td>
         <td class="l_td01">{{list.status_conv}}</td>
     </tr>

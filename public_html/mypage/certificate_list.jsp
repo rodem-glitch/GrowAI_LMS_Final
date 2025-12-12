@@ -10,6 +10,7 @@ String type = m.rs("type");
 String today = m.time("yyyyMMdd");
 boolean isCertCourse = false;
 boolean isCertComplete = false;
+boolean isPassComplete = false;
 
 //목록
 ListManager lm = new ListManager();
@@ -21,7 +22,7 @@ lm.setTable(
 	+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 	+ " LEFT JOIN " + category.table + " ct ON c.category_id = ct.id AND ct.module = 'course' AND ct.status = 1 "
 );
-lm.setFields("a.*, c.course_nm, c.course_type, c.onoff_type, c.cert_course_yn, c.cert_complete_yn, c.credit, c.cert_template_id, ct.category_nm");
+lm.setFields("a.*, c.course_nm, c.course_type, c.onoff_type, c.cert_course_yn, c.cert_complete_yn, c.pass_yn, c.credit, c.cert_template_id, c.pass_cert_template_id, ct.category_nm");
 if(!"".equals(type)) lm.addWhere("c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N'");
 lm.addWhere("a.status = 1");
 lm.addWhere("a.site_id = " + siteId + "");
@@ -41,8 +42,11 @@ while(list.next()) {
 	list.put("type_conv", m.getValue(list.s("onoff_type"), course.onoffTypesMsg));
 	list.put("ready_block", 0 > m.diffDate("D", list.s("start_date"), today));
 	list.put("template_block", 0 < list.i("cert_template_id"));
+	list.put("pass_template_block", 0 < list.i("pass_cert_template_id"));
+	list.put("pass_cert_block", list.b("complete_yn") && "P".equals(list.s("complete_status")));
 	if(!isCertCourse && list.b("cert_course_yn")) isCertCourse = true;
 	if(!isCertComplete && list.b("cert_complete_yn")) isCertComplete = true;
+	if(!isPassComplete && "Y".equals(list.s("pass_yn"))) isPassComplete = true;
 }
 
 
@@ -60,6 +64,7 @@ p.setVar("pagebar", lm.getPaging());
 
 p.setVar("cert_course_block", isCertCourse);
 p.setVar("cert_complete_block", isCertComplete);
+p.setVar("pass_complete_block", isPassComplete);
 p.setVar("LNB_CERTIFICATE", "select");
 p.display();
 

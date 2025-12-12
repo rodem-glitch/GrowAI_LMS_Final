@@ -3,6 +3,7 @@
 //기본키
 int cid = m.ri("cid");
 if(cid == 0) { m.jsErrClose("기본키는 반드시 지정해야 합니다."); return; }
+String certType = m.rs("type");
 
 //객체
 CourseDao course = new CourseDao();
@@ -24,7 +25,7 @@ FileDao file = new FileDao();
 
 //정보
 DataSet list = courseUser.query(
-    " SELECT a.*, b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id, b.etc1 course_etc1, b.etc2 course_etc2 "
+    " SELECT a.*, b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id, b.pass_cert_template_id, b.etc1 course_etc1, b.etc2 course_etc2 "
     + " , c.login_id, c.dept_id, c.user_nm, c.birthday, c.zipcode, c.new_addr, c.addr_dtl, c.gender, c.etc1, c.etc2, c.etc3, c.etc4, c.etc5 "
     + " , d.dept_nm, o.pay_date, oi.pay_price, oi.refund_price "
     + " , (SELECT COUNT(*) FROM " + courseLesson.table + " WHERE course_id = a.course_id AND status = 1) lesson_cnt "
@@ -35,18 +36,21 @@ DataSet list = courseUser.query(
     + " INNER JOIN " + user.table + " c ON a.user_id = c.id " + (deptManagerBlock ? " AND c.dept_id IN (" + userDept.getSubIdx(siteId, userDeptId) + ") " : "") + " AND c.status != -1 "
     + " LEFT JOIN " + userDept.table + " d ON c.dept_id = d.id "
     + " WHERE a.course_id = " + cid + " AND a.complete_yn = 'Y' AND a.status IN (1, 3) "
+    + ("P".equals(certType) ? " AND a.complete_status = 'P' " : ("C".equals(certType) ? " AND a.complete_status = 'C' " : " AND a.complete_status IN ('C','P') "))
     + ("C".equals(userKind) ? " AND a.course_id IN (" + manageCourses + ") " : "")
 );
-if(0 == list.size()) { m.jsErrClose("수료증 정보가 없습니다."); return; }
+if(0 == list.size()) { m.jsErrClose(("P".equals(certType) ? "합격증" : "수료증") + " 정보가 없습니다."); return; }
 
 DataSet cinfo = course.find("id = ? AND site_id = ? AND status != ? ", new Object[] { cid, siteId, -1 });
 if(!cinfo.next()) { m.jsErrClose("해당 과정 정보가 없습니다."); return; }
 
 //이동
-if(0 == cinfo.i("cert_template_id")) { m.jsReplace("certificate_template.jsp?" + m.qs()); return; }
+int targetTemplateId = "P".equals(certType) ? cinfo.i("pass_cert_template_id") : cinfo.i("cert_template_id");
+if(0 == targetTemplateId) { m.jsReplace("certificate_template.jsp?" + m.qs()); return; }
 
 //정보
-DataSet ctinfo = certificateTemplate.find("id = " + cinfo.i("cert_template_id") + " AND site_id = " + siteId + " AND status != -1");
+String templateTypeFilter = "P".equals(certType) ? "P" : "C";
+DataSet ctinfo = certificateTemplate.find("id = " + targetTemplateId + " AND template_type = '" + templateTypeFilter + "' AND site_id = " + siteId + " AND status != -1");
 if(!ctinfo.next()) { m.jsErrClose("해당 수료증템플릿 정보가 없습니다."); return; }
 
 //포맷팅
@@ -116,12 +120,14 @@ while(list.next()) {
     list.put(".files", files);
 }
 
-m.jsAlert("총 " + list.size() + "장의 수료증을 출력합니다.");
+String certTitle = "P".equals(certType) ? "합격증" : "수료증";
+m.jsAlert("총 " + list.size() + "장의 " + certTitle + "을 출력합니다.");
 
 //출력
 p.setLoop("list", list);
 p.setVar("certificate_file_url", (!"/data".equals(Config.getDataUrl()) ? "" : siteDomain) + m.getUploadUrl(ctinfo.s("background_file")));
 p.setVar("single_block", true);
+p.setVar("cert_title", certTitle);
 String tbody = certificateTemplate.fetchTemplate(siteId, ctinfo.s("template_cd"), p);
 
 out.print(tbody);

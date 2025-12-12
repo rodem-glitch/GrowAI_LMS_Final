@@ -12,6 +12,7 @@ CourseModuleDao courseModule = new CourseModuleDao();
 CourseBookDao courseBook = new CourseBookDao();
 CourseTutorDao courseTutor = new CourseTutorDao();
 CourseTargetDao courseTarget = new CourseTargetDao();
+CertificateTemplateDao certificateTemplate = new CertificateTemplateDao();
 
 BookDao book = new BookDao();
 UserDao user = new UserDao();
@@ -19,6 +20,7 @@ TutorDao tutor = new TutorDao();
 GroupDao group = new GroupDao();
 
 MCal mcal = new MCal(); mcal.yearRange = 10;
+DataSet siteconfig = SiteConfig.getArr(new String[] {"cert_template_yn"});
 
 //폼체크
 f.addElement("onoff_type", "N", "hname:'과정 구분', required:'Y'");
@@ -54,6 +56,8 @@ f.addElement("mobile_yn", "Y", "hname:'모바일 지원여부'");
 //f.addElement("top_yn", "N", "hname:'상시 상위고정'");
 f.addElement("recomm_yn", null, "hname:'추천과정'");
 f.addElement("pass_yn", "N", "hname:'합격 상태 사용여부'");
+f.addElement("cert_template_id", 0, "hname:'수료증 템플릿'");
+f.addElement("pass_cert_template_id", 0, "hname:'합격증 템플릿'");
 
 f.addElement("subtitle", null, "hname:'과정목록 소개문구'");
 f.addElement("content1", null, "hname:'텍스트1', allowiframe:'Y', allowhtml:'Y'");
@@ -214,6 +218,8 @@ if(m.isPost() && f.validate()) {
 	course.item("review_yn", "Y");
 	course.item("cert_course_yn", "N");
 	course.item("cert_complete_yn", "Y");
+	course.item("cert_template_id", f.getInt("cert_template_id"));
+	course.item("pass_cert_template_id", f.getInt("pass_cert_template_id"));
 
 	course.item("etc1", f.get("etc1"));
 	course.item("etc2", f.get("etc2"));
@@ -270,6 +276,9 @@ p.setLoop("terms", m.arr2loop(course.terms));
 p.setLoop("subjects", m.arr2loop(course.subjects));
 
 p.setVar("year", m.time("yyyy"));
+p.setVar("template_block", "Y".equals(siteconfig.s("cert_template_yn")));
+p.setLoop("template_list", certificateTemplate.getList(siteId, "C"));
+p.setLoop("pass_template_list", certificateTemplate.getList(siteId, "P"));
 
 p.display();
 

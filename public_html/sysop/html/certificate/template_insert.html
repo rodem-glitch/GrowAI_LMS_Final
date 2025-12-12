@@ -10,18 +10,19 @@
 <script language="javascript" src="/common/js/picker.prototype.js"></script>
 <form name="form1" method="post" target="sysfrm" onsubmit="return goSubmit(this);" enctype="multipart/form-data">
 <input type="hidden" name="id" value="{{id}}">
+<input type="hidden" name="type" value="{{template_type}}">
 <table class="c_tb01" cellpadding="0" cellspacing="0">
     <tr>
-        <td class="c_th01">수료증템플릿<!--@nif(modify)--> 등록<!--/nif(modify)--><!--@if(modify)--> 수정<!--/if(modify)--></td>
+        <td class="c_th01">{{template_title}}템플릿<!--@nif(modify)--> 등록<!--/nif(modify)--><!--@if(modify)--> 수정<!--/if(modify)--></td>
         <td class="c_td01"></td>
     </tr>
 </table>
 
 <div class="reminder01 yellow">
-    <h1>수료증 템플릿 작성 안내</h1>
-    수료증 템플릿 예제로 기본템플릿을 제공하고있습니다.<br>
+    <h1>{{template_title}} 템플릿 작성 안내</h1>
+    {{template_title}} 템플릿 예제로 기본템플릿을 제공하고있습니다.<br>
     해당 템플릿의 내용을 참고하여 템플릿을 작성하시기 바랍니다.<br>
-    <span style="color:#f00;">배경이미지 등록 후 'cer_img' div 태그 안에 'certificate_file_url' 텍스트를 입력해야 수료증을 출력할 때 배경이미지가 정상적으로 나타납니다.</span>
+    <span style="color:#f00;">배경이미지 등록 후 'cer_img' div 태그 안에 'certificate_file_url' 텍스트를 입력해야 {{template_title}}을 출력할 때 배경이미지가 정상적으로 나타납니다.</span>
 </div>
 
 <table class="f_tb01" cellpadding="0" cellspacing="0">

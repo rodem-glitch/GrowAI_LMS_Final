@@ -25,6 +25,12 @@ public class CertificateTemplateDao extends DataObject {
         return this.find("site_id = " + siteId + " AND status = 1", "*", "reg_date DESC");
     }
 
+    public DataSet getList(int siteId, String templateType) {
+        String where = "site_id = " + siteId + " AND status = 1";
+        if(templateType != null && !"".equals(templateType)) where += " AND template_type = '" + templateType + "'";
+        return this.find(where, "*", "reg_date DESC");
+    }
+
     public String getTemplate(int siteId, String templateCd) {
         return this.getOne("SELECT content FROM " + this.table + " WHERE site_id = " + siteId + " AND template_cd = '" + templateCd + "' AND status = 1");
     }

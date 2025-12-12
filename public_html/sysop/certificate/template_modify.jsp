@@ -1,7 +1,11 @@
 <%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
 
+//변수
+String templateType = "P".equals(m.rs("type")) ? "P" : "C";
+
 //접근권한
-if(!Menu.accessible(914, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
+int menuId = "P".equals(templateType) ? 931 : 914;
+if(!Menu.accessible(menuId, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
 
 //객체
 CertificateTemplateDao certificateTemplate = new CertificateTemplateDao();
@@ -18,6 +22,11 @@ DataSet categories = category.getList(siteId);
 //정보
 DataSet info = certificateTemplate.find("id = " + id + " AND site_id = " + siteId + " AND status != -1");
 if(!info.next()) { m.jsError("해당 정보가 없습니다."); return; }
+if(!templateType.equals(info.s("template_type"))) {
+    m.jsAlert("템플릿 유형이 일치하지 않습니다.");
+    m.jsReplace("template_list.jsp?type=" + info.s("template_type"));
+    return;
+}
 info.put("reg_date_conv", m.time("yyyy.MM.dd HH:mm", info.s("reg_date")));
 info.put("status_conv", m.getItem(info.s("status"), certificateTemplate.statusList));
 
@@ -88,7 +97,7 @@ info.put("background_file_conv", m.encode(info.s("background_file")));
 info.put("background_file_url", m.getUploadUrl(info.s("background_file")));
 info.put("background_file_ek", m.encrypt(info.s("background_file") + m.time("yyyyMMdd")));
 
-DataSet clist = course.find(" site_id = ? AND status != ? AND cert_template_id = ? ", new Object[]{ siteId, -1, id });
+DataSet clist = course.find(" site_id = ? AND status != ? AND (cert_template_id = ? OR pass_cert_template_id = ?) ", new Object[]{ siteId, -1, id, id });
 
 while(clist.next()) {
     clist.put("course_nm_conv", m.cutString(clist.s("course_nm"), 80));
@@ -107,11 +116,13 @@ while(clist.next()) {
 //출력
 p.setBody("certificate.template_insert");
 p.setVar("query", m.qs());
-p.setVar("list_query", m.qs("id"));
+p.setVar("list_query", m.qs("id,type"));
 p.setVar("form_script", f.getScript());
 
 p.setVar("modify", true);
 p.setVar(info);
+p.setVar("template_type", templateType);
+p.setVar("template_title", "P".equals(templateType) ? "합격증" : "수료증");
 
 p.setLoop("course_list", clist);
 p.setLoop("status_list", m.arr2loop(certificateTemplate.statusList));

@@ -45,6 +45,7 @@
 									<col style="width: 8%" />
 									<!--@if(cert_course_block)--><col style="width: 80px" /><!--/if(cert_course_block)-->
 									<!--@if(cert_complete_block)--><col style="width: 60px" /><!--/if(cert_complete_block)-->
+									<!--@if(pass_complete_block)--><col style="width: 60px" /><!--/if(pass_complete_block)-->
 								</colgroup>
 								<thead>
 									<tr>
@@ -54,6 +55,7 @@
 										<th scope="col">총점</th>
 										<!--@if(cert_course_block)--><th scope="col">수강확인서</th><!--/if(cert_course_block)-->
 										<!--@if(cert_complete_block)--><th scope="col">이수증</th><!--/if(cert_complete_block)-->
+										<!--@if(pass_complete_block)--><th scope="col">합격증</th><!--/if(pass_complete_block)-->
 									</tr>
 								</thead>
 								<tbody>
@@ -87,6 +89,19 @@
 											<!--@nif(list.cert_complete_yn)-->-<!--/nif(list.cert_complete_yn)-->
 										</td>
 										<!--/if(cert_complete_block)-->
+										<!--@if(pass_complete_block)-->
+										<td class="tac">
+											<!--@if(list.pass_cert_block)-->
+											<!--@if(list.pass_template_block)-->
+											<button type="button" class="button small green" onclick="OpenWindow('certificate_template.jsp?cuid={{list.id}}&type=P', '_CP01', '650', '950')">발급</button>
+											<!--/if(list.pass_template_block)-->
+											<!--@nif(list.pass_template_block)-->
+											<button type="button" class="button small green" onclick="OpenWindow('certificate.jsp?cuid={{list.id}}&type=P', '_CP01', '650', '950')">발급</button>
+											<!--/nif(list.pass_template_block)-->
+											<!--/if(list.pass_cert_block)-->
+											<!--@nif(list.pass_cert_block)-->-<!--/nif(list.pass_cert_block)-->
+										</td>
+										<!--/if(pass_complete_block)-->
 									</tr>
 									<!--/loop(list)-->
 									<!--@nif(list)-->

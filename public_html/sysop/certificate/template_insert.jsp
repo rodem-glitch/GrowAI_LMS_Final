@@ -1,7 +1,11 @@
 <%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
 
+//변수
+String templateType = "P".equals(m.rs("type")) ? "P" : "C";
+
 //접근권한
-if(!Menu.accessible(914, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
+int menuId = "P".equals(templateType) ? 931 : 914;
+if(!Menu.accessible(menuId, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
 
 //객체
 CertificateTemplateDao certificateTemplate = new CertificateTemplateDao();
@@ -12,7 +16,7 @@ if("CHECK".equals(m.rs("mode"))) {
     if("".equals(value)) { return; }
 
     //중복여부
-    if(0 < certificateTemplate.findCount("template_cd = '" + value + "' AND site_id = " + siteId)) {
+    if(0 < certificateTemplate.findCount("template_cd = '" + value + "' AND site_id = " + siteId + " AND template_type = '" + templateType + "'")) {
         out.print("<span class='bad'>사용 중인 코드입니다. 다시 입력해 주세요.</span>");
     } else {
         out.print("<span class='good'>사용할 수 있는 코드입니다.</span>");
@@ -32,12 +36,13 @@ f.addElement("status", 1, "hname:'상태', required:'Y', option:'number'");
 if(m.isPost() && f.validate()) {
 
     //중복검사-코드
-    if(0 < certificateTemplate.findCount("template_cd = '" + f.get("template_cd") + "' AND site_id = " + siteId)) { m.jsAlert("사용 중인 코드입니다. 다시 입력해 주세요."); return; }
+    if(0 < certificateTemplate.findCount("template_cd = '" + f.get("template_cd") + "' AND site_id = " + siteId + " AND template_type = '" + templateType + "'")) { m.jsAlert("사용 중인 코드입니다. 다시 입력해 주세요."); return; }
 
     certificateTemplate.item("site_id", siteId);
     certificateTemplate.item("template_cd", f.get("template_cd"));
     certificateTemplate.item("template_nm", f.get("template_nm"));
     certificateTemplate.item("content", f.get("content"));
+    certificateTemplate.item("template_type", templateType);
     if(1 == siteId) certificateTemplate.item("base_yn", f.get("base_yn", "N"));
     certificateTemplate.item("reg_date", m.time("yyyyMMddHHmmss"));
     certificateTemplate.item("status", f.get("status", "0"));
@@ -63,16 +68,18 @@ if(m.isPost() && f.validate()) {
         catch(Exception e) { m.errorLog("Exception : " + e.getMessage(), e); }
     }
 
-    m.jsReplace("template_list.jsp?" + m.qs(), "parent");
+    m.jsReplace("template_list.jsp?type=" + templateType + "&" + m.qs(), "parent");
     return;
 }
 
 //출력
 p.setBody("certificate.template_insert");
 p.setVar("query", m.qs());
-p.setVar("list_query", m.qs("id"));
+p.setVar("list_query", m.qs("id,type"));
 p.setVar("form_script", f.getScript());
 
+p.setVar("template_type", templateType);
+p.setVar("template_title", "P".equals(templateType) ? "합격증" : "수료증");
 p.setLoop("status_list", m.arr2loop(certificateTemplate.statusList));
 p.display();
 

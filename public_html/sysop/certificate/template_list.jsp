@@ -1,12 +1,17 @@
 <%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
 
+//변수
+String templateType = "P".equals(m.rs("type")) ? "P" : "C";
+
 //접근권한
-if(!Menu.accessible(914, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
+int menuId = "P".equals(templateType) ? 931 : 914;
+if(!Menu.accessible(menuId, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
 
 //객체
 CertificateTemplateDao certificateTemplate = new CertificateTemplateDao();
 
 //폼체크
+f.addElement("type", templateType, null);
 f.addElement("s_status", null, null);
 f.addElement("s_field", null, null);
 f.addElement("s_keyword", null, null);
@@ -20,6 +25,7 @@ lm.setTable(certificateTemplate.table + " a");
 lm.setFields("a.*");
 lm.addWhere("a.status != -1");
 lm.addWhere("a.site_id = " + siteId + "");
+lm.addWhere("a.template_type = '" + templateType + "'");
 lm.addSearch("a.status", f.get("s_status"));
 if(!"".equals(f.get("s_field"))) lm.addSearch(f.get("s_field"), f.get("s_keyword"), "LIKE");
 else lm.addSearch("a.template_cd, a.template_nm, a.content", f.get("s_keyword"), "LIKE");
@@ -35,8 +41,9 @@ while(list.next()) {
 
 //엑셀
 if("excel".equals(m.rs("mode"))) {
-    ExcelWriter ex = new ExcelWriter(response, "수료증템플릿관리(" + m.time("yyyy-MM-dd") + ").xls");
-    ex.setData(list, new String[] { "__ord=>No", "template_cd=>템플릿코드", "template_nm=>템플릿명", "content=>내용", "status_conv=>상태" }, "수료증템플릿관리(" + m.time("yyyy-MM-dd") + ")");
+    String excelTitle = ("P".equals(templateType) ? "합격증" : "수료증") + "템플릿관리(" + m.time("yyyy-MM-dd") + ")";
+    ExcelWriter ex = new ExcelWriter(response, excelTitle + ".xls");
+    ex.setData(list, new String[] { "__ord=>No", "template_cd=>템플릿코드", "template_nm=>템플릿명", "content=>내용", "status_conv=>상태" }, excelTitle);
     ex.write();
     return;
 }
@@ -44,7 +51,7 @@ if("excel".equals(m.rs("mode"))) {
 //출력
 p.setBody("certificate.template_list");
 p.setVar("query", m.qs());
-p.setVar("list_query", m.qs("id"));
+p.setVar("list_query", m.qs("id,type"));
 p.setVar("form_script", f.getScript());
 
 p.setLoop("list", list);
@@ -52,6 +59,7 @@ p.setVar("list_total", lm.getTotalString());
 p.setVar("pagebar", lm.getPaging());
 
 p.setLoop("status_list", m.arr2loop(certificateTemplate.statusList));
+p.setVar("template_type", templateType);
 p.display();
 
 %>
