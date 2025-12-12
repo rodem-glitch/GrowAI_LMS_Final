@@ -211,6 +211,10 @@ if(m.isPost() && f.validate()) {
 	course.item("content2_title", f.get("content2_title"));
 	course.item("content2", content2);
 
+	// MANAGER_ID 컬럼이 NOT NULL인 환경에서 값 누락으로 인한 INSERT 오류를 막기 위해
+	// 기본 담당자를 현재 등록 관리자(userId)로 세팅합니다.
+	course.item("manager_id", userId);
+
 	course.item("exam_yn", "Y");
 	course.item("homework_yn", "Y");
 	course.item("forum_yn", "Y");
