@@ -6,6 +6,9 @@ int cuid = m.ri("cuid");
 int chapter = m.ri("chapter");
 int nid = m.ri("nid");
 int start = m.ri("start");
+int vid = m.ri("vid"); //다중영상일 때 서브영상 id
+int plid = m.ri("plid"); //다중영상일 때 부모 차시 id(진도 저장용)
+if(plid == 0) plid = lid;
 String ek = m.rs("ek");
 
 if(lid == 0) { m.jsErrClose(_message.get("alert.common.required_key")); return; }
@@ -70,6 +73,8 @@ p.setVar("progress_block", cuid > 0);
 p.setVar("complete_block", "Y".equals(info.s("complete_yn")));
 p.setVar("next_lesson_id", nid > 0);
 p.setVar("ie8", ie8);
+p.setVar("vid", vid);
+p.setVar("plid", plid);
 p.display();
 
 %>

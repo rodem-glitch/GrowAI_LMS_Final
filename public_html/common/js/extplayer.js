@@ -27,6 +27,10 @@ function save() {
 function progressCall() {
 	try {
 		var param = 'cuid=' + cuid + '&lid=' + lid + '&chapter=' + chapter;
+		//다중영상 차시일 때는 서브영상 id(vid)를 함께 전달합니다.
+		if(typeof vid !== 'undefined' && parseInt(vid, 10) > 0) {
+			param += '&vid=' + vid;
+		}
 		$.ajaxSetup({cache:false});
 		$.get('/classroom/progress_movie.jsp?' + param + '&study_time=' + playTime + '&curr_time=' + currTime + '&last_time=' + lastTime, function(data) {
 			

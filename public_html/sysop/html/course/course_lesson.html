@@ -418,6 +418,8 @@
 
 		<!--@nif(list.twoway_block)-->
 		<!--@if(list.pc_block)--><input type="button" value="미리보기" class="btn_simp" onclick="preview('{{list.lesson_id}}', '{{list.content_width}}', '{{list.content_height}}')"><!--/if(list.pc_block)-->
+		<!-- 다중영상 차시 구성 팝업 -->
+		<!--@if(course.online_block)--><input type="button" value="영상구성" class="btn_simp green" onclick="OpenWindows('lesson_video.jsp?cid={{cid}}&lid={{list.lesson_id}}&chapter={{list.chapter}}', '_CLV01', 1000, 800);"><!--/if(course.online_block)-->
 		<!--@nif(list.pc_block)-->-<!--/nif(list.pc_block)-->
 		<!--/nif(list.twoway_block)-->
 

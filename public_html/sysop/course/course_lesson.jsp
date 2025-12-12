@@ -196,6 +196,14 @@ DataSet sortList = new DataSet();
 DataSet list = lm.getDataSet();
 Integer[] sidx = new Integer[list.size()];
 while(list.next()) {
+	//다중영상 차시는 과정-차시 테이블 합산시간을 표시합니다.
+	if("Y".equals(list.s("multi_yn"))) {
+		if(list.i("multi_total_time") > 0) list.put("total_time", list.i("multi_total_time"));
+		if(list.i("multi_complete_time") > 0) list.put("complete_time", list.i("multi_complete_time"));
+		list.put("multi_block", true);
+	} else {
+		list.put("multi_block", false);
+	}
 	list.put("lesson_nm_conv", m.cutString(list.s("lesson_nm"), 55));
 	//list.put("lesson_type_conv", m.getItem(list.s("lesson_type"), "W".equals(siteinfo.s("ovp_vendor")) ? lesson.types : lesson.catenoidTypes));
 	list.put("lesson_type_conv", m.getItem(list.s("lesson_type"), lesson.allTypes));

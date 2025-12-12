@@ -104,6 +104,11 @@ boolean isEnd = "E".equals(cuinfo.s("progress"));
 int lastChapter = 1;
 int lastSectionId = 0;
 while(list.next()) {
+	//다중영상 차시는 과정-차시 테이블의 합산시간을 사용합니다.
+	if("Y".equals(list.s("multi_yn"))) {
+		if(list.i("multi_total_time") > 0) list.put("total_time", list.i("multi_total_time"));
+		if(list.i("multi_complete_time") > 0) list.put("complete_time", list.i("multi_complete_time"));
+	}
 	String[] paragraph = m.split(",", m.replace(list.s("paragraph"), "'", ""));
 	Arrays.sort(paragraph);
 	list.put("study_min", list.i("study_time") / 60);

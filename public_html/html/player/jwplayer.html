@@ -274,7 +274,7 @@ function stop() {
 function save() {
 	try {
 		$.ajaxSetup({cache:false});
-		$.get('/classroom/progress_movie.jsp?study_time=' + playTime + '&curr_time=' + thisPos + '&last_time=' + maxPos + '&cuid={{cuid}}&lid={{lid}}&chapter={{chapter}}', function(data) {
+		$.get('/classroom/progress_movie.jsp?study_time=' + playTime + '&curr_time=' + thisPos + '&last_time=' + maxPos + '&cuid={{cuid}}&lid={{plid}}&chapter={{chapter}}&vid={{vid}}', function(data) {
 
 			if(data == '2' && top.opener) top.opener.location.reload();
 		});

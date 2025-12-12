@@ -39,10 +39,10 @@
 		var is_play = false;
 		window.onload = function() {
 			<!--@nif(download_block)-->
-			<!--@nif(iframe_block)-->location.href = '{{start_url_conv}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}';<!--/nif(iframe_block)-->
+			<!--@nif(iframe_block)-->location.href = '{{start_url_conv}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';<!--/nif(iframe_block)-->
 			<!--@if(iframe_block)-->
 
-			var scheme_param = 'path?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}';
+			var scheme_param = 'path?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';
 			kollus_custom_scheme_call(scheme_param);
 
 			var controller;
@@ -87,7 +87,7 @@
 			<!--/nif(download_block)-->
 
 			<!--@if(download_block)-->
-			var scheme_param = 'download?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}';
+			var scheme_param = 'download?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';
 			kollus_custom_scheme_call(scheme_param);
 			<!--/if(download_block)-->
 		};
@@ -159,7 +159,7 @@
 	var is_play = false;
 	window.onload = function() {
 		<!--@nif(download_block)-->
-		var scheme_param = 'path?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}';
+		var scheme_param = 'path?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';
 		kollus_custom_scheme_call(scheme_param);
 
 		var controller;
@@ -203,7 +203,7 @@
 		<!--/nif(download_block)-->
 
 		<!--@if(download_block)-->
-		var scheme_param = 'download?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}';
+		var scheme_param = 'download?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';
 		kollus_custom_scheme_call(scheme_param);
 		<!--/if(download_block)-->
 	};
@@ -243,7 +243,7 @@
 		});
 		<!--/nif(leave_block)-->
 		<!--@if(leave_block)-->
-		document.getElementById("player").src = "{{start_url_conv}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}";
+		document.getElementById("player").src = "{{start_url_conv}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}";
 		document.getElementById("player").style.display = "block";
 		<!--/if(leave_block)-->
 	}
@@ -253,6 +253,21 @@
 	<div class="tit_cont">
 		<h4>{{lesson_nm}}</h4>
 	</div>
+	<!--@if(multi_block)-->
+	<div class="multi_playlist" style="padding:10px; background:#f8f8f8; border:1px solid #ddd; margin:10px; color:#000;">
+		<strong>이 차시의 영상 목록</strong>
+		<ul style="margin:5px 0 0 15px;">
+			<!--@loop(video_list)-->
+			<li style="margin:3px 0;">
+				<!--@if(video_list.on_block)--><strong>{{video_list.lesson_nm}}</strong><!--/if(video_list.on_block)-->
+				<!--@nif(video_list.on_block)--><a href="{{video_list.play_url}}">{{video_list.lesson_nm}}</a><!--/nif(video_list.on_block)-->
+				<span style="font-size:12px; color:#666;">({{video_list.total_time}}분 / 인정 {{video_list.complete_time}}분)</span>
+				<!--@if(video_list.complete_block)--><span class="label sky" style="margin-left:5px;">완료</span><!--/if(video_list.complete_block)-->
+			</li>
+			<!--/loop(video_list)-->
+		</ul>
+	</div>
+	<!--/if(multi_block)-->
 	<div class="cont_in">
 		<div class="wbt">
 			<iframe id="player" src="about:blank" allow="encrypted-media;local-network-access" allowfullscreen style="width:100%; height:100%;" frameborder="0"></iframe>

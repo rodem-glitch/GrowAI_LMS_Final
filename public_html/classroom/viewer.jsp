@@ -10,6 +10,7 @@ if("play".equals(m.rs("mode")) && m.isMobile()) {
 //기본키
 int lid = m.ri("lid");
 int chapter = m.ri("chapter");
+int vid = m.ri("vid"); //다중영상일 때 서브영상 id
 if(lid == 0) { m.jsErrClose(_message.get("alert.common.required_key")); return; }
 
 //객체
@@ -22,6 +23,8 @@ CourseUserLogDao courseUserLog = new CourseUserLogDao();
 KollusDao kollus = new KollusDao(siteId);
 DoczoomDao doczoom = new DoczoomDao();
 FileDao file = new FileDao();
+CourseLessonVideoDao courseLessonVideo = new CourseLessonVideoDao();
+CourseProgressVideoDao courseProgressVideo = new CourseProgressVideoDao(siteId);
 
 //제한-수강가능여부
 if(0 < m.diffDate("D", cuinfo.s("restudy_edate"), today)) { m.jsErrClose(_message.get("alert.course_user.noperiod_study")); return; }
@@ -61,6 +64,31 @@ if(!info.next()) { m.jsErrClose(_message.get("alert.course_lesson.nodata")); ret
 
 //제한
 if(1 != info.i("lesson_status")) { m.jsErrClose(_message.get("alert.lesson.stopped")); return; }
+
+//다중영상 차시 여부 및 부모 합산시간 계산
+//왜: 기존 단일차시 로직에 영향 없이, 다중영상으로 설정된 차시만 합산 시간/진도 기준을 적용하기 위해
+boolean multiBlock = "Y".equals(info.s("multi_yn"))
+	|| 0 < courseLessonVideo.findCount("course_id = " + courseId + " AND lesson_id = " + lid + " AND site_id = " + siteId + " AND status = 1");
+int parentTotalMin = info.i("multi_total_time");
+int parentCompleteMin = info.i("multi_complete_time");
+if(multiBlock && (parentTotalMin == 0 && parentCompleteMin == 0)) {
+	//캐시가 비어있으면 매핑 기준으로 다시 계산(운영 실수 대비)
+	DataSet sums = courseLessonVideo.query(
+		"SELECT SUM(l.total_time) total_time, SUM(l.complete_time) complete_time "
+		+ " FROM " + courseLessonVideo.table + " v "
+		+ " INNER JOIN " + lesson.table + " l ON l.id = v.video_id AND l.status = 1 "
+		+ " WHERE v.course_id = " + courseId + " AND v.lesson_id = " + lid + " AND v.site_id = " + siteId + " AND v.status = 1"
+	);
+	if(sums.next()) {
+		parentTotalMin = sums.i("total_time");
+		parentCompleteMin = sums.i("complete_time");
+	}
+}
+if(multiBlock) {
+	//부모 차시 기준 제한/배수/출결 계산을 위해 합산시간으로 치환
+	info.put("total_time", parentTotalMin);
+	info.put("complete_time", parentCompleteMin);
+}
 
 //포맷팅
 info.put("lesson_nm_conv", m.cutString(info.s("lesson_nm"), 40));
@@ -125,10 +153,107 @@ if(info.d("p_ratio") < 100.0 && cuinfo.b("sms_yn") && !courseSession.verifySessi
 	return;
 }
 
+//다중영상 차시일 경우: 서브영상 목록을 불러오고, 현재 재생할 서브영상을 결정합니다.
+DataSet videoList = new DataSet();
+int currentVid = 0;
+int nextVid = 0;
+if(multiBlock) {
+	videoList = courseLessonVideo.query(
+		"SELECT v.video_id, v.sort "
+		+ ", l.lesson_nm, l.lesson_type, l.start_url, l.mobile_a, l.mobile_i, l.content_width, l.content_height, l.total_time, l.complete_time, l.description "
+		+ ", p.curr_time, p.last_time, p.study_time, p.ratio p_ratio, p.complete_yn "
+		+ " FROM " + courseLessonVideo.table + " v "
+		+ " INNER JOIN " + lesson.table + " l ON l.id = v.video_id AND l.status = 1 "
+		+ " LEFT JOIN " + courseProgressVideo.table + " p ON p.course_user_id = " + cuid + " AND p.lesson_id = " + lid + " AND p.video_id = v.video_id AND p.status = 1 "
+		+ " WHERE v.course_id = " + courseId
+		+ " AND v.lesson_id = " + lid
+		+ " AND v.site_id = " + siteId
+		+ " AND v.status = 1 "
+		+ " ORDER BY v.sort ASC "
+	);
+
+	//현재 서브영상 선택 규칙
+	// 1) vid 파라미터가 있으면 그 영상
+	// 2) 없으면 미완료(complete_yn != Y) 중 첫 번째
+	// 3) 모두 완료면 첫 번째
+	currentVid = vid;
+	boolean found = false;
+	if(currentVid > 0) {
+		videoList.first();
+		while(videoList.next()) {
+			if(videoList.i("video_id") == currentVid) { found = true; break; }
+		}
+	}
+	if(currentVid == 0 || !found) {
+		currentVid = 0;
+		videoList.first();
+		while(videoList.next()) {
+			if(!"Y".equals(videoList.s("complete_yn"))) { currentVid = videoList.i("video_id"); break; }
+		}
+		if(currentVid == 0 && videoList.size() > 0) {
+			videoList.first(); videoList.next();
+			currentVid = videoList.i("video_id");
+		}
+	}
+
+	//다음 서브영상(선택 표시용)
+	videoList.first();
+	boolean passedCurrent = false;
+	while(videoList.next()) {
+		if(passedCurrent) { nextVid = videoList.i("video_id"); break; }
+		if(videoList.i("video_id") == currentVid) passedCurrent = true;
+	}
+
+	//서브영상 목록 포맷팅 + 재생 URL 세팅
+	videoList.first();
+	while(videoList.next()) {
+		videoList.put("lesson_nm_conv", m.cutString(videoList.s("lesson_nm"), 40));
+		videoList.put("study_min", videoList.i("study_time") / 60);
+		videoList.put("complete_block", "Y".equals(videoList.s("complete_yn")));
+		videoList.put("on_block", videoList.i("video_id") == currentVid);
+		videoList.put("play_url", "viewer.jsp?" + m.qs("vid") + "&vid=" + videoList.i("video_id"));
+	}
+
+	//현재 재생할 서브영상 정보로 info를 덮어씁니다.
+	DataSet playInfo = lesson.query(
+		"SELECT a.* "
+		+ ", p.curr_time, p.last_time, p.study_time, p.ratio p_ratio, p.complete_yn "
+		+ " FROM " + lesson.table + " a "
+		+ " LEFT JOIN " + courseProgressVideo.table + " p ON p.course_user_id = " + cuid + " AND p.lesson_id = " + lid + " AND p.video_id = a.id AND p.status = 1 "
+		+ " WHERE a.id = " + currentVid + " AND a.status = 1 "
+	);
+	if(!playInfo.next()) { m.jsErrClose("서브영상 정보를 찾을 수 없습니다."); return; }
+
+	info.put("video_id", currentVid);
+	info.put("lesson_nm", playInfo.s("lesson_nm"));
+	info.put("lesson_type", playInfo.s("lesson_type"));
+	info.put("start_url", playInfo.s("start_url"));
+	info.put("mobile_a", playInfo.s("mobile_a"));
+	info.put("mobile_i", playInfo.s("mobile_i"));
+	info.put("content_width", playInfo.i("content_width"));
+	info.put("content_height", playInfo.i("content_height"));
+	info.put("description", playInfo.s("description"));
+	info.put("total_time", playInfo.i("total_time"));
+	info.put("complete_time", playInfo.i("complete_time"));
+	info.put("curr_time", playInfo.i("curr_time"));
+	info.put("last_time", playInfo.i("last_time"));
+	info.put("study_time", playInfo.i("study_time"));
+	info.put("p_ratio", playInfo.d("p_ratio"));
+	info.put("complete_yn", playInfo.s("complete_yn"));
+
+	//현재 재생 서브영상 기준으로 다시 포맷팅
+	info.put("lesson_nm_conv", m.cutString(info.s("lesson_nm"), 40));
+	info.put("description_conv", m.nl2br(info.s("description")));
+	info.put("complete_block", "Y".equals(info.s("complete_yn")));
+	info.put("start_pos", 100 <= info.d("p_ratio") ? 0 : info.i("last_time"));
+	info.put("catenoid_block", "05".equals(info.s("lesson_type")));
+	info.put("content_height_conv", info.i("content_height") + 20);
+}
+
 //목록-강의목차
 DataSet list = courseLesson.query(
 	"SELECT a.* "
-	+ ", l.onoff_type, l.lesson_nm, l.start_url, l.mobile_a, l.mobile_i, l.lesson_type, l.total_time, l.total_page "
+	+ ", l.onoff_type, l.lesson_nm, l.start_url, l.mobile_a, l.mobile_i, l.lesson_type, l.total_time, l.complete_time, l.total_page "
 	+ ", c.complete_yn, c.ratio, c.last_date, c.study_time, c.study_page "
 	+ ", cs.id section_id, cs.section_nm "
 	+ ", ( CASE WHEN c.last_date BETWEEN '" + today + "000000' AND '" + today + "235959' THEN 'Y' ELSE 'N' END ) is_study "
@@ -144,6 +269,11 @@ lastChapter = 1;
 int lastSectionId = 0;
 boolean noSectionBlock = false;
 while(list.next()) {
+	//다중영상 차시는 과정-차시 테이블의 합산시간을 사용
+	if("Y".equals(list.s("multi_yn"))) {
+		if(list.i("multi_total_time") > 0) list.put("total_time", list.i("multi_total_time"));
+		if(list.i("multi_complete_time") > 0) list.put("complete_time", list.i("multi_complete_time"));
+	}
 	if(list.i("chapter") > maxChapter) maxChapter = list.i("chapter");
 	if(list.b("complete_yn")) lastChapter = list.i("chapter") + 1;
 	list.put("study_min", list.i("study_time") / 60);
@@ -290,12 +420,14 @@ if(!"".equals(SiteConfig.s("kollus_expire_time")) && !"0".equals(SiteConfig.s("k
 //kollus.d(out);
 String fileType = "mp4";
 if("01".equals(info.s("lesson_type")) || "03".equals(info.s("lesson_type"))) {
+	//다중영상일 때는 현재 서브영상 id로 플레이어를 호출합니다.
+	int playLid = multiBlock ? currentVid : lid;
 	int unixTime = m.getUnixTime();
-	String key = lid + "|" + userId + "|" + unixTime;
-	String startUrl = "/main/video.jsp?ek=" + m.encrypt(key) + "&lid=" + lid + "&uid=" + userId + "&ut=" + unixTime;
+	String key = playLid + "|" + userId + "|" + unixTime;
+	String startUrl = "/main/video.jsp?ek=" + m.encrypt(key) + "&lid=" + playLid + "&uid=" + userId + "&ut=" + unixTime;
 	if(info.s("start_url").endsWith(".m3u8")) fileType = "m3u8";
 	else info.put("start_url", startUrl);
-	info.put("start_url_conv", "/player/jwplayer.jsp?lid=" + lid + "&cuid=" + cuid + "&nid=" + info.s("next_lesson_id") + "&chapter=" + info.s("chapter") + "&ek=" + m.encrypt(lid + "|" + cuid + "|" + m.time("yyyyMMdd")));
+	info.put("start_url_conv", "/player/jwplayer.jsp?lid=" + playLid + "&plid=" + lid + "&cuid=" + cuid + "&nid=" + info.s("next_lesson_id") + "&chapter=" + info.s("chapter") + "&vid=" + (multiBlock ? playLid : 0) + "&ek=" + m.encrypt(playLid + "|" + cuid + "|" + m.time("yyyyMMdd")));
 } else if("05".equals(info.s("lesson_type"))) {
 	//kollus.d(out);
 	String startUrl = kollus.getPlayUrl(
@@ -386,6 +518,15 @@ p.setVar("is_lesson", "lesson".equals(bodyType));
 
 p.setVar(info);
 p.setVar("lesson_query", m.qs("lid,chapter"));
+
+//다중영상 관련 변수
+p.setVar("multi_block", multiBlock);
+p.setVar("current_vid", currentVid);
+p.setVar("next_vid", nextVid);
+p.setVar("video_id", currentVid);
+p.setVar("parent_total_time", parentTotalMin);
+p.setVar("parent_complete_time", parentCompleteMin);
+p.setLoop("video_list", videoList);
 
 p.setLoop("list", list);
 p.setLoop("files", files);
