@@ -330,6 +330,8 @@ if(m.isPost() && f.validate()) {
 	user.item("email_yn", emailYn);
 	user.item("sms_yn", smsYn);
 	user.item("privacy_yn", "Y");
+	//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. 신규가입은 0에서 시작하도록 기본값을 넣어줍니다.
+	user.item("fail_cnt", 0);
 	user.item("passwd_date", m.addDate("d", siteinfo.i("passwd_day"), m.time("yyyyMMdd"), "yyyyMMdd"));
 	user.item("conn_date", m.time("yyyyMMddHHmmss"));
 	user.item("reg_date", m.time("yyyyMMddHHmmss"));

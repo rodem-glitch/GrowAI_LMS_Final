@@ -88,6 +88,10 @@ public class CourseUserDao extends DataObject {
 		//item("tutor_id", tutorId);
 		item("grade", 1);
 
+		// RENEW_CNT 컬럼이 NOT NULL인 환경에서도 기존 수강신청/관리자등록이 실패하지 않도록
+		// 최초 등록 시 연장횟수를 0으로 기본 세팅합니다.
+		item("renew_cnt", 0);
+
 		if("A".equals(cinfo.s("course_type"))) {
 			if(!"".equals(startDate) && !"".equals(endDate)) {
 				item("start_date", startDate);

@@ -105,6 +105,8 @@ if(m.isPost() && f.validate()) {
 	user.item("reg_date", m.time("yyyyMMddHHmmss"));
 	user.item("status", f.getInt("status"));
 	user.item("passwd_date", m.addDate("d", siteinfo.i("passwd_day"), m.time("yyyyMMdd"), "yyyyMMdd"));
+	//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. 강사 등록도 0에서 시작하도록 기본값을 넣어줍니다.
+	user.item("fail_cnt", 0);
 
 	if(!user.insert()) { m.jsAlert("등록하는 중 오류가 발생했습니다."); return; }
 

@@ -331,6 +331,8 @@ if(m.isPost() && f.validate()) {
 	user.item("etc5", f.get("etc5"));
 	user.item("dupinfo", isAuth ? ainfo.s("dupinfo") : "");
 	user.item("oauth_vendor", mSession.s("join_vendor"));
+	//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. 신규가입은 0에서 시작하도록 기본값을 넣어줍니다.
+	user.item("fail_cnt", 0);
 
 	//파일
 	if("Y".equals(SiteConfig.s("join_userfile_yn"))) {

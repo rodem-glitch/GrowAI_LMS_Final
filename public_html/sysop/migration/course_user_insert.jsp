@@ -141,6 +141,10 @@ if(m.isPost()) {
         
         courseUser.item("start_date", list.s("start_date"));
         courseUser.item("end_date", list.s("end_date"));
+
+        // RENEW_CNT 컬럼이 NOT NULL인 환경에서도 마이그레이션 등록이 실패하지 않도록
+        // 별도 연장 이력이 없는 경우 기본값 0으로 세팅합니다.
+        courseUser.item("renew_cnt", 0);
         courseUser.item("progress_ratio", list.d("progress_ratio"));
         courseUser.item("progress_score", list.d("progress_score"));
         courseUser.item("total_score", list.d("total_score"));

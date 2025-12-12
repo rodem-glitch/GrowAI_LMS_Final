@@ -78,6 +78,8 @@ if(m.isPost() && f.validate()) {
 	user.item("reg_date", m.time("yyyyMMddHHmmss"));
 	user.item("status", f.getInt("status"));
 	user.item("passwd_date", sysToday);
+	//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. 관리자 신규등록은 0에서 시작하도록 기본값을 넣어줍니다.
+	user.item("fail_cnt", 0);
 
 	if(-2 == f.getInt("status")) {
 		//탈퇴등록

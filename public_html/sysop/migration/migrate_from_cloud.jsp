@@ -684,6 +684,12 @@ if(m.isPost() && "preview".equals(f_mode)) {
             course.item("cert_course_yn", courseList.s("cert_course_yn"));
             course.item("cert_complete_yn", courseList.s("cert_complete_yn"));
             course.item("cert_template_id", courseList.s("cert_template_id"));
+
+            // 구 클라우드 데이터에는 합격증(pass) 관련 컬럼이 없을 수 있으므로
+            // 값이 비어있을 때는 기본값(N/0)으로 보정합니다.
+            String passYn = courseList.s("pass_yn");
+            course.item("pass_yn", "".equals(passYn) ? "N" : passYn);
+            course.item("pass_cert_template_id", courseList.i("pass_cert_template_id"));
             course.item("complete_no_yn", courseList.s("complete_no_yn"));
             course.item("postfix_cnt", courseList.s("postfix_cnt"));
             course.item("postfix_type", courseList.s("postfix_type"));

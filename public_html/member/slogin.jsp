@@ -139,6 +139,8 @@ if(info.next()) {
 	user.item("etc2", etc2);
 	user.item("etc3", etc3);
 	user.item("privacy_yn", "N");
+	//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. SSO 신규생성도 0에서 시작하도록 기본값을 넣어줍니다.
+	user.item("fail_cnt", 0);
 	user.item("passwd_date", m.time("yyyyMMdd"));
 	user.item("conn_date", now);
 	user.item("reg_date", now);

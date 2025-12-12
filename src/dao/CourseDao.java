@@ -94,6 +94,10 @@ public class CourseDao extends DataObject {
 		this.item("course_nm", courseNm);
 		this.item("course_file", "");
 
+		// MANAGER_ID 컬럼이 NOT NULL로 추가된 이후에도 과정 복사(insert)가 실패하지 않도록
+		// 원본 과정의 담당자가 비어있는 경우 0으로 보정하여 저장합니다.
+		this.item("manager_id", info.i("manager_id"));
+
 		if("R".equals(info.s("course_type"))) {
 			this.item("request_sdate", requestStart);
 			this.item("request_edate", requestEnd);

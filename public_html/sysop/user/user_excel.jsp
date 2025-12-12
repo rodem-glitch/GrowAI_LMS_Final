@@ -108,6 +108,8 @@ if(m.isPost()) {
 				user.item("email_yn", "N");
 				user.item("sms_yn", "N");
 				user.item("privacy_yn", "N");
+				//FAIL_CNT는 로그인 실패횟수로 TB_USER에서 NOT NULL입니다. 엑셀 일괄등록도 0으로 시작하도록 기본값을 넣어줍니다.
+				user.item("fail_cnt", 0);
 				user.item("passwd_date", sysToday);
 
 				if(user.insert()) success++;

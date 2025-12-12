@@ -106,6 +106,12 @@ if(m.isPost() && f.validate()) {
 	course.item("cert_course_yn", "Y");
 	course.item("cert_complete_yn", "Y");
 
+	// 합격증/수료증 템플릿 기능을 사용하지 않는 기본 과정이므로
+	// 관련 컬럼을 기본값으로 세팅해 NOT NULL 환경에서도 오류를 방지합니다.
+	course.item("cert_template_id", 0);
+	course.item("pass_yn", "N");
+	course.item("pass_cert_template_id", 0);
+
 	course.item("etc1", "");
 	course.item("etc2", "");
 
