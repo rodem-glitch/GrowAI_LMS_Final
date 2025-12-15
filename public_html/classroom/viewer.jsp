@@ -65,6 +65,11 @@ if(!info.next()) { m.jsErrClose(_message.get("alert.course_lesson.nodata")); ret
 //제한
 if(1 != info.i("lesson_status")) { m.jsErrClose(_message.get("alert.lesson.stopped")); return; }
 
+// 다중 영상 차시에서는 아래에서 info에 "현재 재생할 영상" 정보를 덮어씁니다.
+// 그래서 부모 차시(원래 차시)의 타입/완료여부는 따로 들고 있어야 안전합니다.
+String parentLessonType = info.s("lesson_type");
+String parentCompleteYN = info.s("complete_yn");
+
 //다중영상 차시 여부 및 부모 합산시간 계산
 //왜: 기존 단일차시 로직에 영향 없이, 다중영상으로 설정된 차시만 합산 시간/진도 기준을 적용하기 위해
 boolean multiBlock = "Y".equals(info.s("multi_yn"))
@@ -360,17 +365,27 @@ if("F".equals(info.s("onoff_type")) && 10 < info.i("lesson_type")) {
 }
 
 //인정시간이 0인 경우 곧바로 완료처리
-if(info.i("complete_time") == 0 && !"Y".equals(info.s("complete_yn"))) {
-	info.put("complete_yn", "Y");
-	info.put("last_time", info.i("total_time") * 60);
-	info.put("p_ratio", "100.0");
-	info.put("p_reg_date", m.time("yyyyMMddHHmmss"));
+// - 단일 영상 차시: 해당 차시 complete_time(분) == 0 이면 즉시 완료
+// - 다중 영상 차시: 합산 complete_time(분) == 0 이면 즉시 완료
+int parentCompleteTimeMinForAutoComplete = multiBlock ? parentCompleteMin : info.i("complete_time");
+String parentCompleteYNForAutoComplete = multiBlock ? parentCompleteYN : info.s("complete_yn");
+if(parentCompleteTimeMinForAutoComplete == 0 && !"Y".equals(parentCompleteYNForAutoComplete)) {
+	// 단일 영상 차시에서는 기존 화면 변수를 그대로 맞춰주고,
+	// 다중 영상 차시에서는 "현재 영상" 변수(info)가 덮어써져 있으므로 DB만 정확히 갱신합니다.
+	if(!multiBlock) {
+		info.put("complete_yn", "Y");
+		info.put("last_time", info.i("total_time") * 60);
+		info.put("p_ratio", "100.0");
+		info.put("p_reg_date", m.time("yyyyMMddHHmmss"));
+	}
 	courseProgress.completeProgress(cuid, lid, info.i("chapter"));
+	parentCompleteYN = "Y";
 }
 
 //진도정보가 없을 경우 초기화
 if("".equals(info.s("p_reg_date"))) {
-	courseProgress.initProgress(cuid, lid, info.i("course_id"), userId, info.i("chapter"), info.s("lesson_type"));
+	// 부모 차시 진도는 "부모 차시의 타입"으로 만들어야 이후 통계/표시가 꼬이지 않습니다.
+	courseProgress.initProgress(cuid, lid, info.i("course_id"), userId, info.i("chapter"), parentLessonType);
 }
 
 //로그

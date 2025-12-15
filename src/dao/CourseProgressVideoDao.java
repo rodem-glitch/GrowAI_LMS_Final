@@ -55,7 +55,10 @@ public class CourseProgressVideoDao extends DataObject {
 
 		//수강생정보
 		DataSet cuinfo = courseUser.query(
-			" SELECT a.course_id, a.user_id, a.end_date, c.period_yn "
+			// 왜 a.id를 같이 조회하나요?
+			// - 아래 updateParentProgress()에서 부모(차시) 진도 갱신 시 course_user_id가 필요합니다.
+			// - SELECT에 a.id가 없으면 0으로 처리되어, 부모 진도가 잘못 갱신될 수 있습니다.
+			" SELECT a.id, a.course_id, a.user_id, a.end_date, c.period_yn "
 			+ " FROM " + courseUser.table + " a "
 			+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 			+ " WHERE a.id = " + cuid + " AND a.status IN (1, 3) "
@@ -292,4 +295,3 @@ public class CourseProgressVideoDao extends DataObject {
 		return "N".equals(pPreCompleteYN) && "Y".equals(pCompleteYN) ? 2 : 1;
 	}
 }
-
