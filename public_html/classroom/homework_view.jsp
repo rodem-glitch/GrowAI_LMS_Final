@@ -6,6 +6,7 @@ if(id == 0) { m.jsError(_message.get("alert.common.required_key")); return; }
 //객체
 HomeworkDao homework = new HomeworkDao();
 HomeworkUserDao homeworkUser = new HomeworkUserDao();
+HomeworkTaskDao homeworkTask = new HomeworkTaskDao();
 CourseProgressDao courseProgress = new CourseProgressDao();
 ClFileDao file = new ClFileDao();
 
@@ -140,6 +141,20 @@ while(feedbackFiles.next()) {
 	feedbackFiles.put("filename_conv", m.urlencode(Base64Coder.encode(feedbackFiles.s("filename"))));
 }
 
+//추가과제 목록
+//왜: 기본 과제(LM_HOMEWORK_USER)는 1회 제출/피드백 구조라서, 추가 과제는 별도 테이블에서 반복 이력을 보여줍니다.
+DataSet taskList = homeworkTask.find(
+	"site_id = " + siteId + " AND course_id = " + courseId + " AND homework_id = " + id + " AND course_user_id = " + cuid + " AND status = 1"
+	, "*"
+	, "id ASC"
+);
+while(taskList.next()) {
+	taskList.put("reg_date_conv", !"".equals(taskList.s("reg_date")) ? m.time(_message.get("format.datetime.dot"), taskList.s("reg_date")) : "-");
+	taskList.put("task_conv", m.cutString(m.stripTags(taskList.s("task")), 60));
+	taskList.put("submit_conv", taskList.b("submit_yn") ? _message.get("classroom.module.status.submit") : _message.get("classroom.module.status.nosubmit"));
+	taskList.put("confirm_conv", taskList.b("confirm_yn") ? "피드백완료" : "피드백대기");
+}
+
 //출력
 p.setLayout(ch);
 p.setBody("classroom.homework_view");
@@ -152,6 +167,7 @@ p.setVar(info);
 
 p.setLoop("files", files);
 p.setLoop("feedback_files", feedbackFiles);
+p.setLoop("task_list", taskList);
 p.display();
 
 %>

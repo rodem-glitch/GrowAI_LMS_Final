@@ -180,5 +180,45 @@
 						<input type="button" class="button white left" onclick="location.href='homework.jsp?{{list_query}}'" value="목록" />
 					</div>
 					<!--/nif(open_block)-->
+
+					<h5 class="tb_title mt30">추가 과제</h5>
+					<div class="tb_box tb_insert">
+						<table summary="추가 과제를 확인할 수 있습니다.">
+							<caption>추가 과제</caption>
+							<colgroup>
+								<col style="width:140px" />
+								<col style="width:*%" />
+								<col style="width:120px" />
+								<col style="width:120px" />
+								<col style="width:80px" />
+							</colgroup>
+							<thead>
+								<tr>
+									<th>부여일시</th>
+									<th>내용</th>
+									<th>제출</th>
+									<th>피드백</th>
+									<th>보기</th>
+								</tr>
+							</thead>
+							<tbody>
+								<!--@loop(task_list)-->
+								<tr>
+									<td>{{task_list.reg_date_conv}}</td>
+									<td>{{task_list.task_conv}}</td>
+									<td>{{task_list.submit_conv}}</td>
+									<td>{{task_list.confirm_conv}}</td>
+									<td><a href="homework_task_view.jsp?cuid={{cuid}}&hid={{id}}&tid={{task_list.id}}" class="button small blue">보기</a></td>
+								</tr>
+								<!--/loop(task_list)-->
+							</tbody>
+						</table>
+						<!--@nif(task_list)-->
+						<div style="padding:10px 0;">추가 과제가 없습니다.</div>
+						<!--/nif(task_list)-->
+						<p class="desc01" style="margin-top:10px;">
+							추가 과제는 교수자가 필요할 때마다 여러 번 부여할 수 있고, 제출/피드백 내역이 모두 기록됩니다.
+						</p>
+					</div>
 				</div>
 			</div>

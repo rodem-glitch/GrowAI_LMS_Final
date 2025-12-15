@@ -91,6 +91,53 @@
 </form>
 {{form_script}}
 
+<table class="c_tb01" cellpadding="0" cellspacing="0">
+<tr>
+	<td class="c_th01">추가 과제(반복)</td>
+	<td class="c_td01" align="right">
+		<button type="button" class="bttn2 sky" onclick="OpenWindows('homework_task_view.jsp?cid={{cid}}&hid={{hid}}&cuid={{cuid}}&mode=add', '', 920, 860);">추가 과제 부여</button>
+	</td>
+</tr>
+</table>
+
+<table class="l_tb01" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
+<col width="50">
+<col width="170">
+<col width="80">
+<col width="90">
+<col width="80">
+<thead>
+<tr align="center">
+	<td class="l_th03">No</td>
+	<td class="l_th03">부여일시</td>
+	<td class="l_th03">제출</td>
+	<td class="l_th03">피드백</td>
+	<td class="l_th03">관리</td>
+</tr>
+</thead>
+<tbody>
+<!--@loop(task_list)-->
+<tr class="l_tr_{{task_list.ROW_CLASS}}" align="center">
+	<td class="l_td01">{{task_list.__ord}}</td>
+	<td class="l_td01">{{task_list.reg_date_conv}}</td>
+	<td class="l_td01">{{task_list.submit_conv}}</td>
+	<td class="l_td01">{{task_list.confirm_conv}}</td>
+	<td class="l_td01">
+		<input type="button" value="관리" class="btn_simp" onclick="OpenWindows('homework_task_view.jsp?cid={{cid}}&hid={{hid}}&cuid={{cuid}}&tid={{task_list.id}}', '', 920, 860);">
+	</td>
+</tr>
+<!--/loop(task_list)-->
+</tbody>
+</table>
+
+<!--@nif(task_list)-->
+<table class="n_tb01" cellpadding="0" cellspacing="0">
+<tr>
+	<td>추가 과제가 없습니다.</td>
+</tr>
+</table>
+<!--/nif(task_list)-->
+
 
 <table class="pn_tb01" cellpadding="0" cellspacing="0" width="100%">
 <col width="20"><col>
