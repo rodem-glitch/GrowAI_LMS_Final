@@ -274,8 +274,9 @@ function stop() {
 function save() {
 	try {
 		$.ajaxSetup({cache:false});
-		$.get('/classroom/progress_movie.jsp?study_time=' + playTime + '&curr_time=' + thisPos + '&last_time=' + maxPos + '&cuid={{cuid}}&lid={{lid}}&chapter={{chapter}}', function(data) {
-
+		// 다중 영상 차시에서는 부모 차시(plid) + 영상(vid) 정보를 같이 보내야 영상별/차시별 진도가 정상 기록됩니다.
+		$.get('/classroom/progress_movie.jsp?study_time=' + playTime + '&curr_time=' + thisPos + '&last_time=' + maxPos + '&cuid={{cuid}}&lid={{plid}}&chapter={{chapter}}&vid={{vid}}', function(data) {
+	
 			if(data == '2' && top.opener) top.opener.location.reload();
 		});
 		playTime = 0;

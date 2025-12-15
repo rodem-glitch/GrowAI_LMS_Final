@@ -18,12 +18,24 @@ if(!ek.equals(m.encrypt(lid + "|" + cuid + "|" + m.time("yyyyMMdd")))) { m.jsErr
 //객체
 LessonDao lesson = new LessonDao();
 CourseProgressDao courseProgress = new CourseProgressDao();
+CourseProgressVideoDao courseProgressVideo = new CourseProgressVideoDao();
 
 //목록
+// 다중 영상 차시(vid > 0)에서는 진도 테이블이 LM_COURSE_PROGRESS_VIDEO 이므로,
+// 부모차시(plid) + 영상(vid) 기준으로 이어보기/완료여부를 조회해야 정상 동작합니다.
+String progressFields = "";
+String progressJoin = "";
+if(cuid > 0) {
+	progressFields = ", p.last_time, p.curr_time, p.complete_yn ";
+	progressJoin = (vid > 0)
+		? " LEFT JOIN " + courseProgressVideo.table + " p ON p.course_user_id = " + cuid + " AND p.lesson_id = " + plid + " AND p.video_id = " + vid + " AND p.status = 1 "
+		: " LEFT JOIN " + courseProgress.table + " p ON p.course_user_id = " + cuid + " AND p.lesson_id = a.id ";
+}
+
 DataSet info = lesson.query(
-	"SELECT a.* " + (cuid > 0 ? ", p.last_time, p.curr_time, p.complete_yn " : "")
+	"SELECT a.* " + (cuid > 0 ? progressFields : "")
 	+ " FROM " + lesson.table + " a "
-	+ (cuid > 0 ? " LEFT JOIN " + courseProgress.table + " p ON p.course_user_id = " + cuid + " AND p.lesson_id = a.id " : "")
+	+ (cuid > 0 ? progressJoin : "")
 	+ " WHERE a.status = 1 AND a.id = " + lid
 );
 if(!info.next()) { m.jsErrClose(_message.get("alert.lesson.nodata")); return; }
