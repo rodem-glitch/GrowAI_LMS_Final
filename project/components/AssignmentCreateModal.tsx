@@ -1,0 +1,210 @@
+import { useState } from 'react';
+import { X } from 'lucide-react';
+
+interface AssignmentCreateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (assignmentData: any) => void;
+}
+
+export function AssignmentCreateModal({ isOpen, onClose, onSave }: AssignmentCreateModalProps) {
+  const [assignmentData, setAssignmentData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    dueTime: '',
+    totalScore: 100,
+    submissionType: 'file', // file, text, both
+    fileTypes: '',
+    maxFileSize: 10,
+    allowLateSubmission: false,
+    latePenalty: 0,
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(assignmentData);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h3 className="text-gray-900">과제 등록</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* 과제 제목 */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              과제 제목 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={assignmentData.title}
+              onChange={(e) => setAssignmentData({ ...assignmentData, title: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="예: HTML 포트폴리오 페이지 제작"
+              required
+            />
+          </div>
+
+          {/* 과제 설명 */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              과제 설명 <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={assignmentData.description}
+              onChange={(e) => setAssignmentData({ ...assignmentData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={4}
+              placeholder="과제 내용 및 요구사항을 입력하세요"
+              required
+            />
+          </div>
+
+          {/* 제출 마감일 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">
+                마감 날짜 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={assignmentData.dueDate}
+                onChange={(e) => setAssignmentData({ ...assignmentData, dueDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">
+                마감 시간 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={assignmentData.dueTime}
+                onChange={(e) => setAssignmentData({ ...assignmentData, dueTime: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+
+          {/* 배점 */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              배점 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              value={assignmentData.totalScore}
+              onChange={(e) => setAssignmentData({ ...assignmentData, totalScore: parseInt(e.target.value) || 0 })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="예: 100"
+              required
+            />
+          </div>
+
+          {/* 제출 방식 */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              제출 방식 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={assignmentData.submissionType}
+              onChange={(e) => setAssignmentData({ ...assignmentData, submissionType: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="file">파일 업로드</option>
+              <option value="text">텍스트 입력</option>
+              <option value="both">파일 + 텍스트</option>
+            </select>
+          </div>
+
+          {/* 파일 업로드 설정 */}
+          {(assignmentData.submissionType === 'file' || assignmentData.submissionType === 'both') && (
+            <>
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">허용 파일 형식</label>
+                <input
+                  type="text"
+                  value={assignmentData.fileTypes}
+                  onChange={(e) => setAssignmentData({ ...assignmentData, fileTypes: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="예: .pdf, .docx, .zip"
+                />
+                <p className="text-sm text-gray-500 mt-1">쉼표로 구분하여 입력하세요</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">최대 파일 크기 (MB)</label>
+                <input
+                  type="number"
+                  value={assignmentData.maxFileSize}
+                  onChange={(e) => setAssignmentData({ ...assignmentData, maxFileSize: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </>
+          )}
+
+          {/* 지각 제출 설정 */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={assignmentData.allowLateSubmission}
+                onChange={(e) => setAssignmentData({ ...assignmentData, allowLateSubmission: e.target.checked })}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">지각 제출 허용</span>
+            </label>
+
+            {assignmentData.allowLateSubmission && (
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">지각 제출 감점 (%)</label>
+                <input
+                  type="number"
+                  value={assignmentData.latePenalty}
+                  onChange={(e) => setAssignmentData({ ...assignmentData, latePenalty: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="예: 10"
+                  min="0"
+                  max="100"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 버튼 */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              등록
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

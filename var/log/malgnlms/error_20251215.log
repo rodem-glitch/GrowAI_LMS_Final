@@ -1,0 +1,8 @@
+[2025-12-15 17:40:08] {Template.readFile} path:c:\home\lms\public_html\html\mail\template.html
+[2025-12-15 17:40:08] at /sysop/main/auth2.jsp
+{Malgn.mail} mail:ja.gong@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)at /sysop/main/auth2.jsp
+{Malgn.mail} mail:ja.gong@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)
+[2025-12-15 17:41:17] {Template.readFile} path:c:\home\lms\public_html\html\mail\template.html
+[2025-12-15 17:41:17] at /sysop/main/auth2.jsp
+{Malgn.mail} mail:ja.gong@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)at /sysop/main/auth2.jsp
+{Malgn.mail} mail:ja.gong@newkl.net, subject:[한국폴리텍대학 학습관리시스템] 인증번호가 발급되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)
