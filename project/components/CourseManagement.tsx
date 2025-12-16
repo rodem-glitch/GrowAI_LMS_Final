@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Info,
   List,
@@ -28,9 +28,11 @@ import { AssignmentCreateModal } from './AssignmentCreateModal';
 
 interface CourseManagementProps {
   course: {
+    id: string;
     courseId: string;
     courseType: string;
     subjectName: string;
+    programId: number;
     programName: string;
     period: string;
     students: number;
@@ -53,9 +55,14 @@ type TabType =
   | 'grades'
   | 'completion';
 
-export function CourseManagement({ course, onBack }: CourseManagementProps) {
+export function CourseManagement({ course: initialCourse, onBack }: CourseManagementProps) {
+  const [course, setCourse] = useState(initialCourse);
   const [activeTab, setActiveTab] = useState<TabType>('info');
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(false);
+
+  useEffect(() => {
+    setCourse(initialCourse);
+  }, [initialCourse]);
 
   const tabs = [
     { id: 'info' as TabType, label: '과목정보', icon: Info, isSubTab: false },
@@ -94,7 +101,7 @@ export function CourseManagement({ course, onBack }: CourseManagementProps) {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
-        return <CourseInfoTab course={course} />;
+        return <CourseInfoTab course={course} onCourseUpdated={setCourse} />;
       case 'curriculum':
         return <CurriculumTab />;
       case 'students':

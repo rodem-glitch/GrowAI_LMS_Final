@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { X, Search, CheckCircle } from 'lucide-react';
+import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
   id: string;
@@ -27,68 +28,59 @@ export function CourseSelectionModal({
   const [classificationFilter, setClassificationFilter] = useState('전체');
   const [tempSelected, setTempSelected] = useState<Course | null>(selectedCourse);
 
-  // 샘플 과정 데이터
-  const courses: Course[] = [
-    {
-      id: 'C001',
-      classification: '학위전공',
-      name: '데이터베이스 학위과정',
-      department: '정보통신계열',
-      major: '컴퓨터공학',
-      departmentName: '컴퓨터공학과',
-    },
-    {
-      id: 'C002',
-      classification: '전문기술',
-      name: 'AI 머신러닝 전문과정',
-      department: '정보통신계열',
-      major: '인공지능',
-      departmentName: '인공지능학과',
-    },
-    {
-      id: 'C003',
-      classification: '학위전공심화',
-      name: '웹 프론트엔드 개발 과정',
-      department: '정보통신계열',
-      major: '소프트웨어공학',
-      departmentName: '소프트웨어공학과',
-    },
-    {
-      id: 'C004',
-      classification: '하이테크',
-      name: '사물인터넷 하이테크 과정',
-      department: '전자계열',
-      major: '전자공학',
-      departmentName: '전자공학과',
-    },
-    {
-      id: 'C005',
-      classification: '기능장',
-      name: '기계설계 기능장 과정',
-      department: '기계계열',
-      major: '기계공학',
-      departmentName: '기계공학과',
-    },
-    {
-      id: 'C006',
-      classification: '신중년',
-      name: '신중년 디지털 전환 과정',
-      department: '특별과정',
-      major: '디지털리터러시',
-      departmentName: '평생교육원',
-    },
-  ];
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const filteredCourses = courses.filter((course) => {
+  // 왜: 모달을 열 때마다 DB 기준 "내 과정"을 최신으로 가져옵니다.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    setTempSelected(selectedCourse);
+    setSearchTerm('');
+    setClassificationFilter('전체');
+
+    const fetchPrograms = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getPrograms();
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const rows = res.rst_data ?? [];
+        const mapped: Course[] = rows.map((row) => ({
+          id: String(row.id),
+          classification: '과정',
+          name: row.course_nm,
+          department: '-',
+          major: '-',
+          departmentName: '-',
+        }));
+
+        if (!cancelled) setCourses(mapped);
+      } catch (e) {
+        if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchPrograms();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, selectedCourse]);
+
+  const filteredCourses = useMemo(() => courses.filter((course) => {
     const matchesSearch =
-      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.major.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.departmentName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClassification =
-      classificationFilter === '전체' || course.classification === classificationFilter;
+      searchTerm === '' ||
+      course.name.toLowerCase().includes(searchTerm.toLowerCase());
 
+    // 왜: 현재 DB에 "과정 분류" 필드가 없어서, UI는 유지하되 검색만 적용합니다.
+    const matchesClassification = true;
     return matchesSearch && matchesClassification;
-  });
+  }), [courses, searchTerm, classificationFilter]);
 
   const handleConfirm = () => {
     onSelect(tempSelected);
@@ -180,43 +172,51 @@ export function CourseSelectionModal({
             </div>
 
             {/* 과정 목록 */}
-            {filteredCourses.map((course) => (
-              <div
-                key={course.id}
-                onClick={() => setTempSelected(course)}
-                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  tempSelected?.id === course.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                        {course.classification}
-                      </span>
-                      <span className="text-sm text-gray-500">{course.id}</span>
-                    </div>
-                    <h4 className="text-gray-900 mb-1">{course.name}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>{course.department} • {course.major}</span>
-                      <span>•</span>
-                      <span>{course.departmentName}</span>
-                    </div>
-                  </div>
-                  {tempSelected?.id === course.id && (
-                    <CheckCircle className="w-6 h-6 text-blue-600 ml-4" />
-                  )}
-                </div>
+            {errorMessage ? (
+              <div className="py-16 text-center text-gray-500">
+                <p>{errorMessage}</p>
               </div>
-            ))}
-
-            {filteredCourses.length === 0 && (
+            ) : loading ? (
+              <div className="py-16 text-center text-gray-500">
+                <p>불러오는 중...</p>
+              </div>
+            ) : filteredCourses.length === 0 ? (
               <div className="py-16 text-center text-gray-500">
                 <p>검색 결과가 없습니다</p>
                 <p className="text-sm mt-2">다른 검색어나 필터를 시도해보세요</p>
               </div>
+            ) : (
+              filteredCourses.map((course) => (
+                <div
+                  key={course.id}
+                  onClick={() => setTempSelected(course)}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    tempSelected?.id === course.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                          {course.classification}
+                        </span>
+                        <span className="text-sm text-gray-500">{course.id}</span>
+                      </div>
+                      <h4 className="text-gray-900 mb-1">{course.name}</h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>{course.department} • {course.major}</span>
+                        <span>•</span>
+                        <span>{course.departmentName}</span>
+                      </div>
+                    </div>
+                    {tempSelected?.id === course.id && (
+                      <CheckCircle className="w-6 h-6 text-blue-600 ml-4" />
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

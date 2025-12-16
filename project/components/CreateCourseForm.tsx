@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
+import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface CurriculumItem {
   id: string;
@@ -26,7 +27,34 @@ interface Evaluation {
   area: string;
 }
 
+function normalizeDateToYmd(input: string) {
+  const digits = input.replace(/[^0-9]/g, '');
+  return digits.length === 8 ? digits : '';
+}
+
+function parseTrainingPeriod(input: string) {
+  // 왜: 화면 입력은 "2024.03.01 - 2024.12.31"처럼 사람이 쓰는 형식이라,
+  //     서버로는 항상 yyyyMMdd(숫자 8자리)로 통일해서 보내기 위함입니다.
+  const value = input.trim();
+  if (!value) return null;
+
+  const match = value.match(
+    /(\d{4}[.\-\/]\d{2}[.\-\/]\d{2}|\d{8})\s*(?:-|~|–|—)\s*(\d{4}[.\-\/]\d{2}[.\-\/]\d{2}|\d{8})/
+  );
+  if (!match) return null;
+
+  const start = normalizeDateToYmd(match[1]);
+  const end = normalizeDateToYmd(match[2]);
+  if (!start || !end) return null;
+
+  return { start, end };
+}
+
 export function CreateCourseForm() {
+  const [courseName, setCourseName] = useState('');
+  const [trainingPeriod, setTrainingPeriod] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [curriculumItems, setCurriculumItems] = useState<CurriculumItem[]>([]);
   const [teachingPlans, setTeachingPlans] = useState<TeachingPlan[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -98,9 +126,38 @@ export function CreateCourseForm() {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('과정이 개설되었습니다.');
+    setErrorMessage(null);
+
+    if (!courseName.trim()) {
+      setErrorMessage('과정명을 입력해 주세요.');
+      return;
+    }
+
+    const parsed = parseTrainingPeriod(trainingPeriod);
+    if (!parsed) {
+      setErrorMessage('교육훈련기간을 "YYYY.MM.DD - YYYY.MM.DD" 형식으로 입력해 주세요.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await tutorLmsApi.createProgram({
+        courseName: courseName.trim(),
+        startDate: parsed.start,
+        endDate: parsed.end,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      alert('과정이 개설되었습니다.');
+      setCourseName('');
+      setTrainingPeriod('');
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -109,6 +166,12 @@ export function CreateCourseForm() {
         <h2 className="text-gray-900 mb-2">과정 개설</h2>
         <p className="text-gray-600">새로운 교육 과정을 개설합니다.</p>
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {errorMessage}
+        </div>
+      )}
 
       {/* 기본 정보 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -133,6 +196,8 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">과정명</label>
             <input
               type="text"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="과정명을 입력하세요"
             />
@@ -172,6 +237,8 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">교육훈련기간</label>
             <input
               type="text"
+              value={trainingPeriod}
+              onChange={(e) => setTrainingPeriod(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="예: 2024.03.01 - 2024.12.31"
             />
@@ -483,10 +550,11 @@ export function CreateCourseForm() {
         </button>
         <button
           type="submit"
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Save className="w-5 h-5" />
-          <span>과정 개설</span>
+          <span>{saving ? '저장 중...' : '과정 개설'}</span>
         </button>
       </div>
     </form>

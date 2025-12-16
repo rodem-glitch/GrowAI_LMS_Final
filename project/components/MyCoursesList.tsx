@@ -1,80 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Users, Settings } from 'lucide-react';
 import { CourseManagement } from './CourseManagement';
+import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
   id: string;
   courseId: string;
   courseType: string;
   subjectName: string;
+  programId: number;
   programName: string;
   period: string;
   students: number;
   status: '대기' | '신청기간' | '학습기간' | '종료';
 }
-
-const mockCourses: Course[] = [
-  {
-    id: '1',
-    courseId: 'CS2024001',
-    courseType: '학위전공',
-    subjectName: '웹 프로그래밍 기초',
-    programName: '-',
-    period: '2024.03.01 - 2024.06.30',
-    students: 28,
-    status: '학습기간',
-  },
-  {
-    id: '2',
-    courseId: 'CS2024002',
-    courseType: '학위전공심화',
-    subjectName: '데이터베이스 설계',
-    programName: '여름방학 단기과정',
-    period: '2024.03.01 - 2024.06.30',
-    students: 24,
-    status: '학습기간',
-  },
-  {
-    id: '3',
-    courseId: 'HT2024001',
-    courseType: '하이테크',
-    subjectName: 'AI 머신러닝 실습',
-    programName: '-',
-    period: '2024.09.01 - 2024.12.31',
-    students: 30,
-    status: '신청기간',
-  },
-  {
-    id: '4',
-    courseId: 'PT2024001',
-    courseType: '전문기술',
-    subjectName: '네트워크 보안',
-    programName: '여름방학 단기과정',
-    period: '2024.01.01 - 2024.02.28',
-    students: 22,
-    status: '종료',
-  },
-  {
-    id: '5',
-    courseId: 'MC2024001',
-    courseType: '기능장',
-    subjectName: '산업용 로봇 제어',
-    programName: '-',
-    period: '2024.06.01 - 2024.08.31',
-    students: 18,
-    status: '대기',
-  },
-  {
-    id: '6',
-    courseId: 'HS2024001',
-    courseType: '고교위탁',
-    subjectName: '프로그래밍 입문',
-    programName: '여름방학 단기과정',
-    period: '2024.03.01 - 2024.12.31',
-    students: 35,
-    status: '학습기간',
-  },
-];
 
 export function MyCoursesList() {
   const [year, setYear] = useState('2024');
@@ -82,8 +21,12 @@ export function MyCoursesList() {
   const [status, setStatus] = useState('전체');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const filteredCourses = mockCourses.filter((course) => {
+  // 왜: 기존 화면 필터 UI를 그대로 살리면서, 데이터만 실제 DB 결과로 바꿉니다.
+  const filteredCourses = useMemo(() => courses.filter((course) => {
     const matchesCourseType = courseType === '전체' || course.courseType === courseType;
     const matchesStatus = status === '전체' || course.status === status;
     const matchesSearch =
@@ -93,7 +36,48 @@ export function MyCoursesList() {
       course.courseId.toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesCourseType && matchesStatus && matchesSearch;
-  });
+  }), [courses, courseType, status, searchTerm]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchCourses = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getMyCourses({ year });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const rows = res.rst_data ?? [];
+        const mapped: Course[] = rows.map((row) => {
+          const statusLabel = (row.status_label as Course['status']) ?? '대기';
+
+          return {
+            id: String(row.id),
+            courseId: row.course_id_conv || row.course_cd || String(row.id),
+            courseType: '-', // 현재 UI에서만 쓰는 값이라, 필요해지면 DB 컬럼과 매핑해서 채웁니다.
+            subjectName: row.subject_nm_conv || row.course_nm,
+            programId: Number(row.program_id ?? 0),
+            programName: row.program_nm_conv || '-',
+            period: row.period_conv || '-',
+            students: Number(row.student_cnt ?? 0),
+            status: statusLabel,
+          };
+        });
+
+        if (!cancelled) setCourses(mapped);
+      } catch (e) {
+        if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchCourses();
+    return () => {
+      cancelled = true;
+    };
+  }, [year]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -189,7 +173,19 @@ export function MyCoursesList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredCourses.length > 0 ? (
+              {errorMessage ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                    <p>{errorMessage}</p>
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                    <p>불러오는 중...</p>
+                  </td>
+                </tr>
+              ) : filteredCourses.length > 0 ? (
                 filteredCourses.map((course, index) => (
                   <tr key={course.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>

@@ -1,8 +1,25 @@
 import { useState } from 'react';
 import { Edit } from 'lucide-react';
+import { tutorLmsApi } from '../api/tutorLmsApi';
+import { CourseSelectionModal } from './CourseSelectionModal';
+
+type ProgramOption = {
+  id: string;
+  classification: string;
+  name: string;
+  department: string;
+  major: string;
+  departmentName: string;
+};
 
 // 과목정보 메인 탭
-export function CourseInfoTab({ course }: { course: any }) {
+export function CourseInfoTab({
+  course,
+  onCourseUpdated,
+}: {
+  course: any;
+  onCourseUpdated?: (nextCourse: any) => void;
+}) {
   const [subTab, setSubTab] = useState<'basic' | 'evaluation' | 'completion' | 'certificate'>('basic');
   const [useCertificate, setUseCertificate] = useState(false);
 
@@ -55,7 +72,7 @@ export function CourseInfoTab({ course }: { course: any }) {
       </div>
 
       {/* 하위 탭 콘텐츠 */}
-      {subTab === 'basic' && <BasicInfoTab course={course} />}
+      {subTab === 'basic' && <BasicInfoTab course={course} onCourseUpdated={onCourseUpdated} />}
       {subTab === 'evaluation' && (
         <EvaluationTab useCertificate={useCertificate} setUseCertificate={setUseCertificate} />
       )}
@@ -66,18 +83,79 @@ export function CourseInfoTab({ course }: { course: any }) {
 }
 
 // 기본 정보 탭
-function BasicInfoTab({ course }: { course: any }) {
+function BasicInfoTab({
+  course,
+  onCourseUpdated,
+}: {
+  course: any;
+  onCourseUpdated?: (nextCourse: any) => void;
+}) {
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const selectedProgram: ProgramOption | null =
+    course && 0 < Number(course.programId)
+      ? {
+          id: String(course.programId),
+          classification: '과정',
+          name: course.programName,
+          department: '-',
+          major: '-',
+          departmentName: '-',
+        }
+      : null;
+
+  const handleProgramSelect = async (program: ProgramOption | null) => {
+    // 왜: "소속 과정"은 과목(LM_COURSE)의 subject_id로만 관리하고, 0이면 미소속으로 처리합니다.
+    const courseId = Number(course?.id);
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    const programId = program ? Number(program.id) : 0;
+    if (program && !programId) {
+      setErrorMessage('과정 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.setCourseProgram({ courseId, programId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      onCourseUpdated?.({
+        ...course,
+        programId,
+        programName: program ? program.name : '-',
+      });
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
         <button
-          onClick={() => alert('과목 정보 수정 기능')}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => setIsCourseModalOpen(true)}
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Edit className="w-4 h-4" />
-          <span>수정</span>
+          <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-700 mb-2">과목명</label>
@@ -116,6 +194,15 @@ function BasicInfoTab({ course }: { course: any }) {
           </div>
         </div>
       </div>
+
+      <CourseSelectionModal
+        isOpen={isCourseModalOpen}
+        onClose={() => setIsCourseModalOpen(false)}
+        onSelect={(program) => {
+          void handleProgramSelect(program as ProgramOption | null);
+        }}
+        selectedCourse={selectedProgram}
+      />
       <div>
         <label className="block text-sm text-gray-700 mb-2">과목 개요</label>
         <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
