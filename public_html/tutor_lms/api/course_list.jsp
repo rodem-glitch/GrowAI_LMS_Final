@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- `project` 화면의 "담당과목" 목록에서, 내 과목과 소속 과정(프로그램) 정보를 같이 보여주기 위함입니다.

@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 특정 과정(프로그램)에 소속된 과목 목록을 불러와서, 화면에서 묶음(연계) 상태를 보여주기 위함입니다.

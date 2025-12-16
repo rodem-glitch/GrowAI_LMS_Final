@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 과정(프로그램)을 삭제해도, 과목은 "소속 과정이 없을 수도 있음" 조건을 만족해야 하므로 과목의 소속을 먼저 해제합니다.

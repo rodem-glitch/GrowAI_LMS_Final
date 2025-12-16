@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- `project` 화면의 "과정탐색/과정선택"에서 교수자가 만든 과정(프로그램) 목록을 바로 보여주기 위함입니다.

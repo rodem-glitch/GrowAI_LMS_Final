@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 교수자가 "단기 과정(프로그램)"을 직접 개설하면, 그 안에 여러 과목을 묶어 관리할 수 있습니다.

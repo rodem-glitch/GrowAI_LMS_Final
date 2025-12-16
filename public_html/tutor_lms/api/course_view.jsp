@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 과목 상세 화면(과목 정보 관리)에서 "소속 과정(프로그램)" 정보를 즉시 보여주기 위한 단건 조회 API입니다.

@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 과목을 특정 과정(프로그램)에 소속시키거나(연계), 소속을 해제할 수 있어야 합니다.

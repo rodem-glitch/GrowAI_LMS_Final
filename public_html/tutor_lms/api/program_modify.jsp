@@ -1,4 +1,4 @@
-<%@ include file="init.jsp" %><%
+<%@ page pageEncoding="utf-8" %><%@ include file="init.jsp" %><%
 
 //왜 필요한가:
 //- 교수자가 만든 과정(프로그램)은 운영 중에도 이름/기간이 바뀔 수 있어서 수정 기능이 필요합니다.
