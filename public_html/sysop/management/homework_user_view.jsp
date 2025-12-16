@@ -14,6 +14,7 @@ if(hid == 0 || cuid == 0 || courseId == 0) { m.jsError("기본키는 반드시 �
 CourseModuleDao courseModule = new CourseModuleDao();
 CourseUserDao courseUser = new CourseUserDao();
 HomeworkUserDao homeworkUser = new HomeworkUserDao();
+HomeworkTaskDao homeworkTask = new HomeworkTaskDao();
 UserDao user = new UserDao(isBlindUser);
 UserDeptDao userDept = new UserDeptDao();
 ClFileDao file = new ClFileDao();
@@ -111,6 +112,19 @@ info.put("user_file_ek", m.encrypt(info.s("user_file") + m.time("yyyyMMdd")));
 */
 info.put("confirm_block", "Y".equals(info.s("confirm_yn")));
 
+//추가과제 목록
+//왜: LM_HOMEWORK_USER는 1회 제출/피드백만 저장되므로, 반복되는 추가 과제를 별도 테이블에서 조회합니다.
+DataSet taskList = homeworkTask.find(
+	"site_id = " + siteId + " AND course_id = " + courseId + " AND homework_id = " + hid + " AND course_user_id = " + cuid + " AND status = 1"
+	, "*"
+	, "id ASC"
+);
+while(taskList.next()) {
+	taskList.put("reg_date_conv", !"".equals(taskList.s("reg_date")) ? m.time("yyyy.MM.dd HH:mm", taskList.s("reg_date")) : "-");
+	taskList.put("submit_conv", "Y".equals(taskList.s("submit_yn")) ? "제출" : "미제출");
+	taskList.put("confirm_conv", "Y".equals(taskList.s("confirm_yn")) ? "피드백완료" : "미피드백");
+}
+
 //목록-파일
 DataSet files = file.find("module = 'homework_" + hid + "' AND module_id = " + cuid + " AND status = 1");
 while(files.next()) {
@@ -191,12 +205,16 @@ p.setVar("query", m.qs("mode, tceuid"));
 p.setVar("list_query", m.qs("mode,tceuid,cuid"));
 p.setVar("form_script", f.getScript());
 
+p.setVar("cid", courseId);
+p.setVar("hid", hid);
+p.setVar("cuid", cuid);
 p.setVar("info", info);
 p.setVar("dek", m.encrypt("del" + userId));
 p.setVar("next", next);
 p.setVar("prev", prev);
 
 p.setLoop("files", files);
+p.setLoop("task_list", taskList);
 p.display();
 
 %>
