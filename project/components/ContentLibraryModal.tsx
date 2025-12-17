@@ -54,7 +54,7 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
             id: String(row.id),
             title: row.title,
             description: row.description || '',
-            category: row.lesson_type || '레슨',
+            category: row.lesson_type_conv || row.lesson_type || '레슨',
             tags: [],
             views: Number(row.views ?? 0),
             thumbnail: row.thumbnail || '',
@@ -85,12 +85,25 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
       content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       content.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // 왜: 레슨 테이블에 "카테고리"가 별도로 없는 환경이 많아서, UI는 유지하되 lesson_type 정도만 매핑합니다.
+    // 왜: 레슨(LM_LESSON)은 lesson_type(유형)만 있으므로, "카테고리" 필터는 유형 기준으로 동작시킵니다.
     const matchesCategory = categoryFilter === '전체' || content.category === categoryFilter;
 
-    // levelFilter/onlyFree는 현재 DB 필드가 없어 UI만 유지합니다.
+    // 왜: level(난이도)/무료여부는 레슨 테이블에 필드가 없어, UI는 비활성으로 처리합니다.
     return matchesTab && matchesSearch && matchesCategory;
   });
+
+  const categoryOptions = React.useMemo(() => {
+    const uniq = Array.from(new Set(contents.map((c) => c.category).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return ['전체', ...uniq];
+  }, [contents]);
+
+  React.useEffect(() => {
+    // 왜: 검색/탭 변경으로 옵션 목록이 바뀌면, 더 이상 존재하지 않는 필터 값은 "전체"로 되돌려야 화면이 비지 않습니다.
+    if (categoryFilter === '전체') return;
+    if (!categoryOptions.includes(categoryFilter)) setCategoryFilter('전체');
+  }, [categoryOptions, categoryFilter]);
 
   const handleSelect = (content: Content) => {
     onSelect(content);
@@ -183,32 +196,36 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option>전체</option>
-              <option>IT/프로그래밍</option>
-              <option>데이터</option>
-              <option>AI</option>
-              <option>디자인</option>
+              {categoryOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <select
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled
+              title="현재 레슨 데이터에는 난이도 정보가 없어 필터를 지원하지 않습니다."
+              className="px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
             >
               <option>전체 유형</option>
               <option>기초</option>
               <option>중급</option>
               <option>고급</option>
             </select>
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-not-allowed">
               <input
                 type="checkbox"
                 checked={onlyFree}
                 onChange={(e) => setOnlyFree(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                disabled
+                title="현재 레슨 데이터에는 무료/유료 정보가 없어 필터를 지원하지 않습니다."
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-not-allowed"
               />
               무료
             </label>
-            <div className="text-sm text-blue-600 cursor-pointer hover:underline">
+            <div className="text-sm text-gray-600">
               총 {filteredContents.length}개의 콘텐츠
             </div>
           </div>
