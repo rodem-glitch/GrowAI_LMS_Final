@@ -66,11 +66,17 @@ f.addElement("complete_limit_total_score", cinfo.i("complete_limit_total_score")
 //수정
 if(m.isPost() && f.validate()) {
 
-	if(f.getInt("complete_limit_progress") > f.getInt("limit_progress")) {
-		m.jsAlert("수료(완료) 진도 기준은 합격 진도 기준을 넘을 수 없습니다."); return;
-	}
-	if(f.getInt("complete_limit_total_score") > f.getInt("limit_total_score")) {
-		m.jsAlert("수료(완료) 총점 기준은 합격 총점 기준을 넘을 수 없습니다."); return;
+	// 왜: "합격 상태"를 사용하는 경우에만(=3단계 판정) 합격 기준(limit_*)이 의미가 있습니다.
+	// 합격을 사용하지 않는 환경(=2단계 판정)에서는 수료(완료) 기준만으로 판정하므로,
+	// 여기서 불필요하게 입력을 막지 않도록 합격 사용 시에만 비교 제한을 걸어줍니다.
+	boolean usePass = "Y".equals(f.get("pass_yn", "N"));
+	if(usePass) {
+		if(f.getInt("complete_limit_progress") > f.getInt("limit_progress")) {
+			m.jsAlert("수료(완료) 진도 기준은 합격 진도 기준을 넘을 수 없습니다."); return;
+		}
+		if(f.getInt("complete_limit_total_score") > f.getInt("limit_total_score")) {
+			m.jsAlert("수료(완료) 총점 기준은 합격 총점 기준을 넘을 수 없습니다."); return;
+		}
 	}
 
 	//과정
@@ -79,7 +85,7 @@ if(m.isPost() && f.validate()) {
 	course.item("assign_homework", f.getInt("assign_homework"));
 	course.item("assign_forum", f.getInt("assign_forum"));
 	course.item("assign_etc", f.getInt("assign_etc"));
-	course.item("pass_yn", f.get("pass_yn", "N"));
+	course.item("pass_yn", usePass ? "Y" : "N");
 	course.item("limit_progress", f.getInt("limit_progress"));
 	course.item("limit_exam", f.getInt("limit_exam"));
 	course.item("limit_homework", f.getInt("limit_homework"));

@@ -1,8 +1,9 @@
 <%@ page contentType="text/html; charset=utf-8" %><%@ include file="/init.jsp" %><%
 
 //왜 필요한가:
-//- "수료증/합격증 출력"은 JSON이 아니라 HTML 인쇄 화면이어야 합니다.
-//- sysop의 증명서 템플릿 렌더링 로직을 참고하되, tutor 화면 권한(교수자/관리자) 기준으로 제한합니다.
+//- 과목에 증명서 템플릿이 지정되지 않은 경우(또는 템플릿이 삭제/오류인 경우)에도
+//  교수자 화면에서 수료증/합격증 출력이 막히지 않도록 "기본 수료증 화면"을 제공합니다.
+//- sysop의 기본 수료증 출력(page.certificate)을 tutor 권한 기준으로 재사용합니다.
 
 //로그인 확인
 if(0 == userId) { m.jsErrClose("로그인이 필요합니다."); return; }
@@ -20,7 +21,6 @@ TutorDao tutor = new TutorDao();
 CourseTutorDao courseTutor = new CourseTutorDao();
 UserDao user = new UserDao();
 UserDeptDao userDept = new UserDeptDao();
-CertificateTemplateDao certificateTemplate = new CertificateTemplateDao();
 FileDao file = new FileDao();
 
 //권한: 교수자는 본인 과목만
@@ -33,11 +33,11 @@ if(!isAdmin) {
 	}
 }
 
-//상세 정보(템플릿에서 쓰는 값들을 최대한 준비)
+//상세 정보(기본 수료증 템플릿(page.certificate)에서 사용하는 값들)
 DataSet info = courseUser.query(
 	" SELECT a.* "
-	+ " , b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit, b.cert_template_id, b.pass_cert_template_id "
-	+ " , c.login_id, c.dept_id, c.user_nm, c.birthday, c.zipcode, c.new_addr, c.addr_dtl, c.gender "
+	+ " , b.course_nm, b.course_type, b.onoff_type, b.lesson_day, b.lesson_time, b.year, b.step, b.course_address, b.credit "
+	+ " , c.login_id, c.dept_id, c.user_nm, c.birthday, c.zipcode, c.new_addr, c.addr_dtl, c.gender, c.etc1, c.etc2, c.etc3, c.etc4, c.etc5 "
 	+ " , d.dept_nm "
 	+ " , (SELECT COUNT(*) FROM " + courseLesson.table + " WHERE course_id = a.course_id AND status = 1) lesson_cnt "
 	+ " FROM " + courseUser.table + " a "
@@ -49,31 +49,14 @@ DataSet info = courseUser.query(
 );
 if(!info.next()) { m.jsErrClose("수료(또는 합격) 처리된 수강 정보가 없습니다."); return; }
 
-int targetTemplateId = "P".equals(certType) ? info.i("pass_cert_template_id") : info.i("cert_template_id");
-
-String templateTypeFilter = "P".equals(certType) ? "P" : "C";
-
-// 왜: 템플릿이 미지정(0)인 경우에는 "사이트 기본 템플릿"을 사용하되,
-// 환경에 따라 해당 타입(C/P) 템플릿이 하나도 없을 수 있으니(예: 합격증만 존재) 기본 수료증 화면으로 폴백합니다.
-DataSet ctinfo = new DataSet();
-if(0 < targetTemplateId) {
-	ctinfo = certificateTemplate.find(
-		"id = " + targetTemplateId + " AND template_type = '" + templateTypeFilter + "' AND site_id = " + siteId + " AND status != -1"
-	);
-	if(!ctinfo.next()) { m.jsReplace("certificate.jsp?" + m.qs()); return; }
-} else {
-	ctinfo = certificateTemplate.find(
-		"site_id = " + siteId + " AND template_type = '" + templateTypeFilter + "' AND status = 1"
-		, "*"
-		, "reg_date DESC"
-		, 1
-	);
-	if(!ctinfo.next()) { m.jsReplace("certificate.jsp?" + m.qs()); return; }
-}
-
-//포맷팅(템플릿에서 자주 쓰는 키들을 맞춰줍니다)
+//포맷팅(기본 템플릿이 기대하는 키들)
 if(0 < info.i("dept_id")) info.put("dept_nm_conv", userDept.getNames(info.i("dept_id")));
-else info.put("dept_nm_conv", "[미소속]");
+else {
+	// 왜: 기본 수료증 템플릿(page.certificate)은 dept_nm을 직접 출력합니다.
+	// 소속이 없으면 빈칸으로 보이지 않게 기본 문구를 넣어줍니다.
+	info.put("dept_nm", "[미소속]");
+	info.put("dept_nm_conv", "[미소속]");
+}
 
 info.put("lesson_time_conv", m.nf((int)info.d("lesson_time")));
 info.put("birthday_conv", !"".equals(info.s("birthday")) ? m.time("yyyy.MM.dd", info.s("birthday")) : "-");
@@ -87,13 +70,13 @@ info.put("progress_ratio_conv", m.nf(info.d("progress_ratio"), 1));
 info.put("total_score", m.nf(info.d("total_score"), 0));
 info.put("complete_date_conv", !"".equals(info.s("complete_date")) ? m.time("yyyy.MM.dd", info.s("complete_date")) : "-");
 
-info.put("certificate_no", m.time("yyyy.MM.dd", info.s("start_date")) + "-" + m.strrpad(id + "", 5, "0"));
 info.put("today", m.time("yyyy년 MM월 dd일"));
 info.put("today2", m.time("yyyy.MM.dd"));
 info.put("today3", m.time("yy.MM.dd"));
 
-//배경 이미지 URL
-info.put("certificate_file_url", m.getUploadUrl(ctinfo.s("background_file")));
+//배경 이미지 URL(사이트 기본 수료증 배경)
+String bgUrl = (!"/data".equals(Config.getDataUrl()) ? "" : siteDomain) + m.getUploadUrl(siteinfo.s("certificate_file"));
+info.put("certificate_file_url", bgUrl);
 
 //강사 목록(템플릿에서 사용할 수 있게)
 DataSet tutors = courseTutor.query(
@@ -113,26 +96,18 @@ while(files.next()) {
 }
 
 //렌더링
+// 왜: 기본 수료증은 Malgn 템플릿(page.certificate)을 사용하므로, 루트를 /html로 맞춥니다.
+p.setRoot(siteinfo.s("doc_root") + "/html");
+p.setLayout(null);
+p.setBody("page.certificate");
+
 p.setVar(info);
 p.setLoop("list", info);
 p.setLoop("tutors", tutors);
 p.setLoop("files", files);
+
 p.setVar("single_block", true);
 p.setVar("cert_title", "P".equals(certType) ? "합격증" : "수료증");
-
-String tbody = "";
-try {
-	tbody = certificateTemplate.fetchTemplate(siteId, ctinfo.s("template_cd"), p);
-} catch(Exception e) {
-	m.jsErrClose("증명서 템플릿을 불러오는 중 오류가 발생했습니다.");
-	return;
-}
-
-out.print(tbody);
+p.display();
 
 %>
-<script>
-window.onload = function() {
-	try { window.print(); } catch (e) { alert("인쇄할 수 없습니다."); }
-}
-</script>

@@ -342,16 +342,22 @@ public class CourseUserDao extends DataObject {
 					sumAssignScore += assignScore;
 					sumConvertScore += convertScore;
 				}
+				// 왜: 배정된 시험이 없거나(0개), 배점 합이 0이면 0으로 나누기가 발생해 재계산이 실패할 수 있습니다.
+				// 이런 경우에는 "시험 점수는 0"으로 두고 다음 항목 계산을 계속 진행합니다.
+				if(sumAssignScore > 0) {
+					//환산점수(100점)
+					//	sumConvertScore : sumAssignScore = 환산점수 : 100
+					//	환산점수 = sumConvertScore * 100 / sumAssignScore
+					this.item("exam_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
 
-				//환산점수(100점)
-				//	sumConvertScore : sumAssignScore = 환산점수 : 100
-				//	환산점수 = sumConvertScore * 100 / sumAssignScore
-				this.item("exam_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-
-				//환산점수(시험과정배점)
-				//	sumConvertScore : sumAssignScore = 환산점수 : 시험과정배점
-				//	환산점수 = sumConvertScore * 시험과정배점 / sumAssignScore
-				this.item("exam_score", Malgn.round(sumConvertScore * cinfo.i("assign_exam") / sumAssignScore, 2));
+					//환산점수(시험과정배점)
+					//	sumConvertScore : sumAssignScore = 환산점수 : 시험과정배점
+					//	환산점수 = sumConvertScore * 시험과정배점 / sumAssignScore
+					this.item("exam_score", Malgn.round(sumConvertScore * cinfo.i("assign_exam") / sumAssignScore, 2));
+				} else {
+					this.item("exam_value", 0.00);
+					this.item("exam_score", 0.00);
+				}
 
 			} else if("homework".equals(scoreFields[i])) {
 				int sumAssignScore = 0;
@@ -373,8 +379,14 @@ public class CourseUserDao extends DataObject {
 					sumAssignScore += assignScore;
 					sumConvertScore += convertScore;
 				}
-				this.item("homework_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-				this.item("homework_score", Malgn.round(sumConvertScore * cinfo.i("assign_homework") / sumAssignScore, 2));
+				// 왜: 배정된 과제가 없거나(0개), 배점 합이 0이면 0으로 나누기가 발생해 재계산이 실패할 수 있습니다.
+				if(sumAssignScore > 0) {
+					this.item("homework_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
+					this.item("homework_score", Malgn.round(sumConvertScore * cinfo.i("assign_homework") / sumAssignScore, 2));
+				} else {
+					this.item("homework_value", 0.00);
+					this.item("homework_score", 0.00);
+				}
 
 			} else if("forum".equals(scoreFields[i])) {
 				int sumAssignScore = 0;
@@ -396,11 +408,25 @@ public class CourseUserDao extends DataObject {
 					sumAssignScore += assignScore;
 					sumConvertScore += convertScore;
 				}
-				this.item("forum_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-				this.item("forum_score", Malgn.round(sumConvertScore * cinfo.i("assign_forum") / sumAssignScore, 2));
+				// 왜: 배정된 토론이 없거나(0개), 배점 합이 0이면 0으로 나누기가 발생해 재계산이 실패할 수 있습니다.
+				if(sumAssignScore > 0) {
+					this.item("forum_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
+					this.item("forum_score", Malgn.round(sumConvertScore * cinfo.i("assign_forum") / sumAssignScore, 2));
+				} else {
+					this.item("forum_value", 0.00);
+					this.item("forum_score", 0.00);
+				}
 
 			} else if("etc".equals(scoreFields[i])) {
-				this.item("etc_value", Malgn.round(cuinfo.d("etc_score") * 100 / cinfo.i("assign_etc"), 2));
+				// 왜: 기타 배점(assign_etc)이 0인 과목이 있을 수 있으니 0으로 나누지 않게 방어합니다.
+				// 기타 점수는 직접 입력하는 값이라 "기타점수/기타배점" 비율로 100점 환산값(etc_value)을 계산합니다.
+				double assignEtc = cinfo.d("assign_etc");
+				double etcScore = cuinfo.d("etc_score");
+				if(assignEtc > 0) {
+					this.item("etc_value", Malgn.round(Math.min(etcScore, assignEtc) * 100 / assignEtc, 2));
+				} else {
+					this.item("etc_value", 0.00);
+				}
 			}
 		}
 		

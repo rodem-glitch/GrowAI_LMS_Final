@@ -55,7 +55,12 @@ while(culist.next()) {
 	tmp.first();
 
 	cinfo.first();
-	if(courseUser.updateUserScore(tmp, cinfo)) success++;
+	if(courseUser.updateUserScore(tmp, cinfo)) {
+		// 왜: 성적을 재계산하면 총점이 바뀌고, 그에 따라 수료/합격 상태도 달라질 수 있습니다.
+		// 그래서 재계산 시에는 판정값(complete_status/complete_yn)도 함께 갱신합니다.
+		courseUser.completeUser(culist.i("id"));
+		success++;
+	}
 }
 
 result.put("rst_code", "0000");
@@ -64,4 +69,3 @@ result.put("rst_data", success);
 result.print();
 
 %>
-

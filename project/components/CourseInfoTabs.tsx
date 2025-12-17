@@ -417,6 +417,7 @@ function EvaluationTab({
     () => form.assignProgress + form.assignExam + form.assignHomework + form.assignForum + form.assignEtc,
     [form.assignEtc, form.assignExam, form.assignForum, form.assignHomework, form.assignProgress],
   );
+  const passEnabled = form.passYn === 'Y';
 
   const handleSave = async () => {
     // 왜: 배점/기준은 수료 판정 및 성적/증명서 출력에 직접 영향을 주므로, DB에 저장해야 새로고침 후에도 유지됩니다.
@@ -537,6 +538,11 @@ function EvaluationTab({
         <p className="text-sm text-gray-600">
           아래 기준은 수료/합격 판정 및 성적 상태 표시(미달/수료/합격)에 사용됩니다.
         </p>
+        {!passEnabled && (
+          <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg text-sm">
+            합격 상태 사용이 꺼져 있어요. 그래서 지금은 “합격 기준” 입력칸을 잠가두었습니다. (수료 기준만 사용됩니다)
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -545,7 +551,8 @@ function EvaluationTab({
               type="number"
               value={form.limitTotalScore}
               onChange={(e) => setForm((prev) => ({ ...prev, limitTotalScore: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
           <div>
@@ -554,7 +561,8 @@ function EvaluationTab({
               type="number"
               value={form.limitProgress}
               onChange={(e) => setForm((prev) => ({ ...prev, limitProgress: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
         </div>
@@ -566,7 +574,8 @@ function EvaluationTab({
               type="number"
               value={form.limitExam}
               onChange={(e) => setForm((prev) => ({ ...prev, limitExam: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
           <div>
@@ -575,7 +584,8 @@ function EvaluationTab({
               type="number"
               value={form.limitHomework}
               onChange={(e) => setForm((prev) => ({ ...prev, limitHomework: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
           <div>
@@ -584,7 +594,8 @@ function EvaluationTab({
               type="number"
               value={form.limitForum}
               onChange={(e) => setForm((prev) => ({ ...prev, limitForum: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
           <div>
@@ -593,7 +604,8 @@ function EvaluationTab({
               type="number"
               value={form.limitEtc}
               onChange={(e) => setForm((prev) => ({ ...prev, limitEtc: toInt(e.target.value, 0) }))}
-              className={numberInputClass}
+              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
+              disabled={!passEnabled}
             />
           </div>
         </div>

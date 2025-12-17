@@ -444,15 +444,12 @@
 </tr>
 <!--/if(modify)-->
 
-<!--새로 추가 Start-->
-<tr>
-	<td class="f_th01">수료증,합격증 4번 사용여부</td>
-	<td class="f_td01" colspan="3">
-		<label class="switch01"><input type="checkbox" id="status_fullcourse" name="status_fullcourse" value="Y"></label>
-		<span class="desc01">1학기 2학기 총 4번의 합격증, 수료증을 발행할 경우 선택합니다.</span>
-	</td>
-</tr>
-<!--새로 추가 End-->
+<!--
+왜 숨기나요?
+- '수료증/합격증 4번' 관련 항목은 DB 저장/발급 로직이 연결되어 있지 않아(=실제로는 동작하지 않아)
+  화면에 남아 있으면 관리자분들이 설정을 해도 반영이 안 되는 "헷갈림"만 만들었습니다.
+- 그래서 현재는 UI에서 제거(숨김)하고, 필요 시 요구사항을 정리한 뒤 제대로 구현하는 것이 안전합니다.
+-->
 </table>
 </div>
 
@@ -714,10 +711,6 @@
 			<td class="l_th03">수강후기</td>
 			<td class="l_th03 certcotitle">수강증</td>
 			<td class="l_th03 certcomtitle">수료증</td>
-			<!--새로 추가 Start-->
-			<td class="l_th03 addcolumn hide">2차 합격증</td>
-			<td class="l_th03 addcolumn hide">2차 수료증</td>
-			<!--새로 추가 End-->
 		</tr>
 		<tr align="center">
 			<td class="l_td01">
@@ -741,14 +734,6 @@
 			<td class="l_td01">
 				<label class="switch01"><input type="checkbox" name="cert_complete_yn" value="Y"></label>
 			</td>
-			<!--새로 추가 Start-->
-			<td class="l_td01 addcolumn hide">
-				<label class="switch01"><input type="checkbox" name="cert_course2_yn" value="Y" class="addcheckbox"></label>
-			</td>
-			<td class="l_td01 addcolumn hide">
-				<label class="switch01"><input type="checkbox" name="cert_complete2_yn" value="Y" class="addcheckbox"></label>
-			</td>
-			<!--새로 추가 End-->
 		</tr>
 		</table>
 		<!-- div class="desc01" style="margin-top:5px;"> 미사용시 노출이 되지 않습니다.	</div -->
@@ -916,11 +901,6 @@
 			<td class="l_th03">구분</td>
 			<td class="l_th03">진도(출석)율</td>
 			<td class="l_th01 completetitle">총점</td>
-			<!--새로 추가 Start-->
-			<td class="l_th01 addcolumn hide">합격</td>
-			<td class="l_th01 addcolumn hide">총점2</td>
-			<td class="l_th01 addcolumn hide">합격2</td>
-			<!--새로 추가 END-->
 <!--			<td class="l_th03">시험</td>-->
 <!--			<td class="l_th03">과제</td>-->
 <!--			<td class="l_th03">토론</td>-->
@@ -951,17 +931,6 @@
 
 				<input type="text" name="limit_total_score" value="{{limit_total_score}}" class="ipt_right nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
 			</td>
-			<!--새로 추가 Start-->
-			<td class="l_td01 addcolumn hide">
-				<input type="text" name="limit_total_course" value="{{limit_total_course}}" class="ipt_right addinput nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
-			</td>
-			<td class="l_td01 addcolumn hide">
-				<input type="text" name="limit_total_score2" value="{{limit_total_score2}}" class="ipt_right addinput nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
-			</td>
-			<td class="l_td01 addcolumn hide">
-				<input type="text" name="limit_total_course2" value="{{limit_total_course2}}" class="ipt_right addinput nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
-			</td>
-			<!--새로 추가 END-->
 		</tr>
 		<tr align="center">
 			<td class="l_th02">수료(완료) 기준</td>
@@ -971,8 +940,6 @@
 			<td class="l_td01">
 				<input type="text" name="complete_limit_total_score" value="{{complete_limit_total_score}}" class="ipt_right nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
 			</td>
-			<td class="l_td01 addcolumn hide">-</td>
-			<td class="l_td01 addcolumn hide">-</td>
 		</tr>
 		</table>
 	</td>
@@ -1126,22 +1093,6 @@ addEvent("onload", function() {
 <script language="JavaScript">
 function goSubmit(f) {
 	if(!validate(f)) return false;
-	<!--새로 추가 Start-->
-	if ($("#status_fullcourse").is(":checked")) {
-		var check=true;
-		$.each($(".addinput"),function(k,obj) {
-			if ($(obj).val() == "0") {
-				check=false;
-				alert("'수료증,합격증 4번 사용여부'가 활성화 되어 있어\n해당 부분의 점수가 등록 되어 있어야 합니다.");
-				if ($(".evaluation").css("display") == "none") {
-					$(".evaluationparent").click();
-				}
-				return false;
-			}
-		});
-		return check;
-	}
-	<!--새로 추가 End-->
 	if(f['course_type'].value == "R") {
 		var rsdate = f['request_sdate'].value;
 		var redate = f['request_edate'].value;
@@ -1357,19 +1308,5 @@ $(document).ready(function() {
 	$(".fa-plus").closest("table").next(".toggle-area").toggle(100);
 	<!--/if(modify)-->
 
-	<!--새로 추가 Start-->
-	$("#status_fullcourse").on("click",function() {
-		$(".addcolumn, .status_fullcourse").toggleClass('hide', !$(this).is(":checked"));
-		// $(".status_normalcourse").toggleClass('hide', $(this).is(":checked"));
-		$(".addcheckbox").click();
-		$(".certcotitle").text($(this).is(":checked")?"1차 합격증":"수강증");
-		$(".certcomtitle").text($(this).is(":checked")?"1차 수료증":"수료증");
-	});
-	if ($("#status_fullcourse").is(":checked")) {
-		$(".addcolumn, .status_fullcourse").toggleClass('hide', !$("#status_fullcourse").is(":checked"));
-		$(".certcotitle").text("1차 합격증");
-		$(".certcomtitle").text("1차 수료증");
-	}
-	<!--새로 추가 End-->
 });
 </script>

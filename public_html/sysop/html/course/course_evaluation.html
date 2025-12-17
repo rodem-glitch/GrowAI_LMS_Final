@@ -168,6 +168,35 @@
 </form>
 {{form_script}}
 
+<script>
+// 왜: "합격 상태"를 쓰지 않는다면(=수료/미수료 2단계만 사용),
+// "합격 기준" 입력칸은 실제 판정에 사용되지 않아 실수로 값을 바꾸는 일이 자주 생깁니다.
+// 그래서 합격 상태가 OFF일 때는 해당 입력칸을 잠가서(비활성화) 혼란을 줄입니다.
+(function() {
+	function togglePassCriteria() {
+		var f = document.forms['form1'];
+		if(!f) return;
+
+		var passEl = f['pass_yn'];
+		var passEnabled = passEl && passEl.checked;
+
+		var names = ["limit_total_score", "limit_progress", "limit_exam", "limit_homework", "limit_forum", "limit_etc"];
+		for(var i = 0; i < names.length; i++) {
+			if(f[names[i]]) f[names[i]].disabled = !passEnabled;
+		}
+	}
+
+	addEvent("onload", function() {
+		try {
+			$("input[name='pass_yn']").on("change", function() {
+				togglePassCriteria();
+			});
+		} catch(e) {}
+		togglePassCriteria();
+	});
+}());
+</script>
+
 <table class="c_tb01" cellpadding="0" cellspacing="0">
 <tr>
 	<td class="c_th01">배정된 평가항목</td>
