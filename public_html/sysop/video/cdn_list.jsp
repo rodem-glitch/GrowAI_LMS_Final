@@ -3,8 +3,16 @@
 <%@ include file="init.jsp" %><%
 
 //기본키
+String mode = m.rs("mode");
 if("".equals(siteinfo.s("cdn_ftp"))) {
-	m.redirect("choice.jsp?" + m.qs());
+	// 왜: CDN FTP 설정이 없으면 파일 목록을 열 수 없는데, 기존 코드는 존재하지 않는 choice.jsp로 보내서
+	//     사용자가 "흰 화면"으로 느끼는 문제(404/빈 화면)가 발생할 수 있습니다.
+	m.jsAlert("CDN FTP 정보가 설정되어 있지 않습니다.\\n\\n[관리자 > 사이트관리 > 사이트정보]에서 CDN FTP를 먼저 설정해 주세요.");
+	if("select".equals(mode)) {
+		m.js("window.close();");
+	} else {
+		m.jsReplace("../site/site_info.jsp", "parent");
+	}
 	return;
 }
 
@@ -12,7 +20,6 @@ if("".equals(siteinfo.s("cdn_ftp"))) {
 //if(!Menu.accessible(69, userId, userKind)) { m.jsError("접근 권한이 없습니다."); return; }
 
 //변수
-String mode = m.rs("mode");
 String dir = m.rs("dir", "");
 String parentDir = (!"".equals(dir) ? dir.substring(0, dir.lastIndexOf("/")) : "");
 

@@ -33,6 +33,8 @@ f.addElement("study_edate", null, "hname:'학습기한', required:'Y'");
 
 //선택값
 f.addElement("program_id", 0, "hname:'소속과정ID'");
+//왜: sysop(관리자)과 동일한 LM_CATEGORY를 쓰도록, 선택된 카테고리 ID를 같이 받아 저장합니다.
+f.addElement("category_id", 0, "hname:'카테고리ID'");
 f.addElement("semester", "", "hname:'학기'");
 f.addElement("credit", 0, "hname:'학점'");
 f.addElement("lesson_time", 0, "hname:'시수'");
@@ -53,6 +55,15 @@ String year = f.get("year").trim();
 String studySdate = m.time("yyyyMMdd", f.get("study_sdate"));
 String studyEdate = m.time("yyyyMMdd", f.get("study_edate"));
 int programId = f.getInt("program_id");
+int categoryId = f.getInt("category_id");
+
+//왜: 다른 사이트/다른 모듈의 카테고리를 억지로 넣으면, 화면/관리자에서 "카테고리가 안 맞는다" 문제가 생깁니다.
+//     그래서 현재 사이트의 course 카테고리만 허용하고, 아니면 0(미지정)으로 안전하게 처리합니다.
+if(categoryId > 0) {
+	LmCategoryDao lmCategory = new LmCategoryDao("course");
+	DataSet cinfo = lmCategory.find("id = " + categoryId + " AND site_id = " + siteId + " AND module = 'course' AND status = 1");
+	if(!cinfo.next()) categoryId = 0;
+}
 
 if(0 > m.diffDate("D", studySdate, studyEdate)) {
 	result.put("rst_code", "1100");
@@ -77,7 +88,7 @@ int newId = course.getSequence();
 course.item("id", newId);
 course.item("site_id", siteId);
 course.item("subject_id", programId);
-course.item("category_id", 0);
+course.item("category_id", categoryId);
 course.item("course_nm", courseNm);
 course.item("year", year);
 course.item("step", nextStep);

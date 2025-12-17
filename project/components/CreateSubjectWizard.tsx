@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Info,
   Users,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { ContentLibraryModal } from './ContentLibraryModal';
 import { CourseSelectionModal } from './CourseSelectionModal';
-import { tutorLmsApi } from '../api/tutorLmsApi';
+import { tutorLmsApi, type TutorCourseCategoryRow } from '../api/tutorLmsApi';
 
 type Step = 'basic' | 'learners' | 'curriculum' | 'confirm';
 
@@ -52,7 +52,7 @@ interface FormData {
   // 기본 정보
   subjectName: string;
   selectedCourse: Course | null;
-  category: string;
+  categoryId: number;
   year: string;
   semester: string;
   credits: string;
@@ -75,10 +75,13 @@ export function CreateSubjectWizard() {
   const [currentStep, setCurrentStep] = useState<Step>('basic');
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [courseCategories, setCourseCategories] = useState<TutorCourseCategoryRow[]>([]);
   const [formData, setFormData] = useState<FormData>({
     subjectName: '',
     selectedCourse: null,
-    category: 'CLASSROOM',
+    categoryId: 0,
     year: '2024',
     semester: '1학기',
     credits: '',
@@ -99,6 +102,48 @@ export function CreateSubjectWizard() {
       },
     ],
   });
+
+  useEffect(() => {
+    // 왜: 관리자(sysop)와 같은 카테고리 목록(LM_CATEGORY)을 불러와서, PLISM에서도 같은 기준으로 선택하게 하기 위함입니다.
+    let alive = true;
+
+    setCategoryLoading(true);
+    setCategoryError(null);
+
+    tutorLmsApi
+      .getCourseCategories()
+      .then((res) => {
+        if (!alive) return;
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const rows = (res.rst_data ?? []) as TutorCourseCategoryRow[];
+        setCourseCategories(rows);
+
+        // 왜: 화면의 기본값이 텍스트(CLASSROOM)였는데, 실제 DB 카테고리에서는 보통 "자율강좌"가 가장 가까운 성격이라
+        //     사용자가 따로 고르지 않아도 기본 선택이 되게 합니다(없으면 0=미지정 유지).
+        const preferred =
+          rows.find((r) => r.category_nm === '자율강좌') ??
+          rows.find((r) => (r.category_nm ?? '').includes('자율'));
+
+        if (preferred) {
+          setFormData((prev) =>
+            prev.categoryId > 0 ? prev : { ...prev, categoryId: Number(preferred.id) }
+          );
+        }
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setCategoryError(err instanceof Error ? err.message : '카테고리를 불러오는 중 오류가 발생했습니다.');
+      })
+      .finally(() => {
+        if (!alive) return;
+        setCategoryLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const steps = [
     { id: 'basic' as Step, label: '기본 정보', icon: Info },
@@ -128,11 +173,15 @@ export function CreateSubjectWizard() {
   };
 
   const resetWizard = () => {
+    const preferred =
+      courseCategories.find((c) => c.category_nm === '자율강좌') ??
+      courseCategories.find((c) => (c.category_nm ?? '').includes('자율'));
+
     setCurrentStep('basic');
     setFormData({
       subjectName: '',
       selectedCourse: null,
-      category: 'CLASSROOM',
+      categoryId: preferred ? Number(preferred.id) : 0,
       year: '2024',
       semester: '1학기',
       credits: '',
@@ -182,6 +231,7 @@ export function CreateSubjectWizard() {
         studyStartDate: formData.startDate,
         studyEndDate: formData.endDate,
         programId: programId > 0 ? programId : undefined,
+        categoryId: formData.categoryId > 0 ? formData.categoryId : undefined,
         semester: formData.semester,
         credit: formData.credits,
         lessonTime: formData.hours,
@@ -302,7 +352,13 @@ export function CreateSubjectWizard() {
       {/* Step Content */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         {currentStep === 'basic' && (
-          <BasicInfoStep formData={formData} updateFormData={updateFormData} />
+          <BasicInfoStep
+            formData={formData}
+            updateFormData={updateFormData}
+            courseCategories={courseCategories}
+            categoryLoading={categoryLoading}
+            categoryError={categoryError}
+          />
         )}
         {currentStep === 'learners' && (
           <LearnersStep formData={formData} updateFormData={updateFormData} />
@@ -310,7 +366,7 @@ export function CreateSubjectWizard() {
         {currentStep === 'curriculum' && (
           <CurriculumStep formData={formData} updateFormData={updateFormData} />
         )}
-        {currentStep === 'confirm' && <ConfirmStep formData={formData} />}
+        {currentStep === 'confirm' && <ConfirmStep formData={formData} courseCategories={courseCategories} />}
 
         {/* Navigation Buttons */}
         <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-200">
@@ -349,9 +405,15 @@ export function CreateSubjectWizard() {
 function BasicInfoStep({
   formData,
   updateFormData,
+  courseCategories,
+  categoryLoading,
+  categoryError,
 }: {
   formData: FormData;
   updateFormData: (updates: Partial<FormData>) => void;
+  courseCategories: TutorCourseCategoryRow[];
+  categoryLoading: boolean;
+  categoryError: string | null;
 }) {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -422,12 +484,20 @@ function BasicInfoStep({
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">과정 카테고리</label>
-          <input
-            type="text"
-            value={formData.category}
-            onChange={(e) => updateFormData({ category: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+          <select
+            value={String(formData.categoryId)}
+            disabled={categoryLoading}
+            onChange={(e) => updateFormData({ categoryId: Number(e.target.value) })}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+          >
+            <option value="0">{categoryLoading ? '카테고리 불러오는 중...' : '[미지정]'}</option>
+            {courseCategories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.label || c.name_conv || c.category_nm}
+              </option>
+            ))}
+          </select>
+          {categoryError && <div className="text-sm text-red-600 mt-1">{categoryError}</div>}
         </div>
       </div>
 
@@ -1047,7 +1117,19 @@ function CurriculumStep({
 }
 
 // 최종 확인 단계
-function ConfirmStep({ formData }: { formData: FormData }) {
+function ConfirmStep({
+  formData,
+  courseCategories,
+}: {
+  formData: FormData;
+  courseCategories: TutorCourseCategoryRow[];
+}) {
+  const selectedCategory = courseCategories.find(
+    (c) => Number(c.id) === Number(formData.categoryId)
+  );
+  const categoryLabel =
+    selectedCategory?.label || selectedCategory?.name_conv || selectedCategory?.category_nm || '-';
+
   return (
     <div className="space-y-8">
       <h3 className="text-gray-900">최종 확인</h3>
@@ -1069,7 +1151,7 @@ function ConfirmStep({ formData }: { formData: FormData }) {
             </div>
             <div>
               <span className="text-gray-600">카테고리:</span>
-              <span className="ml-2 text-gray-900">{formData.category || '-'}</span>
+              <span className="ml-2 text-gray-900">{categoryLabel}</span>
             </div>
             <div>
               <span className="text-gray-600">년도/학기:</span>

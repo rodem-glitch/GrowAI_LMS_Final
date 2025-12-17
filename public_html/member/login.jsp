@@ -124,7 +124,7 @@ if(m.isPost() || isToken) {
 
 		} else if(0 == info.i("status")) {
 			if(0 == siteinfo.i("join_status")) m.jsError(_message.get("alert.member.wait_approve")); //승인대기중인 아이디입니다.
-			else m.jsError(_message.get("alert.member.nodata")); //회원 정보가 없습니다.
+			else m.jsError(_message.get("alert.member.stopped")); //중지된 아이디입니다.
 			return;
 
 		} else {

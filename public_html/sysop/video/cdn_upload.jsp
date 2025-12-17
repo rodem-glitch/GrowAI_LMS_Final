@@ -3,7 +3,10 @@
 <%@ include file="init.jsp" %><%
 
 if("".equals(siteinfo.s("cdn_ftp"))) {
-	m.redirect("choice.jsp?" + m.qs());
+	// 왜: CDN FTP 설정이 없으면 업로드 자체가 불가능합니다.
+	//     기존처럼 존재하지 않는 choice.jsp로 보내면 "흰 화면"처럼 보여서 원인 파악이 더 어려워집니다.
+	m.jsAlert("CDN FTP 정보가 설정되어 있지 않습니다.\\n\\n[관리자 > 사이트관리 > 사이트정보]에서 CDN FTP를 먼저 설정해 주세요.");
+	m.js("if(parent && parent.CloseLayer) { parent.CloseLayer(); } else { window.close(); }");
 	return;
 }
 

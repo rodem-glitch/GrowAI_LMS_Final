@@ -74,6 +74,17 @@ export type TutorCourseYearRow = {
   year: string;
 };
 
+export type TutorCourseCategoryRow = {
+  id: number;
+  category_nm: string;
+  name_conv?: string;
+  label?: string;
+  parent_id?: number;
+  depth?: number;
+  display_yn?: 'Y' | 'N';
+  status?: number;
+};
+
 export type TutorCourseInfoDetail = {
   id: number;
   course_nm: string;
@@ -599,6 +610,7 @@ export const tutorLmsApi = {
     studyStartDate: string;
     studyEndDate: string;
     programId?: number;
+    categoryId?: number;
     semester?: string;
     credit?: string | number;
     lessonTime?: string | number;
@@ -612,6 +624,7 @@ export const tutorLmsApi = {
     body.set('study_sdate', payload.studyStartDate);
     body.set('study_edate', payload.studyEndDate);
     if (payload.programId) body.set('program_id', String(payload.programId));
+    if (payload.categoryId) body.set('category_id', String(payload.categoryId));
     if (payload.semester) body.set('semester', payload.semester);
     if (payload.credit !== undefined && payload.credit !== null && String(payload.credit) !== '') body.set('credit', String(payload.credit));
     if (payload.lessonTime !== undefined && payload.lessonTime !== null && String(payload.lessonTime) !== '') body.set('lesson_time', String(payload.lessonTime));
@@ -624,6 +637,11 @@ export const tutorLmsApi = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
+  },
+
+  async getCourseCategories() {
+    // 왜: "과정 카테고리"를 관리자(sysop)와 같은 기준(LM_CATEGORY)으로 보여주기 위해 필요합니다.
+    return requestJson<TutorCourseCategoryRow[]>(`/tutor_lms/api/course_categories.jsp`);
   },
 
   async getLearners(params: { keyword?: string; deptId?: number; deptKeyword?: string; page?: number; limit?: number } = {}) {
