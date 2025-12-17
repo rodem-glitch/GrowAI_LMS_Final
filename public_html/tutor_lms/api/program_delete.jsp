@@ -19,6 +19,7 @@ if(0 == id) {
 }
 
 SubjectDao subject = new SubjectDao();
+SubjectPlanDao subjectPlan = new SubjectPlanDao();
 CourseDao course = new CourseDao();
 
 //왜: 교수자는 본인 과정만, 관리자는 전체 과정을 삭제할 수 있어야 합니다.
@@ -47,6 +48,15 @@ if(!subject.update(whereUpdate)) {
 	result.put("rst_message", "삭제 중 오류가 발생했습니다.");
 	result.print();
 	return;
+}
+
+//운영계획서도 함께 삭제 처리(왜: 목록/상세에서 삭제된 과정 정보가 남지 않게 합니다)
+try {
+	subjectPlan.item("status", -1);
+	subjectPlan.item("mod_date", m.time("yyyyMMddHHmmss"));
+	subjectPlan.update("subject_id = " + id + " AND site_id = " + siteId + " AND status != -1");
+} catch(Exception ignore) {
+	//왜: 운영계획서 테이블(LM_SUBJECT_PLAN)이 아직 없는 환경에서도, 과정 삭제 자체는 성공해야 합니다.
 }
 
 result.put("rst_code", "0000");

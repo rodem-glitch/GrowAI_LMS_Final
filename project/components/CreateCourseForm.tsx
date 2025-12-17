@@ -27,6 +27,69 @@ interface Evaluation {
   area: string;
 }
 
+const CLASSIFICATION_LABELS: Record<string, string> = {
+  'degree-major': '학위전공',
+  'degree-major-advanced': '학위전공심화',
+  'professional-tech': '전문기술',
+  'high-tech': '하이테크',
+  'master-craftsman': '기능장',
+  'high-school-consignment': '고교위탁',
+  'new-seniors': '신중년',
+};
+
+const TRAINING_LEVEL_LABELS: Record<string, string> = {
+  beginner: '초급',
+  intermediate: '중급',
+  advanced: '고급',
+};
+
+function buildPlanJson(params: {
+  classification: string;
+  courseName: string;
+  department: string;
+  major: string;
+  departmentName: string;
+  trainingPeriodText: string;
+  startDateYmd: string;
+  endDateYmd: string;
+  trainingLevel: string;
+  trainingTarget: string;
+  trainingGoal: string;
+  curriculumItems: CurriculumItem[];
+  teachingPlans: TeachingPlan[];
+  evaluations: Evaluation[];
+}) {
+  // 왜: DB에는 "문자열 1개(plan_json)"만 저장하므로, 화면에서 입력한 값을 한 덩어리(JSON)로 묶어
+  //     저장/조회/출력을 항상 같은 규칙으로 처리하기 위함입니다.
+  return {
+    version: 1,
+    basic: {
+      classification: {
+        value: params.classification,
+        label: CLASSIFICATION_LABELS[params.classification] ?? params.classification,
+      },
+      courseName: params.courseName,
+      department: params.department,
+      major: params.major,
+      departmentName: params.departmentName,
+    },
+    training: {
+      trainingPeriodText: params.trainingPeriodText,
+      startDateYmd: params.startDateYmd,
+      endDateYmd: params.endDateYmd,
+      trainingLevel: {
+        value: params.trainingLevel,
+        label: TRAINING_LEVEL_LABELS[params.trainingLevel] ?? params.trainingLevel,
+      },
+      trainingTarget: params.trainingTarget,
+      trainingGoal: params.trainingGoal,
+    },
+    curriculum: params.curriculumItems,
+    teachingPlans: params.teachingPlans,
+    evaluations: params.evaluations,
+  };
+}
+
 function normalizeDateToYmd(input: string) {
   const digits = input.replace(/[^0-9]/g, '');
   return digits.length === 8 ? digits : '';
@@ -51,8 +114,15 @@ function parseTrainingPeriod(input: string) {
 }
 
 export function CreateCourseForm() {
+  const [classification, setClassification] = useState('');
   const [courseName, setCourseName] = useState('');
+  const [department, setDepartment] = useState('');
+  const [major, setMajor] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
   const [trainingPeriod, setTrainingPeriod] = useState('');
+  const [trainingLevel, setTrainingLevel] = useState('');
+  const [trainingTarget, setTrainingTarget] = useState('');
+  const [trainingGoal, setTrainingGoal] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [curriculumItems, setCurriculumItems] = useState<CurriculumItem[]>([]);
@@ -130,6 +200,11 @@ export function CreateCourseForm() {
     e.preventDefault();
     setErrorMessage(null);
 
+    if (!classification) {
+      setErrorMessage('과정 분류를 선택해 주세요.');
+      return;
+    }
+
     if (!courseName.trim()) {
       setErrorMessage('과정명을 입력해 주세요.');
       return;
@@ -143,16 +218,44 @@ export function CreateCourseForm() {
 
     setSaving(true);
     try {
+      const planJson = JSON.stringify(buildPlanJson({
+        classification,
+        courseName: courseName.trim(),
+        department: department.trim(),
+        major: major.trim(),
+        departmentName: departmentName.trim(),
+        trainingPeriodText: trainingPeriod.trim(),
+        startDateYmd: parsed.start,
+        endDateYmd: parsed.end,
+        trainingLevel,
+        trainingTarget: trainingTarget.trim(),
+        trainingGoal: trainingGoal.trim(),
+        curriculumItems,
+        teachingPlans,
+        evaluations,
+      }));
+
       const res = await tutorLmsApi.createProgram({
         courseName: courseName.trim(),
         startDate: parsed.start,
         endDate: parsed.end,
+        planJson,
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
       alert('과정이 개설되었습니다.');
+      setClassification('');
       setCourseName('');
+      setDepartment('');
+      setMajor('');
+      setDepartmentName('');
       setTrainingPeriod('');
+      setTrainingLevel('');
+      setTrainingTarget('');
+      setTrainingGoal('');
+      setCurriculumItems([]);
+      setTeachingPlans([]);
+      setEvaluations([]);
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
     } finally {
@@ -181,7 +284,11 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">
               과정 분류 <span className="text-red-500">*</span>
             </label>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              value={classification}
+              onChange={(e) => setClassification(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">선택하세요</option>
               <option value="degree-major">학위전공</option>
               <option value="degree-major-advanced">학위전공심화</option>
@@ -206,6 +313,8 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">계열</label>
             <input
               type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="계열을 입력하세요"
             />
@@ -214,6 +323,8 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">전공</label>
             <input
               type="text"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="전공을 입력하세요"
             />
@@ -222,6 +333,8 @@ export function CreateCourseForm() {
             <label className="block text-sm text-gray-700 mb-2">학과명</label>
             <input
               type="text"
+              value={departmentName}
+              onChange={(e) => setDepartmentName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="학과명을 입력하세요"
             />
@@ -245,7 +358,11 @@ export function CreateCourseForm() {
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-2">교육훈련수준</label>
-            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select
+              value={trainingLevel}
+              onChange={(e) => setTrainingLevel(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">선택하세요</option>
               <option value="beginner">초급</option>
               <option value="intermediate">중급</option>
@@ -257,6 +374,8 @@ export function CreateCourseForm() {
           <label className="block text-sm text-gray-700 mb-2">교육훈련대상자</label>
           <input
             type="text"
+            value={trainingTarget}
+            onChange={(e) => setTrainingTarget(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="교육훈련대상자를 입력하세요"
           />
@@ -265,6 +384,8 @@ export function CreateCourseForm() {
           <label className="block text-sm text-gray-700 mb-2">교육훈련목표</label>
           <textarea
             rows={4}
+            value={trainingGoal}
+            onChange={(e) => setTrainingGoal(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="교육훈련목표를 입력하세요"
           />

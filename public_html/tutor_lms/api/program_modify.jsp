@@ -19,6 +19,7 @@ if(0 == id) {
 }
 
 SubjectDao subject = new SubjectDao();
+SubjectPlanDao subjectPlan = new SubjectPlanDao();
 
 //왜: 교수자는 본인 과정만, 관리자는 전체 과정을 수정할 수 있어야 합니다.
 String whereOwner = !isAdmin ? (" AND user_id = " + userId + " ") : "";
@@ -35,6 +36,8 @@ int ownerId = isAdmin ? info.i("user_id") : userId;
 f.addElement("course_nm", info.s("course_nm"), "hname:'과정명', required:'Y'");
 f.addElement("start_date", info.s("start_date"), "hname:'시작일', required:'Y'");
 f.addElement("end_date", info.s("end_date"), "hname:'종료일', required:'Y'");
+//왜: 화면의 상세 필드/반복 리스트는 JSON으로 한 번에 저장합니다. (없으면 기존 값 유지)
+f.addElement("plan_json", "", "hname:'운영계획서 JSON'");
 
 if(!f.validate()) {
 	result.put("rst_code", "1000");
@@ -81,6 +84,27 @@ if(!subject.update(whereUpdate)) {
 	result.put("rst_message", "저장 중 오류가 발생했습니다.");
 	result.print();
 	return;
+}
+
+//운영계획서/상세필드(JSON) 저장(빈 값이면 수정하지 않음)
+try {
+	String planJson = f.get("plan_json");
+	if(!"".equals(planJson)) {
+		if(0 < subjectPlan.findCount("subject_id = " + id + " AND site_id = " + siteId + " AND status != -1")) {
+			subjectPlan.item("plan_json", planJson);
+			subjectPlan.item("mod_date", m.time("yyyyMMddHHmmss"));
+			subjectPlan.update("subject_id = " + id + " AND site_id = " + siteId + " AND status != -1");
+		} else {
+			subjectPlan.item("subject_id", id);
+			subjectPlan.item("site_id", siteId);
+			subjectPlan.item("plan_json", planJson);
+			subjectPlan.item("reg_date", m.time("yyyyMMddHHmmss"));
+			subjectPlan.item("status", 1);
+			subjectPlan.insert();
+		}
+	}
+} catch(Exception ignore) {
+	//왜: 운영계획서 테이블(LM_SUBJECT_PLAN)이 아직 없는 환경에서도, 기본 정보 수정은 막히면 안 됩니다.
 }
 
 result.put("rst_code", "0000");

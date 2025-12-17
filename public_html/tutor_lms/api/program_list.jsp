@@ -4,6 +4,7 @@
 //- `project` 화면의 "과정탐색/과정선택"에서 교수자가 만든 과정(프로그램) 목록을 바로 보여주기 위함입니다.
 
 SubjectDao subject = new SubjectDao();
+SubjectPlanDao subjectPlan = new SubjectPlanDao();
 CourseDao course = new CourseDao();
 
 String keyword = m.rs("s_keyword");
@@ -24,17 +25,37 @@ if(!isAdmin) {
 	whereOwner = " AND a.user_id = " + tutorId + " ";
 }
 
-DataSet list = subject.query(
-	" SELECT a.id, a.user_id, a.course_nm, a.start_date, a.end_date, a.reg_date, a.status "
-	+ " , (SELECT COUNT(*) FROM " + course.table + " c "
-		+ " WHERE c.site_id = " + siteId + " AND c.subject_id = a.id AND c.status != -1) course_cnt "
-	+ " FROM " + subject.table + " a "
-	+ " WHERE a.site_id = " + siteId + " AND a.status != -1 "
-	+ whereOwner
-	+ whereKeyword
-	+ " ORDER BY a.id DESC "
-	, params.toArray()
-);
+DataSet list = null;
+try {
+	list = subject.query(
+		" SELECT a.id, a.user_id, a.course_nm, a.start_date, a.end_date, a.reg_date, a.status "
+		+ " , sp.plan_json "
+		+ " , (SELECT COUNT(*) FROM " + course.table + " c "
+			+ " WHERE c.site_id = " + siteId + " AND c.subject_id = a.id AND c.status != -1) course_cnt "
+		+ " FROM " + subject.table + " a "
+		+ " LEFT JOIN " + subjectPlan.table + " sp ON sp.subject_id = a.id AND sp.site_id = " + siteId + " AND sp.status != -1 "
+		+ " WHERE a.site_id = " + siteId + " AND a.status != -1 "
+		+ whereOwner
+		+ whereKeyword
+		+ " ORDER BY a.id DESC "
+		, params.toArray()
+	);
+} catch(Exception e) {
+	//왜: 운영계획서 보조테이블(LM_SUBJECT_PLAN)이 아직 DB에 없을 수 있습니다.
+	//- 이 경우에도 "과정 목록" 자체는 보여야 하므로, plan_json 없이 조회로 폴백합니다.
+	list = subject.query(
+		" SELECT a.id, a.user_id, a.course_nm, a.start_date, a.end_date, a.reg_date, a.status "
+		+ " , '' plan_json "
+		+ " , (SELECT COUNT(*) FROM " + course.table + " c "
+			+ " WHERE c.site_id = " + siteId + " AND c.subject_id = a.id AND c.status != -1) course_cnt "
+		+ " FROM " + subject.table + " a "
+		+ " WHERE a.site_id = " + siteId + " AND a.status != -1 "
+		+ whereOwner
+		+ whereKeyword
+		+ " ORDER BY a.id DESC "
+		, params.toArray()
+	);
+}
 
 while(list.next()) {
 	list.put("course_nm_conv", m.cutString(list.s("course_nm"), 100));
