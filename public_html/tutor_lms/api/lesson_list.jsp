@@ -40,6 +40,8 @@ while(list.next()) {
 	list.put("title", list.s("title"));
 	list.put("is_favorite", list.i("is_favorite") > 0);
 	list.put("duration", list.i("total_time") > 0 ? (list.i("total_time") + "분") : "-");
+	//왜: lesson_type은 코드(01/02/03...)라서, 화면에서는 사람이 읽을 수 있는 라벨도 같이 내려줍니다.
+	list.put("lesson_type_conv", m.getItem(list.s("lesson_type"), lesson.types));
 	//왜: 썸네일/태그/조회수는 현재 레슨 테이블에 없어서, 화면에서는 기본값으로 처리합니다.
 	list.put("thumbnail", "");
 	list.put("views", 0);
@@ -52,4 +54,3 @@ result.put("rst_data", list);
 result.print();
 
 %>
-

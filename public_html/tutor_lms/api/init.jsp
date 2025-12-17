@@ -20,8 +20,9 @@ if(0 == userId) {
 boolean isAdmin = "S".equals(userKind) || "A".equals(userKind);
 
 //교수자 권한 확인(TB_USER.tutor_yn) - 관리자가 아니면 교수자만 허용
-UserDao user = new UserDao();
-DataSet uinfo = user.find("id = " + userId + " AND site_id = " + siteId + " AND status = 1");
+//왜: 각 API(JSP)에서 흔히 `UserDao user` 변수를 따로 선언해서 쓰기 때문에, include(init.jsp)에서는 이름 충돌이 나지 않도록 별도 이름을 사용합니다.
+UserDao authUser = new UserDao();
+DataSet uinfo = authUser.find("id = " + userId + " AND site_id = " + siteId + " AND status = 1");
 if(!uinfo.next()) {
 	result.put("rst_code", "4041");
 	result.put("rst_message", "사용자 정보가 없습니다.");

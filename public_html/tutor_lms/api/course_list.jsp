@@ -59,6 +59,10 @@ while(list.next()) {
 	list.put("subject_nm_conv", m.cutString(list.s("course_nm"), 100));
 	list.put("program_nm_conv", !"".equals(list.s("program_nm")) ? m.cutString(list.s("program_nm"), 100) : "-");
 
+	//왜: 프론트 화면에서 "정규/상시", "온라인/집합/혼합"을 사람이 읽을 수 있게 보여주기 위함입니다.
+	list.put("course_type_conv", m.getItem(list.s("course_type"), course.types));
+	list.put("onoff_type_conv", m.getItem(list.s("onoff_type"), course.onoffTypes));
+
 	String ss = list.s("study_sdate");
 	String se = list.s("study_edate");
 	String rs = list.s("request_sdate");
