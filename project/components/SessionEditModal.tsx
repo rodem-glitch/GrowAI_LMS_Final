@@ -186,7 +186,7 @@ export function SessionEditModal({
                           </div>
                           <div>
                             <label className="block text-xs text-gray-600 mb-1">
-                              키 또는 URL
+                              레슨ID 또는 URL
                             </label>
                             <input
                               type="text"
@@ -194,7 +194,7 @@ export function SessionEditModal({
                               onChange={(e) =>
                                 updateVideo(video.id, 'url', e.target.value)
                               }
-                              placeholder="youtube.com 또는 키 입력"
+                              placeholder="레슨ID(숫자) 또는 외부 URL 입력"
                               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>

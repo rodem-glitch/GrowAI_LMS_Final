@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Info,
   List,
@@ -25,6 +25,10 @@ import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
 import { ExamCreateModal } from './ExamCreateModal';
 import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { tutorLmsApi } from '../api/tutorLmsApi';
+import { CurriculumTab } from './courseManagement/CurriculumTab';
+import { StudentsTab } from './courseManagement/StudentsTab';
+import { AttendanceTab } from './courseManagement/AttendanceTab';
 
 interface CourseManagementProps {
   course: {
@@ -103,27 +107,27 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'info':
         return <CourseInfoTab course={course} onCourseUpdated={setCourse} />;
       case 'curriculum':
-        return <CurriculumTab />;
+        return <CurriculumTab courseId={Number(course.id)} />;
       case 'students':
-        return <StudentsTab />;
+        return <StudentsTab courseId={Number(course.id)} />;
       case 'attendance':
-        return <AttendanceTab />;
+        return <AttendanceTab courseId={Number(course.id)} />;
       case 'exam':
-        return <ExamTab />;
+        return <ExamTab courseId={Number(course.id)} />;
       case 'assignment':
-        return <AssignmentTab />;
+        return <AssignmentTab courseId={Number(course.id)} />;
       case 'assignment-management':
-        return <AssignmentManagementTab />;
+        return <AssignmentManagementTab courseId={Number(course.id)} />;
       case 'assignment-feedback':
-        return <AssignmentFeedbackTab />;
+        return <AssignmentFeedbackTab courseId={Number(course.id)} />;
       case 'materials':
-        return <MaterialsTab />;
+        return <MaterialsTab courseId={Number(course.id)} />;
       case 'qna':
-        return <QnaTab />;
+        return <QnaTab courseId={Number(course.id)} />;
       case 'grades':
-        return <GradesTab />;
+        return <GradesTab courseId={Number(course.id)} />;
       case 'completion':
-        return <CompletionTab />;
+        return <CompletionTab courseId={Number(course.id)} />;
       default:
         return null;
     }
@@ -231,8 +235,8 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 
 // 과목정보 탭 (이제 CourseInfoTabs.tsx에서 import됨)
 
-// 강의목차 탭
-function CurriculumTab() {
+// (레거시/미사용) 강의목차 탭 - courseManagement/CurriculumTab.tsx로 분리됨
+function LegacyCurriculumTab() {
   const [expandedSession, setExpandedSession] = useState<number | null>(null);
   const [editingSession, setEditingSession] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -479,8 +483,8 @@ function CurriculumTab() {
   );
 }
 
-// 수강생 탭
-function StudentsTab() {
+// (레거시/미사용) 수강생 탭 - courseManagement/StudentsTab.tsx로 분리됨
+function LegacyStudentsTab() {
   const students = [
     { id: 1, name: '김민수', studentId: '2024001', email: 'minsu@example.com', progress: 85 },
     { id: 2, name: '이지현', studentId: '2024002', email: 'jihyun@example.com', progress: 92 },
@@ -536,8 +540,8 @@ function StudentsTab() {
   );
 }
 
-// 진도/출석 탭
-function AttendanceTab() {
+// (레거시/미사용) 진도/출석 탭 - courseManagement/AttendanceTab.tsx로 분리됨
+function LegacyAttendanceTab() {
   const [selectedSession, setSelectedSession] = useState<number>(1);
 
   // 차시 목록
@@ -790,17 +794,45 @@ function AttendanceTab() {
 }
 
 // 시험 탭
-function ExamTab() {
+function ExamTab({ courseId }: { courseId: number }) {
   const [selectedExam, setSelectedExam] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const exams = [
-    { id: 1, title: '중간고사', date: '2024.04.15', duration: '90분', submitted: 25, total: 28 },
-    { id: 2, title: '기말고사', date: '2024.06.20', duration: '90분', submitted: 0, total: 28 },
-  ];
+  const [exams, setExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const fetchExams = async () => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getExams({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row) => ({
+        id: Number(row.exam_id),
+        title: row.exam_nm,
+        date: row.start_date_conv || row.start_date || '-',
+        duration: row.exam_time ? `${row.exam_time}분` : '-',
+        submitted: Number(row.submitted_cnt ?? 0),
+        total: Number(row.total_cnt ?? 0),
+      }));
+      setExams(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '시험 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchExams();
+  }, [courseId]);
 
   // 학생별 시험 점수 데이터
-  const examScores = {
+  /* const examScores = {
     1: [
       { studentId: '2024001', name: '김민수', score: 85, submitted: true, submittedAt: '2024.04.15 14:30' },
       { studentId: '2024002', name: '이지현', score: 92, submitted: true, submittedAt: '2024.04.15 14:25' },
@@ -832,13 +864,20 @@ function ExamTab() {
       { studentId: '2024028', name: '황수아', score: 0, submitted: false, submittedAt: '-' },
     ],
     2: [],
-  };
+  }; */
 
   if (selectedExam !== null) {
     const exam = exams.find((e) => e.id === selectedExam);
-    const scores = examScores[selectedExam];
-    
-    return <ExamDetailView exam={exam} scores={scores} onBack={() => setSelectedExam(null)} />;
+
+    return (
+      <ExamDetailView
+        courseId={courseId}
+        examId={selectedExam}
+        exam={exam}
+        onBack={() => setSelectedExam(null)}
+        onRefresh={() => void fetchExams()}
+      />
+    );
   }
 
   return (
@@ -853,7 +892,17 @@ function ExamTab() {
             <span>시험 등록</span>
           </button>
         </div>
-        {exams.map((exam) => (
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {loading && (
+          <div className="p-6 text-center text-gray-500">시험 목록을 불러오는 중...</div>
+        )}
+
+        {!loading && exams.map((exam) => (
           <button
             key={exam.id}
             onClick={() => setSelectedExam(exam.id)}
@@ -884,8 +933,28 @@ function ExamTab() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSave={(examData) => {
-          console.log('새 시험 등록:', examData);
-          alert('시험이 등록되었습니다.');
+          void (async () => {
+            try {
+              const res = await tutorLmsApi.createExam({
+                courseId,
+                title: examData.title,
+                description: examData.description,
+                examDate: examData.examDate,
+                examTime: examData.examTime,
+                duration: Number(examData.duration || 0),
+                questionCount: Number(examData.questionCount || 0),
+                totalScore: Number(examData.totalScore || 100),
+                allowRetake: Boolean(examData.allowRetake),
+                showResults: Boolean(examData.showResults),
+                onoffType: 'F',
+              });
+              if (res.rst_code !== '0000') throw new Error(res.rst_message);
+              await fetchExams();
+              alert('시험이 등록되었습니다.');
+            } catch (e) {
+              alert(e instanceof Error ? e.message : '시험 등록 중 오류가 발생했습니다.');
+            }
+          })();
         }}
       />
     </>
@@ -893,10 +962,57 @@ function ExamTab() {
 }
 
 // 시험 상세 화면
-function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; onBack: () => void }) {
-  const [editingScore, setEditingScore] = useState<string | null>(null);
+function ExamDetailView({
+  courseId,
+  examId,
+  exam,
+  onBack,
+  onRefresh,
+}: {
+  courseId: number;
+  examId: number;
+  exam: any;
+  onBack: () => void;
+  onRefresh: () => void;
+}) {
+  const [editingScore, setEditingScore] = useState<number | null>(null);
   const [tempScore, setTempScore] = useState<string>('');
-  const [studentScores, setStudentScores] = useState(scores);
+  const [studentScores, setStudentScores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const examTitle = exam?.title ?? '시험';
+  const examDate = exam?.date ?? '-';
+  const examDuration = exam?.duration ?? '-';
+
+  const fetchExamUsers = async () => {
+    if (!courseId || !examId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getExamUsers({ courseId, examId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        courseUserId: Number(row.course_user_id),
+        studentId: row.login_id,
+        name: row.user_nm,
+        score: Number(row.marking_score ?? 0),
+        submitted: Boolean(row.submitted),
+        submittedAt: row.submitted_at ?? '-',
+      }));
+      setStudentScores(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '제출 현황을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchExamUsers();
+  }, [courseId, examId]);
 
   const submittedScores = studentScores.filter((s) => s.submitted);
   
@@ -937,26 +1053,35 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
   };
 
   // 점수 수정 시작
-  const handleStartEdit = (studentId: string, currentScore: number) => {
-    setEditingScore(studentId);
+  const handleStartEdit = (courseUserId: number, currentScore: number) => {
+    setEditingScore(courseUserId);
     setTempScore(currentScore.toString());
   };
 
   // 점수 수정 저장
-  const handleSaveScore = (studentId: string) => {
-    const newScore = parseInt(tempScore);
+  const handleSaveScore = async (courseUserId: number) => {
+    const newScore = parseInt(tempScore, 10);
     if (isNaN(newScore) || newScore < 0 || newScore > 100) {
       alert('점수는 0~100 사이의 숫자여야 합니다.');
       return;
     }
 
-    setStudentScores((prev) =>
-      prev.map((student) =>
-        student.studentId === studentId ? { ...student, score: newScore } : student
-      )
-    );
-    setEditingScore(null);
-    setTempScore('');
+    try {
+      const res = await tutorLmsApi.updateExamScore({
+        courseId,
+        examId,
+        courseUserId,
+        markingScore: newScore,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      await fetchExamUsers();
+      onRefresh();
+      setEditingScore(null);
+      setTempScore('');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '점수 저장 중 오류가 발생했습니다.');
+    }
   };
 
   // 점수 수정 취소
@@ -977,9 +1102,9 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h3 className="text-xl text-gray-900">{exam.title}</h3>
+            <h3 className="text-xl text-gray-900">{examTitle}</h3>
             <p className="text-sm text-gray-600">
-              시험일: {exam.date} • 시험시간: {exam.duration}
+              시험일: {examDate} • 시험시간: {examDuration}
             </p>
           </div>
         </div>
@@ -991,6 +1116,16 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
           <span>엑셀 다운로드</span>
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {loading && (
+        <div className="p-6 text-center text-gray-500">제출 현황을 불러오는 중...</div>
+      )}
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-5 gap-4">
@@ -1066,13 +1201,13 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
             </thead>
             <tbody className="divide-y divide-gray-200">
               {studentScores.map((student, index) => (
-                <tr key={student.studentId} className="hover:bg-gray-50 transition-colors">
+                <tr key={student.courseUserId} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
                   <td className="px-4 py-4 text-sm text-gray-900">{student.studentId}</td>
                   <td className="px-4 py-4 text-sm text-gray-900">{student.name}</td>
                   <td className="px-4 py-4 text-center">
                     {student.submitted ? (
-                      editingScore === student.studentId ? (
+                      editingScore === student.courseUserId ? (
                         <div className="flex items-center justify-center gap-2">
                           <input
                             type="number"
@@ -1082,7 +1217,7 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
                             onChange={(e) => setTempScore(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
-                                handleSaveScore(student.studentId);
+                                handleSaveScore(student.courseUserId);
                               } else if (e.key === 'Escape') {
                                 handleCancelEdit();
                               }
@@ -1091,7 +1226,7 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
                             autoFocus
                           />
                           <button
-                            onClick={() => handleSaveScore(student.studentId)}
+                            onClick={() => handleSaveScore(student.courseUserId)}
                             className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
                             title="저장"
                           >
@@ -1107,7 +1242,7 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
                         </div>
                       ) : (
                         <button
-                          onClick={() => handleStartEdit(student.studentId, student.score)}
+                          onClick={() => handleStartEdit(student.courseUserId, student.score)}
                           className={`inline-flex items-center justify-center px-3 py-1 rounded-lg hover:opacity-80 transition-opacity ${
                             student.score >= 90
                               ? 'bg-green-100 text-green-700'
@@ -1141,9 +1276,9 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
                     {student.submittedAt}
                   </td>
                   <td className="px-4 py-4 text-center">
-                    {student.submitted && editingScore !== student.studentId && (
+                    {student.submitted && editingScore !== student.courseUserId && (
                       <button
-                        onClick={() => handleStartEdit(student.studentId, student.score)}
+                        onClick={() => handleStartEdit(student.courseUserId, student.score)}
                         className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                         title="점수 수정"
                       >
@@ -1162,7 +1297,7 @@ function ExamDetailView({ exam, scores, onBack }: { exam: any; scores: any[]; on
 }
 
 // 과제 탭
-function AssignmentTab() {
+function AssignmentTab({ courseId }: { courseId: number }) {
   const [subTab, setSubTab] = useState<'management' | 'feedback'>('management');
 
   return (
@@ -1192,33 +1327,68 @@ function AssignmentTab() {
       </div>
 
       {/* 하위 탭 콘텐츠 */}
-      {subTab === 'management' && <AssignmentManagementTab />}
-      {subTab === 'feedback' && <AssignmentFeedbackTab />}
+      {subTab === 'management' && <AssignmentManagementTab courseId={courseId} />}
+      {subTab === 'feedback' && <AssignmentFeedbackTab courseId={courseId} />}
     </div>
   );
 }
 
 // 과제 관리 하위 탭
-function AssignmentManagementTab() {
+function AssignmentManagementTab({ courseId }: { courseId: number }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
-  const assignments = [
-    {
-      id: 1,
-      title: 'HTML 포트폴리오 페이지 제작',
-      dueDate: '2024.03.25',
-      submitted: 22,
-      total: 28,
-    },
-    { id: 2, title: 'CSS 레이아웃 실습', dueDate: '2024.04.10', submitted: 20, total: 28 },
-    {
-      id: 3,
-      title: 'JavaScript 계산기 만들기',
-      dueDate: '2024.05.05',
-      submitted: 15,
-      total: 28,
-    },
-  ];
+
+  const [homeworks, setHomeworks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 왜: 과제 탭은 "새로고침해도 유지되는 실데이터"가 핵심이라서, 화면이 뜰 때마다 DB(서버)에서 다시 읽어옵니다.
+  const fetchHomeworks = async () => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getHomeworks({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        id: Number(row.homework_id),
+        title: row.homework_nm || row.module_nm || '과제',
+        dueDate: row.end_date_conv || row.end_date || '-',
+        submitted: Number(row.submitted_cnt ?? 0),
+        total: Number(row.total_cnt ?? 0),
+      }));
+      setHomeworks(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '과제 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchHomeworks();
+  }, [courseId]);
+
+  const handleDeleteHomework = (homeworkId: number, title: string) => {
+    void (async () => {
+      // 왜: 제출/채점 데이터가 이미 쌓인 과제를 지우면 운영 데이터가 깨질 수 있어서, 사용자에게 한 번 더 확인받습니다.
+      const ok = confirm(
+        `과제 "${title}"을(를) 삭제하시겠습니까?\n\n이미 제출 내역이 있는 경우, 서버에서 삭제가 차단될 수 있습니다.`
+      );
+      if (!ok) return;
+
+      try {
+        const res = await tutorLmsApi.deleteHomework({ courseId, homeworkId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchHomeworks();
+        alert('삭제되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+      }
+    })();
+  };
 
   return (
     <>
@@ -1232,41 +1402,77 @@ function AssignmentManagementTab() {
             <span>과제 등록</span>
           </button>
         </div>
-      {assignments.map((assignment) => (
-        <div
-          key={assignment.id}
-          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-gray-900 mb-1">{assignment.title}</div>
-              <div className="text-sm text-gray-600">마감일: {assignment.dueDate}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-sm text-gray-600">제출 현황</div>
-                <div className="text-gray-900">
-                  {assignment.submitted} / {assignment.total}명
+
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {loading && (
+          <div className="p-6 text-center text-gray-500">과제 목록을 불러오는 중...</div>
+        )}
+
+        {!loading && homeworks.length === 0 && (
+          <div className="p-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+            등록된 과제가 없습니다. 우측 상단에서 과제를 등록해 주세요.
+          </div>
+        )}
+
+        {!loading &&
+          homeworks.map((assignment) => (
+            <div
+              key={assignment.id}
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="text-gray-900 mb-1">{assignment.title}</div>
+                  <div className="text-sm text-gray-600">마감일: {assignment.dueDate}</div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm text-gray-600">제출 현황</div>
+                    <div className="text-gray-900">
+                      {assignment.submitted} / {assignment.total}명
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteHomework(assignment.id, assignment.title)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => alert(`${assignment.title} 수정 기능`)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
             </div>
-          </div>
-        </div>
-      ))}
+          ))}
       </div>
       
       <AssignmentCreateModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSave={(assignmentData) => {
-          console.log('새 과제 등록:', assignmentData);
-          alert('과제가 등록되었습니다.');
+          void (async () => {
+            try {
+              const res = await tutorLmsApi.createHomework({
+                courseId,
+                title: assignmentData.title,
+                description: assignmentData.description,
+                dueDate: assignmentData.dueDate,
+                dueTime: assignmentData.dueTime,
+                totalScore: Number(assignmentData.totalScore || 0),
+                onoffType: 'N',
+              });
+              if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+              await fetchHomeworks();
+              alert('과제가 등록되었습니다.');
+            } catch (e) {
+              alert(e instanceof Error ? e.message : '과제 등록 중 오류가 발생했습니다.');
+            }
+          })();
         }}
       />
     </>
@@ -1274,7 +1480,7 @@ function AssignmentManagementTab() {
 }
 
 // 피드백 관리 하위 탭
-function AssignmentFeedbackTab() {
+function AssignmentFeedbackTabLegacy() {
   const [selectedAssignment, setSelectedAssignment] = useState('1');
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
@@ -1656,163 +1862,1005 @@ function AssignmentFeedbackTab() {
   );
 }
 
-// 자료 탭
-function MaterialsTab() {
-  const materials = [
-    { id: 1, title: 'HTML 기초 강의자료.pdf', uploadDate: '2024.03.01', size: '2.5MB' },
-    { id: 2, title: 'CSS 스타일링 예제.zip', uploadDate: '2024.03.08', size: '5.2MB' },
-    { id: 3, title: 'JavaScript 실습 코드.zip', uploadDate: '2024.03.15', size: '3.8MB' },
-  ];
+// 피드백 관리 하위 탭(API 연동)
+function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
+  const [homeworks, setHomeworks] = useState<any[]>([]);
+  const [selectedHomeworkId, setSelectedHomeworkId] = useState<number | null>(null);
+
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedCourseUserId, setSelectedCourseUserId] = useState<number | null>(null);
+
+  const [tempScore, setTempScore] = useState<string>('0');
+  const [feedbackText, setFeedbackText] = useState<string>('');
+
+  const [loadingHomeworks, setLoadingHomeworks] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const toBool = (value: any) =>
+    value === true || value === 1 || value === '1' || value === 'Y' || value === 'true';
+
+  // 왜: 피드백 화면은 "현재 과제 목록"이 먼저 필요하므로, 진입 시 과제 목록을 먼저 불러옵니다.
+  const fetchHomeworks = async () => {
+    if (!courseId) return;
+    setLoadingHomeworks(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getHomeworks({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        id: Number(row.homework_id),
+        title: row.homework_nm || row.module_nm || '과제',
+      }));
+      setHomeworks(mapped);
+
+      const firstId = mapped[0]?.id ?? null;
+      setSelectedHomeworkId((prev) => {
+        if (prev && mapped.some((h: any) => h.id === prev)) return prev;
+        return firstId;
+      });
+
+      if (!firstId) {
+        setStudents([]);
+        setSelectedCourseUserId(null);
+        setTempScore('0');
+        setFeedbackText('');
+      }
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '과제 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingHomeworks(false);
+    }
+  };
+
+  const fetchHomeworkUsers = async (homeworkId: number) => {
+    if (!courseId || !homeworkId) return;
+    setLoadingUsers(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getHomeworkUsers({ courseId, homeworkId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        courseUserId: Number(row.course_user_id),
+        studentId: row.login_id,
+        name: row.user_nm,
+        submitted: toBool(row.submitted),
+        submittedAt: row.submitted_at ?? '-',
+        confirm: toBool(row.confirm),
+        markingScore: Number(row.marking_score ?? 0),
+        scoreConv: row.score_conv ?? '',
+        feedback: row.feedback ?? '',
+        taskCnt: Number(row.task_cnt ?? 0),
+      }));
+      setStudents(mapped);
+
+      // 왜: 재조회 후 선택된 학생이 목록에서 사라지면(권한/상태 변화 등) 선택을 해제해야 화면이 깨지지 않습니다.
+      setSelectedCourseUserId((prev) => {
+        if (prev && mapped.some((s: any) => s.courseUserId === prev)) return prev;
+        return null;
+      });
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '제출 현황을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchHomeworks();
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!selectedHomeworkId) return;
+    void fetchHomeworkUsers(selectedHomeworkId);
+  }, [courseId, selectedHomeworkId]);
+
+  const selectedStudent = students.find((s: any) => s.courseUserId === selectedCourseUserId) ?? null;
+
+  const handleSelectStudent = (courseUserId: number) => {
+    setSelectedCourseUserId(courseUserId);
+    const student = students.find((s: any) => s.courseUserId === courseUserId);
+    setTempScore(String(student?.markingScore ?? 0));
+    setFeedbackText(String(student?.feedback ?? ''));
+  };
+
+  const handleSubmitFeedback = () => {
+    if (!selectedHomeworkId || !selectedCourseUserId) return;
+
+    const score = parseInt(tempScore, 10);
+    if (isNaN(score) || score < 0 || score > 100) {
+      alert('점수는 0~100 사이의 숫자여야 합니다.');
+      return;
+    }
+
+    void (async () => {
+      try {
+        // 왜: 저장 즉시 성적(homework_score/total_score)에 반영되어야 "실사용" 흐름이 끊기지 않습니다.
+        const res = await tutorLmsApi.updateHomeworkFeedback({
+          courseId,
+          homeworkId: selectedHomeworkId,
+          courseUserId: selectedCourseUserId,
+          markingScore: score,
+          feedback: feedbackText,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchHomeworkUsers(selectedHomeworkId);
+        alert('저장되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+      }
+    })();
+  };
+
+  const handleAppendTask = () => {
+    if (!selectedHomeworkId || !selectedCourseUserId) return;
+
+    const task = prompt('추가과제 내용을 입력해 주세요.');
+    if (!task || !task.trim()) return;
+
+    void (async () => {
+      try {
+        const res = await tutorLmsApi.appendHomeworkTask({
+          courseId,
+          homeworkId: selectedHomeworkId,
+          courseUserId: selectedCourseUserId,
+          task: task.trim(),
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchHomeworkUsers(selectedHomeworkId);
+        alert('추가과제가 부여되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '추가과제 부여 중 오류가 발생했습니다.');
+      }
+    })();
+  };
+
+  const summary = {
+    total: students.length,
+    needFeedback: students.filter((s: any) => s.submitted && !s.confirm).length,
+    doneFeedback: students.filter((s: any) => s.confirm).length,
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Upload className="w-4 h-4" />
-          <span>자료 업로드</span>
-        </button>
+      {/* 과제 선택 */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm text-gray-700">과제 선택:</label>
+        <select
+          value={selectedHomeworkId ?? ''}
+          onChange={(e) => {
+            const nextId = e.target.value ? Number(e.target.value) : null;
+            setSelectedHomeworkId(nextId);
+            setSelectedCourseUserId(null);
+            setTempScore('0');
+            setFeedbackText('');
+          }}
+          disabled={loadingHomeworks || homeworks.length === 0}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+        >
+          {homeworks.length === 0 && <option value="">과제가 없습니다</option>}
+          {homeworks.map((hw: any) => (
+            <option key={hw.id} value={hw.id}>
+              {hw.title}
+            </option>
+          ))}
+        </select>
       </div>
-      <div className="space-y-2">
-        {materials.map((material) => (
-          <div
-            key={material.id}
-            className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {loadingUsers && (
+        <div className="p-6 text-center text-gray-500">제출 현황을 불러오는 중...</div>
+      )}
+
+      {homeworks.length === 0 && !loadingHomeworks ? (
+        <div className="p-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+          먼저 과제를 등록해 주세요. (과제 관리 탭에서 등록할 수 있습니다.)
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-6">
+            {/* 왼쪽: 수강생 목록 */}
+            <div>
+              <div className="bg-gray-50 px-4 py-3 rounded-t-lg border border-b-0 border-gray-200">
+                <h4 className="text-gray-900">수강생 목록 ({students.length}명)</h4>
+              </div>
+              <div className="border border-gray-200 rounded-b-lg divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+                {students.map((student: any) => {
+                  const isSelected = selectedCourseUserId === student.courseUserId;
+                  const badge = !student.submitted
+                    ? { label: '미제출', className: 'bg-red-100 text-red-700' }
+                    : student.confirm
+                    ? { label: '피드백 완료', className: 'bg-green-100 text-green-700' }
+                    : { label: '피드백 필요', className: 'bg-orange-100 text-orange-700' };
+
+                  return (
+                    <button
+                      key={student.courseUserId}
+                      onClick={() => handleSelectStudent(student.courseUserId)}
+                      className={`w-full p-4 text-left transition-colors ${
+                        isSelected
+                          ? 'bg-blue-50 border-l-4 border-blue-600'
+                          : 'hover:bg-gray-50 border-l-4 border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="text-gray-900 mb-1">{student.name}</div>
+                          <div className="text-sm text-gray-600">{student.studentId}</div>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>제출: {student.submittedAt}</span>
+                        <span>
+                          점수: {student.markingScore}점{student.scoreConv ? ` (${student.scoreConv})` : ''}
+                        </span>
+                      </div>
+                      {0 < student.taskCnt && (
+                        <div className="mt-2 text-xs text-blue-700">추가과제 {student.taskCnt}건</div>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {students.length === 0 && (
+                  <div className="p-8 text-center text-gray-500">수강생이 없습니다.</div>
+                )}
+              </div>
+            </div>
+
+            {/* 오른쪽: 피드백/채점 */}
+            <div>
+              {selectedStudent ? (
+                <div className="border border-gray-200 rounded-lg">
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                    <h4 className="text-gray-900">
+                      {selectedStudent.name} ({selectedStudent.studentId})
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">제출시간: {selectedStudent.submittedAt}</p>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-2">점수(0~100)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={tempScore}
+                          onChange={(e) => setTempScore(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="flex items-end justify-end">
+                        <button
+                          onClick={handleAppendTask}
+                          className="flex items-center gap-2 px-4 py-2 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>추가과제 부여</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">피드백</label>
+                      <textarea
+                        value={feedbackText}
+                        onChange={(e) => setFeedbackText(e.target.value)}
+                        placeholder="학생에게 전달할 피드백을 입력하세요..."
+                        rows={6}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setTempScore(String(selectedStudent.markingScore ?? 0));
+                          setFeedbackText(String(selectedStudent.feedback ?? ''));
+                        }}
+                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={handleSubmitFeedback}
+                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        저장
+                      </button>
+                    </div>
+
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-sm text-blue-900 mb-2">피드백 안내</div>
+                      <div className="text-sm text-blue-700">
+                        - 저장을 누르면 점수/피드백이 DB에 저장되고, 성적(과제 점수)에 즉시 반영됩니다.
+                        <br />- 오프라인 과제처럼 제출 기록이 없어도, 필요하면 점수 입력이 가능합니다.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg">
+                  <div className="p-12 text-center text-gray-500">
+                    <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p>학생을 선택하여</p>
+                    <p>점수와 피드백을 저장하세요</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 통계 요약 */}
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="text-sm text-gray-600 mb-1">총 인원</div>
+              <div className="text-2xl text-gray-900">{summary.total}명</div>
+            </div>
+            <div className="p-4 bg-orange-50 rounded-lg">
+              <div className="text-sm text-orange-600 mb-1">피드백 필요</div>
+              <div className="text-2xl text-orange-900">{summary.needFeedback}명</div>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="text-sm text-green-600 mb-1">피드백 완료</div>
+              <div className="text-2xl text-green-900">{summary.doneFeedback}명</div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// 자료 탭
+function MaterialsTab({ courseId }: { courseId: number }) {
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [uploadForm, setUploadForm] = useState<{
+    title: string;
+    content: string;
+    link: string;
+    file: File | null;
+  }>({
+    title: '',
+    content: '',
+    link: '',
+    file: null,
+  });
+
+  const resetUploadForm = () => {
+    setUploadForm({ title: '', content: '', link: '', file: null });
+  };
+
+  // 왜: 자료 목록은 DB가 기준이므로, 탭 진입/업로드/삭제 후에는 서버에서 다시 읽어와야 합니다.
+  const fetchMaterials = async () => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getMaterials({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        id: Number(row.library_id),
+        title: row.library_nm,
+        uploadDate: row.upload_date_conv || '-',
+        size: row.file_size_conv || '-',
+        downloadUrl: row.file_url || row.library_link || '',
+        hasFile: !!row.file_url,
+        hasLink: !!row.library_link,
+      }));
+      setMaterials(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '자료 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchMaterials();
+  }, [courseId]);
+
+  const handleDownload = (material: any) => {
+    const url = material.downloadUrl;
+    if (!url) {
+      alert('다운로드할 파일/링크가 없습니다.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDelete = (libraryId: number, title: string) => {
+    void (async () => {
+      // 왜: 삭제는 되돌리기 어렵기 때문에, 운영 환경에서는 반드시 확인을 한 번 더 받습니다.
+      const ok = confirm(`자료 "${title}"을(를) 삭제하시겠습니까?`);
+      if (!ok) return;
+
+      try {
+        const res = await tutorLmsApi.deleteMaterial({ courseId, libraryId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchMaterials();
+        alert('삭제되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+      }
+    })();
+  };
+
+  const handleUpload = () => {
+    void (async () => {
+      const title = uploadForm.title.trim();
+      const hasFile = !!uploadForm.file;
+      const hasLink = !!uploadForm.link.trim();
+
+      if (!title) {
+        alert('자료명을 입력해 주세요.');
+        return;
+      }
+      if (!hasFile && !hasLink) {
+        alert('자료 파일 또는 링크 중 하나는 필요합니다.');
+        return;
+      }
+
+      setUploading(true);
+      try {
+        const res = await tutorLmsApi.uploadMaterial({
+          courseId,
+          title,
+          content: uploadForm.content,
+          link: uploadForm.link,
+          file: uploadForm.file,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchMaterials();
+        setShowUploadModal(false);
+        resetUploadForm();
+        alert('업로드되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '업로드 중 오류가 발생했습니다.');
+      } finally {
+        setUploading(false);
+      }
+    })();
+  };
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <FolderOpen className="w-5 h-5 text-blue-600" />
+            <Upload className="w-4 h-4" />
+            <span>자료 업로드</span>
+          </button>
+        </div>
+
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {loading && (
+          <div className="p-6 text-center text-gray-500">자료 목록을 불러오는 중...</div>
+        )}
+
+        {!loading && materials.length === 0 && (
+          <div className="p-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+            등록된 자료가 없습니다. 우측 상단에서 자료를 업로드해 주세요.
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {materials.map((material) => (
+            <div
+              key={material.id}
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <FolderOpen className="w-5 h-5 text-blue-600" />
+                <div>
+                  <div className="text-gray-900">{material.title}</div>
+                  <div className="text-sm text-gray-600">
+                    {material.uploadDate} • {material.size}
+                    {material.hasLink && !material.hasFile && <span className="ml-2">(링크)</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownload(material)}
+                  className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                >
+                  다운로드
+                </button>
+                <button
+                  onClick={() => handleDelete(material.id, material.title)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-gray-900">자료 업로드</h3>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  resetUploadForm();
+                }}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleUpload();
+              }}
+              className="p-6 space-y-6"
+            >
               <div>
-                <div className="text-gray-900">{material.title}</div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  자료명 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={uploadForm.title}
+                  onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="예: 강의자료.pdf"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">설명</label>
+                <textarea
+                  value={uploadForm.content}
+                  onChange={(e) => setUploadForm({ ...uploadForm, content: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="자료에 대한 간단한 설명을 입력하세요"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">링크(선택)</label>
+                <input
+                  type="url"
+                  value={uploadForm.link}
+                  onChange={(e) => setUploadForm({ ...uploadForm, link: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="https://..."
+                />
+                <p className="text-sm text-gray-500 mt-1">파일 업로드 대신 링크만 등록할 수도 있습니다.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">파일(선택)</label>
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setUploadForm({ ...uploadForm, file: e.target.files?.[0] ?? null })
+                  }
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500 mt-1">파일 또는 링크 중 하나는 필수입니다.</p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    resetUploadForm();
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={uploading}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+                  disabled={uploading}
+                >
+                  {uploading ? '업로드 중...' : '업로드'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Q&A 탭
+function QnaTab({ courseId }: { courseId: number }) {
+  const [keyword, setKeyword] = useState('');
+  const [qnas, setQnas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [detail, setDetail] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [answerText, setAnswerText] = useState('');
+
+  const toBool = (value: any) =>
+    value === true || value === 1 || value === '1' || value === 'Y' || value === 'true';
+
+  // 왜: Q&A는 새 글/답변이 수시로 생기므로, 목록은 항상 서버(DB)에서 다시 읽는 방식이 안전합니다.
+  const fetchQnas = async (params?: { keyword?: string }) => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getQnas({ courseId, keyword: params?.keyword });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        id: Number(row.id),
+        subject: row.subject,
+        student: row.user_nm || row.login_id || '-',
+        date: row.reg_date_conv || '-',
+        answered: toBool(row.answered) || Number(row.proc_status ?? 0) === 1,
+      }));
+      setQnas(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : 'Q&A 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDetail = async (postId: number) => {
+    if (!courseId || !postId) return;
+    setDetailLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getQnaDetail({ courseId, postId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      setDetail(res.rst_data ?? null);
+      setAnswerText(String(res.rst_data?.answer_content ?? ''));
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : 'Q&A 상세를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchQnas({ keyword: keyword.trim() ? keyword.trim() : undefined });
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!selectedPostId) return;
+    void fetchDetail(selectedPostId);
+  }, [courseId, selectedPostId]);
+
+  const handleSaveAnswer = () => {
+    if (!selectedPostId) return;
+    const content = answerText.trim();
+    if (!content) {
+      alert('답변 내용을 입력해 주세요.');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const res = await tutorLmsApi.answerQna({ courseId, postId: selectedPostId, content });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchDetail(selectedPostId);
+        await fetchQnas({ keyword: keyword.trim() ? keyword.trim() : undefined });
+        alert('저장되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+      }
+    })();
+  };
+
+  if (selectedPostId) {
+    const answered = detail ? toBool(detail.answered) : false;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setSelectedPostId(null);
+                setDetail(null);
+                setAnswerText('');
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h3 className="text-xl text-gray-900">Q&A</h3>
+              <p className="text-sm text-gray-600">질문 상세 및 답변</p>
+            </div>
+          </div>
+          <span
+            className={`px-3 py-1 text-xs rounded-full ${
+              answered ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            }`}
+          >
+            {answered ? '답변완료' : '대기중'}
+          </span>
+        </div>
+
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {detailLoading && (
+          <div className="p-6 text-center text-gray-500">상세를 불러오는 중...</div>
+        )}
+
+        {detail && (
+          <div className="space-y-4">
+            <div className="border border-gray-200 rounded-lg">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="text-gray-900 mb-1">{detail.subject}</div>
                 <div className="text-sm text-gray-600">
-                  {material.uploadDate} • {material.size}
+                  {detail.question_user_nm} • {detail.question_reg_date_conv || '-'}
+                </div>
+              </div>
+              <div
+                className="p-4 text-sm text-gray-800 prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: detail.question_content || '' }}
+              />
+            </div>
+
+            <div className="border border-gray-200 rounded-lg">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="text-gray-900">답변</div>
+                <div className="text-xs text-gray-500">
+                  {detail.answer_reg_date_conv ? `최근 저장: ${detail.answer_reg_date_conv}` : ''}
+                </div>
+              </div>
+              <div className="p-4 space-y-3">
+                <textarea
+                  value={answerText}
+                  onChange={(e) => setAnswerText(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="답변 내용을 입력하세요..."
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveAnswer}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {answered ? '답변 수정' : '답변 등록'}
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-50 rounded transition-colors">
-                다운로드
-              </button>
-              <button
-                onClick={() => alert(`${material.title} 수정 기능`)}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => alert(`${material.title} 삭제 기능`)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="검색어(제목)"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void fetchQnas({ keyword: keyword.trim() ? keyword.trim() : undefined });
+          }}
+        />
+        <button
+          onClick={() => void fetchQnas({ keyword: keyword.trim() ? keyword.trim() : undefined })}
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          검색
+        </button>
+      </div>
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {loading && <div className="p-6 text-center text-gray-500">Q&A 목록을 불러오는 중...</div>}
+
+      {!loading && qnas.length === 0 && (
+        <div className="p-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+          Q&A 글이 없습니다.
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {qnas.map((qna) => (
+          <button
+            key={qna.id}
+            onClick={() => setSelectedPostId(qna.id)}
+            className="w-full text-left p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="text-gray-900 mb-1">{qna.subject}</div>
+                <div className="text-sm text-gray-600">
+                  {qna.student} • {qna.date}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-3 py-1 text-xs rounded-full ${
+                    qna.answered ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}
+                >
+                  {qna.answered ? '답변완료' : '대기중'}
+                </span>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
-// Q&A 탭
-function QnaTab() {
-  const qnas = [
-    {
-      id: 1,
-      question: 'CSS flexbox와 grid의 차이점이 무엇인가요?',
-      student: '김민수',
-      date: '2024.03.20',
-      answered: true,
-    },
-    {
-      id: 2,
-      question: 'JavaScript 이벤트 버블링에 대해 설명해주세요.',
-      student: '이지현',
-      date: '2024.03.22',
-      answered: true,
-    },
-    {
-      id: 3,
-      question: '과제 제출 기한 연장이 가능한가요?',
-      student: '박준호',
-      date: '2024.03.23',
-      answered: false,
-    },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {qnas.map((qna) => (
-        <div
-          key={qna.id}
-          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <div className="text-gray-900 mb-1">{qna.question}</div>
-              <div className="text-sm text-gray-600">
-                {qna.student} • {qna.date}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 text-xs rounded-full ${
-                  qna.answered
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'
-                }`}
-              >
-                {qna.answered ? '답변완료' : '대기중'}
-              </span>
-              <button
-                onClick={() => alert(`${qna.question} 답변 ${qna.answered ? '수정' : '작성'} 기능`)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // 성적관리 탭
-function GradesTab() {
-  const grades = [
-    { name: '김민수', studentId: '2020001', midterm: 85, final: 90, assignment: 88, attendance: 95, progressRate: 100, total: 89 },
-    { name: '이지현', studentId: '2020002', midterm: 92, final: 95, assignment: 90, attendance: 100, progressRate: 100, total: 94 },
-    { name: '박준호', studentId: '2020003', midterm: 78, final: 82, assignment: 75, attendance: 90, progressRate: 85, total: 81 },
-    { name: '최서연', studentId: '2020004', midterm: 95, final: 98, assignment: 95, attendance: 100, progressRate: 100, total: 97 },
-    { name: '정우진', studentId: '2020005', midterm: 88, final: 85, assignment: 90, attendance: 95, progressRate: 95, total: 89 },
-    { name: '강민지', studentId: '2020006', midterm: 65, final: 70, assignment: 68, attendance: 75, progressRate: 80, total: 69 },
-    { name: '윤서준', studentId: '2020007', midterm: 45, final: 50, assignment: 52, attendance: 60, progressRate: 55, total: 52 },
-  ];
+function GradesTab({ courseId }: { courseId: number }) {
+  const [grades, setGrades] = useState<any[]>([]);
+  const [courseInfo, setCourseInfo] = useState<any | null>(null);
 
-  // 수료기준: 총점 60점 이상, 진도율 60% 이상
-  const completionCriteria = { totalScore: 60, progressRate: 60 };
-  // 합격기준: 총점 80점 이상, 진도율 80% 이상
-  const passCriteria = { totalScore: 80, progressRate: 80 };
+  const [loading, setLoading] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const getStatus = (student: any) => {
-    const meetsCompletion = student.total >= completionCriteria.totalScore && student.progressRate >= completionCriteria.progressRate;
-    const meetsPass = student.total >= passCriteria.totalScore && student.progressRate >= passCriteria.progressRate;
+  const toNum = (value: any, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
 
-    if (meetsPass) {
-      return { label: '합격', color: 'bg-green-100 text-green-700' };
-    } else if (meetsCompletion) {
-      return { label: '수료', color: 'bg-blue-100 text-blue-700' };
-    } else {
-      return { label: '미달', color: 'bg-red-100 text-red-700' };
+  // 왜: 성적 화면은 "현재 DB 점수"가 기준이므로, 탭 진입/재계산 후에는 서버에서 다시 불러옵니다.
+  const fetchGrades = async () => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getGrades({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const rows = res.rst_data ?? [];
+      const mapped = rows.map((row: any) => ({
+        courseUserId: Number(row.course_user_id),
+        studentId: row.login_id,
+        name: row.user_nm,
+        progressRatio: toNum(row.progress_ratio, 0),
+        examScore: toNum(row.exam_score, 0),
+        homeworkScore: toNum(row.homework_score, 0),
+        etcScore: toNum(row.etc_score, 0),
+        totalScore: toNum(row.total_score, 0),
+        statusLabel: row.status_label || '',
+      }));
+      setGrades(mapped);
+      setCourseInfo(res.rst_course ?? null);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '성적을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    void fetchGrades();
+  }, [courseId]);
+
+  const getStatusBadge = (label: string) => {
+    if (label === '합격') return 'bg-green-100 text-green-700';
+    if (label === '수료') return 'bg-blue-100 text-blue-700';
+    return 'bg-red-100 text-red-700';
+  };
+
+  const completionCriteria = {
+    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
+    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+  };
+  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passCriteria = {
+    progressRate: toNum(courseInfo?.limit_progress, 0),
+    totalScore: toNum(courseInfo?.limit_total_score, 0),
+  };
+
+  const handleRecalc = () => {
+    void (async () => {
+      // 왜: 재계산은 전체 수강생 점수/총점을 다시 계산하므로 시간이 걸릴 수 있어, 명시적으로 눌렀을 때만 실행합니다.
+      const ok = confirm('성적을 재계산하시겠습니까?\n\n(시험/과제 점수, 진도율 등을 기준으로 총점이 다시 계산됩니다.)');
+      if (!ok) return;
+
+      setRecalcLoading(true);
+      try {
+        const res = await tutorLmsApi.recalcGrades({ courseId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchGrades();
+        alert('재계산이 완료되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '재계산 중 오류가 발생했습니다.');
+      } finally {
+        setRecalcLoading(false);
+      }
+    })();
   };
 
   return (
     <div>
       <div className="mb-4 flex justify-between items-center">
-        <div className="text-sm text-gray-600">성적 입력 및 관리</div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-          <Download className="w-4 h-4" />
-          <span>성적표 다운로드</span>
-        </button>
+        <div className="text-sm text-gray-600">성적 조회 및 관리</div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRecalc}
+            disabled={recalcLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+          >
+            <Play className="w-4 h-4" />
+            <span>{recalcLoading ? '재계산 중...' : '성적 재계산'}</span>
+          </button>
+          <button
+            onClick={() => alert('성적표 다운로드 기능은 추후 연결됩니다.')}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span>성적표 다운로드</span>
+          </button>
+        </div>
       </div>
 
       {/* 기준 안내 */}
@@ -1821,73 +2869,454 @@ function GradesTab() {
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
             <div className="text-gray-600">
-              총점 {completionCriteria.totalScore}점 이상, 진도율 {completionCriteria.progressRate}% 이상
+              진도율 {completionCriteria.progressRate}% 이상
+              {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
             </div>
           </div>
           <div>
             <div className="text-gray-700 mb-1">합격 기준</div>
             <div className="text-gray-600">
-              총점 {passCriteria.totalScore}점 이상, 진도율 {passCriteria.progressRate}% 이상
+              {passEnabled
+                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
+                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">학번</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">중간고사</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">기말고사</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">과제</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">출석</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">진도율</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">총점</th>
-              <th className="px-4 py-3 text-center text-sm text-gray-700">결과</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {grades.map((grade, index) => {
-              const status = getStatus(grade);
-              return (
-                <tr key={index} className="hover:bg-gray-50 transition-colors">
+      {errorMessage && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {loading && <div className="p-6 text-center text-gray-500">성적을 불러오는 중...</div>}
+
+      {!loading && (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">학번</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">진도율</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">시험</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">과제</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">기타</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">총점</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">결과</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {grades.map((grade) => (
+                <tr key={grade.courseUserId} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-4 text-sm text-gray-900">{grade.name}</td>
                   <td className="px-4 py-4 text-center text-sm text-gray-600">{grade.studentId}</td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900">{grade.midterm}</td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900">{grade.final}</td>
                   <td className="px-4 py-4 text-center text-sm text-gray-900">
-                    {grade.assignment}
+                    {Math.round(grade.progressRatio * 10) / 10}%
                   </td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900">
-                    {grade.attendance}
-                  </td>
-                  <td className="px-4 py-4 text-center text-sm text-gray-900">
-                    {grade.progressRate}%
-                  </td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-900">{grade.examScore}</td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-900">{grade.homeworkScore}</td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-900">{grade.etcScore}</td>
                   <td className="px-4 py-4 text-center">
                     <span className="inline-flex px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
-                      {grade.total}
+                      {Math.round(grade.totalScore * 100) / 100}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-center">
-                    <span className={`inline-flex px-3 py-1 rounded-full ${status.color}`}>
-                      {status.label}
+                    <span className={`inline-flex px-3 py-1 rounded-full ${getStatusBadge(grade.statusLabel)}`}>
+                      {grade.statusLabel || '미달'}
                     </span>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+
+              {grades.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
+                    성적 데이터가 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
 
-// 수료관리 탭
-function CompletionTab() {
+// 수료관리 탭(API 연동)
+function CompletionTab({ courseId }: { courseId: number }) {
+  const [selectedCourseUserIds, setSelectedCourseUserIds] = useState<number[]>([]);
+
+  const [rows, setRows] = useState<any[]>([]);
+  const [courseInfo, setCourseInfo] = useState<any | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const toNum = (value: any, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  // 왜: 수료/종료/증명서 출력은 "운영 DB 상태"가 기준이므로, 화면 진입/처리 후에는 반드시 다시 조회합니다.
+  const fetchCompletions = async () => {
+    if (!courseId) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getCompletions({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const list = res.rst_data ?? [];
+      const mapped = list.map((row: any) => ({
+        courseUserId: Number(row.course_user_id),
+        studentId: row.login_id,
+        name: row.user_nm,
+        progressRatio: toNum(row.progress_ratio, 0),
+        totalScore: toNum(row.total_score, 0),
+        completeStatus: String(row.complete_status || ''), //P/C/F/''
+        completeYn: String(row.complete_yn || ''),
+        completeDate: row.complete_date_conv || '-',
+        closeYn: String(row.close_yn || ''),
+        closeDate: row.close_date_conv || '-',
+        statusLabel: row.status_label || '',
+      }));
+      setRows(mapped);
+      setCourseInfo(res.rst_course ?? null);
+
+      // 선택된 항목이 목록에서 사라진 경우(상태 변화 등) 선택을 정리합니다.
+      setSelectedCourseUserIds((prev) =>
+        prev.filter((id) => mapped.some((r: any) => r.courseUserId === id))
+      );
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '수료 정보를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchCompletions();
+  }, [courseId]);
+
+  const completionCriteria = {
+    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
+    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+  };
+  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passCriteria = {
+    progressRate: toNum(courseInfo?.limit_progress, 0),
+    totalScore: toNum(courseInfo?.limit_total_score, 0),
+  };
+
+  const canPrintCompletion = (row: any) => row.completeStatus === 'C' || row.completeStatus === 'P';
+  const canPrintPass = (row: any) => row.completeStatus === 'P';
+
+  const getStatusBadge = (label: string) => {
+    if (label === '합격') return 'bg-green-100 text-green-700';
+    if (label === '수료') return 'bg-blue-100 text-blue-700';
+    if (label === '종료') return 'bg-gray-100 text-gray-700';
+    if (label === '미수료') return 'bg-red-100 text-red-700';
+    return 'bg-yellow-100 text-yellow-800';
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedCourseUserIds(rows.map((r) => r.courseUserId));
+    } else {
+      setSelectedCourseUserIds([]);
+    }
+  };
+
+  const handleSelectStudent = (courseUserId: number) => {
+    setSelectedCourseUserIds((prev) =>
+      prev.includes(courseUserId) ? prev.filter((id) => id !== courseUserId) : [...prev, courseUserId]
+    );
+  };
+
+  const handleAction = (action: 'complete_y' | 'complete_n' | 'close_y' | 'close_n', label: string) => {
+    if (selectedCourseUserIds.length === 0) {
+      alert('처리할 학생을 선택해 주세요.');
+      return;
+    }
+
+    void (async () => {
+      const ok = confirm(`${label}을(를) 실행하시겠습니까?\n\n선택 인원: ${selectedCourseUserIds.length}명`);
+      if (!ok) return;
+
+      setActionLoading(true);
+      try {
+        const res = await tutorLmsApi.updateCompletion({ courseId, action, courseUserIds: selectedCourseUserIds });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchCompletions();
+        alert('처리가 완료되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '처리 중 오류가 발생했습니다.');
+      } finally {
+        setActionLoading(false);
+      }
+    })();
+  };
+
+  const openCertificate = (courseUserId: number, type: 'C' | 'P') => {
+    // 왜: 팝업 차단을 피하려면(브라우저 정책), 클릭 직후에 창을 먼저 열어 둔 뒤 URL을 채워야 합니다.
+    const win = window.open('', '_blank');
+    if (!win) {
+      alert('팝업이 차단되었습니다. 브라우저에서 팝업 허용 후 다시 시도해 주세요.');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const res = await tutorLmsApi.issueCertificate({ courseUserId, type });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        const url = res.rst_data;
+        if (!url) throw new Error('인쇄 URL을 받지 못했습니다.');
+        win.location.href = url;
+      } catch (e) {
+        try { win.close(); } catch (ignore) {}
+        alert(e instanceof Error ? e.message : '증명서 출력 중 오류가 발생했습니다.');
+      }
+    })();
+  };
+
+  const handlePrintBulk = (type: 'C' | 'P') => {
+    if (selectedCourseUserIds.length === 0) {
+      alert('출력할 학생을 선택해 주세요.');
+      return;
+    }
+
+    const selectedRows = rows.filter((r) => selectedCourseUserIds.includes(r.courseUserId));
+    const eligible = selectedRows.filter((r) => (type === 'P' ? canPrintPass(r) : canPrintCompletion(r)));
+
+    if (eligible.length === 0) {
+      alert(type === 'P' ? '합격증을 출력할 대상이 없습니다.' : '수료증을 출력할 대상이 없습니다.');
+      return;
+    }
+
+    if (eligible.length > 20) {
+      alert('한 번에 너무 많이 출력하면 팝업 차단이 될 수 있습니다. 20명 이하로 나눠서 출력해 주세요.');
+      return;
+    }
+
+    // 팝업은 동기적으로 먼저 열어 둡니다.
+    const opened = eligible.map((r) => ({
+      row: r,
+      win: window.open('', '_blank'),
+    }));
+
+    if (opened.some((x) => !x.win)) {
+      opened.forEach((x) => {
+        try { x.win?.close(); } catch (ignore) {}
+      });
+      alert('팝업이 차단되었습니다. 브라우저에서 팝업 허용 후 다시 시도해 주세요.');
+      return;
+    }
+
+    void (async () => {
+      const errors: string[] = [];
+      for (const x of opened) {
+        try {
+          const res = await tutorLmsApi.issueCertificate({ courseUserId: x.row.courseUserId, type });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+          const url = res.rst_data;
+          if (!url) throw new Error('인쇄 URL을 받지 못했습니다.');
+          x.win!.location.href = url;
+        } catch (e) {
+          try { x.win?.close(); } catch (ignore) {}
+          errors.push(`${x.row.name}: ${e instanceof Error ? e.message : '오류'}`);
+        }
+      }
+      if (errors.length > 0) {
+        alert(`일부 출력이 실패했습니다.\n\n${errors.join('\n')}`);
+      }
+    })();
+  };
+
+  const passEligibleCount = rows.filter(
+    (r) => selectedCourseUserIds.includes(r.courseUserId) && canPrintPass(r)
+  ).length;
+
+  return (
+    <div>
+      <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-gray-700 mb-1">수료 기준</div>
+            <div className="text-gray-600">
+              진도율 {completionCriteria.progressRate}% 이상
+              {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-700 mb-1">합격 기준</div>
+            <div className="text-gray-600">
+              {passEnabled
+                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
+                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2 justify-end">
+        <button
+          onClick={() => void fetchCompletions()}
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          disabled={loading || actionLoading}
+        >
+          새로고침
+        </button>
+        <button
+          onClick={() => handleAction('complete_y', '수료/합격 처리')}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
+          disabled={actionLoading}
+        >
+          수료/합격 처리
+        </button>
+        <button
+          onClick={() => handleAction('complete_n', '판정 초기화')}
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:bg-gray-200"
+          disabled={actionLoading}
+        >
+          판정 초기화
+        </button>
+        <button
+          onClick={() => handleAction('close_y', '종료(마감) 처리')}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:bg-gray-300"
+          disabled={actionLoading}
+        >
+          종료(마감)
+        </button>
+        <button
+          onClick={() => handleAction('close_n', '종료 해제')}
+          className="px-4 py-2 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors disabled:bg-gray-200"
+          disabled={actionLoading}
+        >
+          종료 해제
+        </button>
+      </div>
+
+      <div className="mb-4 flex gap-2 justify-end">
+        <button
+          onClick={() => handlePrintBulk('C')}
+          disabled={selectedCourseUserIds.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          <span>수료증 일괄출력 ({selectedCourseUserIds.length})</span>
+        </button>
+        <button
+          onClick={() => handlePrintBulk('P')}
+          disabled={selectedCourseUserIds.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          <Download className="w-4 h-4" />
+          <span>합격증 일괄출력 ({passEligibleCount})</span>
+        </button>
+      </div>
+
+      {errorMessage && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {loading && <div className="p-6 text-center text-gray-500">수료 정보를 불러오는 중...</div>}
+
+      {!loading && (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-center">
+                  <input
+                    type="checkbox"
+                    onChange={handleSelectAll}
+                    checked={rows.length > 0 && selectedCourseUserIds.length === rows.length}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                </th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">학번</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">진도율</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">총점</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">상태</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">판정/종료</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">증명서 출력</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {rows.map((data: any) => (
+                <tr key={data.courseUserId} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedCourseUserIds.includes(data.courseUserId)}
+                      onChange={() => handleSelectStudent(data.courseUserId)}
+                      className="w-4 h-4 text-blue-600 rounded"
+                    />
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900">{data.name}</td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-600">{data.studentId}</td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-900">
+                    {Math.round(data.progressRatio * 10) / 10}%
+                  </td>
+                  <td className="px-4 py-4 text-center text-sm text-gray-900">
+                    {Math.round(data.totalScore * 100) / 100}점
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <span className={`inline-flex px-3 py-1 rounded-full text-xs ${getStatusBadge(data.statusLabel)}`}>
+                      {data.statusLabel || '미판정'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4 text-center text-xs text-gray-600">
+                    <div>판정: {data.completeStatus || '-'}</div>
+                    <div>종료: {data.closeYn || '-'}</div>
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => openCertificate(data.courseUserId, 'C')}
+                        disabled={!canPrintCompletion(data)}
+                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        수료증
+                      </button>
+                      <button
+                        onClick={() => openCertificate(data.courseUserId, 'P')}
+                        disabled={!canPrintPass(data)}
+                        className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        합격증
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
+                    수료 데이터가 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 수료관리 탭(legacy/mock)
+function CompletionTabLegacy() {
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
 
   const completionData = [
