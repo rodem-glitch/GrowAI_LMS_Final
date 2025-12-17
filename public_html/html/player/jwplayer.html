@@ -63,10 +63,19 @@ html, body {
 #next_lesson .next_btn a { width:8.750em; border:0.063em solid #868e96; border-radius:0.313em; background-color:#adb5bd; margin:0; padding:0.625em; font-size:1em; font-family:inherit; text-decoration:none}
 #next_lesson .next_end { margin-top:2.500em; }
 
+/* 다중영상: 다음 영상 안내(모바일 자동재생 제한 대응) */
+#next_video { box-sizing:border-box; display:none; position:absolute; z-index:998; width:100%; height:100%; margin:0 auto; background-color:rgba(0,0,0,0.35); }
+#next_video * { box-sizing:border-box; }
+#next_video .next_info { position:relative; width:22.500em; height:13.000em; background-color:#343a40; margin:-7.500em auto 0; top:50%; padding:1.875em; }
+#next_video .next_btn { margin-top:2.0em; text-align:center; }
+#next_video .next_btn a { display:inline-block; width:100%; border:0.063em solid #1d4ed8; border-radius:0.313em; background-color:#2563eb; margin:0; padding:0.750em; font-size:1em; font-family:inherit; text-decoration:none; color:#ffffff; }
+
 @media screen and (max-width:736px) {
 	/* #controller #ctrl_close { display:list-item; } */
 	#next_lesson { font-size:5vmin; background-color:#343a40; }
 	#next_lesson .next_info { height:100%; padding:0.938em; }
+	#next_video { font-size:5vmin; }
+	#next_video .next_info { height:100%; padding:0.938em; }
 }
 
 #player_wrapper { margin:0 auto; height:100%; }
@@ -122,6 +131,19 @@ html, body {
 <!--/if(is_max)-->
 <!--/if(progress_block)-->
 
+<!--@if(progress_block)-->
+<!--@if(next_vid_block)-->
+<div id="next_video">
+	<div class="next_info">
+		<h3>다음 영상이 준비되었습니다.<br>이어서 재생하시겠습니까?</h3>
+		<div class="next_btn">
+			<a href="javascript:goNextVideo();" target="_top">다음 영상 재생하기</a>
+		</div>
+	</div>
+</div>
+<!--/if(next_vid_block)-->
+<!--/if(progress_block)-->
+
 <div id="player_wrapper">
 	<div id="player">플레이어 로딩중입니다.</div>
 </div>
@@ -138,7 +160,7 @@ try {
 		type: "{{file_type}}",
 		width: '100%',
 		height: '100%',
-		autostart: 'false'
+		autostart: {{autostart}}
 	});
 } catch (e) {
 	alert("플레이어 실행 시 오류가 발생하였습니다.");
@@ -163,6 +185,17 @@ var isSeek = false;		//이동 가능 여부
 var startTime = {{start_pos}};
 var stimer;
 var _direct = false
+
+//다중영상: 다음 서브영상 id(없으면 0)
+var nextVid = parseInt("{{next_vid}}", 10) || 0;
+
+function goNextVideo() {
+	//왜: 다음 영상은 “부모 차시(plid) + 다음 서브영상(nextVid)” 조합으로 다시 viewer.jsp를 호출해야 합니다.
+	if(nextVid <= 0) return;
+	var url = "/classroom/viewer.jsp?cuid={{cuid}}&lid={{plid}}&chapter={{chapter}}&vid=" + nextVid + "&autoplay=Y";
+	try { top.location.href = url; } catch(e) { location.href = url; }
+}
+
 jwplayer().on('play', function() {
 	if(isMobile && _direct == false && startTime > 0) seekPlay();
 	startTimer();
@@ -171,6 +204,21 @@ jwplayer().on('stop', stop);
 jwplayer().on('time', checkTime);
 jwplayer().on('complete', function() {
 	//$("#next_lesson").show();
+
+	// 왜: 다중영상 차시는 1개 영상이 끝나면 다음 서브영상으로 이어서 재생되어야 합니다.
+	//     단, 모바일은 기기 정책으로 자동재생이 막힐 수 있어 “다음 영상 재생하기” 버튼을 크게 띄웁니다.
+	if(nextVid > 0) {
+		stopTimer();
+		save(function() {
+			if(isMobile) {
+				$("#next_video").show();
+			} else {
+				goNextVideo();
+			}
+		});
+		return;
+	}
+
 	stop();
 });
 jwplayer().on('error', onError);
@@ -271,15 +319,21 @@ function stop() {
 	save();
 }
 
-function save() {
+function save(afterSave) {
 	try {
 		$.ajaxSetup({cache:false});
 		$.get('/classroom/progress_movie.jsp?study_time=' + playTime + '&curr_time=' + thisPos + '&last_time=' + maxPos + '&cuid={{cuid}}&lid={{plid}}&chapter={{chapter}}&vid={{vid}}', function(data) {
 
 			if(data == '2' && top.opener) top.opener.location.reload();
+			if(typeof afterSave === "function") afterSave(data);
+		}).fail(function() {
+			if(typeof afterSave === "function") afterSave("");
 		});
 		playTime = 0;
-	} catch (e) { console.log(e); }
+	} catch (e) {
+		console.log(e);
+		if(typeof afterSave === "function") afterSave("");
+	}
 }
 
 function trace(s) {

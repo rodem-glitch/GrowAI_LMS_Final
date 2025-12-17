@@ -9,6 +9,8 @@ int start = m.ri("start");
 int vid = m.ri("vid"); //다중영상일 때 서브영상 id
 int plid = m.ri("plid"); //다중영상일 때 부모 차시 id(진도 저장용)
 if(plid == 0) plid = lid;
+int nvid = m.ri("nvid"); //다중영상일 때 다음 서브영상 id(이어보기용)
+String autoplay = m.rs("autoplay"); //다음 영상으로 넘어갈 때 PC 자동재생을 시도할지 여부(Y/N)
 String ek = m.rs("ek");
 
 if(lid == 0) { m.jsErrClose(_message.get("alert.common.required_key")); return; }
@@ -87,6 +89,9 @@ p.setVar("next_lesson_id", nid > 0);
 p.setVar("ie8", ie8);
 p.setVar("vid", vid);
 p.setVar("plid", plid);
+p.setVar("next_vid", nvid);
+p.setVar("next_vid_block", nvid > 0);
+p.setVar("autostart", "Y".equals(autoplay) ? "true" : "false");
 p.display();
 
 %>
