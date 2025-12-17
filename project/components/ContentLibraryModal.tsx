@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Search, Heart } from 'lucide-react';
+import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
   id: string;
@@ -26,88 +27,93 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
   const [levelFilter, setLevelFilter] = useState('전체 유형');
   const [onlyFree, setOnlyFree] = useState(false);
 
-  // 샘플 콘텐츠 데이터
-  const contents: Content[] = [
-    {
-      id: '1',
-      title: 'Python 기초 문법 완전정복',
-      description: 'Python의 기본 문법부터 변수, 함수와 제어문까지 완벽 이해 및 실습 경험입니다.',
-      category: 'IT/프로그래밍',
-      tags: ['Python', '기초', '문법'],
-      views: 1250,
-      thumbnail: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=400&h=300&fit=crop',
-      isFavorite: true,
-      duration: '4시간',
-    },
-    {
-      id: '2',
-      title: '데이터베이스 설계 원리',
-      description: '관계형 데이터베이스 설계와 핵심 원리 및 관계형 모델을 교육받을 수 있습니다.',
-      category: '데이터',
-      tags: ['Database', 'SQL', '설계'],
-      views: 890,
-      thumbnail: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=400&h=300&fit=crop',
-      isFavorite: false,
-      duration: '5시간',
-    },
-    {
-      id: '3',
-      title: 'AI 머신러닝 실습 가이드',
-      description: '실제 데이터를 활용한 머신러닝 전체 과정을 실습 가이드 모델로 학습합니다.',
-      category: 'AI',
-      tags: ['AI', '머신러닝', '실습'],
-      views: 2150,
-      thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=300&fit=crop',
-      isFavorite: true,
-      duration: '3시간',
-    },
-    {
-      id: '4',
-      title: '웹 프론트엔드 개발 실무',
-      description: 'HTML, CSS, JavaScript를 활용한 실무 웹 개발 프로젝트',
-      category: 'IT/프로그래밍',
-      tags: ['Frontend', 'Web', 'JavaScript'],
-      views: 1670,
-      thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=300&fit=crop',
-      isFavorite: false,
-      duration: '6시간',
-    },
-    {
-      id: '5',
-      title: '데이터 시각화 기초',
-      description: '차트와 그래프를 활용한 효과적인 데이터 시각화 기법',
-      category: '데이터',
-      tags: ['Data', 'Visualization', 'Chart'],
-      views: 1320,
-      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop',
-      isFavorite: false,
-      duration: '4시간',
-    },
-    {
-      id: '6',
-      title: 'UI/UX 디자인 원칙',
-      description: '사용자 중심의 인터페이스 디자인 원칙과 실전 적용',
-      category: '디자인',
-      tags: ['UI', 'UX', '디자인'],
-      views: 980,
-      thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=300&fit=crop',
-      isFavorite: true,
-      duration: '5시간',
-    },
-  ];
+  const [contents, setContents] = useState<Content[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 왜: 샘플 데이터가 아니라, 실제 레슨(LM_LESSON) 목록을 API로 가져와 보여줘야 합니다.
+  // - 찜 탭은 서버에서 favorite_yn=Y로 필터링해서 내려주므로, 화면은 그대로 보여주기만 하면 됩니다.
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const fetchLessons = async () => {
+        setLoading(true);
+        setErrorMessage(null);
+        setContents([]);
+        try {
+          const res = await tutorLmsApi.getLessons({
+            keyword: searchTerm,
+            favoriteOnly: activeTab === 'favorites',
+          });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+          const rows = res.rst_data ?? [];
+          const mapped: Content[] = rows.map((row) => ({
+            id: String(row.id),
+            title: row.title,
+            description: row.description || '',
+            category: row.lesson_type || '레슨',
+            tags: [],
+            views: Number(row.views ?? 0),
+            thumbnail: row.thumbnail || '',
+            isFavorite: Boolean(row.is_favorite),
+            duration: row.duration || '-',
+          }));
+
+          if (!cancelled) setContents(mapped);
+        } catch (e) {
+          if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      };
+
+      fetchLessons();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isOpen, activeTab, searchTerm]);
 
   const filteredContents = contents.filter((content) => {
     const matchesTab = activeTab === 'all' || (activeTab === 'favorites' && content.isFavorite);
-    const matchesSearch = content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       content.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // 왜: 레슨 테이블에 "카테고리"가 별도로 없는 환경이 많아서, UI는 유지하되 lesson_type 정도만 매핑합니다.
     const matchesCategory = categoryFilter === '전체' || content.category === categoryFilter;
-    
+
+    // levelFilter/onlyFree는 현재 DB 필드가 없어 UI만 유지합니다.
     return matchesTab && matchesSearch && matchesCategory;
   });
 
   const handleSelect = (content: Content) => {
     onSelect(content);
     onClose();
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, content: Content) => {
+    // 왜: 카드 전체 클릭은 "선택"이고, 하트 버튼은 "찜"이라서 이벤트를 분리해야 합니다.
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const res = await tutorLmsApi.toggleWishlist({ module: 'lesson', moduleId: Number(content.id) });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const next = Number(res.rst_data ?? 0) === 1;
+      setContents((prev) => {
+        if (activeTab === 'favorites' && !next) return prev.filter((c) => c.id !== content.id);
+        return prev.map((c) => (c.id === content.id ? { ...c, isFavorite: next } : c));
+      });
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : '찜 처리 중 오류가 발생했습니다.');
+    }
   };
 
   if (!isOpen) return null;
@@ -207,6 +213,18 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+              {errorMessage}
+            </div>
+          )}
+
+          {loading && (
+            <div className="py-12 text-center text-gray-500">
+              <p>불러오는 중...</p>
+            </div>
+          )}
+
           {/* Content Grid */}
           <div className="grid grid-cols-3 gap-6">
             {filteredContents.map((content) => (
@@ -217,15 +235,26 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
               >
                 {/* Thumbnail */}
                 <div className="relative h-48 bg-gray-100">
-                  <img
-                    src={content.thumbnail}
-                    alt={content.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {content.thumbnail ? (
+                    <img
+                      src={content.thumbnail}
+                      alt={content.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                      NO IMAGE
+                    </div>
+                  )}
                   <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs">
-                    {content.isFavorite ? '찜함' : '콘텐츠'}
+                    {content.isFavorite ? '찜함' : '레슨'}
                   </div>
-                  <button className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  <button
+                    type="button"
+                    onClick={(e) => handleToggleFavorite(e, content)}
+                    className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    title={content.isFavorite ? '찜 해제' : '찜하기'}
+                  >
                     <Heart
                       className={`w-4 h-4 ${
                         content.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
@@ -260,7 +289,7 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
                   {/* Stats */}
                   <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-1">
-                      <span>👁️ {content.views.toLocaleString()}</span>
+                      <span>조회 {content.views.toLocaleString()}</span>
                     </div>
                     <button className="text-blue-600 hover:underline">
                       과정에 추가
@@ -271,7 +300,7 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
             ))}
           </div>
 
-          {filteredContents.length === 0 && (
+          {!loading && !errorMessage && filteredContents.length === 0 && (
             <div className="text-center py-16 text-gray-500">
               <p className="mb-2">검색 결과가 없습니다.</p>
               <p className="text-sm">다른 검색어나 필터를 시도해보세요.</p>

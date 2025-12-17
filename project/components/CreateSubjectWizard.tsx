@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ContentLibraryModal } from './ContentLibraryModal';
 import { CourseSelectionModal } from './CourseSelectionModal';
+import { tutorLmsApi } from '../api/tutorLmsApi';
 
 type Step = 'basic' | 'learners' | 'curriculum' | 'confirm';
 
@@ -21,6 +22,30 @@ interface Course {
   department: string;
   major: string;
   departmentName: string;
+}
+
+interface Learner {
+  id: string;
+  name: string;
+  campus: string;
+  major: string;
+  studentId?: string;
+  email?: string;
+  deptPath?: string;
+}
+
+interface SessionVideo {
+  id: string;
+  title: string;
+  url: string; //외부 URL(직접 입력)일 때 사용
+  lessonId?: string; //콘텐츠 라이브러리(레슨)에서 선택했을 때 사용
+}
+
+interface SessionItem {
+  id: string;
+  title: string;
+  description: string;
+  videos: SessionVideo[];
 }
 
 interface FormData {
@@ -36,25 +61,20 @@ interface FormData {
   endDate: string;
   description: string;
   objectives: string;
+  courseFileName: string;
+  courseFileUrl: string;
   
   // 학습자
-  selectedLearners: any[];
+  selectedLearners: Learner[];
   
   // 차시
-  sessions: {
-    id: string;
-    title: string;
-    description: string;
-    videos: {
-      id: string;
-      title: string;
-      url: string;
-    }[];
-  }[];
+  sessions: SessionItem[];
 }
 
 export function CreateSubjectWizard() {
   const [currentStep, setCurrentStep] = useState<Step>('basic');
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     subjectName: '',
     selectedCourse: null,
@@ -67,6 +87,8 @@ export function CreateSubjectWizard() {
     endDate: '',
     description: '',
     objectives: '',
+    courseFileName: '',
+    courseFileUrl: '',
     selectedLearners: [],
     sessions: [
       {
@@ -105,6 +127,123 @@ export function CreateSubjectWizard() {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
+  const resetWizard = () => {
+    setCurrentStep('basic');
+    setFormData({
+      subjectName: '',
+      selectedCourse: null,
+      category: 'CLASSROOM',
+      year: '2024',
+      semester: '1학기',
+      credits: '',
+      hours: '',
+      startDate: '',
+      endDate: '',
+      description: '',
+      objectives: '',
+      courseFileName: '',
+      courseFileUrl: '',
+      selectedLearners: [],
+      sessions: [
+        {
+          id: '1',
+          title: '',
+          description: '',
+          videos: [],
+        },
+      ],
+    });
+  };
+
+  const handleComplete = async () => {
+    // 왜: "완료" 버튼을 눌렀을 때 DB에 실제 과목/수강생/차시가 저장돼야 새로고침해도 정보가 유지됩니다.
+    setErrorMessage(null);
+
+    const courseName = formData.subjectName.trim();
+    if (!courseName) {
+      setErrorMessage('과목명을 입력해 주세요.');
+      return;
+    }
+    if (!formData.year.trim()) {
+      setErrorMessage('년도를 입력해 주세요.');
+      return;
+    }
+    if (!formData.startDate || !formData.endDate) {
+      setErrorMessage('수업시작일과 학습기한을 입력해 주세요.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const programId = formData.selectedCourse ? Number(formData.selectedCourse.id) : 0;
+      const createRes = await tutorLmsApi.createCourse({
+        courseName,
+        year: formData.year.trim(),
+        studyStartDate: formData.startDate,
+        studyEndDate: formData.endDate,
+        programId: programId > 0 ? programId : undefined,
+        semester: formData.semester,
+        credit: formData.credits,
+        lessonTime: formData.hours,
+        content1: formData.description,
+        content2: formData.objectives,
+        courseFile: formData.courseFileName || undefined,
+      });
+      if (createRes.rst_code !== '0000') throw new Error(createRes.rst_message);
+
+      const courseId = Number(createRes.rst_data);
+      if (!courseId) throw new Error('과목 생성 결과(course_id)가 올바르지 않습니다.');
+
+      // (선택) 수강생 등록: 선택된 학습자가 있을 때만 호출합니다.
+      if (formData.selectedLearners.length > 0) {
+        const userIds = formData.selectedLearners
+          .map((l) => Number(l.id))
+          .filter((id) => Number.isFinite(id) && id > 0);
+
+        if (userIds.length > 0) {
+          const addRes = await tutorLmsApi.addCourseStudents({ courseId, userIds });
+          if (addRes.rst_code !== '0000') throw new Error(addRes.rst_message);
+        }
+      }
+
+      // 차시/레슨 등록: 섹션을 만들고 그 안에 레슨(또는 외부링크)을 추가합니다.
+      for (let i = 0; i < formData.sessions.length; i += 1) {
+        const session = formData.sessions[i];
+        const sectionName = session.title.trim() || `${i + 1}차시`;
+
+        const sectionRes = await tutorLmsApi.insertCurriculumSection({ courseId, sectionName });
+        if (sectionRes.rst_code !== '0000') throw new Error(sectionRes.rst_message);
+
+        const sectionId = Number(sectionRes.rst_data);
+        if (!sectionId) continue;
+
+        for (const video of session.videos) {
+          const lessonId = video.lessonId ? Number(video.lessonId) : 0;
+          const url = video.url.trim();
+
+          // 왜: 사용자가 "영상 추가"만 누르고 값(레슨/URL)을 입력하지 않을 수 있어, 빈 행은 건너뜁니다.
+          if (!lessonId && !url) continue;
+
+          const addLessonRes = await tutorLmsApi.addCurriculumLesson({
+            courseId,
+            sectionId,
+            lessonId: lessonId > 0 ? lessonId : undefined,
+            url: lessonId > 0 ? undefined : url,
+            title: video.title.trim() || undefined,
+          });
+          if (addLessonRes.rst_code !== '0000') throw new Error(addLessonRes.rst_message);
+        }
+      }
+
+      alert('과목이 개설되었습니다. (담당과목 메뉴에서 확인할 수 있습니다)');
+      resetWizard();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -112,6 +251,12 @@ export function CreateSubjectWizard() {
         <h2 className="text-gray-900 mb-2">새 과목 개설</h2>
         <p className="text-gray-600">단계별로 교육과목을 개설하고 설정할 수 있습니다.</p>
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -184,8 +329,14 @@ export function CreateSubjectWizard() {
               다음
             </button>
           ) : (
-            <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              과목 개설 완료
+            <button
+              onClick={handleComplete}
+              disabled={saving}
+              className={`px-6 py-2 bg-green-600 text-white rounded-lg transition-colors ${
+                saving ? 'opacity-60 cursor-not-allowed' : 'hover:bg-green-700'
+              }`}
+            >
+              {saving ? '저장 중...' : '과목 개설 완료'}
             </button>
           )}
         </div>
@@ -203,10 +354,53 @@ function BasicInfoStep({
   updateFormData: (updates: Partial<FormData>) => void;
 }) {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const handleCourseSelect = (course: Course) => {
+  const handleCourseSelect = (course: Course | null) => {
     updateFormData({ selectedCourse: course });
     setIsCourseModalOpen(false);
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const clearImage = () => {
+    updateFormData({ courseFileName: '', courseFileUrl: '' });
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    // 왜: 너무 큰 이미지는 업로드 실패/지연이 생길 수 있어, 화면에서 먼저 제한합니다.
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('이미지는 10MB 이하만 업로드할 수 있습니다.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const res = await tutorLmsApi.uploadCourseImage({ file });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      // 왜: rst_data가 단일 객체/배열 형태로 올 수 있어, 둘 다 처리합니다.
+      const payload: any = Array.isArray(res.rst_data) ? res.rst_data?.[0] : res.rst_data;
+      if (!payload?.file_name) throw new Error('업로드 결과가 올바르지 않습니다.');
+
+      updateFormData({
+        courseFileName: String(payload.file_name),
+        courseFileUrl: String(payload.file_url || ''),
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : '업로드 중 오류가 발생했습니다.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -252,10 +446,52 @@ function BasicInfoStep({
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">메인 이미지</label>
-          <button className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-left text-gray-700 hover:bg-gray-200 transition-colors flex items-center justify-between">
-            <span>파일 업로드</span>
-            <Upload className="w-4 h-4" />
-          </button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handlePickImage}
+                disabled={uploading}
+                className={`flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-left text-gray-700 transition-colors flex items-center justify-between ${
+                  uploading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-gray-200'
+                }`}
+              >
+                <span>{uploading ? '업로드 중...' : (formData.courseFileName ? '이미지 변경' : '파일 업로드')}</span>
+                <Upload className="w-4 h-4" />
+              </button>
+              {formData.courseFileName && (
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+
+            {uploadError && (
+              <div className="text-sm text-red-600">{uploadError}</div>
+            )}
+
+            {formData.courseFileUrl && (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <img
+                  src={formData.courseFileUrl}
+                  alt="메인 이미지"
+                  className="w-full h-32 object-cover"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -368,18 +604,64 @@ function LearnersStep({
   const [campus, setCampus] = useState('전체');
   const [major, setMajor] = useState('전체');
 
-  // 샘플 학습자 데이터
-  const allLearners = [
-    { id: '1', name: '김학생', campus: '서울캠퍼스', major: '전자공학과' },
-    { id: '2', name: '이학생', campus: '서울캠퍼스', major: '전산정보학과' },
-    { id: '3', name: '박학생', campus: '부산캠퍼스', major: '전자공학과' },
-    { id: '4', name: '최학생', campus: '대구캠퍼스', major: '기계공학과' },
-    { id: '5', name: '정학생', campus: '서울캠퍼스', major: '전산정보학과' },
-    { id: '6', name: '강학생', campus: '부산캠퍼스', major: '전자공학과' },
-    { id: '7', name: '조학생', campus: '서울캠퍼스', major: '전산정보학과' },
-    { id: '8', name: '윤학생', campus: '대구캠퍼스', major: '기계공학과' },
-    { id: '9', name: '장학생', campus: '서울캠퍼스', major: '전자공학과' },
-  ];
+  const [allLearners, setAllLearners] = useState<Learner[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 왜: 샘플 배열이 아니라, 실제 회원(TB_USER)을 검색해서 선택해야 합니다.
+  React.useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const fetchLearners = async () => {
+        setLoading(true);
+        setErrorMessage(null);
+        try {
+          const res = await tutorLmsApi.getLearners({ keyword: searchTerm, limit: 200 });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+          const rows = res.rst_data ?? [];
+          const mapped: Learner[] = rows.map((row: any) => {
+            const deptPath = String(row.dept_path || '');
+            const parts = deptPath.split(' > ').map((p: string) => p.trim()).filter(Boolean);
+            const campusName = parts[0] || String(row.dept_nm || '-') || '-';
+            const majorName = (parts.length > 0 ? parts[parts.length - 1] : String(row.dept_nm || '-')) || '-';
+
+            return {
+              id: String(row.id),
+              name: String(row.name || row.user_nm || '-'),
+              campus: campusName,
+              major: majorName,
+              studentId: String(row.student_id || ''),
+              email: String(row.email || ''),
+              deptPath,
+            };
+          });
+
+          if (!cancelled) setAllLearners(mapped);
+        } catch (e) {
+          if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      };
+
+      fetchLearners();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm]);
+
+  // 왜: DB 구조(부서 트리)에 따라 옵션이 달라지므로, 현재 조회된 목록 기준으로 필터 옵션을 만들어 제공합니다.
+  const campusOptions = ['전체', ...Array.from(new Set(allLearners.map((l) => l.campus).filter(Boolean)))];
+  const majorOptions = ['전체', ...Array.from(new Set(
+    allLearners
+      .filter((l) => campus === '전체' || l.campus === campus)
+      .map((l) => l.major)
+      .filter(Boolean),
+  ))];
 
   const filteredLearners = allLearners.filter((learner) => {
     const matchesSearch = learner.name.includes(searchTerm);
@@ -388,7 +670,7 @@ function LearnersStep({
     return matchesSearch && matchesCampus && matchesMajor;
   });
 
-  const toggleLearner = (learner: any) => {
+  const toggleLearner = (learner: Learner) => {
     const isSelected = formData.selectedLearners.some((l) => l.id === learner.id);
     if (isSelected) {
       updateFormData({
@@ -433,13 +715,15 @@ function LearnersStep({
             <label className="block text-sm text-gray-700 mb-2">캠퍼스</label>
             <select
               value={campus}
-              onChange={(e) => setCampus(e.target.value)}
+              onChange={(e) => {
+                setCampus(e.target.value);
+                setMajor('전체');
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option>전체</option>
-              <option>서울캠퍼스</option>
-              <option>부산캠퍼스</option>
-              <option>대구캠퍼스</option>
+              {campusOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
           <div>
@@ -449,31 +733,38 @@ function LearnersStep({
               onChange={(e) => setMajor(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option>전체</option>
-              <option>전자공학과</option>
-              <option>전산정보학과</option>
-              <option>기계공학과</option>
+              {majorOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
         </div>
+
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
 
         <div className="flex items-center justify-between">
           <div className="flex gap-3">
             <button
               onClick={selectAll}
+              disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               전체 선택
             </button>
             <button
               onClick={deselectAll}
+              disabled={loading}
               className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
               현재 목록 전체 해제
             </button>
           </div>
           <div className="text-sm text-gray-600">
-            검색 결과: {filteredLearners.length}명 / 선택된: {formData.selectedLearners.length}명
+            {loading ? '불러오는 중...' : `검색 결과: ${filteredLearners.length}명 / 선택된: ${formData.selectedLearners.length}명`}
           </div>
         </div>
       </div>
@@ -586,7 +877,9 @@ function CurriculumStep({
         const newVideo = {
           id: `${currentSessionId}-video-${Date.now()}-${Math.random()}`,
           title: content.title,
-          url: content.url || content.id,
+          url: '',
+          // 왜: 콘텐츠 모달에서 고른 것은 "레슨 ID"로 저장하고, 실제 DB 추가 시 lesson_id로 처리합니다.
+          lessonId: String(content.id),
         };
         updateSession(currentSessionId, {
           videos: [...session.videos, newVideo],
@@ -694,16 +987,20 @@ function CurriculumStep({
                             </div>
                             <div>
                               <label className="block text-xs text-gray-600 mb-1">
-                                키 또는 URL
+                                레슨 ID 또는 URL
                               </label>
                               <input
                                 type="text"
-                                value={video.url}
-                                onChange={(e) =>
-                                  updateVideo(session.id, video.id, { url: e.target.value })
-                                }
-                                placeholder="youtube.com 또는 키 입력"
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={video.lessonId ? `레슨 ID: ${video.lessonId}` : video.url}
+                                onChange={(e) => {
+                                  if (video.lessonId) return;
+                                  updateVideo(session.id, video.id, { url: e.target.value });
+                                }}
+                                disabled={Boolean(video.lessonId)}
+                                placeholder={video.lessonId ? '' : '외부 URL을 입력하세요'}
+                                className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                  video.lessonId ? 'bg-gray-100 text-gray-500' : ''
+                                }`}
                               />
                             </div>
                           </div>
