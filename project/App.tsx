@@ -96,7 +96,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             {/* Empty content area - 추후 추가될 컨텐츠 영역 */}
             {activeMenu === 'dashboard' ? (
-              <Dashboard />
+              <Dashboard onNavigate={(menu) => setActiveMenu(menu)} />
             ) : activeMenu === 'explore' ? (
               <CourseExplorer />
             ) : activeMenu === 'courses' ? (

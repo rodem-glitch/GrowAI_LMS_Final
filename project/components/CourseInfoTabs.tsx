@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Edit } from 'lucide-react';
-import { tutorLmsApi } from '../api/tutorLmsApi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Edit, Save } from 'lucide-react';
+import { tutorLmsApi, type TutorCertificateTemplateRow, type TutorCourseInfoDetail } from '../api/tutorLmsApi';
 import { CourseSelectionModal } from './CourseSelectionModal';
+
+type SubTab = 'basic' | 'evaluation' | 'completion' | 'certificate';
 
 type ProgramOption = {
   id: string;
@@ -12,6 +14,20 @@ type ProgramOption = {
   departmentName: string;
 };
 
+function toInt(value: unknown, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function toYn(value: unknown, fallback: 'Y' | 'N' = 'N'): 'Y' | 'N' {
+  return value === 'Y' ? 'Y' : value === 'N' ? 'N' : fallback;
+}
+
+function clamp0to100(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, value));
+}
+
 // 과목정보 메인 탭
 export function CourseInfoTab({
   course,
@@ -20,8 +36,45 @@ export function CourseInfoTab({
   course: any;
   onCourseUpdated?: (nextCourse: any) => void;
 }) {
-  const [subTab, setSubTab] = useState<'basic' | 'evaluation' | 'completion' | 'certificate'>('basic');
-  const [useCertificate, setUseCertificate] = useState(false);
+  const courseId = toInt(course?.id, 0);
+  const [subTab, setSubTab] = useState<SubTab>('basic');
+  const [detail, setDetail] = useState<TutorCourseInfoDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const passYn = toYn(detail?.pass_yn, 'N') === 'Y';
+
+  const fetchCourseInfo = async () => {
+    // 왜: 목록에서 넘어온 `course`에는 과목소개/평가/증명서 같은 상세 컬럼이 없어서, 항상 DB에서 다시 조회해야 합니다.
+    if (courseId <= 0) {
+      setDetail(null);
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getCourseInfo({ courseId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      setDetail(res.rst_data ?? null);
+    } catch (e) {
+      setDetail(null);
+      setErrorMessage(e instanceof Error ? e.message : '과목 정보를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchCourseInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId]);
+
+  useEffect(() => {
+    // 왜: 합격증 탭은 pass_yn=Y일 때만 의미가 있습니다.
+    if (subTab === 'certificate' && !passYn) setSubTab('evaluation');
+  }, [passYn, subTab]);
 
   return (
     <div className="space-y-6">
@@ -45,7 +98,7 @@ export function CourseInfoTab({
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          평가항목
+          평가/수료 기준
         </button>
         <button
           onClick={() => setSubTab('completion')}
@@ -57,7 +110,7 @@ export function CourseInfoTab({
         >
           수료증
         </button>
-        {useCertificate && (
+        {passYn && (
           <button
             onClick={() => setSubTab('certificate')}
             className={`px-4 py-2 transition-colors ${
@@ -71,13 +124,39 @@ export function CourseInfoTab({
         )}
       </div>
 
-      {/* 하위 탭 콘텐츠 */}
-      {subTab === 'basic' && <BasicInfoTab course={course} onCourseUpdated={onCourseUpdated} />}
-      {subTab === 'evaluation' && (
-        <EvaluationTab useCertificate={useCertificate} setUseCertificate={setUseCertificate} />
+      {loading && (
+        <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-gray-600">
+          불러오는 중...
+        </div>
       )}
-      {subTab === 'completion' && <CompletionCertificateTab />}
-      {subTab === 'certificate' && useCertificate && <PassCertificateTab />}
+
+      {!loading && errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      {!loading && !errorMessage && subTab === 'basic' && (
+        <BasicInfoTab
+          course={course}
+          courseId={courseId}
+          detail={detail}
+          onReload={fetchCourseInfo}
+          onCourseUpdated={onCourseUpdated}
+        />
+      )}
+
+      {!loading && !errorMessage && subTab === 'evaluation' && (
+        <EvaluationTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
+      )}
+
+      {!loading && !errorMessage && subTab === 'completion' && (
+        <CompletionCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
+      )}
+
+      {!loading && !errorMessage && subTab === 'certificate' && passYn && (
+        <PassCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
+      )}
     </div>
   );
 }
@@ -85,17 +164,30 @@ export function CourseInfoTab({
 // 기본 정보 탭
 function BasicInfoTab({
   course,
+  courseId,
+  detail,
+  onReload,
   onCourseUpdated,
 }: {
   course: any;
+  courseId: number;
+  detail: TutorCourseInfoDetail | null;
+  onReload: () => Promise<void> | void;
   onCourseUpdated?: (nextCourse: any) => void;
 }) {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [content1, setContent1] = useState('');
+  const [content2, setContent2] = useState('');
+
+  useEffect(() => {
+    setContent1(detail?.content1 ?? '');
+    setContent2(detail?.content2 ?? '');
+  }, [detail?.content1, detail?.content2]);
 
   const selectedProgram: ProgramOption | null =
-    course && 0 < Number(course.programId)
+    course && 0 < toInt(course.programId, 0)
       ? {
           id: String(course.programId),
           classification: '과정',
@@ -107,14 +199,12 @@ function BasicInfoTab({
       : null;
 
   const handleProgramSelect = async (program: ProgramOption | null) => {
-    // 왜: "소속 과정"은 과목(LM_COURSE)의 subject_id로만 관리하고, 0이면 미소속으로 처리합니다.
-    const courseId = Number(course?.id);
     if (!courseId) {
       setErrorMessage('과목 ID가 올바르지 않습니다.');
       return;
     }
 
-    const programId = program ? Number(program.id) : 0;
+    const programId = program ? toInt(program.id, 0) : 0;
     if (program && !programId) {
       setErrorMessage('과정 ID가 올바르지 않습니다.');
       return;
@@ -131,6 +221,28 @@ function BasicInfoTab({
         programId,
         programName: program ? program.name : '-',
       });
+      await onReload();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '소속 과정 변경 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+      setIsCourseModalOpen(false);
+    }
+  };
+
+  const handleSaveContents = async () => {
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.updateCourseInfo({ courseId, content1, content2 });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      alert('저장되었습니다.');
+      await onReload();
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
     } finally {
@@ -138,9 +250,21 @@ function BasicInfoTab({
     }
   };
 
+  const subjectName = course?.subjectName ?? detail?.course_nm ?? '-';
+  const courseIdLabel =
+    course?.courseId ??
+    detail?.course_id_conv ??
+    detail?.course_cd ??
+    (detail?.id ? String(detail.id) : courseId ? String(courseId) : '-');
+
+  const programName = course?.programName ?? detail?.program_nm ?? '-';
+  const period = course?.period ?? detail?.period_conv ?? '-';
+  const students = toInt(course?.students ?? detail?.student_cnt, 0);
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <h3 className="text-gray-900">과목 기본 정보</h3>
         <button
           onClick={() => setIsCourseModalOpen(true)}
           disabled={saving}
@@ -156,42 +280,31 @@ function BasicInfoTab({
           {errorMessage}
         </div>
       )}
+
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-700 mb-2">과목명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.subjectName}
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{subjectName}</div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">과정ID</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.courseId}
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{courseIdLabel}</div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">과정구분</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.courseType}
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{course?.courseType ?? '-'}</div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.programName}
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{programName}</div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">교육기간</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.period}
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{period}</div>
         </div>
         <div>
           <label className="block text-sm text-gray-700 mb-2">수강인원</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-            {course.students}명
-          </div>
+          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{students}명</div>
         </div>
       </div>
 
@@ -203,570 +316,720 @@ function BasicInfoTab({
         }}
         selectedCourse={selectedProgram}
       />
-      <div>
-        <label className="block text-sm text-gray-700 mb-2">과목 개요</label>
-        <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-          본 과목은 웹 개발의 기초를 다루며, HTML, CSS, JavaScript의 기본 개념과 실습을
-          통해 웹 페이지 제작 능력을 배양합니다.
+
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div>
+          <label className="block text-sm text-gray-700 mb-2">과목 소개</label>
+          <textarea
+            value={content1}
+            onChange={(e) => setContent1(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="과목 소개를 입력해 주세요."
+          />
         </div>
-      </div>
-      <div>
-        <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
-        <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-          • 웹 표준 HTML5와 CSS3를 활용한 웹 페이지 구조 설계 및 구현
-          <br />
-          • JavaScript 기본 문법과 DOM 조작을 통한 동적 웹 페이지 개발
-          <br />• 반응형 웹 디자인의 이해와 실무 적용
+        <div>
+          <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
+          <textarea
+            value={content2}
+            onChange={(e) => setContent2(e.target.value)}
+            rows={6}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="학습 목표를 입력해 주세요."
+          />
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={() => void handleSaveContents()}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Save className="w-4 h-4" />
+            <span>{saving ? '저장 중...' : '저장'}</span>
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// 평가항목 탭
-function EvaluationTab({ useCertificate, setUseCertificate }: { useCertificate: boolean; setUseCertificate: (value: boolean) => void }) {
-  const [scores, setScores] = useState({
-    attendance: { total: 100, progress: 100 },
-    exam: { total: 0 },
-    material: { total: 0 },
-    discussion: { total: 0 },
-    other: { total: 0 },
+function EvaluationTab({
+  courseId,
+  detail,
+  onReload,
+}: {
+  courseId: number;
+  detail: TutorCourseInfoDetail | null;
+  onReload: () => Promise<void> | void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    assignProgress: 100,
+    assignExam: 0,
+    assignHomework: 0,
+    assignForum: 0,
+    assignEtc: 0,
+
+    limitTotalScore: 60,
+    limitProgress: 60,
+    limitExam: 0,
+    limitHomework: 0,
+    limitForum: 0,
+    limitEtc: 0,
+
+    completeLimitProgress: 60,
+    completeLimitTotalScore: 60,
+
+    assignSurveyYn: 'N' as 'Y' | 'N',
+    pushSurveyYn: 'N' as 'Y' | 'N',
+    passYn: 'N' as 'Y' | 'N',
   });
 
-  const [criteria, setCriteria] = useState({
-    totalScore: 60,
-    progressRate: 60,
-  });
+  useEffect(() => {
+    // 왜: DB 값을 그대로 가져와서, 사용자가 “현재 설정”을 보고 수정할 수 있어야 합니다.
+    if (!detail) return;
+    setForm({
+      assignProgress: toInt(detail.assign_progress, 100),
+      assignExam: toInt(detail.assign_exam, 0),
+      assignHomework: toInt(detail.assign_homework, 0),
+      assignForum: toInt(detail.assign_forum, 0),
+      assignEtc: toInt(detail.assign_etc, 0),
 
-  const [passCriteria, setPassCriteria] = useState({
-    totalScore: 80,
-    progressRate: 80,
-  });
+      limitTotalScore: toInt(detail.limit_total_score, 60),
+      limitProgress: toInt(detail.limit_progress, 60),
+      limitExam: toInt(detail.limit_exam, 0),
+      limitHomework: toInt(detail.limit_homework, 0),
+      limitForum: toInt(detail.limit_forum, 0),
+      limitEtc: toInt(detail.limit_etc, 0),
 
-  const [settings, setSettings] = useState({
-    surveyRequired: false,
-    looseCriteria: false,
-    surveyEnabled: false,
-  });
+      completeLimitProgress: toInt(detail.complete_limit_progress, 60),
+      completeLimitTotalScore: toInt(detail.complete_limit_total_score, 60),
+
+      assignSurveyYn: toYn(detail.assign_survey_yn, 'N'),
+      pushSurveyYn: toYn(detail.push_survey_yn, 'N'),
+      passYn: toYn(detail.pass_yn, 'N'),
+    });
+  }, [detail]);
+
+  const totalAssignScore = useMemo(
+    () => form.assignProgress + form.assignExam + form.assignHomework + form.assignForum + form.assignEtc,
+    [form.assignEtc, form.assignExam, form.assignForum, form.assignHomework, form.assignProgress],
+  );
+
+  const handleSave = async () => {
+    // 왜: 배점/기준은 수료 판정 및 성적/증명서 출력에 직접 영향을 주므로, DB에 저장해야 새로고침 후에도 유지됩니다.
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.updateCourseEvaluation({
+        courseId,
+        assignProgress: clamp0to100(form.assignProgress),
+        assignExam: clamp0to100(form.assignExam),
+        assignHomework: clamp0to100(form.assignHomework),
+        assignForum: clamp0to100(form.assignForum),
+        assignEtc: clamp0to100(form.assignEtc),
+
+        assignSurveyYn: form.assignSurveyYn,
+        pushSurveyYn: form.pushSurveyYn,
+        passYn: form.passYn,
+
+        limitTotalScore: clamp0to100(form.limitTotalScore),
+        limitProgress: clamp0to100(form.limitProgress),
+        limitExam: clamp0to100(form.limitExam),
+        limitHomework: clamp0to100(form.limitHomework),
+        limitForum: clamp0to100(form.limitForum),
+        limitEtc: clamp0to100(form.limitEtc),
+
+        completeLimitProgress: clamp0to100(form.completeLimitProgress),
+        completeLimitTotalScore: clamp0to100(form.completeLimitTotalScore),
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      alert('저장되었습니다.');
+      await onReload();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const numberInputClass =
+    'w-full px-3 py-2 border border-gray-300 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-blue-500';
 
   return (
     <div className="space-y-6">
-      {/* 배점 비율 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">배점 비율</h4>
-        <div className="text-sm text-gray-600 mb-4">
-          ▸ 총점 100점 만점 기준으로 각 평가항목의 점수를 입력하세요.
-        </div>
-        <div className="grid grid-cols-6 gap-4">
-          <div className="text-center">
-            <div className="bg-blue-100 text-blue-900 py-2 rounded-t-lg">출석</div>
-            <div className="border border-t-0 border-gray-200 rounded-b-lg p-3">
-              <div className="text-sm text-gray-700 mb-2">100점</div>
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-gray-600">진도(출석)</label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <input
-                      type="number"
-                      value={scores.attendance.progress}
-                      onChange={(e) =>
-                        setScores({
-                          ...scores,
-                          attendance: { ...scores.attendance, progress: parseInt(e.target.value) || 0 },
-                        })
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-center"
-                    />
-                    <span className="text-xs text-gray-600">점(%)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {['exam', 'material', 'discussion', 'other'].map((key, index) => {
-            const labels = ['시험', '교재', '토론', '기타'];
-            return (
-              <div key={key} className="text-center">
-                <div className="bg-gray-100 text-gray-900 py-2 rounded-t-lg">{labels[index]}</div>
-                <div className="border border-t-0 border-gray-200 rounded-b-lg p-3">
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      value={scores[key].total}
-                      onChange={(e) =>
-                        setScores({
-                          ...scores,
-                          [key]: { total: parseInt(e.target.value) || 0 },
-                        })
-                      }
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-center"
-                    />
-                    <span className="text-xs text-gray-600">점(%)</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="text-sm text-gray-600 mt-4">
-          ▸ 각 항목의 수료기준 100점만족 기준으로 입력해주세요.
-        </div>
-      </div>
-
-      {/* 수료기준 기준 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">수료기준 기준</h4>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">총점</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={criteria.totalScore}
-                onChange={(e) => setCriteria({ ...criteria, totalScore: parseInt(e.target.value) || 0 })}
-                className="w-24 px-3 py-2 border border-gray-300 rounded"
-              />
-              <span className="text-sm text-gray-700">점 이상 / 100점</span>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">진도(출석)율</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={criteria.progressRate}
-                onChange={(e) => setCriteria({ ...criteria, progressRate: parseInt(e.target.value) || 0 })}
-                className="w-24 px-3 py-2 border border-gray-300 rounded"
-              />
-              <span className="text-sm text-gray-700">% 이상 / 100%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 합격기준 기준 */}
-      {useCertificate && (
-        <div className="border border-gray-200 rounded-lg p-6">
-          <h4 className="text-gray-900 mb-4">합격기준 기준</h4>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-700 mb-2">총점</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={passCriteria.totalScore}
-                  onChange={(e) => setPassCriteria({ ...passCriteria, totalScore: parseInt(e.target.value) || 0 })}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">점 이상 / 100점</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-2">진도(출석)율</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={passCriteria.progressRate}
-                  onChange={(e) => setPassCriteria({ ...passCriteria, progressRate: parseInt(e.target.value) || 0 })}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded"
-                />
-                <span className="text-sm text-gray-700">% 이상 / 100%</span>
-              </div>
-            </div>
-          </div>
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
         </div>
       )}
 
-      {/* 설문참여 확산 여부 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">설문참여 확산 여부</h4>
-            <p className="text-sm text-gray-600">
-              ▸ 수료기준에 설문참여여부를 포함합니다. 모든 설문에 참여해야 수료기준에 충족됩니다.
-            </p>
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h4 className="text-gray-900 mb-1">배점 비율</h4>
+            <p className="text-sm text-gray-600">총점 100점 기준으로 입력해 주세요. (권장: 합계 100)</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
+          <div className={`text-sm ${totalAssignScore === 100 ? 'text-green-700' : 'text-orange-700'}`}>
+            합계: {totalAssignScore}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">출석(진도)</label>
+            <input
+              type="number"
+              value={form.assignProgress}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignProgress: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">시험</label>
+            <input
+              type="number"
+              value={form.assignExam}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignExam: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과제</label>
+            <input
+              type="number"
+              value={form.assignHomework}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignHomework: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">토론</label>
+            <input
+              type="number"
+              value={form.assignForum}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignForum: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">기타</label>
+            <input
+              type="number"
+              value={form.assignEtc}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignEtc: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <h4 className="text-gray-900">수료(합격) 기준</h4>
+        <p className="text-sm text-gray-600">
+          아래 기준은 수료/합격 판정 및 성적 상태 표시(미달/수료/합격)에 사용됩니다.
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">총점 기준</label>
+            <input
+              type="number"
+              value={form.limitTotalScore}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitTotalScore: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">진도 기준(%)</label>
+            <input
+              type="number"
+              value={form.limitProgress}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitProgress: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">시험 기준</label>
+            <input
+              type="number"
+              value={form.limitExam}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitExam: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과제 기준</label>
+            <input
+              type="number"
+              value={form.limitHomework}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitHomework: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">토론 기준</label>
+            <input
+              type="number"
+              value={form.limitForum}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitForum: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">기타 기준</label>
+            <input
+              type="number"
+              value={form.limitEtc}
+              onChange={(e) => setForm((prev) => ({ ...prev, limitEtc: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <h4 className="text-gray-900">수료(완료) 기준</h4>
+        <p className="text-sm text-gray-600">
+          합격 상태를 사용하지 않는 환경에서는 “수료(완료)”가 최종 상태가 됩니다.
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">총점 기준</label>
+            <input
+              type="number"
+              value={form.completeLimitTotalScore}
+              onChange={(e) => setForm((prev) => ({ ...prev, completeLimitTotalScore: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">진도 기준(%)</label>
+            <input
+              type="number"
+              value={form.completeLimitProgress}
+              onChange={(e) => setForm((prev) => ({ ...prev, completeLimitProgress: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <h4 className="text-gray-900">옵션</h4>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-gray-900">설문참여 포함</div>
+            <div className="text-sm text-gray-600">수료 조건에 설문참여 여부를 포함합니다.</div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
-              checked={settings.surveyRequired}
-              onChange={(e) => setSettings({ ...settings, surveyRequired: e.target.checked })}
+              checked={form.assignSurveyYn === 'Y'}
+              onChange={(e) => setForm((prev) => ({ ...prev, assignSurveyYn: e.target.checked ? 'Y' : 'N' }))}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-gray-900">설문 독려</div>
+            <div className="text-sm text-gray-600">설문 독려 메시지/표시 기능을 사용합니다.</div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.pushSurveyYn === 'Y'}
+              onChange={(e) => setForm((prev) => ({ ...prev, pushSurveyYn: e.target.checked ? 'Y' : 'N' }))}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-gray-900">합격 상태 사용</div>
+            <div className="text-sm text-gray-600">합격 상태를 사용하면 “합격증” 발급이 가능합니다.</div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.passYn === 'Y'}
+              onChange={(e) => setForm((prev) => ({ ...prev, passYn: e.target.checked ? 'Y' : 'N' }))}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
           </label>
         </div>
       </div>
 
-      {/* 수료기준 느슨 여부 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">수료기준 느슨 여부</h4>
-            <p className="text-sm text-gray-600">
-              ▸ 사용자의 감정상태 변이가 심하면 수료기준을 느슨하게 합니다.
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
-            <input
-              type="checkbox"
-              checked={settings.looseCriteria}
-              onChange={(e) => setSettings({ ...settings, looseCriteria: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-      </div>
-
-      {/* 설문참여 확산 가능 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">설문참여 확산 가능</h4>
-            <p className="text-sm text-gray-600">
-              ▸ 진도기준을 충족한 수강생에게 설문참여를 확산합니다.
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
-            <input
-              type="checkbox"
-              checked={settings.surveyEnabled}
-              onChange={(e) => setSettings({ ...settings, surveyEnabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-      </div>
-
-      {/* 합격증 사용 여부 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">합격증 사용 여부</h4>
-            <p className="text-sm text-gray-600">
-              ▸ 합격증을 사용할지 여부를 설정합니다.
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
-            <input
-              type="checkbox"
-              checked={useCertificate}
-              onChange={(e) => setUseCertificate(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-      </div>
-
-      {/* 저장 버튼 */}
       <div className="flex justify-end">
-        <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          저장
+        <button
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          <span>{saving ? '저장 중...' : '저장'}</span>
         </button>
       </div>
     </div>
   );
 }
 
-// 수료증 탭
-function CompletionCertificateTab() {
-  const [certificateSettings, setCertificateSettings] = useState({
-    template: '사용자지정중',
-    useNumber: false,
-    numberPrefix: '',
-    firstDigit: 0,
-    firstDigitType: 'enrollment', // enrollment or studentId
-    duplicateHandling: 'error', // error or internal
-  });
+function selectTemplateLabel(row: TutorCertificateTemplateRow) {
+  const name = (row.template_nm || '').trim();
+  const cd = (row.template_cd || '').trim();
+  if (name && cd) return `${name} (${cd})`;
+  return name || cd || `템플릿 #${row.id}`;
+}
+
+function CompletionCertificateTab({
+  courseId,
+  detail,
+  onReload,
+}: {
+  courseId: number;
+  detail: TutorCourseInfoDetail | null;
+  onReload: () => Promise<void> | void;
+}) {
+  const [templates, setTemplates] = useState<TutorCertificateTemplateRow[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [certCompleteYn, setCertCompleteYn] = useState<'Y' | 'N'>('Y');
+  const [certTemplateId, setCertTemplateId] = useState(0);
+  const [completeNoYn, setCompleteNoYn] = useState<'Y' | 'N'>('N');
+  const [completePrefix, setCompletePrefix] = useState('');
+  const [postfixCnt, setPostfixCnt] = useState(0);
+  const [postfixType, setPostfixType] = useState<'R' | 'C'>('R');
+  const [postfixOrd, setPostfixOrd] = useState<'A' | 'D'>('A');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchTemplates = async () => {
+      setLoadingTemplates(true);
+      try {
+        const res = await tutorLmsApi.getCertificateTemplates({ templateType: 'C' });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        if (!cancelled) setTemplates(res.rst_data ?? []);
+      } catch {
+        if (!cancelled) setTemplates([]);
+      } finally {
+        if (!cancelled) setLoadingTemplates(false);
+      }
+    };
+
+    void fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // 왜: DB에서 내려온 현재 설정을 그대로 보여줘야 “어디가 문제인지/무엇이 바뀌는지” 사용자가 알 수 있습니다.
+    if (!detail) return;
+    setCertCompleteYn(toYn(detail.cert_complete_yn, 'Y'));
+    setCertTemplateId(toInt(detail.cert_template_id, 0));
+    setCompleteNoYn(toYn(detail.complete_no_yn, 'N'));
+    setCompletePrefix(detail.complete_prefix ?? '');
+    setPostfixCnt(toInt(detail.postfix_cnt, 0));
+    setPostfixType(detail.postfix_type === 'C' ? 'C' : 'R');
+    setPostfixOrd(detail.postfix_ord === 'D' ? 'D' : 'A');
+  }, [detail]);
+
+  const handleSave = async () => {
+    // 왜: 템플릿/번호 규칙은 “수료 처리”와 “증명서 출력”에 직접 영향을 주므로 DB에 저장해야 합니다.
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+    if (!detail) {
+      setErrorMessage('과목 정보를 먼저 불러와 주세요.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.updateCourseCertificateSettings({
+        courseId,
+        certCompleteYn,
+        certTemplateId,
+        // 왜: 수료증 탭에서 저장할 때 합격증 템플릿이 초기화되면 안 되므로, 현재 값을 함께 보냅니다.
+        passCertTemplateId: toInt(detail.pass_cert_template_id, 0),
+        completeNoYn,
+        completePrefix,
+        postfixCnt: Math.max(0, toInt(postfixCnt, 0)),
+        postfixType,
+        postfixOrd,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      alert('저장되었습니다.');
+      await onReload();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* 수료증 정보 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">수료증 정보</h4>
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-gray-900 mb-1">수료증 사용</h4>
+            <p className="text-sm text-gray-600">수료증 출력 버튼을 사용할지 여부를 설정합니다.</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={certCompleteYn === 'Y'}
+              onChange={(e) => setCertCompleteYn(e.target.checked ? 'Y' : 'N')}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
+          </label>
+        </div>
+
         <div>
           <label className="block text-sm text-gray-700 mb-2">수료증 템플릿</label>
           <select
-            value={certificateSettings.template}
-            onChange={(e) => setCertificateSettings({ ...certificateSettings, template: e.target.value })}
+            value={certTemplateId}
+            onChange={(e) => setCertTemplateId(toInt(e.target.value, 0))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            disabled={loadingTemplates}
           >
-            <option value="사용자지정중">- 사용자지정중 -</option>
-            <option value="템플릿1">템플릿 1</option>
-            <option value="템플릿2">템플릿 2</option>
+            <option value={0}>미지정(사이트 기본 템플릿 사용)</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {selectTemplateLabel(t)}
+              </option>
+            ))}
           </select>
-          <p className="text-sm text-gray-600 mt-2">
-            ▸ 수료증의 서식을 변경합니다. 설정하시면 사용자지정 기능 수료증 양식을 사용합니다.
-          </p>
+          {loadingTemplates && <p className="text-sm text-gray-500 mt-2">템플릿 불러오는 중...</p>}
         </div>
       </div>
 
-      {/* 수료번호 사용여부 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">수료번호 사용여부</h4>
-            <p className="text-sm text-red-600">
-              ▸ 학교에 설정된 수료번호 기준을 사용합니다. 지정하지 않으면 기본 수료번호 양식을 사용합니다.
-            </p>
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-gray-900 mb-1">수료번호 사용</h4>
+            <p className="text-sm text-gray-600">수료 처리 시 수료번호를 생성/부여하는 규칙입니다.</p>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
+          <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
-              checked={certificateSettings.useNumber}
-              onChange={(e) => setCertificateSettings({ ...certificateSettings, useNumber: e.target.checked })}
+              checked={completeNoYn === 'Y'}
+              onChange={(e) => setCompleteNoYn(e.target.checked ? 'Y' : 'N')}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
           </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수료번호 앞자리(접두)</label>
+            <input
+              type="text"
+              value={completePrefix}
+              onChange={(e) => setCompletePrefix(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              placeholder="예: 2025-"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수료번호 뒷자리수</label>
+            <input
+              type="number"
+              value={postfixCnt}
+              onChange={(e) => setPostfixCnt(toInt(e.target.value, 0))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-right"
+              min={0}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">뒷자리 방식</label>
+            <select
+              value={postfixType}
+              onChange={(e) => setPostfixType(e.target.value === 'C' ? 'C' : 'R')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="R">수강순번</option>
+              <option value="C">수강생아이디</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">정렬 방식</label>
+            <select
+              value={postfixOrd}
+              onChange={(e) => setPostfixOrd(e.target.value === 'D' ? 'D' : 'A')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              <option value="A">오름차순</option>
+              <option value="D">내림차순</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* 수료번호 앞자리 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">수료번호 앞자리</h4>
-        <input
-          type="text"
-          value={certificateSettings.numberPrefix}
-          onChange={(e) => setCertificateSettings({ ...certificateSettings, numberPrefix: e.target.value })}
-          placeholder="수료번호 앞자리를 입력하세요"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          ▸ 수료번호 앞자리를 입력합니다. 최대 20자까지 입력이 가능합니다.
-        </p>
-      </div>
-
-      {/* 수료번호 첫자리수 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">수료번호 첫자리수</h4>
-        <input
-          type="number"
-          value={certificateSettings.firstDigit}
-          onChange={(e) => setCertificateSettings({ ...certificateSettings, firstDigit: parseInt(e.target.value) || 0 })}
-          className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          ▸ 수료번호 첫자리수를 입력합니다. 최대 숫자까지 입력이 가능하며, 0을 입력하면 숫자가 그대로 유지됩니다.
-        </p>
-      </div>
-
-      {/* 첫자리 번호방식 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">첫자리 번호방식</h4>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="firstDigitType"
-              checked={certificateSettings.firstDigitType === 'enrollment'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, firstDigitType: 'enrollment' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">수강연번</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="firstDigitType"
-              checked={certificateSettings.firstDigitType === 'studentId'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, firstDigitType: 'studentId' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">수강생번호</span>
-          </label>
-        </div>
-        <p className="text-sm text-gray-600 mt-2">▸ 첫자리 번호방식을 선택합니다.</p>
-      </div>
-
-      {/* 첫자리 중복방식 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">첫자리 중복방식</h4>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="duplicateHandling"
-              checked={certificateSettings.duplicateHandling === 'error'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, duplicateHandling: 'error' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">오류차단</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="duplicateHandling"
-              checked={certificateSettings.duplicateHandling === 'internal'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, duplicateHandling: 'internal' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">내부차단</span>
-          </label>
-        </div>
-        <p className="text-sm text-red-600 mt-2">
-          ▸ 첫자리 번호방식을 수강생번호로 설정한 경우 중복발생시 선택합니다.
-        </p>
-      </div>
-
-      {/* 저장 버튼 */}
       <div className="flex justify-end">
-        <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          저장
+        <button
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          <span>{saving ? '저장 중...' : '저장'}</span>
         </button>
       </div>
     </div>
   );
 }
 
-// 합격증 탭
-function PassCertificateTab() {
-  const [certificateSettings, setCertificateSettings] = useState({
-    template: '사용자지정중',
-    useNumber: false,
-    numberPrefix: '',
-    firstDigit: 0,
-    firstDigitType: 'enrollment',
-    duplicateHandling: 'error',
-  });
+function PassCertificateTab({
+  courseId,
+  detail,
+  onReload,
+}: {
+  courseId: number;
+  detail: TutorCourseInfoDetail | null;
+  onReload: () => Promise<void> | void;
+}) {
+  const [templates, setTemplates] = useState<TutorCertificateTemplateRow[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [passCertTemplateId, setPassCertTemplateId] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchTemplates = async () => {
+      setLoadingTemplates(true);
+      try {
+        const res = await tutorLmsApi.getCertificateTemplates({ templateType: 'P' });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        if (!cancelled) setTemplates(res.rst_data ?? []);
+      } catch {
+        if (!cancelled) setTemplates([]);
+      } finally {
+        if (!cancelled) setLoadingTemplates(false);
+      }
+    };
+
+    void fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!detail) return;
+    setPassCertTemplateId(toInt(detail.pass_cert_template_id, 0));
+  }, [detail]);
+
+  const handleSave = async () => {
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+    if (!detail) {
+      setErrorMessage('과목 정보를 먼저 불러와 주세요.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.updateCourseCertificateSettings({
+        courseId,
+        certCompleteYn: toYn(detail.cert_complete_yn, 'Y'),
+        certTemplateId: toInt(detail.cert_template_id, 0),
+        passCertTemplateId,
+        completeNoYn: toYn(detail.complete_no_yn, 'N'),
+        completePrefix: detail.complete_prefix ?? '',
+        postfixCnt: toInt(detail.postfix_cnt, 0),
+        postfixType: detail.postfix_type === 'C' ? 'C' : 'R',
+        postfixOrd: detail.postfix_ord === 'D' ? 'D' : 'A',
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      alert('저장되었습니다.');
+      await onReload();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* 합격증 정보 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">합격증 정보</h4>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">합격증 템플릿</label>
-          <select
-            value={certificateSettings.template}
-            onChange={(e) => setCertificateSettings({ ...certificateSettings, template: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="사용자지정중">- 사용자지정중 -</option>
-            <option value="템플릿1">템플릿 1</option>
-            <option value="템플릿2">템플릿 2</option>
-          </select>
-          <p className="text-sm text-gray-600 mt-2">
-            ▸ 합격증의 서식을 변경합니다. 설정하시면 사용자지정 기능 합격증 양식을 사용합니다.
-          </p>
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
         </div>
-      </div>
+      )}
 
-      {/* 합격번호 사용여부 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h4 className="text-gray-900 mb-2">합격번호 사용여부</h4>
-            <p className="text-sm text-red-600">
-              ▸ 학교에 설정된 합격번호 기준을 사용합니다. 지정하지 않으면 기본 합격번호 양식을 사용합니다.
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer ml-4">
-            <input
-              type="checkbox"
-              checked={certificateSettings.useNumber}
-              onChange={(e) => setCertificateSettings({ ...certificateSettings, useNumber: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-      </div>
-
-      {/* 합격번호 앞자리 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">합격번호 앞자리</h4>
-        <input
-          type="text"
-          value={certificateSettings.numberPrefix}
-          onChange={(e) => setCertificateSettings({ ...certificateSettings, numberPrefix: e.target.value })}
-          placeholder="합격번호 앞자리를 입력하세요"
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <h4 className="text-gray-900">합격증 템플릿</h4>
+        <p className="text-sm text-gray-600">
+          합격증 출력 시 사용할 템플릿을 선택합니다. (미지정이면 사이트 기본 템플릿을 사용합니다)
+        </p>
+        <select
+          value={passCertTemplateId}
+          onChange={(e) => setPassCertTemplateId(toInt(e.target.value, 0))}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          ▸ 합격번호 앞자리를 입력합니다. 최대 20자까지 입력이 가능합니다.
-        </p>
+          disabled={loadingTemplates}
+        >
+          <option value={0}>미지정(사이트 기본 템플릿 사용)</option>
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {selectTemplateLabel(t)}
+            </option>
+          ))}
+        </select>
+        {loadingTemplates && <p className="text-sm text-gray-500">템플릿 불러오는 중...</p>}
       </div>
 
-      {/* 합격번호 첫자리수 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">합격번호 첫자리수</h4>
-        <input
-          type="number"
-          value={certificateSettings.firstDigit}
-          onChange={(e) => setCertificateSettings({ ...certificateSettings, firstDigit: parseInt(e.target.value) || 0 })}
-          className="w-32 px-3 py-2 border border-gray-300 rounded-lg"
-        />
-        <p className="text-sm text-gray-600 mt-2">
-          ▸ 합격번호 첫자리수를 입력합니다. 최대 숫자까지 입력이 가능하며, 0을 입력하면 숫자가 그대로 유지됩니다.
-        </p>
-      </div>
-
-      {/* 첫자리 번호방식 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">첫자리 번호방식</h4>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="firstDigitType-pass"
-              checked={certificateSettings.firstDigitType === 'enrollment'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, firstDigitType: 'enrollment' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">수강연번</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="firstDigitType-pass"
-              checked={certificateSettings.firstDigitType === 'studentId'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, firstDigitType: 'studentId' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">수강생번호</span>
-          </label>
-        </div>
-        <p className="text-sm text-gray-600 mt-2">▸ 첫자리 번호방식을 선택합니다.</p>
-      </div>
-
-      {/* 첫자리 중복방식 */}
-      <div className="border border-gray-200 rounded-lg p-6">
-        <h4 className="text-gray-900 mb-4">첫자리 중복방식</h4>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="duplicateHandling-pass"
-              checked={certificateSettings.duplicateHandling === 'error'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, duplicateHandling: 'error' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">오류차단</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="duplicateHandling-pass"
-              checked={certificateSettings.duplicateHandling === 'internal'}
-              onChange={() => setCertificateSettings({ ...certificateSettings, duplicateHandling: 'internal' })}
-              className="w-4 h-4 text-blue-600"
-            />
-            <span className="text-sm text-gray-900">내부차단</span>
-          </label>
-        </div>
-        <p className="text-sm text-red-600 mt-2">
-          ▸ 첫자리 번호방식을 수강생번호로 설정한 경우 중복발생시 선택합니다.
-        </p>
-      </div>
-
-      {/* 저장 버튼 */}
       <div className="flex justify-end">
-        <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          저장
+        <button
+          onClick={() => void handleSave()}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          <span>{saving ? '저장 중...' : '저장'}</span>
         </button>
       </div>
     </div>

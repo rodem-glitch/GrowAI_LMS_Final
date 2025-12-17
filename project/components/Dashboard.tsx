@@ -1,161 +1,80 @@
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   BookOpen,
   ClipboardCheck,
   MessageSquare,
-  TrendingUp,
-  Calendar,
   Clock,
 } from 'lucide-react';
+import { tutorLmsApi, type TutorDashboardCourseRow, type TutorDashboardQnaRow, type TutorDashboardStats, type TutorDashboardSubmissionRow } from '../api/tutorLmsApi';
 
-export function Dashboard() {
-  // 통계 데이터
-  const stats = [
+type DashboardMenuId = 'dashboard' | 'explore' | 'courses' | 'create-course' | 'create-subject';
+
+export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId) => void } = {}) {
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [stats, setStats] = useState<TutorDashboardStats | null>(null);
+  const [ongoingCourses, setOngoingCourses] = useState<TutorDashboardCourseRow[]>([]);
+  const [recentSubmissions, setRecentSubmissions] = useState<TutorDashboardSubmissionRow[]>([]);
+  const [recentQnas, setRecentQnas] = useState<TutorDashboardQnaRow[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchDashboard = async () => {
+      // 왜: 대시보드는 “요약 + 최신” 데이터라서, 화면 진입 시 한 번만 불러오면 됩니다.
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getDashboard();
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        if (cancelled) return;
+        setStats(res.rst_data ?? null);
+        setOngoingCourses(res.rst_courses ?? []);
+        setRecentSubmissions(res.rst_submissions ?? []);
+        setRecentQnas(res.rst_qna ?? []);
+      } catch (e) {
+        if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '대시보드를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void fetchDashboard();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const statCards = useMemo(() => ([
     {
       title: '진행 중인 과목',
-      value: '8',
-      change: '+2',
+      value: stats?.active_course_cnt ?? 0,
       icon: BookOpen,
       color: 'bg-blue-100 text-blue-600',
       bgColor: 'bg-blue-50',
     },
     {
       title: '미확인 과제',
-      value: '15',
-      change: '',
+      value: stats?.pending_homework_cnt ?? 0,
       icon: ClipboardCheck,
       color: 'bg-orange-100 text-orange-600',
       bgColor: 'bg-orange-50',
     },
     {
       title: '미답변 Q&A',
-      value: '7',
-      change: '',
+      value: stats?.unanswered_qna_cnt ?? 0,
       icon: MessageSquare,
       color: 'bg-purple-100 text-purple-600',
       bgColor: 'bg-purple-50',
     },
-  ];
+  ]), [stats?.active_course_cnt, stats?.pending_homework_cnt, stats?.unanswered_qna_cnt]);
 
-  // 진행 중인 강좌 목록
-  const ongoingCourses = [
-    {
-      id: 1,
-      name: '웹 프로그래밍 기초',
-      code: 'CS101',
-      students: 45,
-      progress: 65,
-      nextClass: '2024-12-16 10:00',
-      pendingAssignments: 8,
-    },
-    {
-      id: 2,
-      name: '데이터베이스 설계',
-      code: 'CS201',
-      students: 38,
-      progress: 42,
-      nextClass: '2024-12-17 14:00',
-      pendingAssignments: 3,
-    },
-    {
-      id: 3,
-      name: '알고리즘과 자료구조',
-      code: 'CS301',
-      students: 52,
-      progress: 78,
-      nextClass: '2024-12-18 09:00',
-      pendingAssignments: 4,
-    },
-    {
-      id: 4,
-      name: '소프트웨어 공학',
-      code: 'CS401',
-      students: 41,
-      progress: 55,
-      nextClass: '2024-12-19 13:00',
-      pendingAssignments: 0,
-    },
-  ];
-
-  // 최근 제출된 과제
-  const recentAssignments = [
-    {
-      id: 1,
-      student: '김민수',
-      course: '웹 프로그래밍 기초',
-      assignment: '1주차 HTML/CSS 실습',
-      submittedAt: '10분 전',
-      status: 'pending',
-    },
-    {
-      id: 2,
-      student: '이지현',
-      course: '데이터베이스 설계',
-      assignment: 'ER 다이어그램 작성',
-      submittedAt: '25분 전',
-      status: 'pending',
-    },
-    {
-      id: 3,
-      student: '박준호',
-      course: '알고리즘과 자료구조',
-      assignment: '정렬 알고리즘 구현',
-      submittedAt: '1시간 전',
-      status: 'reviewed',
-    },
-    {
-      id: 4,
-      student: '최서연',
-      course: '웹 프로그래밍 기초',
-      assignment: '2주차 JavaScript 과제',
-      submittedAt: '2시간 전',
-      status: 'pending',
-    },
-    {
-      id: 5,
-      student: '정우진',
-      course: '소프트웨어 공학',
-      assignment: '요구사항 분석서',
-      submittedAt: '3시간 전',
-      status: 'reviewed',
-    },
-  ];
-
-  // 최근 Q&A
-  const recentQnA = [
-    {
-      id: 1,
-      student: '강민지',
-      course: '웹 프로그래밍 기초',
-      question: 'CSS Flexbox와 Grid의 차이점이 궁금합니다',
-      askedAt: '15분 전',
-      answered: false,
-    },
-    {
-      id: 2,
-      student: '윤서준',
-      course: '데이터베이스 설계',
-      question: '정규화 3단계 적용 방법에 대해 질문드립니다',
-      askedAt: '1시간 전',
-      answered: false,
-    },
-    {
-      id: 3,
-      student: '장은우',
-      course: '알고리즘과 자료구조',
-      question: '퀵 정렬의 시간 복잡도 계산 방법',
-      askedAt: '2시간 전',
-      answered: true,
-    },
-    {
-      id: 4,
-      student: '한서진',
-      course: '소프트웨어 공학',
-      question: 'Agile과 Waterfall 방법론 비교',
-      askedAt: '5시간 전',
-      answered: true,
-    },
-  ];
+  const goToMyCourses = () => {
+    // 왜: 대시보드의 상세 작업(과제/질문 확인)은 결국 “담당과목”에서 진행됩니다.
+    onNavigate?.('courses');
+  };
 
   return (
     <div className="space-y-6">
@@ -167,7 +86,7 @@ export function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((stat, index) => (
+        {statCards.map((stat, index) => (
           <div
             key={index}
             className={`${stat.bgColor} border border-gray-200 rounded-lg p-6 transition-all hover:shadow-md`}
@@ -176,12 +95,6 @@ export function Dashboard() {
               <div className={`${stat.color} p-3 rounded-lg`}>
                 <stat.icon className="w-6 h-6" />
               </div>
-              {stat.change && (
-                <span className="text-sm text-green-600 flex items-center gap-1">
-                  <TrendingUp className="w-4 h-4" />
-                  {stat.change}
-                </span>
-              )}
             </div>
             <div>
               <div className="text-3xl text-gray-900 mb-1">{stat.value}</div>
@@ -190,6 +103,12 @@ export function Dashboard() {
           </div>
         ))}
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 진행 중인 강좌 */}
@@ -200,50 +119,71 @@ export function Dashboard() {
                 <BookOpen className="w-5 h-5 text-blue-600" />
                 <h3 className="text-gray-900">진행 중인 강좌</h3>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700">
+              <button onClick={goToMyCourses} className="text-sm text-blue-600 hover:text-blue-700">
                 전체보기
               </button>
             </div>
           </div>
-          <div className="divide-y divide-gray-200">
-            {ongoingCourses.map((course) => (
-              <div key={course.id} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="text-gray-900 mb-1">{course.name}</h4>
-                    <p className="text-sm text-gray-600">{course.code}</p>
+          {loading ? (
+            <div className="p-10 text-center text-gray-500">불러오는 중...</div>
+          ) : ongoingCourses.length === 0 ? (
+            <div className="p-10 text-center text-gray-500">진행 중인 과목이 없습니다.</div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {ongoingCourses.map((course) => {
+                const progress = Math.round(Number(course.avg_progress_ratio ?? 0));
+                const students = Number(course.student_cnt ?? 0);
+                const pendingHomework = Number(course.pending_homework_cnt ?? 0);
+                const unansweredQna = Number(course.unanswered_qna_cnt ?? 0);
+                const courseIdLabel = course.course_id_conv || course.course_cd || String(course.id);
+
+                return (
+                  <div key={course.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="text-gray-900 mb-1">{course.course_nm}</h4>
+                        <p className="text-sm text-gray-600">
+                          {courseIdLabel} · {course.period_conv || '-'}
+                        </p>
+                      </div>
+                      {(pendingHomework > 0 || unansweredQna > 0) && (
+                        <div className="flex items-center gap-2">
+                          {pendingHomework > 0 && (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
+                              미확인 과제 {pendingHomework}건
+                            </span>
+                          )}
+                          {unansweredQna > 0 && (
+                            <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                              미답변 Q&A {unansweredQna}건
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {students}명
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">평균 진도율</span>
+                        <span className="text-gray-900">{progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  {course.pendingAssignments > 0 && (
-                    <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">
-                      과제 {course.pendingAssignments}건
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                  <span className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {course.students}명
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    {course.nextClass}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">진도율</span>
-                    <span className="text-gray-900">{course.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all"
-                      style={{ width: `${course.progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 과제 목록 */}
@@ -254,41 +194,48 @@ export function Dashboard() {
                 <ClipboardCheck className="w-5 h-5 text-orange-600" />
                 <h3 className="text-gray-900">과제 목록</h3>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700">
+              <button onClick={goToMyCourses} className="text-sm text-blue-600 hover:text-blue-700">
                 전체보기
               </button>
             </div>
           </div>
-          <div className="divide-y divide-gray-200">
-            {recentAssignments.map((assignment) => (
-              <div
-                key={assignment.id}
-                className="p-6 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h4 className="text-gray-900 mb-1">{assignment.assignment}</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      {assignment.student} · {assignment.course}
-                    </p>
+          {loading ? (
+            <div className="p-10 text-center text-gray-500">불러오는 중...</div>
+          ) : recentSubmissions.length === 0 ? (
+            <div className="p-10 text-center text-gray-500">최근 제출된 과제가 없습니다.</div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {recentSubmissions.map((row) => {
+                const confirmed = Boolean(row.confirmed);
+                const studentLabel = `${row.user_nm || '-'} · ${row.course_nm}`;
+                const submittedAt = row.submitted_at || '-';
+
+                return (
+                  <div key={`${row.homework_id}-${row.course_user_id}`} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="text-gray-900 mb-1">{row.homework_nm}</h4>
+                        <p className="text-sm text-gray-600 mb-1">{studentLabel}</p>
+                      </div>
+                      {!confirmed ? (
+                        <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full whitespace-nowrap">
+                          미확인
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full whitespace-nowrap">
+                          확인완료
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <Clock className="w-4 h-4" />
+                      <span>{submittedAt}</span>
+                    </div>
                   </div>
-                  {assignment.status === 'pending' ? (
-                    <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full whitespace-nowrap">
-                      미확인
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full whitespace-nowrap">
-                      확인완료
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <Clock className="w-4 h-4" />
-                  <span>{assignment.submittedAt}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -300,40 +247,44 @@ export function Dashboard() {
               <MessageSquare className="w-5 h-5 text-purple-600" />
               <h3 className="text-gray-900">최근 Q&A</h3>
             </div>
-            <button className="text-sm text-blue-600 hover:text-blue-700">
+            <button onClick={goToMyCourses} className="text-sm text-blue-600 hover:text-blue-700">
               전체보기
             </button>
           </div>
         </div>
-        <div className="divide-y divide-gray-200">
-          {recentQnA.map((qna) => (
-            <div key={qna.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <h4 className="text-gray-900 mb-1 line-clamp-1">
-                    {qna.question}
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-1">
-                    {qna.student} · {qna.course}
-                  </p>
+        {loading ? (
+          <div className="p-10 text-center text-gray-500">불러오는 중...</div>
+        ) : recentQnas.length === 0 ? (
+          <div className="p-10 text-center text-gray-500">최근 Q&A가 없습니다.</div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {recentQnas.map((qna) => (
+              <div key={qna.post_id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <h4 className="text-gray-900 mb-1 line-clamp-1">{qna.subject}</h4>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {qna.user_nm || '-'} · {qna.course_nm}
+                    </p>
+                  </div>
+                  {!qna.answered ? (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full whitespace-nowrap">
+                      미답변
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full whitespace-nowrap">
+                      답변완료
+                    </span>
+                  )}
                 </div>
-                {!qna.answered ? (
-                  <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full whitespace-nowrap">
-                    미답변
-                  </span>
-                ) : (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full whitespace-nowrap">
-                    답변완료
-                  </span>
-                )}
+                <div className="flex items-center gap-1 text-sm text-gray-500">
+                  <Clock className="w-4 h-4" />
+                  <span>{qna.reg_date_conv || '-'}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Clock className="w-4 h-4" />
-                <span>{qna.askedAt}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
