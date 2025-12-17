@@ -47,6 +47,7 @@
 <tr align="center">
 	<td class="l_td01 video_no">{{video_list.__ord}}
 		<input type="hidden" name="video_id" value="{{video_list.video_id}}">
+		<input type="hidden" class="video_key_md5" value="{{video_list.video_key_md5}}">
 	</td>
 	<td class="l_td01" align="left">{{video_list.lesson_nm}}</td>
 	<td class="l_td01" align="center">{{video_list.total_time}}분</td>
@@ -175,7 +176,7 @@ addEvent("onload", function() {
 	<td class="l_th01">강의명</td>
 	<td class="l_th01">시간</td>
 	<td class="l_th01">등록일</td>
-	<td class="l_th01"><input type="checkbox" onclick="AutoCheck('form_add', 'lidx')"></td>
+	<td class="l_th01"><input type="checkbox" onclick="AutoCheck('form_add', 'lidx'); try { syncDuplicateSelection(true); } catch(e) {}"></td>
 </tr>
 </thead>
 <tbody>
@@ -189,7 +190,7 @@ addEvent("onload", function() {
 	</td>
 	<td class="l_td01" align="right">{{list.total_time_conv}}분</td>
 	<td class="l_td01">{{list.reg_date_conv}}</td>
-	<td class="l_td01"><input type="checkbox" name="lidx" value="{{list.id}}"></td>
+	<td class="l_td01"><input type="checkbox" name="lidx" value="{{list.id}}" data-video-key="{{list.video_key_md5}}"></td>
 </tr>
 <!--/loop(list)-->
 </tbody>
@@ -206,8 +207,61 @@ addEvent("onload", function() {
 </table>
 </form>
 
+<style>
+/* 왜: “이미 등록된 영상과 같은 키”는 선택 자체를 막아야 혼란이 없습니다. */
+tr.dup_block { opacity:0.55; }
+tr.dup_block td { color:#777777; }
+</style>
+
 <script>
+function getLockedVideoKeys() {
+	//왜: 이미 등록된 목록(위쪽 테이블)과 “부모(메인) 영상”과 같은 영상키는 중복이므로 선택을 막아야 합니다.
+	var locked = {};
+	var parentKey = ("{{parent_video_key_md5}}" || "").trim();
+	if(parentKey != "") locked[parentKey] = true;
+
+	$("#video_list input.video_key_md5").each(function() {
+		var k = ("" + ($(this).val() || "")).trim();
+		if(k != "") locked[k] = true;
+	});
+	return locked;
+}
+
+function applyLockedVideoKeys() {
+	//왜: 화면에서 미리 막아주면 “선택했는데 저장 후 사라짐” 같은 헷갈림이 줄어듭니다.
+	var locked = getLockedVideoKeys();
+	$("input[name='lidx']").each(function() {
+		var k = ("" + (this.getAttribute("data-video-key") || "")).trim();
+		if(k != "" && locked[k]) {
+			this.checked = false;
+			this.disabled = true;
+			try { $(this).closest("tr").addClass("dup_block"); } catch(e) { }
+		}
+	});
+}
+
+function syncDuplicateSelection(showAlert) {
+	//왜: 목록 안에 “키가 같은 레슨”이 여러 개 있을 수 있으니, 한 번에 여러 개를 체크하지 못하게 합니다.
+	var locked = getLockedVideoKeys();
+	var seen = {};
+	var removed = 0;
+
+	$("input[name='lidx']:checked").each(function() {
+		var k = ("" + (this.getAttribute("data-video-key") || "")).trim();
+		if(k == "") return;
+		if(locked[k]) { this.checked = false; removed++; return; }
+		if(seen[k]) { this.checked = false; removed++; return; }
+		seen[k] = true;
+	});
+
+	if(removed > 0 && showAlert) {
+		alert("같은 영상은 1개만 선택할 수 있습니다.\\n(중복된 항목은 자동으로 해제되었습니다.)");
+	}
+	return removed == 0;
+}
+
 function addSelected() {
+	syncDuplicateSelection(true);
 	if(!GetFormValue("form_add", "lidx")) {
 		alert("선택 항목이 없습니다.");
 		return;
@@ -220,6 +274,16 @@ addEvent("onload", function() {
 		$(".label").each(function() {
 			var v = $(this).html();
 			$(this).addClass(progresses[v]);
+		});
+	} catch(e) { }
+
+	//왜: 페이지가 열리자마자 “이미 중복인 항목”은 비활성 처리해 혼란을 줄입니다.
+	try { applyLockedVideoKeys(); } catch(e) { }
+
+	//왜: 체크할 때 즉시 중복을 풀어주면 사용자가 “왜 1개만 남지?”를 덜 겪습니다.
+	try {
+		$(document).on("change", "input[name='lidx']", function() {
+			if(this.checked) syncDuplicateSelection(true);
 		});
 	} catch(e) { }
 });

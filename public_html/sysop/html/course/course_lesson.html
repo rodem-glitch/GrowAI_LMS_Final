@@ -504,7 +504,11 @@
 <script type="text/javascript" src="/common/js/jquery.tablednd.0.7.min.js"></script>
 <script type="text/javascript">
 function preview(id, width, height) {
-	OpenWindow('../content/preview_lesson.jsp?id='+id, 'CPL77', width, height);
+	// 왜: 다중영상 차시는 “첫 번째 서브영상”이 실제 재생 대상이 될 수 있어,
+	//     차시 미리보기는 전용 미리보기 페이지를 거쳐 올바른 영상을 띄우도록 합니다.
+	if(!width) width = 853;
+	if(!height) height = 480;
+	OpenWindow('preview_course_lesson.jsp?cid={{cid}}&lid=' + id, 'CPL77', width, height);
 }
 
 function getIdx() {
