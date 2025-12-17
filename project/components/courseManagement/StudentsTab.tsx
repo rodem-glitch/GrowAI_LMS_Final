@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, Plus, Search, Trash2 } from 'lucide-react';
 import { tutorLmsApi, TutorCourseStudentRow } from '../../api/tutorLmsApi';
+import { downloadCsv } from '../../utils/csv';
 
 function parseUserIds(raw: string) {
   return raw
@@ -104,6 +105,28 @@ export function StudentsTab({ courseId }: { courseId: number }) {
     return [...rows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [rows]);
 
+  const handleDownloadCsv = () => {
+    // 왜: 운영자가 바로 확인할 수 있도록, 화면에 표시 중인 목록을 그대로 CSV로 내려받습니다.
+    const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `course_${courseId}_students_${ymd}.csv`;
+
+    const headers = ['No', 'course_user_id', 'user_id', '학번', '이름', '이메일', '진도율(%)'];
+    const body = sortedRows.map((student, index) => {
+      const progress = Number(student.progress ?? student.progress_ratio ?? 0);
+      return [
+        index + 1,
+        student.course_user_id,
+        student.user_id,
+        student.student_id ?? '',
+        student.name ?? '',
+        student.email ?? '',
+        Math.round(progress),
+      ];
+    });
+
+    downloadCsv(filename, headers, body);
+  };
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -135,11 +158,11 @@ export function StudentsTab({ courseId }: { courseId: number }) {
           </button>
 
           <button
-            onClick={() => alert('엑셀 다운로드는 추후 연결 예정입니다.')}
+            onClick={handleDownloadCsv}
             className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Download className="w-4 h-4" />
-            <span>엑셀 다운로드</span>
+            <span>엑셀 다운로드(CSV)</span>
           </button>
         </div>
       </div>
