@@ -22,6 +22,13 @@
 		#vg-test { display:none; position:absolute; top:10px; right:10px; padding:10px; background:#ffffff; opacity:0.5; width:auto; height:auto; color:#000000; }
 		#vg-test h4 { font-size:1.2em; margin:0 0 5px 0; padding:0; }
 		#vg-test button { font-size:1.2em; border-radius:5px; padding:5px 10px; margin:0; border:0 none; background:#000000; color:#ffffff; font-weight:bold; }
+
+		/* 다중영상: 다음 영상 이동 안내(모바일 자동재생 제한 대응) */
+		#next_video_overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.75); align-items:center; justify-content:center; }
+		#next_video_overlay .next_box { background:#ffffff; color:#000000; width:92%; max-width:420px; border-radius:12px; padding:20px; text-align:center; }
+		#next_video_overlay .next_title { font-size:18px; font-weight:bold; }
+		#next_video_overlay .next_desc { margin-top:8px; font-size:14px; color:#333333; line-height:1.4; font-weight:normal; }
+		#next_video_overlay .next_btn { margin-top:14px; width:100%; padding:14px 16px; font-size:18px; font-weight:bold; background:#2563eb; color:#ffffff; border:0 none; border-radius:10px; }
 	</style>
 
 	<!--<script src="https://uicdn.toast.com/tui.code-snippet/latest/tui-code-snippet.js"></script>-->
@@ -33,6 +40,36 @@
 	<script src="/common/kollus/tui-app-loader.js"></script>
 
 	<script>
+		//다중영상: 다음 영상 URL(없으면 빈 문자열)
+		var NEXT_VIDEO_URL = "{{next_video_url}}";
+		var NEXT_VIDEO_AUTO_URL = "{{next_video_autoplay_url}}";
+
+		function goNextVideo(autoPlay) {
+			var url = autoPlay ? NEXT_VIDEO_AUTO_URL : NEXT_VIDEO_URL;
+			if(!url) return;
+			location.href = url;
+		}
+
+		function showNextVideoOverlay() {
+			var el = document.getElementById("next_video_overlay");
+			if(el) el.style.display = "flex";
+		}
+
+		function onMultiVideoDone() {
+			//왜: PC는 자동으로 다음 영상을 이어서 틀어주고,
+			//    모바일은 기기 정책(자동재생 제한) 때문에 “다음 영상 재생하기” 버튼을 크게 띄워줍니다.
+			if(!NEXT_VIDEO_URL) return;
+			try {
+				if(typeof isMobile != "undefined" && isMobile) {
+					showNextVideoOverlay();
+				} else {
+					goNextVideo(true);
+				}
+			} catch(e) {
+				goNextVideo(true);
+			}
+		}
+
 		var vg_time = 0;
 		var vg_timer_id = 0;
 		var vg_timer_alert_id = 0;
@@ -76,6 +113,7 @@
 				});
 				controller.on("done", function() {
 					is_play = false;
+					try { onMultiVideoDone(); } catch(e) { }
 				});
 				controller.on("progress", function(percent, position, duration) {
 					//$("#vg-seconds").html(++vg_time);
@@ -135,6 +173,13 @@
 </head>
 
 <body>
+<div id="next_video_overlay">
+	<div class="next_box">
+		<div class="next_title">다음 영상이 준비되었습니다.</div>
+		<div class="next_desc">휴대폰에서는 자동으로 다음 영상이 켜지지 않을 수 있어요.<br>아래 버튼을 눌러 이어서 재생해 주세요.</div>
+		<button type="button" class="next_btn" onclick="goNextVideo(true);">다음 영상 재생하기</button>
+	</div>
+</div>
 <!--@nif(iframe_block)-->
 <div id="wrapper">
 	<div id="contents">학습창을 불러오는 중입니다.<br>잠시만 기다려주세요.</div>
@@ -193,6 +238,7 @@
 			});
 			controller.on("done", function() {
 				is_play = false;
+				try { onMultiVideoDone(); } catch(e) { }
 			});
 			controller.on("progress", function(percent, position, duration) {
 				//$("#vg-seconds").html(++vg_time);
@@ -249,6 +295,47 @@
 	}
 </script>
 
+<style>
+/* 다중영상: 다음 영상 이동 안내(모바일 자동재생 제한 대응) */
+#next_video_overlay { display:none; position:fixed; left:0; top:0; width:100%; height:100%; z-index:9999; background:rgba(0,0,0,0.75); align-items:center; justify-content:center; }
+#next_video_overlay .next_box { background:#ffffff; color:#000000; width:92%; max-width:420px; border-radius:12px; padding:20px; text-align:center; }
+#next_video_overlay .next_title { font-size:18px; font-weight:bold; }
+#next_video_overlay .next_desc { margin-top:8px; font-size:14px; color:#333333; line-height:1.4; }
+#next_video_overlay .next_btn { margin-top:14px; width:100%; padding:14px 16px; font-size:18px; font-weight:bold; background:#2563eb; color:#ffffff; border:0 none; border-radius:10px; }
+</style>
+
+<script>
+//다중영상: 다음 영상 URL(없으면 빈 문자열)
+var NEXT_VIDEO_URL = "{{next_video_url}}";
+var NEXT_VIDEO_AUTO_URL = "{{next_video_autoplay_url}}";
+
+function goNextVideo(autoPlay) {
+	var url = autoPlay ? NEXT_VIDEO_AUTO_URL : NEXT_VIDEO_URL;
+	if(!url) return;
+	location.href = url;
+}
+
+function showNextVideoOverlay() {
+	var el = document.getElementById("next_video_overlay");
+	if(el) el.style.display = "flex";
+}
+
+function onMultiVideoDone() {
+	//왜: PC는 자동으로 다음 영상을 이어서 틀어주고,
+	//    모바일은 기기 정책(자동재생 제한) 때문에 “다음 영상 재생하기” 버튼을 크게 띄워줍니다.
+	if(!NEXT_VIDEO_URL) return;
+	try {
+		if(typeof isMobile != "undefined" && isMobile) {
+			showNextVideoOverlay();
+		} else {
+			goNextVideo(true);
+		}
+	} catch(e) {
+		goNextVideo(true);
+	}
+}
+</script>
+
 <div class="webtv_cont">
 	<div class="tit_cont">
 		<h4>{{lesson_nm}}</h4>
@@ -299,6 +386,14 @@
 			});
 		</script>
 		<!--/if(SYS_VIEWER_COMMENT)-->
+	</div>
+</div>
+
+<div id="next_video_overlay">
+	<div class="next_box">
+		<div class="next_title">다음 영상이 준비되었습니다.</div>
+		<div class="next_desc">휴대폰에서는 자동으로 다음 영상이 켜지지 않을 수 있어요.<br>아래 버튼을 눌러 이어서 재생해 주세요.</div>
+		<button type="button" class="next_btn" onclick="goNextVideo(true);">다음 영상 재생하기</button>
 	</div>
 </div>
 <!--/if(SYS_VIEWER_VERSION:2)-->

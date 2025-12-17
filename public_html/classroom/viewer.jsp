@@ -437,12 +437,23 @@ String fileType = "mp4";
 if("01".equals(info.s("lesson_type")) || "03".equals(info.s("lesson_type"))) {
 	//다중영상일 때는 현재 서브영상 id로 플레이어를 호출합니다.
 	int playLid = multiBlock ? currentVid : lid;
+	// 왜: 다중영상에서 “다음 영상 자동재생”을 구현하려면, 플레이어가 다음 서브영상 id도 알아야 합니다.
+	//     또한 PC에서는 자동으로 넘어가되, 모바일은 자동재생 제한이 있을 수 있어 autoplay 플래그로 제어합니다.
+	String autoplayYn = "Y".equals(m.rs("autoplay")) ? "Y" : "N";
 	int unixTime = m.getUnixTime();
 	String key = playLid + "|" + userId + "|" + unixTime;
 	String startUrl = "/main/video.jsp?ek=" + m.encrypt(key) + "&lid=" + playLid + "&uid=" + userId + "&ut=" + unixTime;
 	if(info.s("start_url").endsWith(".m3u8")) fileType = "m3u8";
 	else info.put("start_url", startUrl);
-	info.put("start_url_conv", "/player/jwplayer.jsp?lid=" + playLid + "&plid=" + lid + "&cuid=" + cuid + "&nid=" + info.s("next_lesson_id") + "&chapter=" + info.s("chapter") + "&vid=" + (multiBlock ? playLid : 0) + "&ek=" + m.encrypt(playLid + "|" + cuid + "|" + m.time("yyyyMMdd")));
+	info.put("start_url_conv", "/player/jwplayer.jsp?lid=" + playLid
+		+ "&plid=" + lid
+		+ "&cuid=" + cuid
+		+ "&nid=" + info.s("next_lesson_id")
+		+ "&chapter=" + info.s("chapter")
+		+ "&vid=" + (multiBlock ? playLid : 0)
+		+ "&nvid=" + (multiBlock ? nextVid : 0)
+		+ "&autoplay=" + autoplayYn
+		+ "&ek=" + m.encrypt(playLid + "|" + cuid + "|" + m.time("yyyyMMdd")));
 } else if("05".equals(info.s("lesson_type"))) {
 	//kollus.d(out);
 	String startUrl = kollus.getPlayUrl(
@@ -538,6 +549,9 @@ p.setVar("lesson_query", m.qs("lid,chapter"));
 p.setVar("multi_block", multiBlock);
 p.setVar("current_vid", currentVid);
 p.setVar("next_vid", nextVid);
+p.setVar("next_vid_block", nextVid > 0);
+p.setVar("next_video_url", nextVid > 0 ? ("viewer.jsp?" + m.qs("vid, autoplay") + "&vid=" + nextVid) : "");
+p.setVar("next_video_autoplay_url", nextVid > 0 ? ("viewer.jsp?" + m.qs("vid, autoplay") + "&vid=" + nextVid + "&autoplay=Y") : "");
 p.setVar("video_id", currentVid);
 p.setVar("parent_total_time", parentTotalMin);
 p.setVar("parent_complete_time", parentCompleteMin);
@@ -556,7 +570,13 @@ p.setVar("file_block", files.size() > 0);
 p.setVar("no_section_block", noSectionBlock);
 p.setVar("is_max", info.i("chapter") == maxChapter);
 p.setVar("no_list_block", list.size() == 0);
-p.setVar("iframe_block", "Y".equals(m.rs("iframe")) || "Y".equals(SiteConfig.s("kollus_iframe_yn")));
+
+//왜: 콜러스(외부 플레이어) 화면을 “리다이렉트로만” 열면,
+//    우리 화면이 사라져서 서브영상 완료 후 다음 영상으로 넘어갈 수 없습니다.
+//    다중영상 차시에서는 반드시 iframe 기반으로 열어, 이어보기(자동/버튼)를 할 수 있게 합니다.
+boolean iframeBlock = "Y".equals(m.rs("iframe")) || "Y".equals(SiteConfig.s("kollus_iframe_yn"));
+if(multiBlock && ("05".equals(info.s("lesson_type")) || "07".equals(info.s("lesson_type")))) iframeBlock = true;
+p.setVar("iframe_block", iframeBlock);
 
 p.display();
 
