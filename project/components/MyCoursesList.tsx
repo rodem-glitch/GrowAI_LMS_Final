@@ -16,7 +16,9 @@ interface Course {
 }
 
 export function MyCoursesList() {
-  const [year, setYear] = useState('2024');
+  const currentYear = String(new Date().getFullYear());
+  const [yearOptions, setYearOptions] = useState<string[]>(['전체', currentYear]);
+  const [year, setYear] = useState(currentYear);
   const [courseType, setCourseType] = useState('전체');
   const [status, setStatus] = useState('전체');
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +26,40 @@ export function MyCoursesList() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // 왜: 년도 필터 옵션을 하드코딩하면(2024/2023/2022), 실제 데이터와 안 맞아 "없는 년도"를 고르게 될 수 있습니다.
+    const fetchYears = async () => {
+      try {
+        const res = await tutorLmsApi.getCourseYears();
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const years = (res.rst_data ?? [])
+          .map((r) => String(r.year || '').trim())
+          .filter(Boolean);
+
+        const uniq = Array.from(new Set(years)).sort((a, b) => b.localeCompare(a));
+        const options = ['전체', ...uniq];
+
+        if (cancelled) return;
+        setYearOptions(options.length > 1 ? options : ['전체', currentYear]);
+        setYear((prev) => {
+          if (prev && options.includes(prev)) return prev;
+          return uniq[0] ? uniq[0] : '전체';
+        });
+      } catch (e) {
+        // 왜: 년도 옵션 조회 실패는 치명적이지 않으므로, 기본값(현재년도/전체)으로 폴백합니다.
+        if (!cancelled) setYearOptions(['전체', currentYear]);
+      }
+    };
+
+    void fetchYears();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentYear]);
 
   // 왜: 기존 화면 필터 UI를 그대로 살리면서, 데이터만 실제 DB 결과로 바꿉니다.
   const filteredCourses = useMemo(() => courses.filter((course) => {
@@ -45,17 +81,21 @@ export function MyCoursesList() {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const res = await tutorLmsApi.getMyCourses({ year });
+        const res = await tutorLmsApi.getMyCourses({ year: year === '전체' ? undefined : year });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         const rows = res.rst_data ?? [];
         const mapped: Course[] = rows.map((row) => {
           const statusLabel = (row.status_label as Course['status']) ?? '대기';
+          const typeParts = [
+            (row.course_type_conv || '').trim(),
+            (row.onoff_type_conv || '').trim(),
+          ].filter(Boolean);
 
           return {
             id: String(row.id),
             courseId: row.course_id_conv || row.course_cd || String(row.id),
-            courseType: '-', // 현재 UI에서만 쓰는 값이라, 필요해지면 DB 컬럼과 매핑해서 채웁니다.
+            courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
             subjectName: row.subject_nm_conv || row.course_nm,
             programId: Number(row.program_id ?? 0),
             programName: row.program_nm_conv || '-',
@@ -78,6 +118,13 @@ export function MyCoursesList() {
       cancelled = true;
     };
   }, [year]);
+
+  const courseTypeOptions = useMemo(() => {
+    const types = Array.from(new Set(courses.map((c) => c.courseType).filter((t) => t && t !== '미지정'))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return ['전체', ...types];
+  }, [courses]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -113,7 +160,7 @@ export function MyCoursesList() {
 
       {/* 필터 영역 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm text-gray-700 mb-2">년도</label>
             <select
@@ -121,9 +168,25 @@ export function MyCoursesList() {
               onChange={(e) => setYear(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">유형</label>
+            <select
+              value={courseType}
+              onChange={(e) => setCourseType(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {courseTypeOptions.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -164,6 +227,7 @@ export function MyCoursesList() {
               <tr>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">No</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과정ID</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">유형</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과목명</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">소속 과정명</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">기간</th>
@@ -175,13 +239,13 @@ export function MyCoursesList() {
             <tbody className="divide-y divide-gray-200">
               {errorMessage ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                     <p>{errorMessage}</p>
                   </td>
                 </tr>
               ) : loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                     <p>불러오는 중...</p>
                   </td>
                 </tr>
@@ -190,6 +254,7 @@ export function MyCoursesList() {
                   <tr key={course.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.courseId}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{course.courseType}</td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.subjectName}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.programName}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.period}</td>
@@ -224,7 +289,7 @@ export function MyCoursesList() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                     <p>검색 결과가 없습니다.</p>
                   </td>
                 </tr>

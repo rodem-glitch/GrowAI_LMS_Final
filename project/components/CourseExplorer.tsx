@@ -3,6 +3,52 @@ import { Search, Filter, Calendar, Users, BookOpen } from 'lucide-react';
 import { OperationalPlan } from './OperationalPlan';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
+type LabelValue = { value?: string; label?: string };
+type ProgramPlanV1 = {
+  version?: number;
+  basic?: {
+    classification?: LabelValue;
+    courseName?: string;
+    department?: string;
+    major?: string;
+    departmentName?: string;
+    instructor?: string;
+  };
+  training?: {
+    trainingPeriodText?: string;
+    startDateYmd?: string;
+    endDateYmd?: string;
+    trainingLevel?: LabelValue;
+    trainingTarget?: string;
+    trainingGoal?: string;
+  };
+};
+
+function safeParsePlanJson(raw: string | null | undefined): ProgramPlanV1 | null {
+  // 왜: plan_json은 문자열(JSON)로 저장되며, 저장 전/깨진 데이터가 있을 수 있어서 항상 안전하게 파싱해야 합니다.
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as ProgramPlanV1;
+  } catch {
+    return null;
+  }
+}
+
+function deriveYear(params: { startDateYmd?: string; startDate?: string; trainingPeriod?: string }) {
+  // 왜: 연도 필터는 화면에서 꼭 필요한데, 데이터 원천(start_date/plan_json/training_period)이 환경마다 달라서 우선순위를 정합니다.
+  const candidates = [params.startDateYmd, params.startDate].filter(Boolean) as string[];
+  for (const x of candidates) {
+    const v = String(x);
+    if (v.length >= 4 && /^\d{4}/.test(v)) return v.substring(0, 4);
+  }
+
+  const period = params.trainingPeriod || '';
+  const match = period.match(/(\\d{4})/);
+  return match ? match[1] : '-';
+}
+
 interface Course {
   id: string;
   classification: string;
@@ -44,23 +90,27 @@ export function CourseExplorer() {
 
         const rows = res.rst_data ?? [];
         const mapped: Course[] = rows.map((row) => {
-          const trainingPeriod = row.training_period || '-';
-          const year = row.start_date
-            ? String(row.start_date).substring(0, 4)
-            : (trainingPeriod && trainingPeriod.length >= 4 ? trainingPeriod.substring(0, 4) : '-');
+          const plan = safeParsePlanJson(row.plan_json);
+
+          const trainingPeriod = plan?.training?.trainingPeriodText || row.training_period || '-';
+          const year = deriveYear({
+            startDateYmd: plan?.training?.startDateYmd,
+            startDate: row.start_date,
+            trainingPeriod,
+          });
 
           return {
             id: String(row.id),
-            classification: '과정',
-            name: row.course_nm,
-            department: '-',
-            major: '-',
-            departmentName: '-',
+            classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
+            name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
+            department: plan?.basic?.department || '',
+            major: plan?.basic?.major || '',
+            departmentName: plan?.basic?.departmentName || '',
             trainingPeriod,
-            trainingLevel: '-',
-            trainingTarget: '-',
-            trainingGoal: '-',
-            instructor: '-',
+            trainingLevel: plan?.training?.trainingLevel?.label || plan?.training?.trainingLevel?.value || '-',
+            trainingTarget: plan?.training?.trainingTarget || '',
+            trainingGoal: plan?.training?.trainingGoal || '',
+            instructor: plan?.basic?.instructor || '',
             year,
             students: 0,
             subjects: Number(row.course_cnt ?? 0),
@@ -81,17 +131,37 @@ export function CourseExplorer() {
     };
   }, []);
 
-  const filteredCourses = useMemo(() => courses.filter((course) => {
-    const matchesSearch =
-      searchTerm === '' ||
-      course.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const yearOptions = useMemo(() => {
+    const years = Array.from(new Set(courses.map((c) => c.year).filter((y) => y && y !== '-'))).sort((a, b) =>
+      b.localeCompare(a)
+    );
+    return ['전체', ...years];
+  }, [courses]);
 
-    const matchesYear = yearFilter === '전체' || course.year === yearFilter;
+  const filteredCourses = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
 
-    // 왜: DB에 "분류" 컬럼이 없어서, UI는 유지하되 현재는 검색/년도만 적용합니다.
-    const matchesClassification = true;
-    return matchesSearch && matchesYear && matchesClassification;
-  }), [courses, searchTerm, yearFilter, classificationFilter]);
+    return courses.filter((course) => {
+      const haystacks = [
+        course.name,
+        course.department,
+        course.major,
+        course.departmentName,
+        course.instructor,
+        course.trainingLevel,
+        course.trainingTarget,
+        course.trainingGoal,
+      ]
+        .map((v) => String(v || '').toLowerCase())
+        .filter(Boolean);
+
+      const matchesSearch = term === '' || haystacks.some((x) => x.includes(term));
+      const matchesYear = yearFilter === '전체' || course.year === yearFilter;
+      const matchesClassification = classificationFilter === '전체' || course.classification === classificationFilter;
+
+      return matchesSearch && matchesYear && matchesClassification;
+    });
+  }, [courses, searchTerm, yearFilter, classificationFilter]);
 
   // 선택된 과정이 있으면 운영계획서 표시
   if (selectedCourse) {
@@ -143,10 +213,11 @@ export function CourseExplorer() {
             onChange={(e) => setYearFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option>전체</option>
-            <option>2024</option>
-            <option>2023</option>
-            <option>2022</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
           </select>
           <div className="flex gap-2">
             <button
@@ -224,9 +295,9 @@ export function CourseExplorer() {
                     <div className="mb-3">
                       <h4 className="text-gray-900 mb-1 line-clamp-1">{course.name}</h4>
                       <p className="text-sm text-gray-600">
-                        {course.department} • {course.major}
+                        {[course.department, course.major].filter(Boolean).join(' · ') || '-'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">{course.departmentName}</p>
+                      <p className="text-xs text-gray-500 mt-1">{course.departmentName || '-'}</p>
                     </div>
                   </div>
                 </div>
@@ -258,10 +329,9 @@ export function CourseExplorer() {
                         <div className="text-sm text-gray-900">{course.name}</div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {course.department}<br />
-                        {course.major}
+                        {[course.department, course.major].filter(Boolean).join(' · ') || '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{course.departmentName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{course.departmentName || '-'}</td>
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => setSelectedCourse(course)}

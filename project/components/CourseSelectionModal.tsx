@@ -2,6 +2,30 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, Search, CheckCircle } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
+type LabelValue = { value?: string; label?: string };
+type ProgramPlanV1 = {
+  version?: number;
+  basic?: {
+    classification?: LabelValue;
+    courseName?: string;
+    department?: string;
+    major?: string;
+    departmentName?: string;
+  };
+};
+
+function safeParsePlanJson(raw: string | null | undefined): ProgramPlanV1 | null {
+  // 왜: plan_json은 문자열(JSON)이라서, 빈 값/깨진 값이 있어도 화면이 죽지 않도록 안전 파싱이 필요합니다.
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as ProgramPlanV1;
+  } catch {
+    return null;
+  }
+}
+
 interface Course {
   id: string;
   classification: string;
@@ -49,14 +73,18 @@ export function CourseSelectionModal({
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         const rows = res.rst_data ?? [];
-        const mapped: Course[] = rows.map((row) => ({
-          id: String(row.id),
-          classification: '과정',
-          name: row.course_nm,
-          department: '-',
-          major: '-',
-          departmentName: '-',
-        }));
+        const mapped: Course[] = rows.map((row) => {
+          const plan = safeParsePlanJson(row.plan_json);
+
+          return {
+            id: String(row.id),
+            classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
+            name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
+            department: plan?.basic?.department || '',
+            major: plan?.basic?.major || '',
+            departmentName: plan?.basic?.departmentName || '',
+          };
+        });
 
         if (!cancelled) setCourses(mapped);
       } catch (e) {
@@ -72,15 +100,19 @@ export function CourseSelectionModal({
     };
   }, [isOpen, selectedCourse]);
 
-  const filteredCourses = useMemo(() => courses.filter((course) => {
-    const matchesSearch =
-      searchTerm === '' ||
-      course.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCourses = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
 
-    // 왜: 현재 DB에 "과정 분류" 필드가 없어서, UI는 유지하되 검색만 적용합니다.
-    const matchesClassification = true;
-    return matchesSearch && matchesClassification;
-  }), [courses, searchTerm, classificationFilter]);
+    return courses.filter((course) => {
+      const haystacks = [course.name, course.department, course.major, course.departmentName]
+        .map((v) => String(v || '').toLowerCase())
+        .filter(Boolean);
+
+      const matchesSearch = term === '' || haystacks.some((x) => x.includes(term));
+      const matchesClassification = classificationFilter === '전체' || course.classification === classificationFilter;
+      return matchesSearch && matchesClassification;
+    });
+  }, [courses, searchTerm, classificationFilter]);
 
   const handleConfirm = () => {
     onSelect(tempSelected);
@@ -206,9 +238,9 @@ export function CourseSelectionModal({
                       </div>
                       <h4 className="text-gray-900 mb-1">{course.name}</h4>
                       <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <span>{course.department} • {course.major}</span>
-                        <span>•</span>
-                        <span>{course.departmentName}</span>
+                        <span>{[course.department, course.major].filter(Boolean).join(' · ') || '-'}</span>
+                        <span className="text-gray-300">·</span>
+                        <span>{course.departmentName || '-'}</span>
                       </div>
                     </div>
                     {tempSelected?.id === course.id && (

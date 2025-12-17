@@ -14,6 +14,10 @@ export type TutorLmsApiResponse<T> = {
   rst_exam?: unknown;
   rst_homework?: unknown;
   rst_course?: unknown;
+  // 왜: 대시보드처럼 여러 목록을 한 번에 내려주는 API가 있습니다.
+  rst_courses?: unknown;
+  rst_submissions?: unknown;
+  rst_qna?: unknown;
 };
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -53,6 +57,10 @@ export type TutorCourseRow = {
   course_cd?: string;
   course_id_conv?: string;
   subject_nm_conv?: string;
+  course_type?: string;
+  onoff_type?: string;
+  course_type_conv?: string;
+  onoff_type_conv?: string;
   year?: string;
   program_id?: number;
   program_nm?: string;
@@ -60,6 +68,69 @@ export type TutorCourseRow = {
   period_conv?: string;
   student_cnt?: number;
   status_label?: string;
+};
+
+export type TutorCourseYearRow = {
+  year: string;
+};
+
+export type TutorCourseInfoDetail = {
+  id: number;
+  course_nm: string;
+  course_cd?: string;
+  course_id_conv?: string;
+  course_type?: string;
+  onoff_type?: string;
+  subject_id?: number;
+  program_nm?: string;
+  program_start_date?: string;
+  program_end_date?: string;
+  period_conv?: string;
+  student_cnt?: number;
+
+  content1_title?: string;
+  content1?: string;
+  content2_title?: string;
+  content2?: string;
+
+  // 평가/수료 기준
+  assign_progress?: number;
+  assign_exam?: number;
+  assign_homework?: number;
+  assign_forum?: number;
+  assign_etc?: number;
+  assign_survey_yn?: 'Y' | 'N';
+  push_survey_yn?: 'Y' | 'N';
+  pass_yn?: 'Y' | 'N';
+
+  limit_total_score?: number;
+  limit_progress?: number;
+  limit_exam?: number;
+  limit_homework?: number;
+  limit_forum?: number;
+  limit_etc?: number;
+  complete_limit_progress?: number;
+  complete_limit_total_score?: number;
+
+  // 증명서
+  cert_complete_yn?: 'Y' | 'N';
+  cert_template_id?: number;
+  pass_cert_template_id?: number;
+  complete_no_yn?: 'Y' | 'N';
+  complete_prefix?: string;
+  postfix_cnt?: number;
+  postfix_type?: 'R' | 'C';
+  postfix_ord?: 'A' | 'D';
+};
+
+export type TutorCertificateTemplateRow = {
+  id: number;
+  template_nm?: string;
+  template_cd?: string;
+  template_type?: string;
+  background_file?: string;
+  reg_date?: string;
+  status?: number;
 };
 
 export type TutorLearnerRow = {
@@ -99,6 +170,7 @@ export type TutorLessonRow = {
   title: string;
   description?: string;
   lesson_type?: string;
+  lesson_type_conv?: string;
   total_time?: number;
   duration?: string;
   is_favorite?: boolean;
@@ -311,7 +383,69 @@ export type TutorCompletionRow = {
   status_label?: string;
 };
 
+export type TutorDashboardStats = {
+  active_course_cnt: number;
+  pending_homework_cnt: number;
+  unanswered_qna_cnt: number;
+  today?: string;
+};
+
+export type TutorDashboardCourseRow = {
+  id: number;
+  course_cd?: string;
+  course_nm: string;
+  course_id_conv?: string;
+  period_conv?: string;
+  student_cnt?: number;
+  avg_progress_ratio?: number;
+  avg_progress_ratio_conv?: string;
+  pending_homework_cnt?: number;
+  unanswered_qna_cnt?: number;
+};
+
+export type TutorDashboardSubmissionRow = {
+  course_id: number;
+  course_id_conv?: string;
+  course_nm: string;
+  homework_id: number;
+  homework_nm: string;
+  course_user_id: number;
+  user_nm?: string;
+  login_id?: string;
+  submit_date?: string;
+  submitted_at?: string;
+  confirm_yn?: string;
+  confirmed?: boolean;
+};
+
+export type TutorDashboardQnaRow = {
+  post_id: number;
+  course_id: number;
+  course_nm: string;
+  subject: string;
+  reg_date?: string;
+  reg_date_conv?: string;
+  proc_status?: number;
+  answered?: boolean;
+  user_nm?: string;
+  login_id?: string;
+};
+
 export const tutorLmsApi = {
+  // =========================
+  // 대시보드
+  // =========================
+  async getDashboard() {
+    const url = `/tutor_lms/api/dashboard.jsp`;
+    return requestJson<TutorDashboardStats>(url) as Promise<
+      TutorLmsApiResponse<TutorDashboardStats> & {
+        rst_courses?: TutorDashboardCourseRow[];
+        rst_submissions?: TutorDashboardSubmissionRow[];
+        rst_qna?: TutorDashboardQnaRow[];
+      }
+    >;
+  },
+
   async getPrograms(params: { keyword?: string } = {}) {
     const url = `/tutor_lms/api/program_list.jsp${buildQuery({ s_keyword: params.keyword })}`;
     return requestJson<TutorProgramRow[]>(url);
@@ -336,6 +470,11 @@ export const tutorLmsApi = {
     });
   },
 
+  async getCourseYears(params: { tutorId?: number } = {}) {
+    const url = `/tutor_lms/api/course_years.jsp${buildQuery({ tutor_id: params.tutorId })}`;
+    return requestJson<TutorCourseYearRow[]>(url);
+  },
+
   async getMyCourses(params: { year?: string; keyword?: string } = {}) {
     const url = `/tutor_lms/api/course_list.jsp${buildQuery({ year: params.year, s_keyword: params.keyword })}`;
     return requestJson<TutorCourseRow[]>(url);
@@ -347,6 +486,106 @@ export const tutorLmsApi = {
     body.set('program_id', String(payload.programId));
 
     return requestJson<number>(`/tutor_lms/api/course_set_program.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // =========================
+  // 과목정보(소개/목표/평가/증명서 설정)
+  // =========================
+  async getCourseInfo(params: { courseId: number }) {
+    const url = `/tutor_lms/api/course_info_get.jsp${buildQuery({ course_id: params.courseId })}`;
+    return requestJson<TutorCourseInfoDetail>(url);
+  },
+
+  async updateCourseInfo(payload: { courseId: number; content1: string; content2: string }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('content1', payload.content1);
+    body.set('content2', payload.content2);
+
+    return requestJson<number>(`/tutor_lms/api/course_info_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateCourseEvaluation(payload: {
+    courseId: number;
+    assignProgress: number;
+    assignExam: number;
+    assignHomework: number;
+    assignForum: number;
+    assignEtc: number;
+    assignSurveyYn: 'Y' | 'N';
+    pushSurveyYn: 'Y' | 'N';
+    passYn: 'Y' | 'N';
+    limitTotalScore: number;
+    limitProgress: number;
+    limitExam: number;
+    limitHomework: number;
+    limitForum: number;
+    limitEtc: number;
+    completeLimitProgress: number;
+    completeLimitTotalScore: number;
+  }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+
+    body.set('assign_progress', String(payload.assignProgress));
+    body.set('assign_exam', String(payload.assignExam));
+    body.set('assign_homework', String(payload.assignHomework));
+    body.set('assign_forum', String(payload.assignForum));
+    body.set('assign_etc', String(payload.assignEtc));
+
+    body.set('assign_survey_yn', payload.assignSurveyYn);
+    body.set('push_survey_yn', payload.pushSurveyYn);
+    body.set('pass_yn', payload.passYn);
+
+    body.set('limit_total_score', String(payload.limitTotalScore));
+    body.set('limit_progress', String(payload.limitProgress));
+    body.set('limit_exam', String(payload.limitExam));
+    body.set('limit_homework', String(payload.limitHomework));
+    body.set('limit_forum', String(payload.limitForum));
+    body.set('limit_etc', String(payload.limitEtc));
+
+    body.set('complete_limit_progress', String(payload.completeLimitProgress));
+    body.set('complete_limit_total_score', String(payload.completeLimitTotalScore));
+
+    return requestJson<number>(`/tutor_lms/api/course_evaluation_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateCourseCertificateSettings(payload: {
+    courseId: number;
+    certCompleteYn: 'Y' | 'N';
+    certTemplateId: number;
+    passCertTemplateId: number;
+    completeNoYn: 'Y' | 'N';
+    completePrefix: string;
+    postfixCnt: number;
+    postfixType: 'R' | 'C';
+    postfixOrd: 'A' | 'D';
+  }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('cert_complete_yn', payload.certCompleteYn);
+    body.set('cert_template_id', String(payload.certTemplateId));
+    body.set('pass_cert_template_id', String(payload.passCertTemplateId));
+
+    body.set('complete_no_yn', payload.completeNoYn);
+    body.set('complete_prefix', payload.completePrefix);
+    body.set('postfix_cnt', String(payload.postfixCnt));
+    body.set('postfix_type', payload.postfixType);
+    body.set('postfix_ord', payload.postfixOrd);
+
+    return requestJson<number>(`/tutor_lms/api/course_certificate_update.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -869,7 +1108,7 @@ export const tutorLmsApi = {
 
   async getCertificateTemplates(params: { templateType?: 'C' | 'P' } = {}) {
     const url = `/tutor_lms/api/certificate_templates.jsp${buildQuery({ template_type: params.templateType })}`;
-    return requestJson<any[]>(url);
+    return requestJson<TutorCertificateTemplateRow[]>(url);
   },
 
   async issueCertificate(payload: { courseUserId: number; type: 'C' | 'P' }) {
