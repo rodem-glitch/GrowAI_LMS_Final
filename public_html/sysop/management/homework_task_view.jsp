@@ -80,6 +80,11 @@ if("del".equals(mode) && tid > 0) {
 	homeworkTask.item("mod_date", now);
 	if(!homeworkTask.update("id = " + tid + "")) { m.jsError("삭제 중 오류가 발생했습니다."); return; }
 
+	//연결된 첨부파일 삭제
+	file.execute("DELETE FROM " + file.table + " WHERE module = 'homework_task_assign_" + tid + "' AND module_id = " + cuid + "");
+	file.execute("DELETE FROM " + file.table + " WHERE module = 'homework_task_" + tid + "' AND module_id = " + cuid + "");
+	file.execute("DELETE FROM " + file.table + " WHERE module = 'homework_task_feedback_" + tid + "' AND module_id = " + cuid + "");
+
 	m.jsAlert("삭제했습니다.");
 	m.js("try { opener.location.reload(); } catch(e) {} window.close();");
 	return;
@@ -127,6 +132,9 @@ if(m.isPost()) {
 				homeworkTask.item("mod_date", now);
 				homeworkTask.item("status", 1);
 				if(!homeworkTask.insert()) { m.jsError("등록 중 오류가 발생했습니다."); return; }
+
+				//첨부파일 모듈 업데이트 (tid=0 → newId)
+				file.execute("UPDATE " + file.table + " SET module = 'homework_task_assign_" + newId + "' WHERE module = 'homework_task_assign_0' AND module_id = " + cuid + "");
 
 				m.jsAlert("추가 과제를 등록했습니다.");
 				m.jsReplace("homework_task_view.jsp?cid=" + courseId + "&hid=" + hid + "&cuid=" + cuid + "&tid=" + newId, "parent");

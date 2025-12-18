@@ -53,6 +53,11 @@ if("cancel".equals(m.rs("mode"))) {
 	HomeworkTaskDao homeworkTask = new HomeworkTaskDao();
 	homeworkTask.delete("homework_id = " + hid + " AND course_user_id = " + cuid + "");
 
+	//메인 과제 첨부파일 삭제
+	file.execute("DELETE FROM " + file.table + " WHERE module = 'homework_" + hid + "' AND module_id = " + cuid + "");
+	//평가의견 첨부파일 삭제
+	file.execute("DELETE FROM " + file.table + " WHERE module = 'homework_feedback_" + hid + "' AND module_id = " + cuid + "");
+
 	//점수 업데이트
 	courseUser.setCourseUserScore(cuid, "homework");
 
