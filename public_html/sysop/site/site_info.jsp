@@ -258,6 +258,49 @@ if(isMaster) {
 //수정
 if(m.isPost() && f.validate()) {
 
+	//왜: 이 화면에 도메인 입력칸이 있지만, 기존 로직은 domain을 DB(TB_SITE)에 저장하지 않아
+	//    사용자가 값을 바꿔도 새로고침하면 항상 이전 값으로 되돌아가 보였습니다.
+	//    또한 도메인은 사이트 매칭의 "키"라서( sysop/init.jsp 에서 request.getServerName()로 조회 ),
+	//    입력값을 최소한으로 정리(프로토콜/경로/포트 제거)하고 중복을 막아야 안전합니다.
+	String newDomain = f.get("domain");
+	if(newDomain != null) newDomain = newDomain.trim().toLowerCase();
+	else newDomain = "";
+
+	//프로토콜/경로/파라미터가 섞여 들어오는 실수를 방지합니다. (예: https://example.com/path)
+	if(newDomain.startsWith("http://")) newDomain = newDomain.substring(7);
+	if(newDomain.startsWith("https://")) newDomain = newDomain.substring(8);
+	int cut = newDomain.indexOf("/");
+	if(cut > -1) newDomain = newDomain.substring(0, cut);
+	cut = newDomain.indexOf("?");
+	if(cut > -1) newDomain = newDomain.substring(0, cut);
+	cut = newDomain.indexOf("#");
+	if(cut > -1) newDomain = newDomain.substring(0, cut);
+
+	//포트가 붙은 값도 제거합니다. (예: example.com:8080)
+	int lastColon = newDomain.lastIndexOf(":");
+	if(lastColon > -1 && newDomain.indexOf(":") == lastColon) {
+		String port = newDomain.substring(lastColon + 1);
+		if(port.matches("\\d+")) newDomain = newDomain.substring(0, lastColon);
+	}
+
+	//끝에 '.' 이 붙는 비정상 케이스를 방어합니다.
+	while(newDomain.endsWith(".")) newDomain = newDomain.substring(0, newDomain.length() - 1);
+
+	//최소한의 형식 검증 (IP/localhost도 허용)
+	if("".equals(newDomain) || !newDomain.matches("^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$")) {
+		m.jsAlert("도메인 형식이 올바르지 않습니다. (예: dev.example.com)");
+		return;
+	}
+
+	//다른 사이트가 이미 사용 중인 도메인인지 확인합니다.
+	DataSet dupDomain = site.find("domain = ? AND id != ?", new Object[]{newDomain, siteId}, 1);
+	if(dupDomain.next()) {
+		m.jsAlert("이미 사용 중인 도메인입니다.");
+		return;
+	}
+
+	site.item("domain", newDomain);
+
 	site.item("site_nm", f.get("site_nm"));
 	site.item("copyright", f.get("copyright"));
 	if(f.getFileName("logo") != null) {
@@ -445,6 +488,8 @@ if(m.isPost() && f.validate()) {
 	//캐쉬 삭제
 	site.remove(info.s("domain"));
 	if(!"".equals(info.s("domain2"))) site.remove(info.s("domain2"));
+	site.remove(newDomain);
+	site.remove(newDomain.startsWith("www.") ? newDomain.substring(4) : ("www." + newDomain));
 
 	SiteConfig.remove(siteId + "");
 
