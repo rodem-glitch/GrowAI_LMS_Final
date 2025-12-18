@@ -1,5 +1,13 @@
 <!--@include(/course/course_tab.html)-->
 
+<style>
+.multi-video-wrap { margin-top:6px; }
+.multi-video-list { margin-top:6px; padding:8px; background:#f8f8f8; border:1px solid #dcdcdc; }
+.multi-video-list ul { margin:0; padding-left:16px; }
+.multi-video-list li { margin:2px 0; font-size:12px; color:#555; }
+.multi-video-list .time { color:#888; }
+</style>
+
 <!--@nif(course.delete_block)-->
 <div class="reminder01 yellow">
 	<h1>이 과정에서 이미 학습을 시작한 수강생이 있습니다.</h1>
@@ -257,6 +265,20 @@
 		</a>
 		<!--/if(list.twoway_block)-->
 
+		<!-- 서브영상 안내/펼침 -->
+		<!--@if(list.sub_video_block)-->
+		<div class="multi-video-wrap">
+			<button type="button" class="btn_simp sky" onclick="toggleSubVideos('{{list.lesson_id}}');">영상 {{list.sub_video_cnt}}개</button>
+			<div id="subvideo-{{list.lesson_id}}" class="multi-video-list" style="display:none;">
+				<ul>
+					<!--@loop(sub_video_list)-->
+					<li><span class="no">{{sub_video_list.ord}}.</span> {{sub_video_list.lesson_nm}} <span class="time">({{sub_video_list.total_time}}분 / 인정 {{sub_video_list.complete_time}}분)</span></li>
+					<!--/loop(sub_video_list)-->
+				</ul>
+			</div>
+		</div>
+		<!--/if(list.sub_video_block)-->
+
 	</td>
 	<!--@nif(course.online_block)-->
 	<td class="l_td01" style="line-height:32px;" class="fontsmallthin">
@@ -419,7 +441,7 @@
 		<!--@nif(list.twoway_block)-->
 		<!--@if(list.pc_block)--><input type="button" value="미리보기" class="btn_simp" onclick="preview('{{list.lesson_id}}', '{{list.content_width}}', '{{list.content_height}}')"><!--/if(list.pc_block)-->
 		<!-- 다중영상 차시 구성 팝업 -->
-		<!--@if(course.online_block)--><input type="button" value="영상구성" class="btn_simp green" onclick="OpenWindows('lesson_video.jsp?cid={{cid}}&lid={{list.lesson_id}}&chapter={{list.chapter}}', '_CLV01', 1000, 800);"><!--/if(course.online_block)-->
+		<!--@if(course.online_block)--><input type="button" value="영상구성" class="btn_simp green" onclick="openLessonVideo('{{cid}}','{{list.lesson_id}}','{{list.chapter}}');"><!--/if(course.online_block)-->
 		<!--@nif(list.pc_block)-->-<!--/nif(list.pc_block)-->
 		<!--/nif(list.twoway_block)-->
 
@@ -652,6 +674,19 @@ function validateTime(e) {
 }
 <!--/if(course.period_yn)-->
 
+// 왜: 목록에서 서브영상 개수를 눌렀을 때 바로 아래로 펼쳐서 확인할 수 있게 합니다.
+function toggleSubVideos(lessonId) {
+	var $box = $("#subvideo-" + lessonId);
+	if($box.length == 0) return;
+	$box.toggle();
+}
+
+// 왜: 영상구성 팝업을 열 때 스크롤 위치를 저장하고, 돌아올 때 원래 위치로 복원합니다.
+function openLessonVideo(cid, lid, chapter) {
+	try { sessionStorage.setItem("course_lesson_scroll", $(window).scrollTop()); } catch(e) {}
+	OpenWindows('lesson_video.jsp?cid=' + cid + '&lid=' + lid + '&chapter=' + chapter, '_CLV01', 1000, 800);
+}
+
 function setDouble(el, len) {
 	var v = parseFloat(el.value);
 	if(isNaN(v)) v = 1;
@@ -697,6 +732,14 @@ function modifySection(sid) {
 $(document).ready(function() {
 	$("#lesson_list").tableSortable();
 	setLabel();
+	// 스크롤 복원
+	try {
+		var st = sessionStorage.getItem("course_lesson_scroll");
+		if(st) {
+			$(window).scrollTop(parseInt(st, 10));
+			sessionStorage.removeItem("course_lesson_scroll");
+		}
+	} catch(e) {}
 });
 
 $(".section_nm").keydown(function() {

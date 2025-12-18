@@ -218,8 +218,11 @@ if(m.isPost()) {
 	//     그래서 parent(팝업 본문)를 새로고침하고, opener(강의목차 화면)의 시간도 바로 갱신합니다.
 	m.js(
 		"try {"
-		+ " if(parent.opener && !parent.opener.closed && typeof parent.opener.updateMultiLessonTime === 'function') {"
-		+ "  parent.opener.updateMultiLessonTime(" + lid + ", " + displayTotalMin + ", " + displayCompleteMin + ");"
+		+ " if(parent.opener && !parent.opener.closed) {"
+		+ "  if(typeof parent.opener.updateMultiLessonTime === 'function') {"
+		+ "   parent.opener.updateMultiLessonTime(" + lid + ", " + displayTotalMin + ", " + displayCompleteMin + ");"
+		+ "  }"
+		+ "  parent.opener.location.reload();"
 		+ " }"
 		+ "} catch(e) {}"
 	);

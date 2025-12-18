@@ -11,6 +11,13 @@
 						<em class="em2">{{cuinfo.course_nm}}</em>
 					</div>
 				</div>
+				<style>
+				.multi-video-wrap { margin-top:6px; }
+				.multi-video-list { margin-top:6px; padding:8px; background:#f9f9f9; border:1px solid #ddd; }
+				.multi-video-list ul { margin:0; padding-left:16px; }
+				.multi-video-list li { margin:3px 0; font-size:12px; color:#555; }
+				.multi-video-list .time { color:#888; }
+				</style>
 				<div class="content_body">
 					<div class="my_cr_bbs">
 						<div class="my_bbs">
@@ -148,6 +155,20 @@
 										[{{list.lesson_type_conv}}]
 										<!--/nif(list.online_block)-->
 										{{list.lesson_nm}}
+										<!--@if(list.sub_video_block)-->
+										<div class="multi-video-wrap">
+											<button type="button" class="button small white" onclick="toggleClSub('{{list.lesson_id}}');">영상 {{list.sub_video_cnt}}개</button>
+											<div id="cl-sub-{{list.lesson_id}}" class="multi-video-list" style="display:none;">
+												<ul>
+													<!--@loop(sub_video_list)-->
+													<li><span class="no">{{sub_video_list.ord}}.</span> {{sub_video_list.lesson_nm}} <span class="time">({{sub_video_list.total_time}}분 / 인정 {{sub_video_list.complete_time}}분)</span>
+														<!--@if(list.online_block)--><a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}&chapter={{list.chapter}}&vid={{sub_video_list.video_id}}" class="button xxsmall blue" style="margin-left:6px;">바로보기</a><!--/if(list.online_block)-->
+													</li>
+													<!--/loop(sub_video_list)-->
+												</ul>
+											</div>
+										</div>
+										<!--/if(list.sub_video_block)-->
 									</td>
 									<!--@if(course.period_yn)-->
 									<td class="col_lesson_period study_period">
@@ -237,6 +258,12 @@
 				if(type == "F") return;
 				$(".progress_info").hide();
 				$(".lesson_file_info").hide();
+			}
+			// 왜: 강의목차에서 '영상 N개'를 눌렀을 때 서브영상 목록을 펼쳐서 보여주기 위함입니다.
+			function toggleClSub(lid) {
+				var box = $("#cl-sub-" + lid);
+				if(box.length == 0) return;
+				box.toggle();
 			}
 			var clicked = false;
 			function openViewer(cuid, lid, chapter, w, h, is_down) {

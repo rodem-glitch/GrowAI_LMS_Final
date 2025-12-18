@@ -15,6 +15,8 @@ CourseSectionDao courseSection = new CourseSectionDao();
 CourseProgressDao courseProgress = new CourseProgressDao();
 CourseUserDao courseUser = new CourseUserDao();
 LessonDao lesson = new LessonDao();
+// 왜: 차시별 서브영상(다중영상) 정보를 한꺼번에 조회해 목록에 표시하기 위함입니다.
+CourseLessonVideoDao courseLessonVideo = new CourseLessonVideoDao();
 CourseTutorDao courseTutor = new CourseTutorDao();
 TutorDao tutor = new TutorDao();
 UserDao user = new UserDao();
@@ -189,6 +191,32 @@ lm.addWhere("a.status != -1");
 lm.addWhere("a.course_id = " + cid + "");
 lm.setOrderBy("a.chapter ASC");
 
+// 차시별 서브영상 리스트/개수 미리 조회
+// 왜: 목록 렌더링 시 매 차시마다 DB를 다시 조회하지 않도록 미리 한 번에 가져옵니다.
+java.util.HashMap<Integer, DataSet> videoByLesson = new java.util.HashMap<Integer, DataSet>();
+DataSet videoRows = courseLessonVideo.query(
+	"SELECT v.lesson_id, v.video_id, v.sort"
+	+ ", l.lesson_nm, l.total_time, l.complete_time "
+	+ " FROM " + courseLessonVideo.table + " v "
+	+ " INNER JOIN " + lesson.table + " l ON l.id = v.video_id AND l.status = 1 "
+	+ " WHERE v.course_id = " + cid
+	+ " AND v.site_id = " + siteId
+	+ " AND v.status = 1 "
+	+ " ORDER BY v.lesson_id ASC, v.sort ASC "
+);
+while(videoRows.next()) {
+	int lId = videoRows.i("lesson_id");
+	if(!videoByLesson.containsKey(lId)) videoByLesson.put(lId, new DataSet());
+	DataSet rows = videoByLesson.get(lId);
+	rows.addRow();
+	rows.put("ord", rows.size()); // 화면용 순번
+	rows.put("lesson_nm", videoRows.s("lesson_nm"));
+	rows.put("total_time", videoRows.i("total_time"));
+	rows.put("complete_time", videoRows.i("complete_time"));
+	rows.put("video_id", videoRows.i("video_id"));
+	rows.put("lesson_id", lId);
+}
+
 //포맷팅
 int idx = 0;
 int lastSectionId = 0;
@@ -210,6 +238,19 @@ while(list.next()) {
 	list.put("pc_block", !"".equals(list.s("start_url")));
 	list.put("ios_block", !"".equals(list.s("mobile_i")));
 	list.put("android_block", !"".equals(list.s("mobile_a")));
+
+	// 차시별 서브영상 정보 세팅
+	if(videoByLesson.containsKey(list.i("lesson_id"))) {
+		DataSet videos = videoByLesson.get(list.i("lesson_id"));
+		list.put("sub_video_cnt", videos.size());
+		list.put("sub_video_block", videos.size() > 0);
+		list.put(".sub_video_list", videos);
+	} else {
+		list.put("sub_video_cnt", 0);
+		list.put("sub_video_block", false);
+		// 왜: 템플릿이 이전 행의 loop 데이터를 재사용하지 않도록 빈 DataSet을 확실히 내려줍니다.
+		list.put(".sub_video_list", new DataSet());
+	}
 
 	list.put("start_date_conv", m.time("yyyy-MM-dd", list.s("start_date")));
 	list.put("end_date_conv", m.time("yyyy-MM-dd", list.s("end_date")));

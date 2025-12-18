@@ -6,6 +6,8 @@ CourseLessonDao courseLesson = new CourseLessonDao();
 CourseSectionDao courseSection = new CourseSectionDao();
 CourseProgressDao courseProgress = new CourseProgressDao();
 FileDao file = new FileDao();
+// 왜: 강의목차에서 서브영상(다중영상) 정보를 함께 보여주기 위해 조회합니다.
+CourseLessonVideoDao courseLessonVideo = new CourseLessonVideoDao();
 
 ExamDao exam = new ExamDao();
 HomeworkDao homework = new HomeworkDao();
@@ -93,6 +95,32 @@ DataSet list = courseLesson.query(
 	//+ " ORDER BY a.chapter " + ("A".equals(cinfo.s("lesson_display_ord")) ? "ASC" : "DESC")
 );
 
+// 다중영상: 차시별 서브영상 목록/개수 사전 조회
+// 왜: 학습자가 목록에서 바로 서브영상 유무와 제목을 확인하고 펼쳐볼 수 있게 합니다.
+java.util.HashMap<Integer, DataSet> videoByLesson = new java.util.HashMap<Integer, DataSet>();
+DataSet videoRows = courseLessonVideo.query(
+	"SELECT v.lesson_id, v.video_id, v.sort"
+	+ ", l.lesson_nm, l.total_time, l.complete_time "
+	+ " FROM " + courseLessonVideo.table + " v "
+	+ " INNER JOIN " + lesson.table + " l ON l.id = v.video_id AND l.status = 1 "
+	+ " WHERE v.course_id = " + courseId
+	+ " AND v.site_id = " + siteId
+	+ " AND v.status = 1 "
+	+ " ORDER BY v.lesson_id ASC, v.sort ASC "
+);
+while(videoRows.next()) {
+	int lId = videoRows.i("lesson_id");
+	if(!videoByLesson.containsKey(lId)) videoByLesson.put(lId, new DataSet());
+	DataSet rows = videoByLesson.get(lId);
+	rows.addRow();
+	rows.put("ord", rows.size());
+	rows.put("lesson_nm", videoRows.s("lesson_nm"));
+	rows.put("total_time", videoRows.i("total_time"));
+	rows.put("complete_time", videoRows.i("complete_time"));
+	rows.put("video_id", videoRows.i("video_id"));
+	rows.put("lesson_id", lId);
+}
+
 //학습제한-속진여부
 boolean limitFlag = (cinfo.b("limit_lesson_yn") ? limitFlag = courseProgress.getLimitFlag(cuid, cinfo) : false);
 
@@ -108,6 +136,17 @@ while(list.next()) {
 	if("Y".equals(list.s("multi_yn"))) {
 		if(list.i("multi_total_time") > 0) list.put("total_time", list.i("multi_total_time"));
 		if(list.i("multi_complete_time") > 0) list.put("complete_time", list.i("multi_complete_time"));
+	}
+	// 서브영상 정보 세팅
+	if(videoByLesson.containsKey(list.i("lesson_id"))) {
+		DataSet videos = videoByLesson.get(list.i("lesson_id"));
+		list.put("sub_video_cnt", videos.size());
+		list.put("sub_video_block", videos.size() > 0);
+		list.put(".sub_video_list", videos);
+	} else {
+		list.put("sub_video_cnt", 0);
+		list.put("sub_video_block", false);
+		list.put(".sub_video_list", new DataSet());
 	}
 	String[] paragraph = m.split(",", m.replace(list.s("paragraph"), "'", ""));
 	Arrays.sort(paragraph);
