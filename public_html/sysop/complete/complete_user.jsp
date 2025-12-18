@@ -249,7 +249,9 @@ while(list.next()) {
 	//list.put("certificate_block", "Y".equals(list.s("complete_yn")) && "Y".equals(list.s("close_yn")));
 	list.put("certificate_block", "Y".equals(list.s("complete_yn")));
 	list.put("pass_block", "P".equals(list.s("complete_status")) && list.b("complete_yn"));
-	list.put("complete_only_block", "C".equals(list.s("complete_status")) && list.b("complete_yn"));
+	// 왜: 결과상태가 '합격(P)'인 경우에도 '수료증'을 같이 확인/출력해야 한다는 운영 요구사항이 있음
+	// 가정: 합격(P)은 수료(C)를 포함하는 개념으로 보고, 수료증/합격증을 둘 다 노출한다.
+	list.put("complete_only_block", ("C".equals(list.s("complete_status")) || "P".equals(list.s("complete_status"))) && list.b("complete_yn"));
 
 	user.maskInfo(list);
 }
