@@ -75,6 +75,8 @@ if(!isReady && !isEnd
 	examUser.item("feedback", "");
 	examUser.item("duration", 0);
 	examUser.item("ba_cnt", 0);
+	// 왜: 응시 기록 재생성(재시험) 시에도 기본값이 NULL이면 화면 JS가 깨질 수 있어 0으로 초기화합니다.
+	examUser.item("blur_cnt", 0);
 	examUser.item("submit_yn", "N");
 	examUser.item("confirm_yn", "N");
 	examUser.item("confirm_date", "");

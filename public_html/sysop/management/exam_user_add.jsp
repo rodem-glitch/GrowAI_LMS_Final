@@ -35,6 +35,8 @@ if("add".equals(m.rs("mode"))) {
 	examUser.item("feedback", "");
 	examUser.item("duration", 0);
 	examUser.item("ba_cnt", 0);
+	// 왜: 기본값이 NULL이면 응시 화면 스크립트가 깨질 수 있어 0으로 고정합니다.
+	examUser.item("blur_cnt", 0);
 	examUser.item("submit_yn", "Y");
 	examUser.item("confirm_yn", "N");
 	examUser.item("confirm_date", "");
@@ -70,6 +72,8 @@ if("add".equals(m.rs("mode"))) {
 	examUser.item("feedback", "");
 	examUser.item("duration", 0);
 	examUser.item("ba_cnt", 0);
+	// 왜: 기본값이 NULL이면 응시 화면 스크립트가 깨질 수 있어 0으로 고정합니다.
+	examUser.item("blur_cnt", 0);
 	examUser.item("submit_yn", "Y");
 	examUser.item("confirm_yn", "N");
 	examUser.item("confirm_date", "");

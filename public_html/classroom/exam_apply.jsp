@@ -63,6 +63,9 @@ if(0 == examUser.findCount(whrPK)) {
 	examUser.item("feedback", "");
 	examUser.item("duration", 0);
 	examUser.item("ba_cnt", 0);
+	// 왜: `blur_cnt`가 NULL/빈값이면 응시 화면 템플릿의 JS가 깨져(문항 이동/제출 버튼이 안 눌리는 현상)
+	// 부정행위(창 이탈) 카운팅 자체가 동작하지 않을 수 있어서, 최초 생성 시 0으로 고정합니다.
+	examUser.item("blur_cnt", 0);
 	examUser.item("submit_yn", "N");
 	examUser.item("confirm_yn", "N");
 	examUser.item("confirm_date", "");
@@ -91,7 +94,13 @@ if("".equals(euinfo.s("apply_date"))) {
 
 //시간정보
 int unixNow = m.getUnixTime(now);
-int old = !"".equals(euinfo.s("onload_date")) ? m.getUnixTime(euinfo.s("onload_date")) : unixNow;
+// 왜: `call_unload`(창 닫힘) 호출로 `unload_date`/`duration`이 갱신된 뒤 다시 들어오면,
+// 기존 로직은 `onload_date` 기준으로 시간을 또 더해서(겹치는 구간이 2번 계산됨) 남은시간이 0으로 떨어질 수 있습니다.
+// 그래서 실제로 마지막으로 기준이 되어야 하는 시간(대개 unload_date)을 우선 사용해 중복 누적을 막습니다.
+int onloadUnix = !"".equals(euinfo.s("onload_date")) ? m.getUnixTime(euinfo.s("onload_date")) : 0;
+int unloadUnix = !"".equals(euinfo.s("unload_date")) ? m.getUnixTime(euinfo.s("unload_date")) : 0;
+int old = onloadUnix > 0 ? onloadUnix : unixNow;
+if(unloadUnix > old) old = unloadUnix;
 if(old == 0) old = unixNow;
 int duration = Math.max(0, (unixNow - old - 2)) + euinfo.i("duration");
 int remain = (info.i("exam_time") * 60) - duration;
@@ -111,7 +120,8 @@ if("call_retime".equals(m.rs("mode"))) {
 	out.print("</script>");
 	return;
 } else if("call_unload".equals(m.rs("mode"))) {
-	examUser.execute("UPDATE " + examUser.table + " SET unload_date = '" + now + "', duration = " + duration + ", ba_cnt = " + m.ri("ba") + " WHERE " + whrPK);
+	// 왜: unload 이후 재접속 시 시간 누적이 꼬이지 않도록, 기준 시각(onload_date)도 함께 갱신합니다.
+	examUser.execute("UPDATE " + examUser.table + " SET unload_date = '" + now + "', onload_date = '" + now + "', duration = " + duration + ", ba_cnt = " + m.ri("ba") + " WHERE " + whrPK);
 	return;
 } else if("call_blur".equals(m.rs("mode"))) {
 	examUser.execute("UPDATE " + examUser.table + " SET blur_cnt = " + m.ri("blc") + " WHERE " + whrPK);
