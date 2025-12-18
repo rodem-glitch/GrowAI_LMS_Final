@@ -118,7 +118,7 @@
 			<td class="l_th03">토론</td>
 			<td class="l_th03">기타</td>
 		</tr>
-		<tr align="center">
+		<tr align="center" id="passCriteriaRow" <!--@nif(course.pass_yn:Y)-->style="display:none"<!--/nif(course.pass_yn:Y)-->>
 			<td class="l_td01">
 				<input type="text" name="limit_total_score" value="{{course.limit_total_score}}" class="ipt_right nf_100" maxlength="3" size="3"> 점 이상 / <span class="fontsmall">100점</span>
 			</td>
@@ -170,8 +170,8 @@
 
 <script>
 // 왜: "합격 상태"를 쓰지 않는다면(=수료/미수료 2단계만 사용),
-// "합격 기준" 입력칸은 실제 판정에 사용되지 않아 실수로 값을 바꾸는 일이 자주 생깁니다.
-// 그래서 합격 상태가 OFF일 때는 해당 입력칸을 잠가서(비활성화) 혼란을 줄입니다.
+// "합격 기준(limit_*)" 입력칸은 실제 판정에 사용되지 않아 실수로 값을 바꾸는 일이 자주 생깁니다.
+// 그래서 합격 상태가 OFF일 때는 해당 구간을 화면에서 숨겨서(동적으로) 혼란을 줄입니다.
 (function() {
 	function togglePassCriteria() {
 		var f = document.forms['form1'];
@@ -180,10 +180,8 @@
 		var passEl = f['pass_yn'];
 		var passEnabled = passEl && passEl.checked;
 
-		var names = ["limit_total_score", "limit_progress", "limit_exam", "limit_homework", "limit_forum", "limit_etc"];
-		for(var i = 0; i < names.length; i++) {
-			if(f[names[i]]) f[names[i]].disabled = !passEnabled;
-		}
+		var row = document.getElementById("passCriteriaRow");
+		if(row) row.style.display = passEnabled ? "" : "none";
 	}
 
 	addEvent("onload", function() {

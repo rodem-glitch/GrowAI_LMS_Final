@@ -906,7 +906,7 @@
 <!--			<td class="l_th03">토론</td>-->
 <!--			<td class="l_th03">기타</td>-->
 		</tr>
-		<tr align="center">
+		<tr align="center" id="passCriteriaRow" <!--@nif(pass_yn:Y)-->style="display:none"<!--/nif(pass_yn:Y)-->>
 			<td class="l_th02">합격/과락 기준</td>
 			<td class="l_td01">
 				<input type="text" name="limit_progress" value="{{limit_progress}}" class="ipt_right nf_100" maxlength="3" size="3"> % 이상 / <span class="fontsmall">100%</span>
@@ -964,6 +964,33 @@
 	</tr>
 </tr>
 </table>
+
+<script>
+// 왜: "합격 상태 사용"이 OFF이면(=수료/미수료 2단계만 사용),
+// "합격/과락 기준(limit_*)"은 실제 판정에 쓰이지 않아 지금 화면에서는 필요가 없습니다.
+// 그래서 OFF일 때는 해당 입력 구간을 숨겨서, 관리자가 꼭 필요한 값만 보도록 합니다.
+(function() {
+	function togglePassCriteriaRow() {
+		var passEnabled = false;
+		try {
+			passEnabled = $("input[name='pass_yn']").is(":checked");
+		} catch(e) {
+			var f = document.forms['form1'];
+			if(f && f['pass_yn']) passEnabled = !!f['pass_yn'].checked;
+		}
+
+		var row = document.getElementById("passCriteriaRow");
+		if(row) row.style.display = passEnabled ? "" : "none";
+	}
+
+	addEvent("onload", function() {
+		try {
+			$("input[name='pass_yn']").on("change", togglePassCriteriaRow);
+		} catch(e) {}
+		togglePassCriteriaRow();
+	});
+}());
+</script>
 </div>
 
 <table class="c_tb01" cellpadding="0" cellspacing="0" style="margin-top:10px">
