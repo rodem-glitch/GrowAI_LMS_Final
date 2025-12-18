@@ -12,7 +12,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="px-8 py-4">
           <div className="flex items-center">
             {/* Logo */}
@@ -31,7 +31,7 @@ export default function App() {
 
       <div className="flex">
         {/* Left Navigation Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-88px)]">
+        <aside className="w-64 bg-white border-r border-gray-200 sticky top-[88px] h-[calc(100vh-88px)] overflow-y-auto">
           <nav className="p-4 flex flex-col gap-2">
             <button
               onClick={() => setActiveMenu('dashboard')}
