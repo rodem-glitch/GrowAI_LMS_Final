@@ -50,50 +50,17 @@ if(m.isPost() && "save".equals(m.rs("mode"))) {
 	courseUser.item("homework_score", Math.min(cuinfo.d("assign_homework"), m.parseDouble(m.rs("homework_score"))));
 	courseUser.item("forum_score", Math.min(cuinfo.d("assign_forum"), m.parseDouble(m.rs("forum_score"))));
 	*/
-	// 왜: 기타 점수는 "직접 입력"이라 저장 즉시 총점/수료(합격) 판정이 다시 계산되어야 합니다.
-	// 또한 assign_etc(기타 배점)가 0인 과목도 있을 수 있으니 0으로 나누지 않게 방어합니다.
-	double inputEtcScore = m.parseDouble(m.rs("etc_score"));
-	double etcScore = Math.min(cuinfo.d("assign_etc"), inputEtcScore);
-	double etcValue = 0.0;
-	if(cinfo.i("assign_etc") > 0) etcValue = m.round(etcScore * 100 / cinfo.i("assign_etc"), 2);
+	double etcValue = m.round(m.parseDouble(m.rs("etc_score")) * 100 / cinfo.i("assign_etc"), 2);
+	double etcScore = Math.min(cuinfo.d("assign_etc"), m.parseDouble(m.rs("etc_score")));
 	courseUser.item("etc_value", etcValue);
 	courseUser.item("etc_score", etcScore);
 	if(!courseUser.update("id = " + cuid + " AND course_id = " + courseId + " AND user_id = " + uid + "")) {
 		m.js("parent.LayerAlert('" + cuinfo.s("user_nm") + " (" + cuinfo.s("login_id") + ") 수강생의 기타점수를 저장하는 중 오류가 발생했습니다.', 'red');");
 	} else {
-		// 총점/수료(합격) 판정 재계산(왜: 점수만 바뀌고 상태가 안 바뀌면 증명서/수료처리가 꼬입니다)
-		courseUser.updateTotalScore(cuid);
-		courseUser.completeUser(cuid);
-
-		DataSet updated = courseUser.find("id = " + cuid + " AND course_id = " + courseId + " AND user_id = " + uid + "");
-		String totalScoreConv = "";
-		String statusConv = "";
-		if(updated.next()) {
-			totalScoreConv = String.format("%.2f", updated.d("total_score"));
-
-			// 화면의 "상태"도 즉시 갱신(왜: 새로고침을 안 하면 사용자가 변경을 못 느끼는 문제가 자주 발생합니다)
-			String status = "-";
-			if(updated.b("close_yn")) status = "마감";
-			else if(!"".equals(updated.s("complete_yn")) && updated.b("complete_yn")) status = "수료";
-			else if(!"".equals(updated.s("complete_yn")) && !updated.b("complete_yn")) status = "미수료";
-			else if("".equals(updated.s("complete_yn"))) {
-				if(0 > m.diffDate("D", updated.s("start_date"), today)) status = "대기중";
-				else if(0 < m.diffDate("D", updated.s("end_date"), today)) status = "학습종료";
-				else status = "학습중";
-			}
-			statusConv = status;
-		}
-
-		m.js(
-			"parent.LayerAlert('"
-			+ cuid + "번 " + cuinfo.s("user_nm") + " (" + cuinfo.s("login_id") + ") 수강생의 기타점수를 " + String.format("%.2f", etcScore) + "점으로 저장했습니다."
-			+ "', 'green');"
-			+ " parent.document.getElementById('etc_score_" + cuinfo.i("id") + "').value = '" + String.format("%.2f", etcScore) + "';"
-			+ ( !"".equals(totalScoreConv) ? " if(parent.document.getElementById('total_score_" + cuinfo.i("id") + "')) parent.document.getElementById('total_score_" + cuinfo.i("id") + "').innerHTML = '" + totalScoreConv + "';" : "" )
-			+ ( !"".equals(statusConv) ? " if(parent.document.getElementById('status_conv_" + cuinfo.i("id") + "')) parent.document.getElementById('status_conv_" + cuinfo.i("id") + "').innerHTML = '" + statusConv + "';" : "" )
-		);
+		m.js("parent.LayerAlert('" + cuid + "번 " + cuinfo.s("user_nm") + " (" + cuinfo.s("login_id") + ") 수강생의 기타점수를 " + String.format("%.2f", etcScore) + "점으로 저장했습니다.', 'green'); parent.document.getElementById('etc_score_" + cuinfo.i("id") + "').value = '" + String.format("%.2f", etcScore) + "';");
 	}
 
+	courseUser.updateTotalScore(cuid);
 	//m.jsAlert("저장되었습니다.");
 	//m.jsReplace("result_list.jsp?" + m.qs("id,mode,cuid"), "parent");
 	return;
@@ -117,8 +84,6 @@ if(m.isPost() && "save".equals(m.rs("mode"))) {
 	cuinfo.first();
 	cinfo.first();
 	if(!courseUser.updateUserScore(cuinfo, cinfo)) { m.jsAlert("성적을 처리하는 중 오류가 발생했습니다."); return; }
-	// 왜: 점수(총점)가 바뀌면 수료/합격 판정도 같이 바뀔 수 있으므로, 판정값도 함께 갱신합니다.
-	courseUser.completeUser(cuid);
 	m.jsAlert("처리되었습니다.");
 	m.jsReplace("result_list.jsp?" + m.qs("id,mode,cuid"), "parent");
 	return;
@@ -140,11 +105,7 @@ if(m.isPost() && "save".equals(m.rs("mode"))) {
 		temp.first();
 		cinfo.first();
 
-		if(courseUser.updateUserScore(temp, cinfo)) {
-			// 왜: 점수(총점)가 바뀌면 수료/합격 판정도 같이 바뀔 수 있으므로, 판정값도 함께 갱신합니다.
-			courseUser.completeUser(cuinfo.i("id"));
-			result++;
-		}
+		if(courseUser.updateUserScore(temp, cinfo)) result++;
 	}
 	m.jsAlert(result + "건이 처리되었습니다.");
 	m.jsReplace("result_list.jsp?" + m.qs("id,mode,cuid"), "parent");
