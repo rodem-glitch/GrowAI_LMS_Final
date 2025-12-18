@@ -74,6 +74,105 @@ while(rs.next()) {
 StringBuilder sb = new StringBuilder();
 createList(subset, sb, "_root_", 1);
 
+// [중요] 과정 카테고리 ↔ 상단 메뉴 연동
+// - sysop의 과정카테고리(= LM_CATEGORY)를 수정하면, 프론트 상단/모바일 메뉴도 같이 바뀌는 게 자연스럽습니다.
+// - 그런데 현재 사용 중인 `top_v5.html`(커스텀 헤더)에는 과정 메뉴 링크(`cid=...`)와 문구가 하드코딩되어 있어서,
+//   카테고리를 추가/삭제/이름변경/정렬해도 프론트 메뉴가 절대 자동으로 맞춰지지 않습니다.
+// - 그래서 여기서 DB 카테고리를 읽어서, 템플릿에 그대로 꽂아 넣을 수 있는 HTML 조각을 만들어 내려줍니다.
+DataSet courseCats = category.find(
+	"module = 'course' AND depth IN (1, 2) AND display_yn = 'Y' AND status = 1 AND site_id = " + siteId
+	, "id, parent_id, category_nm, depth, sort"
+	, "depth ASC, parent_id ASC, sort ASC"
+);
+
+DataSet courseDepth1 = new DataSet();
+HashMap<Integer, DataSet> courseChildrenMap = new HashMap<Integer, DataSet>();
+while(courseCats.next()) {
+	int depth = courseCats.i("depth");
+	if(depth == 1) {
+		courseDepth1.addRow(courseCats.getRow());
+	} else if(depth == 2) {
+		int parentId = courseCats.i("parent_id");
+		if(!courseChildrenMap.containsKey(parentId)) courseChildrenMap.put(parentId, new DataSet());
+		courseChildrenMap.get(parentId).addRow(courseCats.getRow());
+	}
+}
+courseDepth1.first();
+
+StringBuilder courseMainMenuBefore = new StringBuilder();
+StringBuilder courseMainMenuAfter = new StringBuilder();
+StringBuilder courseMobileMenuBefore = new StringBuilder();
+StringBuilder courseMobileMenuAfter = new StringBuilder();
+
+int courseTopIndex = 0;
+while(courseDepth1.next()) {
+	courseTopIndex++;
+	int categoryId = courseDepth1.i("id");
+	String categoryName = courseDepth1.s("category_nm");
+	String categoryCh = "course" + categoryId;
+
+	StringBuilder mainItem = new StringBuilder();
+	mainItem.append("<li><a href=\"/course/course_list.jsp?cid=");
+	mainItem.append(categoryId);
+	mainItem.append("&ch=");
+	mainItem.append(categoryCh);
+	mainItem.append("\" target=\"_self\">");
+	mainItem.append(categoryName);
+	mainItem.append("</a></li>\n");
+
+	DataSet children = courseChildrenMap.get(categoryId);
+	boolean hasChildren = (children != null && children.size() > 0);
+
+	StringBuilder mobileItem = new StringBuilder();
+	if(hasChildren) {
+		mobileItem.append("<li class=\"li-sub-menu\"><a href=\"#none\" target=\"_self\">");
+		mobileItem.append(categoryName);
+		mobileItem.append("\n");
+		mobileItem.append("    <span class=\"line\"></span>\n");
+		mobileItem.append("    <span class=\"line1\"></span>\n");
+		mobileItem.append("</a>\n");
+		mobileItem.append("    <ul class=\"util_toggle_btn-menu-in\">\n");
+		mobileItem.append("        <li><a href=\"/course/course_list.jsp?cid=");
+		mobileItem.append(categoryId);
+		mobileItem.append("&ch=");
+		mobileItem.append(categoryCh);
+		mobileItem.append("\" target=\"_self\">전체</a></li>\n");
+
+		children.first();
+		while(children.next()) {
+			mobileItem.append("        <li><a href=\"/course/course_list.jsp?cid=");
+			mobileItem.append(children.i("id"));
+			mobileItem.append("&ch=");
+			// 하위 카테고리에서도 '상위 카테고리 전용 레이아웃'을 그대로 쓰고 싶을 때가 많아서
+			// ch는 상위(1depth) 카테고리 기준으로 유지합니다.
+			mobileItem.append(categoryCh);
+			mobileItem.append("\" target=\"_self\">");
+			mobileItem.append(children.s("category_nm"));
+			mobileItem.append("</a></li>\n");
+		}
+		mobileItem.append("    </ul>\n");
+		mobileItem.append("</li>\n");
+	} else {
+		mobileItem.append("<li><a href=\"/course/course_list.jsp?cid=");
+		mobileItem.append(categoryId);
+		mobileItem.append("&ch=");
+		mobileItem.append(categoryCh);
+		mobileItem.append("\" target=\"_self\">");
+		mobileItem.append(categoryName);
+		mobileItem.append("</a></li>\n");
+	}
+
+	// 디자인상 'VIRTUAL CLASS'를 2번째에 고정해두고 싶어서,
+	// 첫 번째 과정 카테고리만 Before에 두고 나머지는 After로 분리합니다.
+	if(courseTopIndex == 1) {
+		courseMainMenuBefore.append(mainItem);
+		courseMobileMenuBefore.append(mobileItem);
+	} else {
+		courseMainMenuAfter.append(mainItem);
+		courseMobileMenuAfter.append(mobileItem);
+	}
+}
+
 //최근로그인시간
 DataSet ullist = userLogin.find("site_id = " + siteId + " AND user_id = " + userId + " AND login_type = 'I'", "reg_date", "reg_date DESC");
 int cnt = 1;
@@ -89,6 +188,10 @@ while (ullist.next()){
 p.setLayout(null);
 p.setBody("layout.top_v5");
 p.setVar("gnb_menu", sb.toString());
+p.setVar("course_main_menu_before_html", courseMainMenuBefore.toString());
+p.setVar("course_main_menu_after_html", courseMainMenuAfter.toString());
+p.setVar("course_mobile_menu_before_html", courseMobileMenuBefore.toString());
+p.setVar("course_mobile_menu_after_html", courseMobileMenuAfter.toString());
 p.setVar("recent_login_time", !"".equals(recentLoginTime)? recentLoginTime : "없음");
 p.setLoop("top_menu", list);
 p.display();

@@ -1,2 +1,17 @@
 [2025-12-18 09:54:11] {Template.readFile} path:c:\home\lms\public_html\html\page\certificate.html
 [2025-12-18 09:54:17] {Template.readFile} path:c:\home\lms\public_html\html\page\certificate.html
+[2025-12-18 12:29:39] at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=, content2_title=학습목표, mod_date=20251218122939} (Unknown column 'mod_date' in 'field list')at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=, content2_title=학습목표, mod_date=20251218122939} (Unknown column 'mod_date' in 'field list')
+[2025-12-18 12:29:41] at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=sfsd, content2_title=학습목표, mod_date=20251218122941} (Unknown column 'mod_date' in 'field list')at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=sfsd, content2_title=학습목표, mod_date=20251218122941} (Unknown column 'mod_date' in 'field list')
+[2025-12-18 12:29:42] at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=sfsd, content2_title=학습목표, mod_date=20251218122942} (Unknown column 'mod_date' in 'field list')at /tutor_0lms/api/course_0info_0update.jsp
+{DB.execute} UPDATE LM_COURSE SET content2=?,content1_title=?,content1=?,content2_title=?,mod_date=? WHERE id = 471 AND site_id = 1 AND status != -1 => Unknown column 'mod_date' in 'field list'
+{content2=ssdfsd, content1_title=과목소개, content1=sfsd, content2_title=학습목표, mod_date=20251218122942} (Unknown column 'mod_date' in 'field list')

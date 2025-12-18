@@ -108,9 +108,9 @@ $(function() {
                                     <li><a href="/mypage/certificate_list.jsp" target="_self">증명서발급</a></li>
                                 </ul>
                             </li>
-                            <li><a href="/course/course_list.jsp?cid=146" target="_self">CLASSROOM</a></li>
+                            {{course_mobile_menu_before_html}}
                             <li><a href="https://xrclass.co.kr/" target="_blank">VIRTUAL CLASS</a></li>
-                            <li><a href="/course/course_list.jsp?cid=173" target="_self">프리클래스</a></li>
+                            {{course_mobile_menu_after_html}}
                             <!--<li><a href="/main/page.jsp?code=virtualclass" target="_self">VIRTUAL CLASS</a></li>-->
                             <!--<li class="li-sub-menu"><a href="#none" target="_self">CLASSROOM
                                 <span class="line"></span>
@@ -123,34 +123,6 @@ $(function() {
                                     <li><a href="/course/course_list.jsp?cid=149" target="_self">Polytech Classroom</a></li>
                                 </ul>
                             </li>-->
-                            <li class="li-sub-menu"><a href="#none" target="_self">폴리텍 콘텐츠
-                                <span class="line"></span>
-                                <span class="line1"></span>
-                            </a>
-                                <ul class="util_toggle_btn-menu-in">
-                                    <li><a href="/course/course_list.jsp?cid=133" target="_self">전체</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=158" target="_self">기계</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=159" target="_self">기계설계</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=160" target="_self">금형</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=161" target="_self">전기</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=162" target="_self">전자</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=141" target="_self">정보통신 IT</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=164" target="_self">자동화</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=165" target="_self">자동차</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=166" target="_self">신소재</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=163" target="_self">산업설비</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=167" target="_self">미디어</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=143" target="_self">디자인</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=142" target="_self">바이오</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=168" target="_self">섬유패션</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=169" target="_self">개별특성화</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=140" target="_self">교양</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=170" target="_self">반도체</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=171" target="_self">로봇</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=172" target="_self">항공</a></li>
-                                    <li><a href="/course/course_list.jsp?cid=144" target="_self">기타</a></li>
-                                </ul>
-                            </li>
                             <!--<li><a href="#none" target="_self">AX Classroom</a></li>-->
                             <li class="li-sub-menu"><a href="#none" target="_self">전자도서관
                                 <span class="line"></span>
@@ -283,13 +255,12 @@ $(function() {
                     <!--<a href="/mypage/index.jsp" title="마이페이지로 이동"><img src="/html/images/demo/logo_lms.png" alt="한국 폴리텍대학 학습관리시스템 로고" /></a>-->
 				</h1>
 
-                <div class="main_menu_wrap">
+				<div class="main_menu_wrap">
 					<ul class="main_menu mm01">
-                        <li><a href="/course/course_list.jsp?cid=146&ch=course146" target="_self">CLASSROOM</a></li>
+                        {{course_main_menu_before_html}}
                         <li><a href="https://xrclass.co.kr/" target="_blank">VIRTUAL CLASS</a></li>
-                        <li><a href="/course/course_list.jsp?cid=173&ch=course173" target="_self">프리클래스</a></li>
+                        {{course_main_menu_after_html}}
                         <!--<li><a href="/main/page.jsp?code=virtualclass" target="_self">VIRTUAL CLASS</a></li>-->
-						<li><a href="/course/course_list.jsp?cid=133" target="_self">폴리텍 콘텐츠</a></li>
 						<!--<li><a href="#none" target="_self">AX Classroom</a></li>-->
                         <li><a href="#none">전자도서관</a>
                             <div id="sub_menu">

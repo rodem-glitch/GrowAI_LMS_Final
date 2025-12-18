@@ -58,6 +58,11 @@ info.put("pers_no", SimpleAES.encrypt(info.s("pers_no"), ssoKey));
     <input type="hidden" name="encrypted" value="Y">
     <input type="hidden" name="ek" value="<%= ek %>">
     <input type="hidden" name="login_id" value="<%= info.s("user_id") %>">
+    <%-- 왜: 폴리텍 SSO 세션에는 사용자ID(user_id)와 학번/사번(pers_no)이 같이 들어옵니다.
+         그런데 기존에 관리자에서 '학번'으로 회원을 만들어둔 경우, login_id가 pers_no라서 SSO(user_id)로는 매칭이 안 되어
+         "회원 정보가 없습니다/등록된 회원이 아닙니다"가 뜰 수 있습니다.
+         아래처럼 pers_no도 같이 전달해두면, slogn.jsp에서 보조키로 찾아서 로그인/동기화가 가능해집니다. --%>
+    <input type="hidden" name="pers_no" value="<%= info.s("pers_no") %>">
     <%--<input type="hidden" name="dept_cd" value="<%= info.s("dept_cd") %>">--%>
 </form>
 </body>

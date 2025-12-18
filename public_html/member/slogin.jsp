@@ -21,13 +21,16 @@ UserDeptDao userDept = new UserDeptDao();
 UserLoginDao userLogin = new UserLoginDao();
 
 //변수
-String lid, userNm, email, mobile, zipcode, addr, newAddr, addrDtl, deptId, deptCd, gender, birthday, returl, etc1, etc2, etc3; 
+String lid, persNo, userNm, email, mobile, zipcode, addr, newAddr, addrDtl, deptId, deptCd, gender, birthday, returl, etc1, etc2, etc3; 
 String now = m.time("yyyyMMddHHmmss");
 String log = f.data.toString() + "\n";
 
 if("Y".equals(f.get("encrypted"))) {
 	String ssokey = siteinfo.s("sso_key");
 	lid = SimpleAES.decrypt(f.get("login_id"), ssokey);
+	//왜: SSO는 login_id(user_id) 외에도 학번/사번(pers_no)을 같이 내려주는데,
+	//    기존 회원이 '학번'으로 생성되어 있으면 login_id로는 매칭이 안 될 수 있어 보조키로 받아둡니다.
+	persNo = !"".equals(f.get("pers_no")) ? SimpleAES.decrypt(f.get("pers_no"), ssokey) : "";
 	userNm = SimpleAES.decrypt(f.get("user_nm"), ssokey);
 	email = !"".equals(f.get("email")) ? SimpleAES.decrypt(f.get("email"), ssokey) : "";
 	mobile = !"".equals(f.get("mobile")) ? SimpleAES.decrypt(f.get("mobile"), ssokey) : "";
@@ -47,6 +50,7 @@ if("Y".equals(f.get("encrypted"))) {
 	log += "{AES} ";
 } else {
 	lid = f.get("login_id"); 
+	persNo = f.get("pers_no");
 	userNm = f.get("user_nm");
 	email = f.get("email");
 	mobile = f.get("mobile");
@@ -66,7 +70,7 @@ if("Y".equals(f.get("encrypted"))) {
 	log += "{NORMAL} ";
 }
 
-log += "login_id:" + lid + " / user_nm:" + userNm + " / dept_id:" + deptId + " / dept_cd:" + deptCd + " / etc1:" + etc1;
+log += "login_id:" + lid + " / pers_no:" + persNo + " / user_nm:" + userNm + " / dept_id:" + deptId + " / dept_cd:" + deptCd + " / etc1:" + etc1;
 
 //포맷팅
 birthday = ((birthday == null || 8 != birthday.length()) ? m.time("yyyyMMdd") : m.time("yyyyMMdd", birthday));
@@ -89,8 +93,20 @@ if(!"2".equals(gender)) gender = "1";
 log += " / gender_conv:" + gender;
 
 //정보
+//왜: PLISM SSO는 로그인아이디(user_id)로 넘어오지만, 관리자에서 "학번/사번(pers_no)"로 회원을 만들어 둔 경우가 있습니다.
+//    그때는 login_id로 못 찾아서 '회원 정보가 없습니다/등록된 회원이 아닙니다'가 뜨므로, pers_no도 같이 받아서 보조키로 찾습니다.
 DataSet info = user.find("login_id = ? AND site_id = ?", new Object[] {lid, siteId});
-if(info.next()) {
+boolean found = info.next();
+if(!found && !"".equals(persNo)) {
+	DataSet alt = user.find("login_id = ? AND site_id = ?", new Object[] {persNo, siteId});
+	if(alt.next()) {
+		info = alt;
+		found = true;
+		log += " / matched_by:pers_no";
+	}
+}
+
+if(found) {
 	if(info.i("status") != 1) { m.jsAlert(_message.get("alert.member.suspended_slogin")); return; }
 
 	if(!"".equals(userNm)) user.item("user_nm", userNm);
