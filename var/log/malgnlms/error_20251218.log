@@ -24,3 +24,15 @@
 [2025-12-18 14:47:03] at /member/privacy_0agree.jsp
 {Malgn.mail} mail:sh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] SMS 수신정보가 변경되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)at /member/privacy_0agree.jsp
 {Malgn.mail} mail:sh.kim@newkl.net, subject:[한국폴리텍대학 학습관리시스템] SMS 수신정보가 변경되었습니다. (Could not connect to SMTP host: 127.0.0.1, port: 25)
+[2025-12-18 15:51:56] at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)
+[2025-12-18 15:59:46] at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)
+[2025-12-18 16:00:14] at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)
+[2025-12-18 16:00:27] at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)at /main/poly_0api_0check.jsp
+{Http.send} Connection timed out: connect (Connection timed out: connect)
