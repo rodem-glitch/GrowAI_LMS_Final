@@ -49,6 +49,10 @@ if("cancel".equals(m.rs("mode"))) {
 		m.jsError("제출 취소하는 중 오류가 발생했습니다."); return;
 	}
 
+	//추가 과제/피드백 정보 삭제
+	HomeworkTaskDao homeworkTask = new HomeworkTaskDao();
+	homeworkTask.delete("homework_id = " + hid + " AND course_user_id = " + cuid + "");
+
 	//점수 업데이트
 	courseUser.setCourseUserScore(cuid, "homework");
 
