@@ -357,8 +357,8 @@
 	<!--/nif(course.online_block)-->
 
 	<!--@if(course.online_block)-->
-	<td class="l_td01" align="center">{{list.total_time}}분</td>
-	<td class="l_td01" align="center">{{list.complete_time}}분</td>
+	<td class="l_td01" align="center"><span id="lesson_total_time_{{list.lesson_id}}">{{list.total_time}}분</span></td>
+	<td class="l_td01" align="center"><span id="lesson_complete_time_{{list.lesson_id}}">{{list.complete_time}}분</span></td>
 	<!--@if(course.period_yn)-->
 	<td class="l_td01" align="center" style="line-height:32px;">
 		<!--@nif(list.twoway_block)-->
@@ -509,6 +509,17 @@ function preview(id, width, height) {
 	if(!width) width = 853;
 	if(!height) height = 480;
 	OpenWindow('preview_course_lesson.jsp?cid={{cid}}&lid=' + id, 'CPL77', width, height);
+}
+
+function updateMultiLessonTime(lessonId, totalMin, completeMin) {
+	// 왜: “영상구성(다중영상)” 팝업에서 저장한 뒤에도,
+	//     이 화면을 새로고침/탭이동하지 않고 시간이 바로 보이게 하기 위함입니다.
+	try {
+		var totalEl = document.getElementById("lesson_total_time_" + lessonId);
+		if(totalEl) totalEl.textContent = (parseInt(totalMin, 10) || 0) + "분";
+		var completeEl = document.getElementById("lesson_complete_time_" + lessonId);
+		if(completeEl) completeEl.textContent = (parseInt(completeMin, 10) || 0) + "분";
+	} catch(e) { }
 }
 
 function getIdx() {

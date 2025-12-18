@@ -206,7 +206,24 @@ if(m.isPost()) {
 	courseLesson.update("course_id = " + cid + " AND lesson_id = " + lid);
 
 	m.jsAlert("저장되었습니다.");
-	m.jsReplace("lesson_video.jsp?" + m.qs("mode"));
+
+	//왜: 서브영상이 0개(다중영상 해제)면 강의목차 화면에서는 '메인(부모) 차시' 시간이 보여야 합니다.
+	//    또한 다중영상이어도 합산 시간이 0이면(데이터 미입력 등) 기존 화면 로직과 동일하게 부모 시간을 유지합니다.
+	//    그래서 opener에는 “강의목차에서 실제로 보일 값”으로 보내서 즉시 갱신 시 0분으로 보이는 문제를 막습니다.
+	int displayTotalMin = totalMin > 0 ? totalMin : linfo.i("total_time");
+	int displayCompleteMin = completeMin > 0 ? completeMin : linfo.i("complete_time");
+
+	// 왜: 이 페이지의 POST는 target="sysfrm"(iframe)로 보내기 때문에,
+	//     기본 jsReplace()를 쓰면 iframe만 새로고침되어 화면이 갱신되지 않습니다.
+	//     그래서 parent(팝업 본문)를 새로고침하고, opener(강의목차 화면)의 시간도 바로 갱신합니다.
+	m.js(
+		"try {"
+		+ " if(parent.opener && !parent.opener.closed && typeof parent.opener.updateMultiLessonTime === 'function') {"
+		+ "  parent.opener.updateMultiLessonTime(" + lid + ", " + displayTotalMin + ", " + displayCompleteMin + ");"
+		+ " }"
+		+ "} catch(e) {}"
+	);
+	m.jsReplace("lesson_video.jsp?" + m.qs("mode"), "parent");
 	return;
 }
 
