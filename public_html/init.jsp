@@ -78,7 +78,7 @@ Page p = new Page(tplRoot);
 p.setRequest(request);
 p.setPageContext(pageContext);
 p.setWriter(out);
-p.setBaseRoot("C:/Users/newkl/Desktop/MalgnLMS/public_html/html");
+p.setBaseRoot("C:/Users/newkl1/Desktop/MalgnLMS/public_html/html");
 
 //언어
 String sysLocale = "".equals(siteinfo.s("locale")) ? "default" : siteinfo.s("locale");

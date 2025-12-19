@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
 	<env>
-		<docRoot>C:/Users/newkl/Desktop/MalgnLMS/public_html</docRoot>
-		<tplRoot>C:/Users/newkl/Desktop/MalgnLMS/public_html/html</tplRoot>
-		<dataDir>C:/Users/newkl/Desktop/MalgnLMS/public_html/data</dataDir>
+		<docRoot>C:/Users/newkl1/Desktop/MalgnLMS/public_html</docRoot>
+		<tplRoot>C:/Users/newkl1/Desktop/MalgnLMS/public_html/html</tplRoot>
+		<dataDir>C:/Users/newkl1/Desktop/MalgnLMS/public_html/data</dataDir>
 		<dataUrl>/data</dataUrl>
-		<logDir>C:/Users/newkl/Desktop/MalgnLMS/var/log/malgnlms</logDir>
+		<logDir>C:/Users/newkl1/Desktop/MalgnLMS/var/log/malgnlms</logDir>
 		<webUrl>http://politech.malgn.co.kr</webUrl>
-		<fileDir>C:/Users/newkl/Desktop/MalgnLMS/public_html/data/file</fileDir>
+		<fileDir>C:/Users/newkl1/Desktop/MalgnLMS/public_html/data/file</fileDir>
 		<jndi>jdbc/lms</jndi>
 		<mailFrom>127.0.0.1</mailFrom>
 		<was>resin</was>
 		<encoding>utf-8</encoding>
-		<keyFile>C:/Users/newkl/Desktop/MalgnLMS/public_html/WEB-INF/key.dat</keyFile>
+		<keyFile>C:/Users/newkl1/Desktop/MalgnLMS/public_html/WEB-INF/key.dat</keyFile>
 
 		<ownerAccount>lms</ownerAccount>
 		<windowTitle>LMS 호스팅</windowTitle>

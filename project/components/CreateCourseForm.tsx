@@ -114,6 +114,7 @@ function parseTrainingPeriod(input: string) {
 }
 
 export function CreateCourseForm() {
+  const [courseCategory, setCourseCategory] = useState('');
   const [classification, setClassification] = useState('');
   const [courseName, setCourseName] = useState('');
   const [department, setDepartment] = useState('');
@@ -244,6 +245,7 @@ export function CreateCourseForm() {
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
       alert('과정이 개설되었습니다.');
+      setCourseCategory('');
       setClassification('');
       setCourseName('');
       setDepartment('');
@@ -280,7 +282,30 @@ export function CreateCourseForm() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <h3 className="text-gray-900 mb-4">기본 정보</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              과정 유형 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={courseCategory}
+              onChange={(e) => {
+                const newCategory = e.target.value;
+                setCourseCategory(newCategory);
+                // 비정규과정에서 선택 가능한 분류 목록
+                const nonRegularClassifications = ['professional-tech', 'master-craftsman', 'new-seniors', 'high-tech'];
+                // 과정 유형이 변경되고, 현재 선택된 분류가 새 유형에 맞지 않으면 초기화
+                if (newCategory === 'non-regular' && classification && !nonRegularClassifications.includes(classification)) {
+                  setClassification('');
+                }
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">선택하세요</option>
+              <option value="regular" disabled className="text-gray-400">정규과정</option>
+              <option value="non-regular">비정규과정</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm text-gray-700 mb-2">
               과정 분류 <span className="text-red-500">*</span>
             </label>
@@ -288,46 +313,29 @@ export function CreateCourseForm() {
               value={classification}
               onChange={(e) => setClassification(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!courseCategory}
             >
               <option value="">선택하세요</option>
-              <option value="degree-major">학위전공</option>
-              <option value="degree-major-advanced">학위전공심화</option>
-              <option value="professional-tech">전문기술</option>
-              <option value="high-tech">하이테크</option>
-              <option value="master-craftsman">기능장</option>
-              <option value="high-school-consignment">고교위탁</option>
-              <option value="new-seniors">신중년</option>
+              {courseCategory === 'regular' && (
+                <>
+                  <option value="degree-major">학위전공</option>
+                  <option value="degree-major-advanced">학위전공심화</option>
+                  <option value="professional-tech">전문기술</option>
+                  <option value="high-tech">하이테크</option>
+                  <option value="master-craftsman">기능장</option>
+                  <option value="high-school-consignment">고교위탁</option>
+                  <option value="new-seniors">신중년</option>
+                </>
+              )}
+              {courseCategory === 'non-regular' && (
+                <>
+                  <option value="professional-tech">전문기술</option>
+                  <option value="master-craftsman">기능장</option>
+                  <option value="new-seniors">신중년</option>
+                  <option value="high-tech">하이테크</option>
+                </>
+              )}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">과정명</label>
-            <input
-              type="text"
-              value={courseName}
-              onChange={(e) => setCourseName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="과정명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">계열</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="계열을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">전공</label>
-            <input
-              type="text"
-              value={major}
-              onChange={(e) => setMajor(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="전공을 입력하세요"
-            />
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-2">학과명</label>
@@ -337,6 +345,26 @@ export function CreateCourseForm() {
               onChange={(e) => setDepartmentName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="학과명을 입력하세요"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">전공/직종</label>
+            <input
+              type="text"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="전공/직종을 입력하세요"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정명</label>
+            <input
+              type="text"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="과정명을 입력하세요"
             />
           </div>
         </div>
