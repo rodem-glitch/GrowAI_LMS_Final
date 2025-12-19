@@ -33,12 +33,14 @@ if("del".equals(m.rs("mode"))) {
 		m.jsAlert("해당 시험이 삭제되면 배점비율과 각 시험의 배점합이 맞지 않게 됩니다. 배점을 0으로 수정한 다음 삭제해야 합니다."); return;
 	}
 
-	//제한
-	if(0 < examUser.findCount("exam_id = " + id + " AND course_id = " + courseId + "")) {
-		m.jsAlert("응시내역이 있습니다. 삭제할 수 없습니다."); return;
-	}
+	//삭제-응시결과
+	ExamResultDao examResult = new ExamResultDao();
+	examResult.delete("exam_id = " + id + " AND course_id = " + courseId);
 
-	//삭제
+	//삭제-응시내역
+	examUser.delete("exam_id = " + id + " AND course_id = " + courseId);
+
+	//삭제-과목모듈
 	if(!courseModule.delete("course_id = " + courseId + " AND module = 'exam' AND module_id = " + id + "")) {
 		m.jsAlert("삭제하는 중 오류가 발생했습니다."); return;
 	}
