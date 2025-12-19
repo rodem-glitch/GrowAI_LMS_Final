@@ -565,7 +565,7 @@ function BasicInfoStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-700 mb-2">년도/학기</label>
           <div className="flex gap-2">
@@ -593,16 +593,6 @@ function BasicInfoStep({
             value={formData.hours}
             onChange={(e) => updateFormData({ hours: e.target.value })}
             placeholder="48"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">학점</label>
-          <input
-            type="number"
-            value={formData.credits}
-            onChange={(e) => updateFormData({ credits: e.target.value })}
-            placeholder="3"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

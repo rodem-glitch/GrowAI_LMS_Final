@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Info, BookOpen, ChevronRight, Search, Eye, X } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 import { OperationalPlan } from './OperationalPlan';
+import { CreateSubjectWizard } from './CreateSubjectWizard';
 
 interface CurriculumItem {
   id: string;
@@ -1015,9 +1016,33 @@ function SubjectsStep({
 }) {
   const [activeTab, setActiveTab] = React.useState<'haksa' | 'plism'>('haksa');
   const [detailSubject, setDetailSubject] = React.useState<Subject | null>(null);
+  const [showNewSubjectForm, setShowNewSubjectForm] = React.useState(false);
 
   return (
     <>
+      {/* 신규 과목 개설 전체 화면 */}
+      {showNewSubjectForm && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* 상단 액션 바 */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shadow-sm">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowNewSubjectForm(false)}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+                <span>닫기</span>
+              </button>
+              <span className="text-gray-400">|</span>
+              <h2 className="text-lg font-semibold text-gray-900">소속 과목 신규 개설</h2>
+            </div>
+          </div>
+          {/* CreateSubjectWizard 표시 */}
+          <div className="p-6">
+            <CreateSubjectWizard />
+          </div>
+        </div>
+      )}
       {/* 상세보기: 운영계획서 전체 화면 */}
       {detailSubject && (
         <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
@@ -1114,10 +1139,7 @@ function SubjectsStep({
           <h3 className="text-gray-900">과목 검색</h3>
           <button
             type="button"
-            onClick={() => {
-              // TODO: 신규 개설 화면 연결 예정
-              alert('신규 개설 화면은 추후 연결 예정입니다.');
-            }}
+            onClick={() => setShowNewSubjectForm(true)}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -1159,60 +1181,11 @@ function SubjectsStep({
             <p className="text-sm mt-2">추후 생성 예정입니다.</p>
           </div>
         ) : (
-          <>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="과목명으로 검색..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>과목 목록을 불러오는 중...</p>
-              </div>
-            ) : availableSubjects.length > 0 ? (
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {availableSubjects.map((subject) => (
-                  <div
-                    key={subject.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{subject.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {subject.year} {subject.semester} {subject.credits && `• ${subject.credits}학점`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setDetailSubject(subject)}
-                        className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        <span>상세보기</span>
-                      </button>
-                      <button
-                        onClick={() => addSubject(subject)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>추가</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>검색 결과가 없습니다.</p>
-              </div>
-            )}
-          </>
+          <div className="text-center py-12 text-gray-500">
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium text-gray-600">PLISM 과목 검색</p>
+            <p className="text-sm mt-2">추후 생성 예정입니다.</p>
+          </div>
         )}
       </div>
     </div>

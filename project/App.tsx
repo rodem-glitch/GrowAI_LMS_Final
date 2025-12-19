@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { GraduationCap, BookOpen, FolderPlus, FileText, Compass, ChevronDown, ChevronRight } from 'lucide-react';
+import { GraduationCap, BookOpen, FolderPlus, Compass, ChevronDown, ChevronRight } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
-import { CreateSubjectWizard } from './components/CreateSubjectWizard';
 import { CourseExplorer } from './components/CourseExplorer';
 import { Dashboard } from './components/Dashboard';
 
@@ -11,7 +10,7 @@ export default function App() {
   const [exploreExpanded, setExploreExpanded] = useState(false);
 
   // 과정탐색 하위 메뉴 여부 확인
-  const isExploreSubMenu = activeMenu === 'explore-haksa' || activeMenu === 'explore-plism';
+  const isExploreSubMenu = activeMenu === 'explore-haksa' || activeMenu === 'explore-plism' || activeMenu === 'explore-haksa-subject';
 
   const handleExploreClick = () => {
     // 과정탐색 클릭 시 펼침/접힘 토글 및 학사를 디폴트로 선택
@@ -92,7 +91,7 @@ export default function App() {
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    <span>학사</span>
+                    <span>PLISM(과목)</span>
                   </button>
                   <button
                     onClick={() => setActiveMenu('explore-plism')}
@@ -103,7 +102,18 @@ export default function App() {
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                    <span>PLISM</span>
+                    <span>학사(과정)</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu('explore-haksa-subject')}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
+                      activeMenu === 'explore-haksa-subject'
+                        ? 'bg-blue-100 text-blue-700 font-medium'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span>학사(과목)</span>
                   </button>
                 </div>
               )}
@@ -131,17 +141,6 @@ export default function App() {
               <FolderPlus className="w-5 h-5" />
               <span>과정개설</span>
             </button>
-            <button
-              onClick={() => setActiveMenu('create-subject')}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                activeMenu === 'create-subject'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <FileText className="w-5 h-5" />
-              <span>과목개설</span>
-            </button>
           </nav>
         </aside>
 
@@ -161,12 +160,18 @@ export default function App() {
               </div>
             ) : activeMenu === 'explore-plism' ? (
               <CourseExplorer />
+            ) : activeMenu === 'explore-haksa-subject' ? (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
+                <div className="text-gray-400">
+                  <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium text-gray-600">학사 과목탐색</p>
+                  <p className="text-sm mt-2">추후 생성 예정입니다.</p>
+                </div>
+              </div>
             ) : activeMenu === 'courses' ? (
               <MyCoursesList />
             ) : activeMenu === 'create-course' ? (
               <CreateCourseForm />
-            ) : activeMenu === 'create-subject' ? (
-              <CreateSubjectWizard />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
                 <div className="text-gray-400">
