@@ -83,6 +83,7 @@ if(m.isPost() && f.validate()) {
 		m.jsAlert(_message.get("alert.common.error_modify")); return;
 	}
 
+	m.jsAlert("제출이 완료되었습니다.");
 	m.jsReplace("homework_task_view.jsp?cuid=" + cuid + "&hid=" + hid + "&tid=" + tid, "parent");
 	return;
 }

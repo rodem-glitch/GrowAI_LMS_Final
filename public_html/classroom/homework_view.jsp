@@ -111,6 +111,7 @@ if(m.isPost() && f.validate()) {
 		courseUser.updateTotalScore(cuid);					//총점 업데이트
 	}
 
+	m.jsAlert("제출이 완료되었습니다.");
 	m.jsReplace("homework.jsp?" + m.qs("id"), "parent");
 	return;
 }
