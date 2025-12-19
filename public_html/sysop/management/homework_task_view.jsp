@@ -182,6 +182,44 @@ if(m.isPost()) {
 			homeworkTask.item("mod_date", now);
 			if(!homeworkTask.update("id = " + tid + "")) { m.jsError("피드백 저장 중 오류가 발생했습니다."); return; }
 
+			//다음 추가과제 함께 부여 (next_task가 있으면)
+			String nextTask = f.get("next_task");
+			if(nextTask != null && !"".equals(nextTask.trim())) {
+				//왜: base64 이미지 차단
+				if(-1 < nextTask.indexOf("<img") && -1 < nextTask.indexOf("data:image/") && -1 < nextTask.indexOf("base64")) {
+					m.jsAlert("다음 추가과제에 이미지는 첨부파일 기능으로 업로드해 주세요.");
+					return;
+				}
+				int nextBytes = nextTask.replace("\r\n", "\n").getBytes("UTF-8").length;
+				if(60000 < nextBytes) { m.jsAlert("다음 추가과제 내용은 60000바이트를 초과할 수 없습니다.\\n(현재 " + nextBytes + "바이트)"); return; }
+
+				int newId = homeworkTask.getSequence();
+				homeworkTask.item("id", newId);
+				homeworkTask.item("site_id", siteId);
+				homeworkTask.item("course_id", courseId);
+				homeworkTask.item("homework_id", hid);
+				homeworkTask.item("course_user_id", cuid);
+				homeworkTask.item("user_id", uinfo.i("user_id"));
+				homeworkTask.item("parent_id", tid);
+				homeworkTask.item("assign_user_id", userId);
+				homeworkTask.item("task", nextTask);
+				homeworkTask.item("submit_yn", "N");
+				homeworkTask.item("confirm_yn", "N");
+				homeworkTask.item("feedback", "");
+				homeworkTask.item("ip_addr", userIp);
+				homeworkTask.item("reg_date", now);
+				homeworkTask.item("mod_date", now);
+				homeworkTask.item("status", 1);
+				if(!homeworkTask.insert()) { m.jsError("다음 추가과제 등록 중 오류가 발생했습니다."); return; }
+
+			//첨부파일 모듈 업데이트 (임시 homework_task_assign_next_tid → 실제 homework_task_assign_newId)
+			file.execute("UPDATE " + file.table + " SET module = 'homework_task_assign_" + newId + "' WHERE module = 'homework_task_assign_next_" + tid + "' AND module_id = " + cuid + "");
+
+				m.jsAlert("피드백을 저장하고 다음 추가과제를 부여했습니다.");
+				m.jsReplace("homework_task_view.jsp?cid=" + courseId + "&hid=" + hid + "&cuid=" + cuid + "&tid=" + newId, "parent");
+				return;
+			}
+
 			m.jsAlert("피드백을 저장했습니다.");
 			m.jsReplace("homework_task_view.jsp?" + m.qs("mode"), "parent");
 			return;

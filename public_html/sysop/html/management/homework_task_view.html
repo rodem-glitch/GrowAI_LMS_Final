@@ -141,6 +141,33 @@
 <!--/if(info.confirm_block)-->
 </table>
 
+<table class="c_tb01" cellpadding="0" cellspacing="0">
+<tr>
+	<td class="c_th01">다음 추가과제 부여 (선택)</td>
+	<td class="c_td01"></td>
+</tr>
+</table>
+
+<table class="f_tb01" cellpadding="0" cellspacing="0" style="table-layout:fixed;">
+<col width="120"><col>
+<tr>
+	<td class="f_th01">과제 내용</td>
+	<td class="f_td01">
+		<textarea name="next_task" style="width:100%; height:150px;" id="next_task"></textarea>
+		<p class="desc01" style="margin-top:6px;">
+			피드백 저장 시 다음 추가과제를 함께 부여하려면 내용을 입력하세요. (비워두면 피드백만 저장됩니다)
+		</p>
+	</td>
+</tr>
+<tr>
+	<td class="f_th01">첨부파일</td>
+	<td class="f_td01">
+		<iframe id="fileupload_next" name="fileupload_next" frameborder="0" src="attach.jsp?md=homework_task_assign_next_{{tid}}&mid={{cuid}}" width="100%" height="130" scrolling="no"></iframe>
+		<p class="desc01">다음 추가과제에 첨부할 파일을 업로드하세요.</p>
+	</td>
+</tr>
+</table>
+
 <table class="b_tb01" cellpadding="0" cellspacing="0">
 <tr>
 	<td></td>
@@ -152,7 +179,7 @@
 		<!--/if(info.confirm_block)-->
 		<!--/if(info.mod_block)-->
 		<!--@nif(info.mod_block)-->
-		<span class="desc01">먼저 ‘추가 과제’를 등록해 주세요.</span>
+		<span class="desc01">먼저 '추가 과제'를 등록해 주세요.</span>
 		<!--/nif(info.mod_block)-->
 	</td>
 </tr>
