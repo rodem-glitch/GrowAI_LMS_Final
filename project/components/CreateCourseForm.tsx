@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Info, BookOpen, ChevronRight, Search } from 'lucide-react';
+import { Plus, Trash2, Save, Info, BookOpen, ChevronRight, Search, Eye, X } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
+import { OperationalPlan } from './OperationalPlan';
 
 interface CurriculumItem {
   id: string;
@@ -33,6 +34,18 @@ interface Subject {
   year: string;
   semester: string;
   credits: string;
+  // OperationalPlan 호환용 필드
+  classification: string;
+  department: string;
+  major: string;
+  departmentName: string;
+  trainingPeriod: string;
+  trainingLevel: string;
+  trainingTarget: string;
+  trainingGoal: string;
+  instructor: string;
+  students: number;
+  subjects: number;
 }
 
 type Step = 'basic' | 'subjects';
@@ -160,15 +173,47 @@ export function CreateCourseForm() {
   const loadAvailableSubjects = async () => {
     setLoadingSubjects(true);
     try {
-      const res = await tutorLmsApi.getCourses({ page: 1, limit: 100 });
+      // PLISM 과정탐색과 동일하게 getPrograms API 사용
+      const res = await tutorLmsApi.getPrograms();
       if (res.rst_code === '0000' && res.rst_data) {
-        const subjects: Subject[] = res.rst_data.map((row: any) => ({
-          id: String(row.id || row.course_id),
-          name: String(row.course_nm || row.name || ''),
-          year: String(row.year || ''),
-          semester: String(row.semester || ''),
-          credits: String(row.credit || ''),
-        }));
+        const subjects: Subject[] = res.rst_data.map((row: any) => {
+          // plan_json 파싱
+          let plan: any = null;
+          try {
+            if (row.plan_json) {
+              plan = JSON.parse(row.plan_json);
+            }
+          } catch {}
+          
+          // 연도 추출
+          let year = '-';
+          const startDate = plan?.training?.startDateYmd || row.start_date || '';
+          if (startDate && startDate.length >= 4) {
+            year = startDate.substring(0, 4);
+          }
+
+          const trainingPeriod = plan?.training?.trainingPeriodText || row.training_period || '-';
+          
+          return {
+            id: String(row.id),
+            name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
+            year,
+            semester: '',
+            credits: '',
+            // OperationalPlan 호환 필드
+            classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
+            department: plan?.basic?.department || '',
+            major: plan?.basic?.major || '',
+            departmentName: plan?.basic?.departmentName || '',
+            trainingPeriod,
+            trainingLevel: plan?.training?.trainingLevel?.label || plan?.training?.trainingLevel?.value || '-',
+            trainingTarget: plan?.training?.trainingTarget || '',
+            trainingGoal: plan?.training?.trainingGoal || '',
+            instructor: plan?.basic?.instructor || '',
+            students: 0,
+            subjects: Number(row.course_cnt ?? 0),
+          };
+        });
         setAvailableSubjects(subjects);
       }
     } catch (e) {
@@ -248,6 +293,11 @@ export function CreateCourseForm() {
   const validateBasicInfo = (): boolean => {
     setErrorMessage(null);
 
+    if (!courseCategory) {
+      setErrorMessage('과정 유형을 선택해 주세요.');
+      return false;
+    }
+
     if (!classification) {
       setErrorMessage('과정 분류를 선택해 주세요.');
       return false;
@@ -255,12 +305,6 @@ export function CreateCourseForm() {
 
     if (!courseName.trim()) {
       setErrorMessage('과정명을 입력해 주세요.');
-      return false;
-    }
-
-    const parsed = parseTrainingPeriod(trainingPeriod);
-    if (!parsed) {
-      setErrorMessage('교육훈련기간을 "YYYY.MM.DD - YYYY.MM.DD" 형식으로 입력해 주세요.');
       return false;
     }
 
@@ -299,11 +343,8 @@ export function CreateCourseForm() {
   const handleSubmit = async () => {
     setErrorMessage(null);
 
+    // 교육훈련기간은 선택사항으로 처리
     const parsed = parseTrainingPeriod(trainingPeriod);
-    if (!parsed) {
-      setErrorMessage('교육훈련기간이 올바르지 않습니다.');
-      return;
-    }
 
     setSaving(true);
     try {
@@ -314,8 +355,8 @@ export function CreateCourseForm() {
         major: major.trim(),
         departmentName: departmentName.trim(),
         trainingPeriodText: trainingPeriod.trim(),
-        startDateYmd: parsed.start,
-        endDateYmd: parsed.end,
+        startDateYmd: parsed?.start || '',
+        endDateYmd: parsed?.end || '',
         trainingLevel,
         trainingTarget: trainingTarget.trim(),
         trainingGoal: trainingGoal.trim(),
@@ -326,8 +367,8 @@ export function CreateCourseForm() {
 
       const res = await tutorLmsApi.createProgram({
         courseName: courseName.trim(),
-        startDate: parsed.start,
-        endDate: parsed.end,
+        startDate: parsed?.start || '',
+        endDate: parsed?.end || '',
         planJson,
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
@@ -972,7 +1013,59 @@ function SubjectsStep({
   loading: boolean;
   courseName: string;
 }) {
+  const [activeTab, setActiveTab] = React.useState<'haksa' | 'plism'>('haksa');
+  const [detailSubject, setDetailSubject] = React.useState<Subject | null>(null);
+
   return (
+    <>
+      {/* 상세보기: 운영계획서 전체 화면 */}
+      {detailSubject && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* 상단 액션 바 */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shadow-sm">
+            <button
+              onClick={() => setDetailSubject(null)}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+              <span>닫기</span>
+            </button>
+            <button
+              onClick={() => {
+                addSubject(detailSubject);
+                setDetailSubject(null);
+              }}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>이 과정 추가</span>
+            </button>
+          </div>
+          {/* 운영계획서 표시 */}
+          <div className="p-6">
+            <OperationalPlan
+              course={{
+                id: detailSubject.id,
+                name: detailSubject.name,
+                classification: detailSubject.classification,
+                department: detailSubject.department,
+                major: detailSubject.major,
+                departmentName: detailSubject.departmentName,
+                trainingPeriod: detailSubject.trainingPeriod,
+                trainingLevel: detailSubject.trainingLevel,
+                trainingTarget: detailSubject.trainingTarget,
+                trainingGoal: detailSubject.trainingGoal,
+                instructor: detailSubject.instructor,
+                year: detailSubject.year,
+                students: detailSubject.students,
+                subjects: detailSubject.subjects,
+              }}
+              onBack={() => setDetailSubject(null)}
+            />
+          </div>
+        </div>
+      )}
+
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800">
@@ -1016,51 +1109,113 @@ function SubjectsStep({
 
       {/* 과목 검색 및 추가 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-gray-900 mb-4">과목 검색</h3>
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="과목명으로 검색..."
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        {/* 헤더: 제목 + 신규 개설 버튼 */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-gray-900">과목 검색</h3>
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: 신규 개설 화면 연결 예정
+              alert('신규 개설 화면은 추후 연결 예정입니다.');
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>신규 개설</span>
+          </button>
         </div>
 
-        {loading ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>과목 목록을 불러오는 중...</p>
-          </div>
-        ) : availableSubjects.length > 0 ? (
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {availableSubjects.map((subject) => (
-              <div
-                key={subject.id}
-                className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{subject.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {subject.year} {subject.semester} {subject.credits && `• ${subject.credits}학점`}
-                  </p>
-                </div>
-                <button
-                  onClick={() => addSubject(subject)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>추가</span>
-                </button>
-              </div>
-            ))}
+        {/* 학사 / PLISM 탭 */}
+        <div className="flex border-b border-gray-200 mb-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('haksa')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'haksa'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            학사
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('plism')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'plism'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            PLISM
+          </button>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        {activeTab === 'haksa' ? (
+          <div className="text-center py-12 text-gray-500">
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium text-gray-600">학사 과목 검색</p>
+            <p className="text-sm mt-2">추후 생성 예정입니다.</p>
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p>검색 결과가 없습니다.</p>
-          </div>
+          <>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="과목명으로 검색..."
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>과목 목록을 불러오는 중...</p>
+              </div>
+            ) : availableSubjects.length > 0 ? (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {availableSubjects.map((subject) => (
+                  <div
+                    key={subject.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{subject.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {subject.year} {subject.semester} {subject.credits && `• ${subject.credits}학점`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDetailSubject(subject)}
+                        className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span>상세보기</span>
+                      </button>
+                      <button
+                        onClick={() => addSubject(subject)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>추가</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>검색 결과가 없습니다.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
+    </>
   );
 }
