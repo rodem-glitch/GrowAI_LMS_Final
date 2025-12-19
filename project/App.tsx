@@ -10,14 +10,18 @@ export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>('dashboard');
   const [exploreExpanded, setExploreExpanded] = useState(false);
 
+  // 과정탐색 하위 메뉴 여부 확인
+  const isExploreSubMenu = activeMenu === 'explore-haksa' || activeMenu === 'explore-plism';
+
   const handleExploreClick = () => {
-    setExploreExpanded(!exploreExpanded);
+    // 과정탐색 클릭 시 펼침/접힘 토글 및 학사를 디폴트로 선택
     if (!exploreExpanded) {
-      setActiveMenu('explore-academic');
+      setExploreExpanded(true);
+      setActiveMenu('explore-haksa');
+    } else {
+      setExploreExpanded(!exploreExpanded);
     }
   };
-
-  const isExploreActive = activeMenu === 'explore-academic' || activeMenu === 'explore-plism';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,18 +59,20 @@ export default function App() {
               <span>대시보드</span>
             </button>
             
-            {/* 과정탐색 메뉴 with 서브메뉴 */}
+            {/* 과정탐색 - 하위 메뉴 포함 */}
             <div>
               <button
                 onClick={handleExploreClick}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                  isExploreActive
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors text-left ${
+                  isExploreSubMenu
                     ? 'bg-blue-600 text-white'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Compass className="w-5 h-5" />
-                <span className="flex-1">과정탐색</span>
+                <div className="flex items-center gap-3">
+                  <Compass className="w-5 h-5" />
+                  <span>과정탐색</span>
+                </div>
                 {exploreExpanded ? (
                   <ChevronDown className="w-4 h-4" />
                 ) : (
@@ -74,18 +80,19 @@ export default function App() {
                 )}
               </button>
               
-              {/* 서브메뉴 */}
+              {/* 하위 메뉴 */}
               {exploreExpanded && (
                 <div className="ml-4 mt-1 flex flex-col gap-1">
                   <button
-                    onClick={() => setActiveMenu('explore-academic')}
+                    onClick={() => setActiveMenu('explore-haksa')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
-                      activeMenu === 'explore-academic'
+                      activeMenu === 'explore-haksa'
                         ? 'bg-blue-100 text-blue-700 font-medium'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
-                    <span>학사정보</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span>학사</span>
                   </button>
                   <button
                     onClick={() => setActiveMenu('explore-plism')}
@@ -95,12 +102,13 @@ export default function App() {
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                     <span>PLISM</span>
                   </button>
                 </div>
               )}
             </div>
-
+            
             <button
               onClick={() => setActiveMenu('courses')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
@@ -143,15 +151,12 @@ export default function App() {
             {/* Empty content area - 추후 추가될 컨텐츠 영역 */}
             {activeMenu === 'dashboard' ? (
               <Dashboard onNavigate={(menu) => setActiveMenu(menu)} />
-            ) : activeMenu === 'explore-academic' ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                <h2 className="text-gray-900 mb-4">학사정보</h2>
-                <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
-                  <div className="text-gray-400">
-                    <Compass className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">학사정보 연동 영역</p>
-                    <p className="text-sm mt-2">추후 학사 시스템 연동 기능이 추가될 예정입니다</p>
-                  </div>
+            ) : activeMenu === 'explore-haksa' ? (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-16 text-center">
+                <div className="text-gray-400">
+                  <Compass className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium text-gray-600">학사 과정탐색</p>
+                  <p className="text-sm mt-2">추후 생성 예정입니다.</p>
                 </div>
               </div>
             ) : activeMenu === 'explore-plism' ? (
