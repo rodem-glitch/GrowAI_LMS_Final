@@ -218,7 +218,7 @@ export function CreateSubjectWizard() {
       return;
     }
     if (!formData.startDate || !formData.endDate) {
-      setErrorMessage('수업시작일과 학습기한을 입력해 주세요.');
+      setErrorMessage('수업시작일과 수업 종료일을 입력해 주세요.');
       return;
     }
 
@@ -565,7 +565,7 @@ function BasicInfoStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-700 mb-2">년도/학기</label>
           <div className="flex gap-2">
@@ -596,35 +596,23 @@ function BasicInfoStep({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">학점</label>
-          <input
-            type="number"
-            value={formData.credits}
-            onChange={(e) => updateFormData({ credits: e.target.value })}
-            placeholder="3"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">수업시작일</label>
+      <div>
+        <label className="block text-sm text-gray-700 mb-2">수업 기간</label>
+        <div className="flex items-center gap-3">
           <input
             type="date"
             value={formData.startDate}
             onChange={(e) => updateFormData({ startDate: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">학습기한</label>
+          <span className="text-gray-500">~</span>
           <input
             type="date"
             value={formData.endDate}
             onChange={(e) => updateFormData({ endDate: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Save, Info, BookOpen, ChevronRight, Search, Eye, X } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
+import { OperationalPlan } from './OperationalPlan';
+import { CreateSubjectWizard } from './CreateSubjectWizard';
 
 interface CurriculumItem {
   id: string;
@@ -26,6 +28,28 @@ interface Evaluation {
   method: string;
   area: string;
 }
+
+interface Subject {
+  id: string;
+  name: string;
+  year: string;
+  semester: string;
+  credits: string;
+  // OperationalPlan 호환용 필드
+  classification: string;
+  department: string;
+  major: string;
+  departmentName: string;
+  trainingPeriod: string;
+  trainingLevel: string;
+  trainingTarget: string;
+  trainingGoal: string;
+  instructor: string;
+  students: number;
+  subjects: number;
+}
+
+type Step = 'basic' | 'subjects';
 
 const CLASSIFICATION_LABELS: Record<string, string> = {
   'degree-major': '학위전공',
@@ -59,8 +83,6 @@ function buildPlanJson(params: {
   teachingPlans: TeachingPlan[];
   evaluations: Evaluation[];
 }) {
-  // 왜: DB에는 "문자열 1개(plan_json)"만 저장하므로, 화면에서 입력한 값을 한 덩어리(JSON)로 묶어
-  //     저장/조회/출력을 항상 같은 규칙으로 처리하기 위함입니다.
   return {
     version: 1,
     basic: {
@@ -96,8 +118,6 @@ function normalizeDateToYmd(input: string) {
 }
 
 function parseTrainingPeriod(input: string) {
-  // 왜: 화면 입력은 "2024.03.01 - 2024.12.31"처럼 사람이 쓰는 형식이라,
-  //     서버로는 항상 yyyyMMdd(숫자 8자리)로 통일해서 보내기 위함입니다.
   const value = input.trim();
   if (!value) return null;
 
@@ -114,6 +134,8 @@ function parseTrainingPeriod(input: string) {
 }
 
 export function CreateCourseForm() {
+  const [currentStep, setCurrentStep] = useState<Step>('basic');
+  const [courseCategory, setCourseCategory] = useState('');
   const [classification, setClassification] = useState('');
   const [courseName, setCourseName] = useState('');
   const [department, setDepartment] = useState('');
@@ -128,6 +150,79 @@ export function CreateCourseForm() {
   const [curriculumItems, setCurriculumItems] = useState<CurriculumItem[]>([]);
   const [teachingPlans, setTeachingPlans] = useState<TeachingPlan[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  
+  // 과목 관련 상태
+  const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
+  const [subjectSearchTerm, setSubjectSearchTerm] = useState('');
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  const steps = [
+    { id: 'basic' as Step, label: '기본 정보', icon: Info },
+    { id: 'subjects' as Step, label: '소속 과목', icon: BookOpen },
+  ];
+
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+
+  // 과목 목록 불러오기
+  useEffect(() => {
+    if (currentStep === 'subjects') {
+      loadAvailableSubjects();
+    }
+  }, [currentStep]);
+
+  const loadAvailableSubjects = async () => {
+    setLoadingSubjects(true);
+    try {
+      // PLISM 과정탐색과 동일하게 getPrograms API 사용
+      const res = await tutorLmsApi.getPrograms();
+      if (res.rst_code === '0000' && res.rst_data) {
+        const subjects: Subject[] = res.rst_data.map((row: any) => {
+          // plan_json 파싱
+          let plan: any = null;
+          try {
+            if (row.plan_json) {
+              plan = JSON.parse(row.plan_json);
+            }
+          } catch {}
+          
+          // 연도 추출
+          let year = '-';
+          const startDate = plan?.training?.startDateYmd || row.start_date || '';
+          if (startDate && startDate.length >= 4) {
+            year = startDate.substring(0, 4);
+          }
+
+          const trainingPeriod = plan?.training?.trainingPeriodText || row.training_period || '-';
+          
+          return {
+            id: String(row.id),
+            name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
+            year,
+            semester: '',
+            credits: '',
+            // OperationalPlan 호환 필드
+            classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
+            department: plan?.basic?.department || '',
+            major: plan?.basic?.major || '',
+            departmentName: plan?.basic?.departmentName || '',
+            trainingPeriod,
+            trainingLevel: plan?.training?.trainingLevel?.label || plan?.training?.trainingLevel?.value || '-',
+            trainingTarget: plan?.training?.trainingTarget || '',
+            trainingGoal: plan?.training?.trainingGoal || '',
+            instructor: plan?.basic?.instructor || '',
+            students: 0,
+            subjects: Number(row.course_cnt ?? 0),
+          };
+        });
+        setAvailableSubjects(subjects);
+      }
+    } catch (e) {
+      console.error('과목 목록 조회 실패:', e);
+    } finally {
+      setLoadingSubjects(false);
+    }
+  };
 
   const addCurriculumItem = () => {
     setCurriculumItems([
@@ -196,25 +291,61 @@ export function CreateCourseForm() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateBasicInfo = (): boolean => {
     setErrorMessage(null);
+
+    if (!courseCategory) {
+      setErrorMessage('과정 유형을 선택해 주세요.');
+      return false;
+    }
 
     if (!classification) {
       setErrorMessage('과정 분류를 선택해 주세요.');
-      return;
+      return false;
     }
 
     if (!courseName.trim()) {
       setErrorMessage('과정명을 입력해 주세요.');
-      return;
+      return false;
     }
 
-    const parsed = parseTrainingPeriod(trainingPeriod);
-    if (!parsed) {
-      setErrorMessage('교육훈련기간을 "YYYY.MM.DD - YYYY.MM.DD" 형식으로 입력해 주세요.');
-      return;
+    return true;
+  };
+
+  const handleNext = () => {
+    if (currentStep === 'basic') {
+      if (!validateBasicInfo()) return;
+      setCurrentStep('subjects');
     }
+  };
+
+  const handlePrev = () => {
+    if (currentStep === 'subjects') {
+      setCurrentStep('basic');
+    }
+  };
+
+  const addSubject = (subject: Subject) => {
+    if (!selectedSubjects.find((s) => s.id === subject.id)) {
+      setSelectedSubjects([...selectedSubjects, subject]);
+    }
+  };
+
+  const removeSubject = (id: string) => {
+    setSelectedSubjects(selectedSubjects.filter((s) => s.id !== id));
+  };
+
+  const filteredSubjects = availableSubjects.filter(
+    (subject) =>
+      subject.name.toLowerCase().includes(subjectSearchTerm.toLowerCase()) &&
+      !selectedSubjects.find((s) => s.id === subject.id)
+  );
+
+  const handleSubmit = async () => {
+    setErrorMessage(null);
+
+    // 교육훈련기간은 선택사항으로 처리
+    const parsed = parseTrainingPeriod(trainingPeriod);
 
     setSaving(true);
     try {
@@ -225,8 +356,8 @@ export function CreateCourseForm() {
         major: major.trim(),
         departmentName: departmentName.trim(),
         trainingPeriodText: trainingPeriod.trim(),
-        startDateYmd: parsed.start,
-        endDateYmd: parsed.end,
+        startDateYmd: parsed?.start || '',
+        endDateYmd: parsed?.end || '',
         trainingLevel,
         trainingTarget: trainingTarget.trim(),
         trainingGoal: trainingGoal.trim(),
@@ -237,25 +368,20 @@ export function CreateCourseForm() {
 
       const res = await tutorLmsApi.createProgram({
         courseName: courseName.trim(),
-        startDate: parsed.start,
-        endDate: parsed.end,
+        startDate: parsed?.start || '',
+        endDate: parsed?.end || '',
         planJson,
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
+      // TODO: 선택된 과목들을 과정에 연결하는 API 호출 (추후 구현)
+      // const programId = res.rst_data;
+      // for (const subject of selectedSubjects) {
+      //   await tutorLmsApi.linkCourseToProgram({ programId, courseId: subject.id });
+      // }
+
       alert('과정이 개설되었습니다.');
-      setClassification('');
-      setCourseName('');
-      setDepartment('');
-      setMajor('');
-      setDepartmentName('');
-      setTrainingPeriod('');
-      setTrainingLevel('');
-      setTrainingTarget('');
-      setTrainingGoal('');
-      setCurriculumItems([]);
-      setTeachingPlans([]);
-      setEvaluations([]);
+      resetForm();
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
     } finally {
@@ -263,8 +389,26 @@ export function CreateCourseForm() {
     }
   };
 
+  const resetForm = () => {
+    setCurrentStep('basic');
+    setCourseCategory('');
+    setClassification('');
+    setCourseName('');
+    setDepartment('');
+    setMajor('');
+    setDepartmentName('');
+    setTrainingPeriod('');
+    setTrainingLevel('');
+    setTrainingTarget('');
+    setTrainingGoal('');
+    setCurriculumItems([]);
+    setTeachingPlans([]);
+    setEvaluations([]);
+    setSelectedSubjects([]);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <div className="mb-8">
         <h2 className="text-gray-900 mb-2">과정 개설</h2>
         <p className="text-gray-600">새로운 교육 과정을 개설합니다.</p>
@@ -276,11 +420,220 @@ export function CreateCourseForm() {
         </div>
       )}
 
+      {/* Stepper */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const isActive = step.id === currentStep;
+            const isCompleted = index < currentStepIndex;
+
+            return (
+              <React.Fragment key={step.id}>
+                <div className="flex items-center">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                      isActive || isCompleted
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span
+                    className={`ml-3 ${
+                      isActive ? 'text-blue-600 font-medium' : isCompleted ? 'text-blue-600' : 'text-gray-500'
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-4 ${
+                      isCompleted ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Step Content */}
+      {currentStep === 'basic' && (
+        <BasicInfoStep
+          courseCategory={courseCategory}
+          setCourseCategory={setCourseCategory}
+          classification={classification}
+          setClassification={setClassification}
+          courseName={courseName}
+          setCourseName={setCourseName}
+          departmentName={departmentName}
+          setDepartmentName={setDepartmentName}
+          major={major}
+          setMajor={setMajor}
+          trainingPeriod={trainingPeriod}
+          setTrainingPeriod={setTrainingPeriod}
+          trainingLevel={trainingLevel}
+          setTrainingLevel={setTrainingLevel}
+          trainingTarget={trainingTarget}
+          setTrainingTarget={setTrainingTarget}
+          trainingGoal={trainingGoal}
+          setTrainingGoal={setTrainingGoal}
+          curriculumItems={curriculumItems}
+          addCurriculumItem={addCurriculumItem}
+          removeCurriculumItem={removeCurriculumItem}
+          updateCurriculumItem={updateCurriculumItem}
+          teachingPlans={teachingPlans}
+          addTeachingPlan={addTeachingPlan}
+          removeTeachingPlan={removeTeachingPlan}
+          updateTeachingPlan={updateTeachingPlan}
+          evaluations={evaluations}
+          addEvaluation={addEvaluation}
+          removeEvaluation={removeEvaluation}
+          updateEvaluation={updateEvaluation}
+        />
+      )}
+
+      {currentStep === 'subjects' && (
+        <SubjectsStep
+          selectedSubjects={selectedSubjects}
+          availableSubjects={filteredSubjects}
+          searchTerm={subjectSearchTerm}
+          setSearchTerm={setSubjectSearchTerm}
+          addSubject={addSubject}
+          removeSubject={removeSubject}
+          loading={loadingSubjects}
+          courseName={courseName}
+        />
+      )}
+
+      {/* Navigation Buttons */}
+      <div className="flex items-center justify-between pt-6 mt-6">
+        <button
+          onClick={handlePrev}
+          disabled={currentStepIndex === 0}
+          className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          이전
+        </button>
+        {currentStep === 'basic' ? (
+          <button
+            onClick={handleNext}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <span>다음</span>
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Save className="w-5 h-5" />
+            <span>{saving ? '저장 중...' : '과정 개설 완료'}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 기본 정보 입력 단계
+function BasicInfoStep({
+  courseCategory,
+  setCourseCategory,
+  classification,
+  setClassification,
+  courseName,
+  setCourseName,
+  departmentName,
+  setDepartmentName,
+  major,
+  setMajor,
+  trainingPeriod,
+  setTrainingPeriod,
+  trainingLevel,
+  setTrainingLevel,
+  trainingTarget,
+  setTrainingTarget,
+  trainingGoal,
+  setTrainingGoal,
+  curriculumItems,
+  addCurriculumItem,
+  removeCurriculumItem,
+  updateCurriculumItem,
+  teachingPlans,
+  addTeachingPlan,
+  removeTeachingPlan,
+  updateTeachingPlan,
+  evaluations,
+  addEvaluation,
+  removeEvaluation,
+  updateEvaluation,
+}: {
+  courseCategory: string;
+  setCourseCategory: (v: string) => void;
+  classification: string;
+  setClassification: (v: string) => void;
+  courseName: string;
+  setCourseName: (v: string) => void;
+  departmentName: string;
+  setDepartmentName: (v: string) => void;
+  major: string;
+  setMajor: (v: string) => void;
+  trainingPeriod: string;
+  setTrainingPeriod: (v: string) => void;
+  trainingLevel: string;
+  setTrainingLevel: (v: string) => void;
+  trainingTarget: string;
+  setTrainingTarget: (v: string) => void;
+  trainingGoal: string;
+  setTrainingGoal: (v: string) => void;
+  curriculumItems: CurriculumItem[];
+  addCurriculumItem: () => void;
+  removeCurriculumItem: (id: string) => void;
+  updateCurriculumItem: (id: string, field: keyof CurriculumItem, value: string) => void;
+  teachingPlans: TeachingPlan[];
+  addTeachingPlan: () => void;
+  removeTeachingPlan: (id: string) => void;
+  updateTeachingPlan: (id: string, field: keyof TeachingPlan, value: string) => void;
+  evaluations: Evaluation[];
+  addEvaluation: () => void;
+  removeEvaluation: (id: string) => void;
+  updateEvaluation: (id: string, field: keyof Evaluation, value: string) => void;
+}) {
+  return (
+    <>
       {/* 기본 정보 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <h3 className="text-gray-900 mb-4">기본 정보</h3>
         <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">
+              과정 유형 <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={courseCategory}
+              onChange={(e) => {
+                const newCategory = e.target.value;
+                setCourseCategory(newCategory);
+                const nonRegularClassifications = ['professional-tech', 'master-craftsman', 'new-seniors', 'high-tech'];
+                if (newCategory === 'non-regular' && classification && !nonRegularClassifications.includes(classification)) {
+                  setClassification('');
+                }
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">선택하세요</option>
+              <option value="regular" disabled className="text-gray-400">정규과정</option>
+              <option value="non-regular">비정규과정</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm text-gray-700 mb-2">
               과정 분류 <span className="text-red-500">*</span>
             </label>
@@ -288,46 +641,29 @@ export function CreateCourseForm() {
               value={classification}
               onChange={(e) => setClassification(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!courseCategory}
             >
               <option value="">선택하세요</option>
-              <option value="degree-major">학위전공</option>
-              <option value="degree-major-advanced">학위전공심화</option>
-              <option value="professional-tech">전문기술</option>
-              <option value="high-tech">하이테크</option>
-              <option value="master-craftsman">기능장</option>
-              <option value="high-school-consignment">고교위탁</option>
-              <option value="new-seniors">신중년</option>
+              {courseCategory === 'regular' && (
+                <>
+                  <option value="degree-major">학위전공</option>
+                  <option value="degree-major-advanced">학위전공심화</option>
+                  <option value="professional-tech">전문기술</option>
+                  <option value="high-tech">하이테크</option>
+                  <option value="master-craftsman">기능장</option>
+                  <option value="high-school-consignment">고교위탁</option>
+                  <option value="new-seniors">신중년</option>
+                </>
+              )}
+              {courseCategory === 'non-regular' && (
+                <>
+                  <option value="professional-tech">전문기술</option>
+                  <option value="master-craftsman">기능장</option>
+                  <option value="new-seniors">신중년</option>
+                  <option value="high-tech">하이테크</option>
+                </>
+              )}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">과정명</label>
-            <input
-              type="text"
-              value={courseName}
-              onChange={(e) => setCourseName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="과정명을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">계열</label>
-            <input
-              type="text"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="계열을 입력하세요"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">전공</label>
-            <input
-              type="text"
-              value={major}
-              onChange={(e) => setMajor(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="전공을 입력하세요"
-            />
           </div>
           <div>
             <label className="block text-sm text-gray-700 mb-2">학과명</label>
@@ -337,6 +673,26 @@ export function CreateCourseForm() {
               onChange={(e) => setDepartmentName(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="학과명을 입력하세요"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">전공/직종</label>
+            <input
+              type="text"
+              value={major}
+              onChange={(e) => setMajor(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="전공/직종을 입력하세요"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정명</label>
+            <input
+              type="text"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="과정명을 입력하세요"
             />
           </div>
         </div>
@@ -414,9 +770,7 @@ export function CreateCourseForm() {
                     <label className="block text-sm text-gray-700 mb-1">구분</label>
                     <select
                       value={item.type}
-                      onChange={(e) =>
-                        updateCurriculumItem(item.id, 'type', e.target.value)
-                      }
+                      onChange={(e) => updateCurriculumItem(item.id, 'type', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="NCS">NCS</option>
@@ -429,9 +783,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={item.hours}
-                      onChange={(e) =>
-                        updateCurriculumItem(item.id, 'hours', e.target.value)
-                      }
+                      onChange={(e) => updateCurriculumItem(item.id, 'hours', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="시수"
                     />
@@ -441,9 +793,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={item.description}
-                      onChange={(e) =>
-                        updateCurriculumItem(item.id, 'description', e.target.value)
-                      }
+                      onChange={(e) => updateCurriculumItem(item.id, 'description', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="설명"
                     />
@@ -489,9 +839,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.courseName}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'courseName', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'courseName', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="교과목명"
                     />
@@ -501,9 +849,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.targetDepartment}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'targetDepartment', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'targetDepartment', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="대상학과"
                     />
@@ -513,9 +859,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.courseType}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'courseType', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'courseType', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="교과구분"
                     />
@@ -525,9 +869,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.trainingHours}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'trainingHours', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'trainingHours', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="교육훈련시간"
                     />
@@ -537,9 +879,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.instructor}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'instructor', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'instructor', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="교수명"
                     />
@@ -549,9 +889,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={plan.textbook}
-                      onChange={(e) =>
-                        updateTeachingPlan(plan.id, 'textbook', e.target.value)
-                      }
+                      onChange={(e) => updateTeachingPlan(plan.id, 'textbook', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="교재"
                     />
@@ -562,9 +900,7 @@ export function CreateCourseForm() {
                   <textarea
                     rows={2}
                     value={plan.goals}
-                    onChange={(e) =>
-                      updateTeachingPlan(plan.id, 'goals', e.target.value)
-                    }
+                    onChange={(e) => updateTeachingPlan(plan.id, 'goals', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="지도목표"
                   />
@@ -574,9 +910,7 @@ export function CreateCourseForm() {
                   <textarea
                     rows={3}
                     value={plan.mainPlan}
-                    onChange={(e) =>
-                      updateTeachingPlan(plan.id, 'mainPlan', e.target.value)
-                    }
+                    onChange={(e) => updateTeachingPlan(plan.id, 'mainPlan', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="주요 교수계획"
                   />
@@ -624,9 +958,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={evaluation.method}
-                      onChange={(e) =>
-                        updateEvaluation(evaluation.id, 'method', e.target.value)
-                      }
+                      onChange={(e) => updateEvaluation(evaluation.id, 'method', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="예: 필기시험, 실기평가, 과제"
                     />
@@ -636,9 +968,7 @@ export function CreateCourseForm() {
                     <input
                       type="text"
                       value={evaluation.area}
-                      onChange={(e) =>
-                        updateEvaluation(evaluation.id, 'area', e.target.value)
-                      }
+                      onChange={(e) => updateEvaluation(evaluation.id, 'area', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="예: 이론, 실습, 태도"
                     />
@@ -660,24 +990,205 @@ export function CreateCourseForm() {
           </div>
         )}
       </div>
+    </>
+  );
+}
 
-      {/* 제출 버튼 */}
-      <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          취소
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Save className="w-5 h-5" />
-          <span>{saving ? '저장 중...' : '과정 개설'}</span>
-        </button>
+// 소속 과목 추가 단계
+function SubjectsStep({
+  selectedSubjects,
+  availableSubjects,
+  searchTerm,
+  setSearchTerm,
+  addSubject,
+  removeSubject,
+  loading,
+  courseName,
+}: {
+  selectedSubjects: Subject[];
+  availableSubjects: Subject[];
+  searchTerm: string;
+  setSearchTerm: (v: string) => void;
+  addSubject: (subject: Subject) => void;
+  removeSubject: (id: string) => void;
+  loading: boolean;
+  courseName: string;
+}) {
+  const [activeTab, setActiveTab] = React.useState<'haksa' | 'plism'>('haksa');
+  const [detailSubject, setDetailSubject] = React.useState<Subject | null>(null);
+  const [showNewSubjectForm, setShowNewSubjectForm] = React.useState(false);
+
+  return (
+    <>
+      {/* 신규 과목 개설 전체 화면 */}
+      {showNewSubjectForm && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* 상단 액션 바 */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shadow-sm">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowNewSubjectForm(false)}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+                <span>닫기</span>
+              </button>
+              <span className="text-gray-400">|</span>
+              <h2 className="text-lg font-semibold text-gray-900">소속 과목 신규 개설</h2>
+            </div>
+          </div>
+          {/* CreateSubjectWizard 표시 */}
+          <div className="p-6">
+            <CreateSubjectWizard />
+          </div>
+        </div>
+      )}
+      {/* 상세보기: 운영계획서 전체 화면 */}
+      {detailSubject && (
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* 상단 액션 바 */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shadow-sm">
+            <button
+              onClick={() => setDetailSubject(null)}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+              <span>닫기</span>
+            </button>
+            <button
+              onClick={() => {
+                addSubject(detailSubject);
+                setDetailSubject(null);
+              }}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              <span>이 과정 추가</span>
+            </button>
+          </div>
+          {/* 운영계획서 표시 */}
+          <div className="p-6">
+            <OperationalPlan
+              course={{
+                id: detailSubject.id,
+                name: detailSubject.name,
+                classification: detailSubject.classification,
+                department: detailSubject.department,
+                major: detailSubject.major,
+                departmentName: detailSubject.departmentName,
+                trainingPeriod: detailSubject.trainingPeriod,
+                trainingLevel: detailSubject.trainingLevel,
+                trainingTarget: detailSubject.trainingTarget,
+                trainingGoal: detailSubject.trainingGoal,
+                instructor: detailSubject.instructor,
+                year: detailSubject.year,
+                students: detailSubject.students,
+                subjects: detailSubject.subjects,
+              }}
+              onBack={() => setDetailSubject(null)}
+            />
+          </div>
+        </div>
+      )}
+
+    <div className="space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-blue-800">
+          <strong>"{courseName}"</strong> 과정에 포함될 과목을 선택하세요.
+        </p>
       </div>
-    </form>
+
+      {/* 선택된 과목 목록 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-gray-900 mb-4">선택된 소속 과목 ({selectedSubjects.length}개)</h3>
+        {selectedSubjects.length > 0 ? (
+          <div className="space-y-2">
+            {selectedSubjects.map((subject) => (
+              <div
+                key={subject.id}
+                className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium text-gray-900">{subject.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {subject.year} {subject.semester} {subject.credits && `• ${subject.credits}학점`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => removeSubject(subject.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>선택된 과목이 없습니다.</p>
+            <p className="text-sm">아래에서 과목을 검색하여 추가하세요.</p>
+          </div>
+        )}
+      </div>
+
+      {/* 과목 검색 및 추가 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {/* 헤더: 제목 + 신규 개설 버튼 */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-gray-900">과목 검색</h3>
+          <button
+            type="button"
+            onClick={() => setShowNewSubjectForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>신규 개설</span>
+          </button>
+        </div>
+
+        {/* 학사 / PLISM 탭 */}
+        <div className="flex border-b border-gray-200 mb-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('haksa')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'haksa'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            학사
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('plism')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'plism'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            PLISM
+          </button>
+        </div>
+
+        {/* 탭 콘텐츠 */}
+        {activeTab === 'haksa' ? (
+          <div className="text-center py-12 text-gray-500">
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium text-gray-600">학사 과목 검색</p>
+            <p className="text-sm mt-2">추후 생성 예정입니다.</p>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium text-gray-600">PLISM 과목 검색</p>
+            <p className="text-sm mt-2">추후 생성 예정입니다.</p>
+          </div>
+        )}
+      </div>
+    </div>
+    </>
   );
 }
