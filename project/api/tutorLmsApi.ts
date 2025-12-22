@@ -70,6 +70,40 @@ export type TutorCourseRow = {
   status_label?: string;
 };
 
+// 통합 과목 타입 (API + 학사 View 모두 지원)
+export type UnifiedCourseRow = {
+  source: 'api' | 'poly';
+  id: number | string;
+  course_cd?: string;
+  course_nm: string;
+  course_id_conv?: string;
+  subject_nm_conv?: string;
+  year?: string;
+  // API 전용 필드
+  program_id?: number;
+  program_nm_conv?: string;
+  course_type?: string;
+  onoff_type?: string;
+  course_type_conv?: string;
+  onoff_type_conv?: string;
+  period_conv?: string;
+  student_cnt?: number;
+  status_label?: string;
+  // 학사 View 전용 필드
+  dept_code?: string;
+  dept_name?: string;
+  grad_code?: string;
+  grad_name?: string;
+  bunban_code?: string;
+  curriculum_code?: string;
+  curriculum_name?: string;
+  grade?: string;
+  open_term?: string;
+  category?: string;
+  visible?: string;
+  course_ename?: string;
+};
+
 export type TutorCourseYearRow = {
   year: string;
 };
@@ -489,6 +523,11 @@ export const tutorLmsApi = {
   async getMyCourses(params: { year?: string; keyword?: string } = {}) {
     const url = `/tutor_lms/api/course_list.jsp${buildQuery({ year: params.year, s_keyword: params.keyword })}`;
     return requestJson<TutorCourseRow[]>(url);
+  },
+
+  async getPolyCourses(params: { year?: string } = {}) {
+    const url = `/tutor_lms/api/course_list_poly.jsp${buildQuery({ year: params.year })}`;
+    return requestJson<UnifiedCourseRow[]>(url);
   },
 
   async setCourseProgram(payload: { courseId: number; programId: number }) {

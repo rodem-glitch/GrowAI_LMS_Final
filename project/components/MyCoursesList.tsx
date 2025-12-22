@@ -5,6 +5,7 @@ import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
   id: string;
+  source: 'api' | 'poly';
   courseId: string;
   courseType: string;
   subjectName: string;
@@ -12,7 +13,11 @@ interface Course {
   programName: string;
   period: string;
   students: number;
-  status: '대기' | '신청기간' | '학습기간' | '종료';
+  status: '대기' | '신청기간' | '학습기간' | '종료' | '-';
+  // 학사 View 전용 필드
+  deptName?: string;
+  gradName?: string;
+  curriculumName?: string;
 }
 
 export function MyCoursesList() {
@@ -81,11 +86,18 @@ export function MyCoursesList() {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const res = await tutorLmsApi.getMyCourses({ year: year === '전체' ? undefined : year });
-        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        // 두 소스에서 병렬로 데이터 조회
+        const yearParam = year === '전체' ? undefined : year;
+        const [apiRes, polyRes] = await Promise.all([
+          tutorLmsApi.getMyCourses({ year: yearParam }),
+          tutorLmsApi.getPolyCourses({ year: yearParam }).catch(() => ({ rst_code: '0000', rst_data: [] })),
+        ]);
 
-        const rows = res.rst_data ?? [];
-        const mapped: Course[] = rows.map((row) => {
+        if (apiRes.rst_code !== '0000') throw new Error(apiRes.rst_message);
+
+        // API 과목 매핑
+        const apiRows = apiRes.rst_data ?? [];
+        const apiMapped: Course[] = apiRows.map((row) => {
           const statusLabel = (row.status_label as Course['status']) ?? '대기';
           const typeParts = [
             (row.course_type_conv || '').trim(),
@@ -94,6 +106,7 @@ export function MyCoursesList() {
 
           return {
             id: String(row.id),
+            source: 'api' as const,
             courseId: row.course_id_conv || row.course_cd || String(row.id),
             courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
             subjectName: row.subject_nm_conv || row.course_nm,
@@ -102,10 +115,35 @@ export function MyCoursesList() {
             period: row.period_conv || '-',
             students: Number(row.student_cnt ?? 0),
             status: statusLabel,
+            deptName: undefined,
+            gradName: undefined,
+            curriculumName: undefined,
           };
         });
 
-        if (!cancelled) setCourses(mapped);
+        // 학사 View 과목 매핑
+        const polyRows = polyRes.rst_data ?? [];
+        const polyMapped: Course[] = polyRows.map((row) => ({
+          id: `poly_${row.id}`,
+          source: 'poly' as const,
+          courseId: row.course_cd || String(row.id),
+          courseType: row.category || '-',
+          subjectName: row.course_nm,
+          programId: 0,
+          programName: '-',
+          period: '-',
+          students: 0,
+          status: '-' as const,
+          deptName: row.dept_name || '-',
+          gradName: row.grad_name || '-',
+          curriculumName: row.curriculum_name || '-',
+        }));
+
+        // 중복 제거 (course_cd 기준, API 우선)
+        const apiCourseIds = new Set(apiMapped.map((c) => c.courseId));
+        const uniquePolyCourses = polyMapped.filter((c) => !apiCourseIds.has(c.courseId));
+
+        if (!cancelled) setCourses([...apiMapped, ...uniquePolyCourses]);
       } catch (e) {
         if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
       } finally {
@@ -226,6 +264,7 @@ export function MyCoursesList() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">No</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">요청</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과정ID</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">유형</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과목명</th>
@@ -239,13 +278,13 @@ export function MyCoursesList() {
             <tbody className="divide-y divide-gray-200">
               {errorMessage ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                     <p>{errorMessage}</p>
                   </td>
                 </tr>
               ) : loading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                     <p>불러오는 중...</p>
                   </td>
                 </tr>
@@ -253,10 +292,19 @@ export function MyCoursesList() {
                 filteredCourses.map((course, index) => (
                   <tr key={course.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-4 text-center">
+                      <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${
+                        course.source === 'api' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {course.source === 'api' ? 'LMS' : '학사'}
+                      </span>
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.courseId}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.courseType}</td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.subjectName}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{course.programName}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {course.source === 'api' ? course.programName : (course.deptName || '-')}
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.period}</td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1 text-sm text-gray-900">
@@ -275,21 +323,25 @@ export function MyCoursesList() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center">
-                        <button
-                          className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
-                          title="과목 관리"
-                          onClick={() => setSelectedCourse(course)}
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span>관리</span>
-                        </button>
+                        {course.source === 'api' ? (
+                          <button
+                            className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                            title="과목 관리"
+                            onClick={() => setSelectedCourse(course)}
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span>관리</span>
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">학사 연동</span>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                     <p>검색 결과가 없습니다.</p>
                   </td>
                 </tr>
