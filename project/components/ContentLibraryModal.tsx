@@ -88,6 +88,7 @@ export function ContentLibraryModal({
             isFavorite: Boolean(row.is_favorite),
             duration: row.duration || '-',
             totalTime: Number(row.total_time ?? 0),
+            completeTime: Number(row.complete_time ?? row.total_time ?? 0), // 인정시간 (DB에서 가져옴)
             contentName: row.content_nm || '',
           }));
 
