@@ -491,6 +491,12 @@ export const tutorLmsApi = {
     return requestJson<TutorCourseRow[]>(url);
   },
 
+  // 왜: 담당과목 화면에서 학사/프리즘 탭을 분리하여 조회하기 위함
+  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string } = { tab: 'prism' }) {
+    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({ tab: params.tab, year: params.year, s_keyword: params.keyword })}`;
+    return requestJson<TutorCourseRow[]>(url);
+  },
+
   async setCourseProgram(payload: { courseId: number; programId: number }) {
     const body = new URLSearchParams();
     body.set('course_id', String(payload.courseId));

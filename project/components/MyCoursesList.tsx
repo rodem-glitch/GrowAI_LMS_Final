@@ -13,10 +13,14 @@ interface Course {
   period: string;
   students: number;
   status: '대기' | '신청기간' | '학습기간' | '종료';
+  source?: 'prism' | 'haksa'; // 데이터 소스 추적용
 }
+
+type TabType = 'haksa' | 'prism';
 
 export function MyCoursesList() {
   const currentYear = String(new Date().getFullYear());
+  const [activeTab, setActiveTab] = useState<TabType>('haksa'); // 기본 탭: 학사
   const [yearOptions, setYearOptions] = useState<string[]>(['전체', currentYear]);
   const [year, setYear] = useState(currentYear);
   const [courseType, setCourseType] = useState('전체');
@@ -81,7 +85,11 @@ export function MyCoursesList() {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const res = await tutorLmsApi.getMyCourses({ year: year === '전체' ? undefined : year });
+        // activeTab에 따라 getMyCoursesCombined 호출
+        const res = await tutorLmsApi.getMyCoursesCombined({ 
+          tab: activeTab, 
+          year: year === '전체' ? undefined : year 
+        });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         const rows = res.rst_data ?? [];
@@ -96,12 +104,13 @@ export function MyCoursesList() {
             id: String(row.id),
             courseId: row.course_id_conv || row.course_cd || String(row.id),
             courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
-            subjectName: row.subject_nm_conv || row.course_nm,
+            subjectName: row.course_nm_conv || row.subject_nm_conv || row.course_nm || '-',
             programId: Number(row.program_id ?? 0),
             programName: row.program_nm_conv || '-',
             period: row.period_conv || '-',
             students: Number(row.student_cnt ?? 0),
             status: statusLabel,
+            source: activeTab, // 데이터 소스 추적
           };
         });
 
@@ -117,7 +126,7 @@ export function MyCoursesList() {
     return () => {
       cancelled = true;
     };
-  }, [year]);
+  }, [year, activeTab]); // activeTab 의존성 추가
 
   const courseTypeOptions = useMemo(() => {
     const types = Array.from(new Set(courses.map((c) => c.courseType).filter((t) => t && t !== '미지정'))).sort((a, b) =>
@@ -156,6 +165,30 @@ export function MyCoursesList() {
       <div className="mb-8">
         <h2 className="text-gray-900 mb-2">담당 과목</h2>
         <p className="text-gray-600">담당하고 있는 과목 목록을 확인하고 관리합니다.</p>
+      </div>
+
+      {/* 탭 영역 */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('haksa')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'haksa'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          학사
+        </button>
+        <button
+          onClick={() => setActiveTab('prism')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'prism'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          프리즘
+        </button>
       </div>
 
       {/* 필터 영역 */}
