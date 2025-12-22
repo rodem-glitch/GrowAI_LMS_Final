@@ -7,6 +7,13 @@ export type TutorLmsApiResponse<T> = {
   rst_message: string;
   rst_data?: T;
   rst_count?: number;
+  rst_total?: number;
+  rst_page?: number;
+  rst_limit?: number;
+  rst_channel?: string;
+  rst_category?: string;
+  rst_channels?: unknown;
+  rst_categories?: unknown;
   rst_program_id?: number;
   rst_detached?: number;
   rst_skipped?: number;
@@ -214,17 +221,30 @@ export type TutorProgramDetail = {
   training_period?: string;
 };
 
-export type TutorLessonRow = {
-  id: number;
+export type TutorKollusRow = {
+  id?: string;
+  media_content_key: string;
   title: string;
-  description?: string;
-  lesson_type?: string;
-  lesson_type_conv?: string;
-  total_time?: number;
+  category_nm?: string;
   duration?: string;
-  is_favorite?: boolean;
+  total_time?: number;
+  content_width?: number;
+  content_height?: number;
+  snapshot_url?: string;
   thumbnail?: string;
-  views?: number;
+  original_file_name?: string;
+  use_encryption_conv?: string;
+};
+
+export type TutorKollusChannelRow = {
+  key: string;
+  name: string;
+  count?: number;
+};
+
+export type TutorKollusCategoryRow = {
+  key: string;
+  name: string;
 };
 
 export type TutorCurriculumRow = {
@@ -716,15 +736,32 @@ export const tutorLmsApi = {
     });
   },
 
-  // ----- 콘텐츠(레슨) -----
-  async getLessons(params: { keyword?: string; favoriteOnly?: boolean; lessonType?: string; contentId?: number } = {}) {
-    const url = `/tutor_lms/api/lesson_list.jsp${buildQuery({
+  // ----- 콘텐츠(콜러스 목록) -----
+  async getKollusList(params: { keyword?: string; channelKey?: string; categoryKey?: string; page?: number; limit?: number; version?: number } = {}) {
+    const url = `/tutor_lms/api/kollus_list.jsp${buildQuery({
       s_keyword: params.keyword,
-      favorite_yn: params.favoriteOnly ? 'Y' : '',
-      lesson_type: params.lessonType,
-      content_id: params.contentId,
+      s_channel: params.channelKey,
+      s_category: params.categoryKey,
+      page: params.page,
+      limit: params.limit,
+      version: params.version,
     })}`;
-    return requestJson<TutorLessonRow[]>(url);
+    return requestJson<TutorKollusRow[]>(url);
+  },
+
+  async upsertKollusLesson(payload: { mediaContentKey: string; title?: string; totalTime?: number; contentWidth?: number; contentHeight?: number }) {
+    const body = new URLSearchParams();
+    body.set('media_content_key', payload.mediaContentKey);
+    if (payload.title) body.set('title', payload.title);
+    if (payload.totalTime !== undefined) body.set('total_time', String(payload.totalTime));
+    if (payload.contentWidth !== undefined) body.set('content_width', String(payload.contentWidth));
+    if (payload.contentHeight !== undefined) body.set('content_height', String(payload.contentHeight));
+
+    return requestJson<number>(`/tutor_lms/api/kollus_lesson_upsert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 
 

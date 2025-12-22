@@ -103,7 +103,7 @@
   - [ ] 수료번호 규칙(접두/뒷자리수/방식/정렬)이 DB에 저장됩니다
 
 ### 5-2) 강의목차: `project/components/courseManagement/CurriculumTab.tsx`
-- API: `/tutor_lms/api/curriculum_list.jsp`, `curriculum_section_*`, `curriculum_lesson_*`, `/tutor_lms/api/lesson_list.jsp`
+- API: `/tutor_lms/api/curriculum_list.jsp`, `curriculum_section_*`, `curriculum_lesson_*`, `/tutor_lms/api/kollus_list.jsp`, `/tutor_lms/api/kollus_lesson_upsert.jsp`
 - 체크
   - [ ] 차시 목록/레슨 목록이 실데이터로 표시됩니다
   - [ ] 차시 추가/수정/삭제가 DB에 반영됩니다
@@ -175,9 +175,8 @@
   - [ ] 저장 후 `CourseExplorer`/`OperationalPlan`에서 실데이터로 확인됩니다
 
 ### `project/components/CreateSubjectWizard.tsx` (과목개설)
-- API: `/tutor_lms/api/course_insert.jsp`, `course_students_add.jsp`, `curriculum_section_insert.jsp`, `curriculum_lesson_add.jsp`, `learner_list.jsp`, `lesson_list.jsp`, `course_image_upload.jsp`
+- API: `/tutor_lms/api/course_insert.jsp`, `course_students_add.jsp`, `curriculum_section_insert.jsp`, `curriculum_lesson_add.jsp`, `learner_list.jsp`, `kollus_list.jsp`, `kollus_lesson_upsert.jsp`, `course_image_upload.jsp`
 - 체크
   - [ ] 과목 생성 → 수강생 등록 → 차시/레슨 등록이 순서대로 DB에 반영됩니다
   - [ ] 콘텐츠 라이브러리(레슨 검색/즐겨찾기)가 정상 동작합니다
   - [ ] 과정 선택 모달이 실데이터로 동작합니다
-

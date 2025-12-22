@@ -72,7 +72,7 @@ export function SessionEditModal({
     const newVideo: Video = {
       id: `video-${Date.now()}-${Math.random()}`,
       title: content.title,
-      url: content.url || content.id,
+      url: content.mediaKey || content.url || content.id,
     };
     setEditedSession((prev) => ({
       ...prev,

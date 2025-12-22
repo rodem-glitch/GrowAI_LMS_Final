@@ -937,7 +937,7 @@ function CurriculumStep({
           title: content.title,
           url: '',
           // 왜: 콘텐츠 모달에서 고른 것은 "레슨 ID"로 저장하고, 실제 DB 추가 시 lesson_id로 처리합니다.
-          lessonId: String(content.id),
+          lessonId: String(content.lessonId ?? content.id),
         };
         updateSession(currentSessionId, {
           videos: [...session.videos, newVideo],

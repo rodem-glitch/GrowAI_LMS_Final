@@ -142,16 +142,17 @@ export const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   const addLessonToSection = (sectionId: number, content: any) => {
     setCurriculumData(prev => prev.map(section => {
       if (section.sectionId === sectionId) {
-        if (section.lessons.find((l: any) => String(l.lessonId) === String(content.id))) {
+        const nextLessonId = content.lessonId ?? content.id;
+        if (section.lessons.find((l: any) => String(l.lessonId) === String(nextLessonId))) {
           return section;
         }
         const newLesson: CurriculumLesson = {
-          lessonId: content.id,
+          lessonId: nextLessonId,
           lessonName: content.title,
-          lessonType: content.lessonType || content.lesson_type || 'VIDEO',
+          lessonType: content.lessonType || content.lesson_type || '05',
           lessonTypeConv: content.category || '',
           totalTime: content.totalTime || 0,
-          completeTime: content.completeTime || content.complete_time || content.totalTime || 0, // 레슨 자체 인정시간 우선 사용
+          completeTime: content.totalTime || 0, // 콜러스 목록은 total_time을 기준으로 인정시간 처리
           duration: content.duration || '',
           isNew: true,
         };
