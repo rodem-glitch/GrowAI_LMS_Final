@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, Heart } from 'lucide-react';
+import { X, Search, Heart, Check } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
@@ -7,32 +7,57 @@ interface Content {
   title: string;
   description: string;
   category: string;
+  lessonType: string;
   tags: string[];
   views: number;
   thumbnail: string;
   isFavorite: boolean;
   duration?: string;
+  totalTime?: number;
+  contentName?: string;
 }
 
 interface ContentLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (content: Content) => void;
+  multiSelect?: boolean; // 다중 선택 모드
+  onMultiSelect?: (contents: Content[]) => void; // 다중 선택 콜백
 }
 
-export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibraryModalProps) {
+// 콘텐츠타입 옵션 (기존 관리자 lesson_video.jsp 기준)
+const LESSON_TYPES = [
+  { value: '', label: '전체' },
+  { value: '01', label: '동영상(위캔디오)' },
+  { value: '03', label: '동영상(콜러스)' },
+  { value: '04', label: '라이브(콜러스)' },
+  { value: '05', label: '웹콘텐츠(WBT)' },
+  { value: '07', label: 'MP4' },
+  { value: '08', label: '외부링크' },
+  { value: '09', label: '문서(닥줌)' },
+];
+
+export function ContentLibraryModal({ 
+  isOpen, 
+  onClose, 
+  onSelect,
+  multiSelect = true,
+  onMultiSelect 
+}: ContentLibraryModalProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'favorites'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('전체');
-  const [levelFilter, setLevelFilter] = useState('전체 유형');
-  const [onlyFree, setOnlyFree] = useState(false);
+  const [lessonTypeFilter, setLessonTypeFilter] = useState('');
+  const [searchField, setSearchField] = useState('');
 
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 다중 선택 state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // 왜: 샘플 데이터가 아니라, 실제 레슨(LM_LESSON) 목록을 API로 가져와 보여줘야 합니다.
-  // - 찜 탭은 서버에서 favorite_yn=Y로 필터링해서 내려주므로, 화면은 그대로 보여주기만 하면 됩니다.
   React.useEffect(() => {
     if (!isOpen) return;
 
@@ -46,6 +71,7 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
           const res = await tutorLmsApi.getLessons({
             keyword: searchTerm,
             favoriteOnly: activeTab === 'favorites',
+            lessonType: lessonTypeFilter || undefined,
           });
           if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
@@ -55,11 +81,15 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
             title: row.title,
             description: row.description || '',
             category: row.lesson_type_conv || row.lesson_type || '레슨',
+            lessonType: row.lesson_type || '',
             tags: [],
             views: Number(row.views ?? 0),
             thumbnail: row.thumbnail || '',
             isFavorite: Boolean(row.is_favorite),
             duration: row.duration || '-',
+            totalTime: Number(row.total_time ?? 0),
+            completeTime: Number(row.complete_time ?? row.total_time ?? 0), // 인정시간 (DB에서 가져옴)
+            contentName: row.content_nm || '',
           }));
 
           if (!cancelled) setContents(mapped);
@@ -77,18 +107,22 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isOpen, activeTab, searchTerm]);
+  }, [isOpen, activeTab, searchTerm, lessonTypeFilter]);
+
+  // 모달 닫힐 때 선택 초기화
+  React.useEffect(() => {
+    if (!isOpen) {
+      setSelectedIds(new Set());
+    }
+  }, [isOpen]);
 
   const filteredContents = contents.filter((content) => {
     const matchesTab = activeTab === 'all' || (activeTab === 'favorites' && content.isFavorite);
     const matchesSearch =
       content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       content.description.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // 왜: 레슨(LM_LESSON)은 lesson_type(유형)만 있으므로, "카테고리" 필터는 유형 기준으로 동작시킵니다.
     const matchesCategory = categoryFilter === '전체' || content.category === categoryFilter;
 
-    // 왜: level(난이도)/무료여부는 레슨 테이블에 필드가 없어, UI는 비활성으로 처리합니다.
     return matchesTab && matchesSearch && matchesCategory;
   });
 
@@ -100,18 +134,41 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
   }, [contents]);
 
   React.useEffect(() => {
-    // 왜: 검색/탭 변경으로 옵션 목록이 바뀌면, 더 이상 존재하지 않는 필터 값은 "전체"로 되돌려야 화면이 비지 않습니다.
     if (categoryFilter === '전체') return;
     if (!categoryOptions.includes(categoryFilter)) setCategoryFilter('전체');
   }, [categoryOptions, categoryFilter]);
 
   const handleSelect = (content: Content) => {
-    onSelect(content);
+    if (multiSelect) {
+      // 다중 선택 모드: 체크박스 토글
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(content.id)) {
+          next.delete(content.id);
+        } else {
+          next.add(content.id);
+        }
+        return next;
+      });
+    } else {
+      // 단일 선택 모드
+      onSelect(content);
+      onClose();
+    }
+  };
+
+  const handleAddSelected = () => {
+    const selected = contents.filter(c => selectedIds.has(c.id));
+    if (onMultiSelect) {
+      onMultiSelect(selected);
+    } else {
+      // 단일 콜백만 있으면 각각 호출
+      selected.forEach(c => onSelect(c));
+    }
     onClose();
   };
 
   const handleToggleFavorite = async (e: React.MouseEvent, content: Content) => {
-    // 왜: 카드 전체 클릭은 "선택"이고, 하트 버튼은 "찜"이라서 이벤트를 분리해야 합니다.
     e.preventDefault();
     e.stopPropagation();
 
@@ -129,11 +186,19 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredContents.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredContents.map(c => c.id)));
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-gray-900">콘텐츠 라이브러리</h2>
@@ -147,91 +212,75 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Subtitle */}
-          <div className="mb-6">
-            <h3 className="text-gray-900 mb-2">올리팩 콘텐츠 라이브러리</h3>
-            <p className="text-sm text-gray-600">
-              플러에서 보유한 다양한 교육 콘텐츠를 검색하고 과정에 활용하세요.
-            </p>
+          {/* 콘텐츠타입 필터 (라디오 버튼) */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <div className="text-sm font-medium text-gray-700 mb-2">콘텐츠타입</div>
+            <div className="flex flex-wrap gap-3">
+              {LESSON_TYPES.map((type) => (
+                <label key={type.value} className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="lessonType"
+                    value={type.value}
+                    checked={lessonTypeFilter === type.value}
+                    onChange={(e) => setLessonTypeFilter(e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm text-gray-700">{type.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-6 mb-6 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`pb-3 border-b-2 transition-colors ${
-                activeTab === 'all'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+          {/* 검색 영역 */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-sm text-gray-600">검색</span>
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              전체 콘텐츠
-            </button>
-            <button
-              onClick={() => setActiveTab('favorites')}
-              className={`pb-3 border-b-2 transition-colors ${
-                activeTab === 'favorites'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              찜한 콘텐츠 ({contents.filter(c => c.isFavorite).length})
-            </button>
-          </div>
-
-          {/* Filters */}
-          <div className="flex items-center gap-4 mb-6">
+              <option value="">전체</option>
+              <option value="title">강의명</option>
+              <option value="author">제작자</option>
+            </select>
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="콘텐츠 제목이나 태그로 검색..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="검색어 입력..."
+                className="w-full pl-4 pr-10 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-            </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {categoryOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value)}
-              disabled
-              title="현재 레슨 데이터에는 난이도 정보가 없어 필터를 지원하지 않습니다."
-              className="px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
-            >
-              <option>전체 유형</option>
-              <option>기초</option>
-              <option>중급</option>
-              <option>고급</option>
-            </select>
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-not-allowed">
-              <input
-                type="checkbox"
-                checked={onlyFree}
-                onChange={(e) => setOnlyFree(e.target.checked)}
-                disabled
-                title="현재 레슨 데이터에는 무료/유료 정보가 없어 필터를 지원하지 않습니다."
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-not-allowed"
-              />
-              무료
-            </label>
-            <div className="text-sm text-gray-600">
-              총 {filteredContents.length}개의 콘텐츠
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200">
+                검색
+              </button>
             </div>
           </div>
 
+          {/* 결과 헤더 */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-sm text-gray-600">
+              총: <span className="text-blue-600 font-medium">{filteredContents.length}</span>건
+            </div>
+            {multiSelect && (
+              <button
+                onClick={handleAddSelected}
+                disabled={selectedIds.size === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  selectedIds.size > 0
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <Check className="w-4 h-4" />
+                <span>선택추가 ({selectedIds.size}건)</span>
+              </button>
+            )}
+          </div>
+
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
               {errorMessage}
             </div>
           )}
@@ -242,85 +291,92 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
             </div>
           )}
 
-          {/* Content Grid */}
-          <div className="grid grid-cols-3 gap-6">
-            {filteredContents.map((content) => (
-              <div
-                key={content.id}
-                className="group cursor-pointer border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-                onClick={() => handleSelect(content)}
-              >
-                {/* Thumbnail */}
-                <div className="relative h-48 bg-gray-100">
-                  {content.thumbnail ? (
-                    <img
-                      src={content.thumbnail}
-                      alt={content.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                      NO IMAGE
-                    </div>
-                  )}
-                  <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs">
-                    {content.isFavorite ? '찜함' : '레슨'}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleFavorite(e, content)}
-                    className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    title={content.isFavorite ? '찜 해제' : '찜하기'}
-                  >
-                    <Heart
-                      className={`w-4 h-4 ${
-                        content.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+          {/* 테이블 형태 목록 */}
+          {!loading && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {multiSelect && (
+                      <th className="px-3 py-2 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === filteredContents.length && filteredContents.length > 0}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                      </th>
+                    )}
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">No</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">콘텐츠타입</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">콘텐츠목록</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">강의명</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">시간</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">등록일</th>
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">찜</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredContents.map((content, index) => (
+                    <tr
+                      key={content.id}
+                      className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+                        selectedIds.has(content.id) ? 'bg-blue-50' : ''
                       }`}
-                    />
-                  </button>
-                  {content.duration && (
-                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
-                      {content.duration}
-                    </div>
-                  )}
+                      onClick={() => handleSelect(content)}
+                    >
+                      {multiSelect && (
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(content.id)}
+                            onChange={() => {}}
+                            className="w-4 h-4 text-blue-600 rounded"
+                          />
+                        </td>
+                      )}
+                      <td className="px-3 py-2 text-sm text-gray-600">{index + 1}</td>
+                      <td className="px-3 py-2">
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                          {content.category}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-600">
+                        {content.contentName || '-'}
+                      </td>
+                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate">
+                        {content.title}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-gray-600">
+                        {content.totalTime ? `${content.totalTime}분` : content.duration}
+                      </td>
+                      <td className="px-3 py-2 text-center text-sm text-gray-500">
+                        -
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleFavorite(e, content)}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          title={content.isFavorite ? '찜 해제' : '찜하기'}
+                        >
+                          <Heart
+                            className={`w-4 h-4 ${
+                              content.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                            }`}
+                          />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {filteredContents.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <p>검색 결과가 없습니다.</p>
                 </div>
-
-                {/* Content Info */}
-                <div className="p-4">
-                  <div className="text-xs text-blue-600 mb-1">{content.category}</div>
-                  <h4 className="text-gray-900 mb-2 line-clamp-1">{content.title}</h4>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{content.description}</p>
-                  
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {content.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <span>조회 {content.views.toLocaleString()}</span>
-                    </div>
-                    <button className="text-blue-600 hover:underline">
-                      과정에 추가
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {!loading && !errorMessage && filteredContents.length === 0 && (
-            <div className="text-center py-16 text-gray-500">
-              <p className="mb-2">검색 결과가 없습니다.</p>
-              <p className="text-sm">다른 검색어나 필터를 시도해보세요.</p>
+              )}
             </div>
           )}
         </div>
@@ -328,3 +384,4 @@ export function ContentLibraryModal({ isOpen, onClose, onSelect }: ContentLibrar
     </div>
   );
 }
+

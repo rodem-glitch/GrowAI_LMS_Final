@@ -54,6 +54,8 @@ export type TutorProgramRow = {
 export type TutorCourseRow = {
   id: number;
   course_nm: string;
+  // 왜: course_list_combined.jsp에서는 화면에서 쓰기 편하게 변환값을 같이 내려줍니다.
+  course_nm_conv?: string;
   course_cd?: string;
   course_id_conv?: string;
   subject_nm_conv?: string;
@@ -68,6 +70,8 @@ export type TutorCourseRow = {
   period_conv?: string;
   student_cnt?: number;
   status_label?: string;
+  // 왜: 담당과목(학사/프리즘) 탭 구분을 위해 서버에서 소스 타입을 내려줍니다.
+  source_type?: 'prism' | 'haksa' | string;
 };
 
 // 통합 과목 타입 (API + 학사 View 모두 지원)
@@ -525,9 +529,16 @@ export const tutorLmsApi = {
     return requestJson<TutorCourseRow[]>(url);
   },
 
+  // 왜: 학사 시스템(View) 과목을 별도 목록으로 조회할 때 사용합니다.
   async getPolyCourses(params: { year?: string } = {}) {
     const url = `/tutor_lms/api/course_list_poly.jsp${buildQuery({ year: params.year })}`;
     return requestJson<UnifiedCourseRow[]>(url);
+  },
+
+  // 왜: 담당과목 화면에서 학사/프리즘 탭을 분리하여 조회하기 위함
+  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string } = { tab: 'prism' }) {
+    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({ tab: params.tab, year: params.year, s_keyword: params.keyword })}`;
+    return requestJson<TutorCourseRow[]>(url);
   },
 
   async setCourseProgram(payload: { courseId: number; programId: number }) {
@@ -706,13 +717,16 @@ export const tutorLmsApi = {
   },
 
   // ----- 콘텐츠(레슨) -----
-  async getLessons(params: { keyword?: string; favoriteOnly?: boolean } = {}) {
+  async getLessons(params: { keyword?: string; favoriteOnly?: boolean; lessonType?: string; contentId?: number } = {}) {
     const url = `/tutor_lms/api/lesson_list.jsp${buildQuery({
       s_keyword: params.keyword,
       favorite_yn: params.favoriteOnly ? 'Y' : '',
+      lesson_type: params.lessonType,
+      content_id: params.contentId,
     })}`;
     return requestJson<TutorLessonRow[]>(url);
   },
+
 
   async toggleWishlist(payload: { module: string; moduleId: number }) {
     const body = new URLSearchParams();
@@ -731,6 +745,7 @@ export const tutorLmsApi = {
     const url = `/tutor_lms/api/curriculum_list.jsp${buildQuery({ course_id: params.courseId })}`;
     return requestJson<TutorCurriculumRow[]>(url);
   },
+
 
   async insertCurriculumSection(payload: { courseId: number; sectionName: string }) {
     const body = new URLSearchParams();
@@ -790,6 +805,33 @@ export const tutorLmsApi = {
     body.set('lesson_id', String(payload.lessonId));
 
     return requestJson<number>(`/tutor_lms/api/curriculum_lesson_delete.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateCurriculumLesson(payload: {
+    courseId: number;
+    lessonId: number;
+    chapter?: number;
+    sectionId?: number;
+    completeTime?: number;
+    tutorId?: number;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('lesson_id', String(payload.lessonId));
+    if (payload.chapter !== undefined) body.set('chapter', String(payload.chapter));
+    if (payload.sectionId !== undefined) body.set('section_id', String(payload.sectionId));
+    if (payload.completeTime !== undefined) body.set('complete_time', String(payload.completeTime));
+    if (payload.tutorId !== undefined) body.set('tutor_id', String(payload.tutorId));
+    if (payload.startDate !== undefined) body.set('start_date', payload.startDate);
+    if (payload.endDate !== undefined) body.set('end_date', payload.endDate);
+
+    return requestJson<number>(`/tutor_lms/api/curriculum_lesson_update.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,

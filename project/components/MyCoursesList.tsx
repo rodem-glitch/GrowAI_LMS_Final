@@ -5,7 +5,8 @@ import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
   id: string;
-  source: 'api' | 'poly';
+  // 왜: 학사/프리즘 탭에 따라 화면 동작(배지, 관리 버튼)을 바꾸기 위해 소스 타입을 들고 있습니다.
+  sourceType: 'haksa' | 'prism';
   courseId: string;
   courseType: string;
   subjectName: string;
@@ -14,14 +15,13 @@ interface Course {
   period: string;
   students: number;
   status: '대기' | '신청기간' | '학습기간' | '종료' | '-';
-  // 학사 View 전용 필드
-  deptName?: string;
-  gradName?: string;
-  curriculumName?: string;
 }
+
+type TabType = 'haksa' | 'prism';
 
 export function MyCoursesList() {
   const currentYear = String(new Date().getFullYear());
+  const [activeTab, setActiveTab] = useState<TabType>('haksa'); // 기본 탭: 학사
   const [yearOptions, setYearOptions] = useState<string[]>(['전체', currentYear]);
   const [year, setYear] = useState(currentYear);
   const [courseType, setCourseType] = useState('전체');
@@ -86,18 +86,15 @@ export function MyCoursesList() {
       setLoading(true);
       setErrorMessage(null);
       try {
-        // 두 소스에서 병렬로 데이터 조회
-        const yearParam = year === '전체' ? undefined : year;
-        const [apiRes, polyRes] = await Promise.all([
-          tutorLmsApi.getMyCourses({ year: yearParam }),
-          tutorLmsApi.getPolyCourses({ year: yearParam }).catch(() => ({ rst_code: '0000', rst_data: [] })),
-        ]);
+        // activeTab에 따라 getMyCoursesCombined 호출
+        const res = await tutorLmsApi.getMyCoursesCombined({
+          tab: activeTab,
+          year: year === '전체' ? undefined : year,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-        if (apiRes.rst_code !== '0000') throw new Error(apiRes.rst_message);
-
-        // API 과목 매핑
-        const apiRows = apiRes.rst_data ?? [];
-        const apiMapped: Course[] = apiRows.map((row) => {
+        const rows = res.rst_data ?? [];
+        const mapped: Course[] = rows.map((row) => {
           const statusLabel = (row.status_label as Course['status']) ?? '대기';
           const typeParts = [
             (row.course_type_conv || '').trim(),
@@ -106,44 +103,19 @@ export function MyCoursesList() {
 
           return {
             id: String(row.id),
-            source: 'api' as const,
+            sourceType: activeTab,
             courseId: row.course_id_conv || row.course_cd || String(row.id),
             courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
-            subjectName: row.subject_nm_conv || row.course_nm,
+            subjectName: row.course_nm_conv || row.subject_nm_conv || row.course_nm || '-',
             programId: Number(row.program_id ?? 0),
             programName: row.program_nm_conv || '-',
             period: row.period_conv || '-',
             students: Number(row.student_cnt ?? 0),
             status: statusLabel,
-            deptName: undefined,
-            gradName: undefined,
-            curriculumName: undefined,
           };
         });
 
-        // 학사 View 과목 매핑
-        const polyRows = polyRes.rst_data ?? [];
-        const polyMapped: Course[] = polyRows.map((row) => ({
-          id: `poly_${row.id}`,
-          source: 'poly' as const,
-          courseId: row.course_cd || String(row.id),
-          courseType: row.category || '-',
-          subjectName: row.course_nm,
-          programId: 0,
-          programName: '-',
-          period: '-',
-          students: 0,
-          status: '-' as const,
-          deptName: row.dept_name || '-',
-          gradName: row.grad_name || '-',
-          curriculumName: row.curriculum_name || '-',
-        }));
-
-        // 중복 제거 (course_cd 기준, API 우선)
-        const apiCourseIds = new Set(apiMapped.map((c) => c.courseId));
-        const uniquePolyCourses = polyMapped.filter((c) => !apiCourseIds.has(c.courseId));
-
-        if (!cancelled) setCourses([...apiMapped, ...uniquePolyCourses]);
+        if (!cancelled) setCourses(mapped);
       } catch (e) {
         if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
       } finally {
@@ -155,7 +127,7 @@ export function MyCoursesList() {
     return () => {
       cancelled = true;
     };
-  }, [year]);
+  }, [year, activeTab]); // activeTab 의존성 추가
 
   const courseTypeOptions = useMemo(() => {
     const types = Array.from(new Set(courses.map((c) => c.courseType).filter((t) => t && t !== '미지정'))).sort((a, b) =>
@@ -194,6 +166,30 @@ export function MyCoursesList() {
       <div className="mb-8">
         <h2 className="text-gray-900 mb-2">담당 과목</h2>
         <p className="text-gray-600">담당하고 있는 과목 목록을 확인하고 관리합니다.</p>
+      </div>
+
+      {/* 탭 영역 */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('haksa')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'haksa'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          학사
+        </button>
+        <button
+          onClick={() => setActiveTab('prism')}
+          className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+            activeTab === 'prism'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          프리즘
+        </button>
       </div>
 
       {/* 필터 영역 */}
@@ -294,16 +290,16 @@ export function MyCoursesList() {
                     <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${
-                        course.source === 'api' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                        course.sourceType === 'prism' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
                       }`}>
-                        {course.source === 'api' ? 'LMS' : '학사'}
+                        {course.sourceType === 'prism' ? 'LMS' : '학사'}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.courseId}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.courseType}</td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.subjectName}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {course.source === 'api' ? course.programName : (course.deptName || '-')}
+                      {course.programName}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.period}</td>
                     <td className="px-4 py-4 text-center">
@@ -323,7 +319,7 @@ export function MyCoursesList() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center">
-                        {course.source === 'api' ? (
+                        {course.sourceType === 'prism' ? (
                           <button
                             className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
                             title="과목 관리"

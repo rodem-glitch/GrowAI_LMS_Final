@@ -8,6 +8,8 @@ out/
 
 # Logs
 logs/
+var/log/
+var/log/**/*.log
 
 # Java build artifacts
 *.class
@@ -31,3 +33,8 @@ tmp/
 # Node / Frontend
 node_modules/
 project/.vite/
+
+# 설정파일
+config.xml
+resin-web.xml
+init.jsp

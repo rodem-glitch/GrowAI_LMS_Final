@@ -29,8 +29,9 @@ if(!isAdmin) {
 
 DataSet list = courseLesson.query(
 	" SELECT cl.course_id, cl.section_id, cl.lesson_id, cl.chapter, cl.lesson_hour "
+	+ " , cl.start_date, cl.end_date, cl.tutor_id "
 	+ " , cs.section_nm "
-	+ " , l.lesson_nm, l.lesson_type, l.total_time, l.description "
+	+ " , l.lesson_nm, l.lesson_type, l.onoff_type, l.total_time, l.complete_time, l.description "
 	+ " FROM " + courseLesson.table + " cl "
 	+ " LEFT JOIN " + courseSection.table + " cs ON cs.id = cl.section_id AND cs.course_id = cl.course_id AND cs.status = 1 "
 	+ " INNER JOIN " + lesson.table + " l ON l.id = cl.lesson_id AND l.status = 1 "
@@ -42,7 +43,13 @@ while(list.next()) {
 	list.put("section_nm", !"".equals(list.s("section_nm")) ? list.s("section_nm") : "기본");
 	list.put("lesson_nm", list.s("lesson_nm"));
 	list.put("total_time_min", list.i("total_time"));
+	list.put("complete_time_min", list.i("complete_time"));
 	list.put("duration_conv", list.i("total_time") > 0 ? (list.i("total_time") + "분") : "-");
+	list.put("complete_time_conv", list.i("complete_time") > 0 ? (list.i("complete_time") + "분") : "-");
+	list.put("lesson_type_conv", m.getItem(list.s("lesson_type"), lesson.allTypes));
+	list.put("onoff_type_conv", m.getItem(list.s("onoff_type"), lesson.onoffTypes));
+	list.put("start_date_conv", m.time("yyyy-MM-dd", list.s("start_date")));
+	list.put("end_date_conv", m.time("yyyy-MM-dd", list.s("end_date")));
 }
 
 result.put("rst_code", "0000");
