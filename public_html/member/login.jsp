@@ -23,6 +23,7 @@ if((returl.startsWith("http://") || returl.startsWith("https://")) && 0 > returl
 //폼입력
 String id = m.rs("id");
 String passwd = m.rs("passwd");
+String userIp = m.getRemoteAddr();
 String accessToken = m.rs("access_token");
 String ek = m.rs("ek");
 int udid = m.ri("udid");
@@ -33,6 +34,8 @@ FileDao file = new FileDao();
 GroupDao group = new GroupDao();
 UserDeptDao userDept = new UserDeptDao();
 UserLoginDao userLogin = new UserLoginDao();
+UserSessionDao UserSession = new UserSessionDao();
+UserSession.setSiteId(siteId);
 
 //폼체크
 f.addElement("id", null, "hname:'아이디', required:'Y'");
@@ -171,7 +174,7 @@ if(m.isPost() || isToken) {
 					auth.put("TUTOR_YN", "Y".equals(info.s("tutor_yn")) ? "Y" : "N");
 					auth.put("DEPT_AUTH2_YN", deptAuth2Yn); //관리자단-회원소속관리에서 2차인증설정 여부 Y/N
 					if("direct".equals(auth.getString("LOGINMETHOD"))) { //ID,PW입력 로그인에서만 2차인증 사용
-						auth.put("USER_AUTH2_YN", "Y".equals(auth2Info.s("auth2Yn")) ? "N" : "Y");
+						auth.put("USER_AUTH2_YN", "Y".equals(authinfo.s("auth2_yn")) ? "N" : "Y");
 					} else {
 						auth.put("USER_AUTH2_YN", "Y");
 						auth.put("USER_AUTH2_TYPE", "");
