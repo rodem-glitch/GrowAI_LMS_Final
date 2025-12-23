@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen } from 'lucide-react';
+import { Search, BookOpen, Heart } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
@@ -8,8 +8,15 @@ interface Content {
   title: string;
   description: string;
   category: string;
+  categoryKey?: string;
+  snapshotUrl?: string;
+  originalFileName?: string;
   thumbnail: string;
+  isFavorite: boolean;
   duration?: string;
+  totalTime?: number;
+  contentWidth?: number;
+  contentHeight?: number;
 }
 
 interface ContentLibraryPageProps {
@@ -47,12 +54,19 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
         setLoadingMore(!isFirstPage);
         setErrorMessage(null);
         try {
-          const res = await tutorLmsApi.getKollusList({
-            keyword: searchTerm,
-            categoryKey: categoryFilter || undefined,
-            page,
-            limit,
-          });
+          const res =
+            activeTab === 'favorites'
+              ? await tutorLmsApi.getKollusWishlistList({
+                  keyword: searchTerm,
+                  page,
+                  limit,
+                })
+              : await tutorLmsApi.getKollusList({
+                  keyword: searchTerm,
+                  categoryKey: categoryFilter || undefined,
+                  page,
+                  limit,
+                });
           if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
           const rows = res.rst_data ?? [];
@@ -62,8 +76,15 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
             title: row.title,
             description: row.original_file_name ? `원본파일이름: ${row.original_file_name}` : '',
             category: row.category_nm || '카테고리 없음',
+            categoryKey: row.category_key,
+            snapshotUrl: row.snapshot_url,
+            originalFileName: row.original_file_name || '',
             thumbnail: row.thumbnail || row.snapshot_url || '',
             duration: row.duration || '-',
+            totalTime: Number(row.total_time ?? 0),
+            contentWidth: Number(row.content_width ?? 0),
+            contentHeight: Number(row.content_height ?? 0),
+            isFavorite: Boolean(row.is_favorite),
           }));
 
           const nextCategories = Array.isArray(res.rst_categories)
@@ -73,7 +94,7 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
           if (!cancelled) {
             setContents((prev) => (isFirstPage ? mapped : [...prev, ...mapped]));
             setTotalCount(Number(res.rst_total ?? mapped.length));
-            if (nextCategories.length > 0) setCategories(nextCategories);
+            if (activeTab !== 'favorites' && nextCategories.length > 0) setCategories(nextCategories);
           }
         } catch (e) {
           if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
@@ -95,6 +116,36 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
   }, [activeTab, searchTerm, categoryFilter, page]);
 
   const categoryOptions = categories;
+
+  const handleToggleFavorite = async (e: React.MouseEvent, content: Content) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const res = await tutorLmsApi.toggleKollusWishlist({
+        mediaContentKey: content.mediaKey,
+        title: content.title,
+        snapshotUrl: content.snapshotUrl || content.thumbnail,
+        categoryKey: content.categoryKey,
+        categoryName: content.category,
+        originalFileName: content.originalFileName,
+        totalTime: content.totalTime,
+        contentWidth: content.contentWidth,
+        contentHeight: content.contentHeight,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const next = Number(res.rst_data ?? 0) === 1;
+      setContents((prev) => {
+        if (activeTab === 'favorites' && !next) {
+          return prev.filter((c) => c.mediaKey !== content.mediaKey);
+        }
+        return prev.map((c) => (c.mediaKey === content.mediaKey ? { ...c, isFavorite: next } : c));
+      });
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : '찜 처리 중 오류가 발생했습니다.');
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -123,18 +174,20 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">전체</option>
-            {categoryOptions.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {activeTab !== 'favorites' && (
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">전체</option>
+              {categoryOptions.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="text-sm text-gray-600">
             총 <span className="text-blue-600">{totalCount}</span>개의 콘텐츠
           </div>
@@ -177,6 +230,18 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
                 <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs">
                   {content.category}
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleFavorite(e, content)}
+                  className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  title={content.isFavorite ? '찜 해제' : '찜하기'}
+                >
+                  <Heart
+                    className={`w-4 h-4 ${
+                      content.isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'
+                    }`}
+                  />
+                </button>
                 {content.duration && content.duration !== '-' && (
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs">
                     {content.duration}

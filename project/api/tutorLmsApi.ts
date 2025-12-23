@@ -226,6 +226,7 @@ export type TutorKollusRow = {
   media_content_key: string;
   title: string;
   category_nm?: string;
+  category_key?: string;
   duration?: string;
   total_time?: number;
   content_width?: number;
@@ -234,6 +235,8 @@ export type TutorKollusRow = {
   thumbnail?: string;
   original_file_name?: string;
   use_encryption_conv?: string;
+  is_favorite?: boolean;
+  media_id?: number;
 };
 
 export type TutorKollusChannelRow = {
@@ -749,6 +752,44 @@ export const tutorLmsApi = {
     return requestJson<TutorKollusRow[]>(url);
   },
 
+  async getKollusWishlistList(params: { keyword?: string; page?: number; limit?: number } = {}) {
+    const url = `/tutor_lms/api/kollus_wishlist_list.jsp${buildQuery({
+      s_keyword: params.keyword,
+      page: params.page,
+      limit: params.limit,
+    })}`;
+    return requestJson<TutorKollusRow[]>(url);
+  },
+
+  async toggleKollusWishlist(payload: {
+    mediaContentKey: string;
+    title?: string;
+    snapshotUrl?: string;
+    categoryKey?: string;
+    categoryName?: string;
+    originalFileName?: string;
+    totalTime?: number;
+    contentWidth?: number;
+    contentHeight?: number;
+  }) {
+    const body = new URLSearchParams();
+    body.set('media_content_key', payload.mediaContentKey);
+    if (payload.title) body.set('title', payload.title);
+    if (payload.snapshotUrl) body.set('snapshot_url', payload.snapshotUrl);
+    if (payload.categoryKey) body.set('category_key', payload.categoryKey);
+    if (payload.categoryName) body.set('category_nm', payload.categoryName);
+    if (payload.originalFileName) body.set('original_file_name', payload.originalFileName);
+    if (payload.totalTime !== undefined) body.set('total_time', String(payload.totalTime));
+    if (payload.contentWidth !== undefined) body.set('content_width', String(payload.contentWidth));
+    if (payload.contentHeight !== undefined) body.set('content_height', String(payload.contentHeight));
+
+    return requestJson<number>(`/tutor_lms/api/kollus_wishlist_toggle.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   async upsertKollusLesson(payload: { mediaContentKey: string; title?: string; totalTime?: number; contentWidth?: number; contentHeight?: number }) {
     const body = new URLSearchParams();
     body.set('media_content_key', payload.mediaContentKey);
@@ -764,18 +805,6 @@ export const tutorLmsApi = {
     });
   },
 
-
-  async toggleWishlist(payload: { module: string; moduleId: number }) {
-    const body = new URLSearchParams();
-    body.set('module', payload.module);
-    body.set('module_id', String(payload.moduleId));
-
-    return requestJson<number>(`/tutor_lms/api/wishlist_toggle.jsp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
-    });
-  },
 
   // ----- 강의목차(curriculum_*) -----
   async getCurriculum(params: { courseId: number }) {

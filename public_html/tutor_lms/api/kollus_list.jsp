@@ -5,6 +5,8 @@
 //- 레슨(DB) 기준이 아니라 콜러스 채널 기준으로 Total 3005 같은 집계를 그대로 맞춥니다.
 
 KollusDao kollus = new KollusDao(siteId);
+KollusMediaDao kollusMedia = new KollusMediaDao();
+WishlistDao wishlist = new WishlistDao(siteId);
 if(2 == m.ri("version")) kollus.setApiVersion("api-vod");
 
 DataSet channels = null;
@@ -129,6 +131,20 @@ while(list.next()) {
 
 	list.put("thumbnail", list.s("snapshot_url"));
 	list.put("id", list.s("media_content_key"));
+
+	//왜: 찜 목록 여부는 TB_WISHLIST(숫자 module_id) 기반이므로 매핑 테이블에서 id를 찾아야 합니다.
+	DataSet minfo = kollusMedia.find(
+		"site_id = " + siteId + " AND media_content_key = ?",
+		new String[] { list.s("media_content_key") }
+	);
+	if(minfo.next()) {
+		int mediaId = minfo.i("id");
+		list.put("media_id", mediaId);
+		list.put("is_favorite", wishlist.isAdded(userId, "kollus", mediaId));
+	} else {
+		list.put("media_id", 0);
+		list.put("is_favorite", false);
+	}
 }
 
 DataSet channelList = new DataSet();
