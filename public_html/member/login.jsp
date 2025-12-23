@@ -23,7 +23,6 @@ if((returl.startsWith("http://") || returl.startsWith("https://")) && 0 > returl
 //폼입력
 String id = m.rs("id");
 String passwd = m.rs("passwd");
-String userIp = m.getRemoteAddr();
 String accessToken = m.rs("access_token");
 String ek = m.rs("ek");
 int udid = m.ri("udid");

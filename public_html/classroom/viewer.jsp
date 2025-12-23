@@ -11,7 +11,9 @@ if("play".equals(m.rs("mode")) && m.isMobile()) {
 int lid = m.ri("lid");
 int chapter = m.ri("chapter");
 int vid = m.ri("vid"); //다중영상일 때 서브영상 id
-if(lid == 0) { m.jsErrClose(_message.get("alert.common.required_key")); return; }
+// 왜: 구형 뷰어(버전 1)는 lid(강의 ID)가 없으면 진행/로그 처리가 불가능합니다.
+//     신형 뷰어(버전 2)는 "바로학습" 등의 진입에서 lid 없이 들어올 수 있어, 아래에서 자동으로 차시를 선택합니다.
+if(lid == 0 && sysViewerVersion != 2) { m.jsErrClose(_message.get("alert.common.required_key")); return; }
 
 //객체
 CourseLessonDao courseLesson = new CourseLessonDao();
@@ -61,6 +63,10 @@ DataSet info = courseLesson.query(
 	)
 );
 if(!info.next()) { m.jsErrClose(_message.get("alert.course_lesson.nodata")); return; }
+
+// 왜: 신형 뷰어에서 lid 없이 들어온 경우(첫 학습 등)에도,
+//     이후의 진도/로그/다중영상 조회가 모두 lesson_id 기준으로 정상 동작해야 합니다.
+if(lid == 0) lid = info.i("lesson_id");
 
 //제한
 if(1 != info.i("lesson_status")) { m.jsErrClose(_message.get("alert.lesson.stopped")); return; }

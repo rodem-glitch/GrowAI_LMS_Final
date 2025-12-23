@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Heart } from 'lucide-react';
+import { Search, BookOpen, Heart, Play } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
@@ -147,6 +147,25 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
     }
   };
 
+  const handlePreview = (content: Content) => {
+    // 왜: 교수자 LMS에서도 sysop처럼 "영상 미리보기"를 바로 확인할 수 있어야 합니다.
+    //     콜러스는 외부 플레이어 URL로 리다이렉트되는 구조이므로, 전용 preview JSP를 새 창으로 엽니다.
+    if (!content.mediaKey) return;
+
+    const previewUrl = `/kollus/preview.jsp?key=${encodeURIComponent(content.mediaKey)}`;
+    const popupWidth = Math.max(Number(content.contentWidth ?? 0), 900);
+    const popupHeight = Math.max(Number(content.contentHeight ?? 0), 506); // 16:9 기본
+
+    const win = window.open(
+      previewUrl,
+      '_blank',
+      `width=${popupWidth},height=${popupHeight},resizable=yes,scrollbars=yes`
+    );
+    if (!win) {
+      setErrorMessage('팝업이 차단되었습니다. 브라우저에서 팝업 허용 후 다시 시도해 주세요.');
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Page Header */}
@@ -212,7 +231,13 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
           {contents.map((content) => (
             <div
               key={content.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+              className="group bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={() => handlePreview(content)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') handlePreview(content);
+              }}
             >
               {/* Thumbnail */}
               <div className="relative h-40 bg-gray-100">
@@ -227,6 +252,11 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
                     <BookOpen className="w-12 h-12 text-gray-300" />
                   </div>
                 )}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-12 h-12 rounded-full bg-black bg-opacity-60 flex items-center justify-center">
+                    <Play className="w-6 h-6 text-white ml-0.5" />
+                  </div>
+                </div>
                 <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs">
                   {content.category}
                 </div>
