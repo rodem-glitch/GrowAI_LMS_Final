@@ -7,6 +7,7 @@ type LabelValue = { value?: string; label?: string };
 type ProgramPlanV1 = {
   version?: number;
   basic?: {
+    courseCategory?: LabelValue;
     classification?: LabelValue;
     courseName?: string;
     department?: string;
@@ -52,6 +53,7 @@ function deriveYear(params: { startDateYmd?: string; startDate?: string; trainin
 
 interface Course {
   id: string;
+  courseCategory: string;
   classification: string;
   name: string;
   department: string;
@@ -72,7 +74,7 @@ export function CourseExplorer() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classificationFilter, setClassificationFilter] = useState('전체');
   const [yearFilter, setYearFilter] = useState('전체');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,7 @@ export function CourseExplorer() {
 
           return {
             id: String(row.id),
+            courseCategory: plan?.basic?.courseCategory?.label || plan?.basic?.courseCategory?.value || '-',
             classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
             name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
             department: plan?.basic?.department || '',
@@ -306,41 +309,34 @@ export function CourseExplorer() {
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm text-gray-700">과정ID</th>
-                    <th className="px-6 py-3 text-left text-sm text-gray-700">분류</th>
-                    <th className="px-6 py-3 text-left text-sm text-gray-700">과정명</th>
-                    <th className="px-6 py-3 text-left text-sm text-gray-700">계열/전공</th>
-                    <th className="px-6 py-3 text-left text-sm text-gray-700">학과명</th>
-                    <th className="px-6 py-3 text-center text-sm text-gray-700">관리</th>
+                    <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap w-20">과정ID</th>
+                    <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap w-28">과정 유형</th>
+                    <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap w-24">과정 분류</th>
+                    <th className="px-4 py-3 text-left text-sm text-gray-700">과정명</th>
+                    <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap w-24">소속 과목</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredCourses.map((course) => (
-                    <tr key={course.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-900">{course.id}</td>
-                      <td className="px-6 py-4">
+                    <tr key={course.id} onClick={() => setSelectedCourse(course)} className="hover:bg-gray-50 transition-colors cursor-pointer">
+                      <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">{course.id}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs">
+                          {course.courseCategory || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
                           {course.classification}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{course.name}</div>
+                      <td className="px-4 py-4">
+                        <div className="text-sm text-gray-900 break-words">{course.name}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {[course.department, course.major].filter(Boolean).join(' · ') || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{course.departmentName || '-'}</td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => setSelectedCourse(course)}
-                          className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        >
-                          상세
-                        </button>
-                      </td>
+                      <td className="px-4 py-4 text-center text-sm text-gray-600 whitespace-nowrap">{course.subjects}개</td>
                     </tr>
                   ))}
                 </tbody>
