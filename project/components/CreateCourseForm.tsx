@@ -70,11 +70,13 @@ const TRAINING_LEVEL_LABELS: Record<string, string> = {
 };
 
 function buildPlanJson(params: {
+  courseCategory: string;
   classification: string;
   courseName: string;
   department: string;
   major: string;
   departmentName: string;
+  courseDescription: string;
   trainingPeriodText: string;
   startDateYmd: string;
   endDateYmd: string;
@@ -88,6 +90,10 @@ function buildPlanJson(params: {
   return {
     version: 1,
     basic: {
+      courseCategory: {
+        value: params.courseCategory,
+        label: params.courseCategory === 'regular' ? '정규과정' : params.courseCategory === 'non-regular' ? '비정규과정' : params.courseCategory,
+      },
       classification: {
         value: params.classification,
         label: CLASSIFICATION_LABELS[params.classification] ?? params.classification,
@@ -96,6 +102,7 @@ function buildPlanJson(params: {
       department: params.department,
       major: params.major,
       departmentName: params.departmentName,
+      courseDescription: params.courseDescription,
     },
     training: {
       trainingPeriodText: params.trainingPeriodText,
@@ -147,6 +154,7 @@ export function CreateCourseForm() {
   const [trainingLevel, setTrainingLevel] = useState('');
   const [trainingTarget, setTrainingTarget] = useState('');
   const [trainingGoal, setTrainingGoal] = useState('');
+  const [courseDescription, setCourseDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [curriculumItems, setCurriculumItems] = useState<CurriculumItem[]>([]);
@@ -352,11 +360,13 @@ export function CreateCourseForm() {
     setSaving(true);
     try {
       const planJson = JSON.stringify(buildPlanJson({
+        courseCategory,
         classification,
         courseName: courseName.trim(),
         department: department.trim(),
         major: major.trim(),
         departmentName: departmentName.trim(),
+        courseDescription: courseDescription.trim(),
         trainingPeriodText: trainingPeriod.trim(),
         startDateYmd: parsed?.start || '',
         endDateYmd: parsed?.end || '',
@@ -407,6 +417,7 @@ export function CreateCourseForm() {
     setTeachingPlans([]);
     setEvaluations([]);
     setSelectedSubjects([]);
+    setCourseDescription('');
   };
 
   return (
@@ -476,6 +487,8 @@ export function CreateCourseForm() {
           setDepartmentName={setDepartmentName}
           major={major}
           setMajor={setMajor}
+          courseDescription={courseDescription}
+          setCourseDescription={setCourseDescription}
         />
       )}
 
@@ -536,6 +549,8 @@ function BasicInfoStep({
   setDepartmentName,
   major,
   setMajor,
+  courseDescription,
+  setCourseDescription,
 }: {
   courseCategory: string;
   setCourseCategory: (v: string) => void;
@@ -547,6 +562,8 @@ function BasicInfoStep({
   setDepartmentName: (v: string) => void;
   major: string;
   setMajor: (v: string) => void;
+  courseDescription: string;
+  setCourseDescription: (v: string) => void;
 }) {
   return (
     <>
@@ -637,6 +654,22 @@ function BasicInfoStep({
               placeholder="과정명을 입력하세요"
             />
           </div>
+        </div>
+      </div>
+
+      {/* 과정설명 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h3 className="text-gray-900 mb-4">과정설명</h3>
+        <div>
+          <label className="block text-sm text-gray-700 mb-2">과정 소개</label>
+          <textarea
+            value={courseDescription}
+            onChange={(e) => setCourseDescription(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px]"
+            placeholder="과정에 대한 소개 및 설명을 입력하세요"
+            rows={5}
+          />
+          <p className="text-sm text-gray-500 mt-2">과정의 목적, 대상, 특징 등을 자유롭게 작성해 주세요.</p>
         </div>
       </div>
     </>

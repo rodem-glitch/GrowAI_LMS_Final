@@ -12,6 +12,7 @@ type ProgramPlanV1 = {
     department?: string;
     major?: string;
     departmentName?: string;
+    courseDescription?: string;
     instructor?: string;
   };
   training?: {

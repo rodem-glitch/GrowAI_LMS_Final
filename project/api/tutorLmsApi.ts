@@ -542,6 +542,26 @@ export const tutorLmsApi = {
     });
   },
 
+  async getProgramCourses(params: { programId: number }) {
+    const url = `/tutor_lms/api/program_course_list.jsp${buildQuery({ program_id: params.programId })}`;
+    return requestJson<TutorCourseRow[]>(url);
+  },
+
+  async modifyProgram(payload: { id: number; courseName: string; startDate?: string; endDate?: string; planJson?: string }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+    body.set('course_nm', payload.courseName);
+    if (payload.startDate !== undefined) body.set('start_date', payload.startDate);
+    if (payload.endDate !== undefined) body.set('end_date', payload.endDate);
+    if (payload.planJson !== undefined) body.set('plan_json', payload.planJson);
+
+    return requestJson<number>(`/tutor_lms/api/program_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   async getCourseYears(params: { tutorId?: number } = {}) {
     const url = `/tutor_lms/api/course_years.jsp${buildQuery({ tutor_id: params.tutorId })}`;
     return requestJson<TutorCourseYearRow[]>(url);

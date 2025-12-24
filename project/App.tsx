@@ -44,7 +44,7 @@ export default function App() {
 
       <div className="flex">
         {/* Left Navigation Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 sticky top-[88px] h-[calc(100vh-88px)] overflow-y-auto">
+        <aside className="w-64 bg-white border-r border-gray-200 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
           <nav className="p-4 flex flex-col gap-2">
             <button
               onClick={() => setActiveMenu('dashboard')}
