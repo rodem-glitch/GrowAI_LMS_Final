@@ -265,32 +265,185 @@ function BasicInfoTab({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과목명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{subjectName}</div>
+      {/* ===== 학사 과목: LMS_COURSE_VIEW 25개 필드 그룹별 표시 ===== */}
+      {isHaksa ? (
+        <div className="space-y-6">
+          {/* 그룹 1: 기본 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📚 기본 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌명(한글)</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCourseName || subjectName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌명(영문)</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCourseEname || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaCourseCode || courseIdLabel || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">분반코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaBunbanCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌형태</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCategory || course?.courseType || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">폐강여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaVisible === 'Y' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {course?.haksaVisible === 'Y' ? '정상' : course?.haksaVisible === 'N' ? '폐강' : course?.haksaVisible || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 2: 개설 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📅 개설 정보</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">개설연도</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaOpenYear || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">개설학기</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaOpenTerm || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">주차</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaWeek || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌시작일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaStartdate || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌종료일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaEnddate || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">대상학년</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaGrade ? `${course.haksaGrade}학년` : '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 3: 학과/과정 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">🏫 학과/과정 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학과/전공명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaDeptName || programName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학과/전공코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaDeptCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">단과대학명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaGradName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">단과대학코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaGradCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">과목구분명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCurriculumName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">과목구분코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaCurriculumCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학부/대학원 구분코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaGroupCode || '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 4: 강의 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">🎓 강의 정보</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의요일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaDayCd || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의시간</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaHour1 || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의실</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaClassroom || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">영문강좌여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaEnglish === 'Y' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {course?.haksaEnglish === 'Y' ? '영문강좌' : course?.haksaEnglish === 'N' ? '국문강좌' : course?.haksaEnglish || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 5: 기타 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📋 기타 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의계획서 구분</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaTypeSyllabus || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의계획서 존재여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaIsSyllabus === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {course?.haksaIsSyllabus === 'Y' ? '있음' : course?.haksaIsSyllabus === 'N' ? '없음' : course?.haksaIsSyllabus || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과정ID</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{courseIdLabel}</div>
+      ) : (
+        /* ===== 프리즘 과목: 기존 기본 정보 표시 ===== */
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목명</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{subjectName}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정ID</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{courseIdLabel}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정구분</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{course?.courseType ?? '-'}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{programName}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">교육기간</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{period}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수강인원</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{students}명</div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과정구분</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{course?.courseType ?? '-'}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{programName}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">교육기간</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{period}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">수강인원</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{students}명</div>
-        </div>
-      </div>
+      )}
 
       <CourseSelectionModal
         isOpen={isCourseModalOpen}

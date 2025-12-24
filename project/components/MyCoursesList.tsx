@@ -15,7 +15,34 @@ interface Course {
   period: string;
   students: number;
   status: '대기' | '신청기간' | '학습기간' | '종료' | '-';
+  // ===== 학사 View 25개 필드 =====
+  haksaCategory?: string;        // 강좌형태
+  haksaDeptName?: string;        // 학과/전공 이름
+  haksaWeek?: string;            // 주차
+  haksaOpenTerm?: string;        // 학기
+  haksaCourseCode?: string;      // 강좌코드
+  haksaVisible?: string;         // 강좌 폐강 여부 (Y=정상, N=폐강)
+  haksaStartdate?: string;       // 강좌시작일
+  haksaBunbanCode?: string;      // 분반코드
+  haksaGrade?: string;           // 학년
+  haksaGradName?: string;        // 단과대학 이름
+  haksaDayCd?: string;           // 강의 요일
+  haksaClassroom?: string;       // 강의실 정보
+  haksaCurriculumCode?: string;  // 과목구분 코드
+  haksaCourseEname?: string;     // 강좌명(영문)
+  haksaTypeSyllabus?: string;    // 강의계획서 구분
+  haksaOpenYear?: string;        // 연도
+  haksaDeptCode?: string;        // 학과/전공 코드
+  haksaCourseName?: string;      // 강좌명(한글)
+  haksaGroupCode?: string;       // 학부/대학원 구분
+  haksaEnddate?: string;         // 강좌종료일
+  haksaEnglish?: string;         // 영문 강좌 여부
+  haksaHour1?: string;           // 강의 시간
+  haksaCurriculumName?: string;  // 과목구분 이름
+  haksaGradCode?: string;        // 단과대학 코드
+  haksaIsSyllabus?: string;      // 강의계획서 존재여부
 }
+
 
 type TabType = 'haksa' | 'prism';
 
@@ -112,6 +139,32 @@ export function MyCoursesList() {
             period: row.period_conv || '-',
             students: Number(row.student_cnt ?? 0),
             status: statusLabel,
+            // ===== 학사 View 25개 필드 =====
+            haksaCategory: row.haksa_category || '',
+            haksaDeptName: row.haksa_dept_name || '',
+            haksaWeek: row.haksa_week || '',
+            haksaOpenTerm: row.haksa_open_term || '',
+            haksaCourseCode: row.haksa_course_code || '',
+            haksaVisible: row.haksa_visible || '',
+            haksaStartdate: row.haksa_startdate || '',
+            haksaBunbanCode: row.haksa_bunban_code || '',
+            haksaGrade: row.haksa_grade || '',
+            haksaGradName: row.haksa_grad_name || '',
+            haksaDayCd: row.haksa_day_cd || '',
+            haksaClassroom: row.haksa_classroom || '',
+            haksaCurriculumCode: row.haksa_curriculum_code || '',
+            haksaCourseEname: row.haksa_course_ename || '',
+            haksaTypeSyllabus: row.haksa_type_syllabus || '',
+            haksaOpenYear: row.haksa_open_year || '',
+            haksaDeptCode: row.haksa_dept_code || '',
+            haksaCourseName: row.haksa_course_name || '',
+            haksaGroupCode: row.haksa_group_code || '',
+            haksaEnddate: row.haksa_enddate || '',
+            haksaEnglish: row.haksa_english || '',
+            haksaHour1: row.haksa_hour1 || '',
+            haksaCurriculumName: row.haksa_curriculum_name || '',
+            haksaGradCode: row.haksa_grad_code || '',
+            haksaIsSyllabus: row.haksa_is_syllabus || '',
           };
         });
 

@@ -20,6 +20,7 @@ import {
   Play,
   Clock,
   Plus,
+  BookOpen,
 } from 'lucide-react';
 import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
@@ -44,9 +45,36 @@ interface CourseManagementProps {
     period: string;
     students: number;
     status: string;
+    // ===== 학사 View 25개 필드 =====
+    haksaCategory?: string;
+    haksaDeptName?: string;
+    haksaWeek?: string;
+    haksaOpenTerm?: string;
+    haksaCourseCode?: string;
+    haksaVisible?: string;
+    haksaStartdate?: string;
+    haksaBunbanCode?: string;
+    haksaGrade?: string;
+    haksaGradName?: string;
+    haksaDayCd?: string;
+    haksaClassroom?: string;
+    haksaCurriculumCode?: string;
+    haksaCourseEname?: string;
+    haksaTypeSyllabus?: string;
+    haksaOpenYear?: string;
+    haksaDeptCode?: string;
+    haksaCourseName?: string;
+    haksaGroupCode?: string;
+    haksaEnddate?: string;
+    haksaEnglish?: string;
+    haksaHour1?: string;
+    haksaCurriculumName?: string;
+    haksaGradCode?: string;
+    haksaIsSyllabus?: string;
   };
   onBack: () => void;
 }
+
 
 type TabType =
   | 'info'
@@ -133,17 +161,17 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'info-completion':
         return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
       case 'curriculum':
-        return <CurriculumTab courseId={Number(course.id)} />;
+        return <CurriculumTab courseId={Number(course.id)} course={course} />;
       case 'students':
         return <StudentsTab courseId={Number(course.id)} />;
       case 'attendance':
         return <AttendanceTab courseId={Number(course.id)} />;
       case 'exam':
-        return <ExamTab courseId={Number(course.id)} />;
+        return <ExamTab courseId={Number(course.id)} course={course} />;
       case 'assignment':
         return <AssignmentTab courseId={Number(course.id)} />;
       case 'assignment-management':
-        return <AssignmentManagementTab courseId={Number(course.id)} />;
+        return <AssignmentManagementTab courseId={Number(course.id)} course={course} />;
       case 'assignment-feedback':
         return <AssignmentFeedbackTab courseId={Number(course.id)} />;
       case 'materials':
@@ -288,9 +316,9 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 
 // 과목정보 탭 (이제 CourseInfoTabs.tsx에서 import됨)
 
-function ExamTab({ courseId }: { courseId: number }) {
+function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0;
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
 
   const [selectedExam, setSelectedExam] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -298,6 +326,24 @@ function ExamTab({ courseId }: { courseId: number }) {
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // 학사 과목의 경우 로컬스토리지에서 시험 목록 불러오기
+  const [haksaExams, setHaksaExams] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isHaksaCourse && course?.id) {
+      try {
+        const saved = localStorage.getItem(`haksa_curriculum_${course.id}`);
+        if (saved) {
+          const contents = JSON.parse(saved);
+          const examContents = contents.filter((c: any) => c.type === 'exam');
+          setHaksaExams(examContents);
+        }
+      } catch {
+        setHaksaExams([]);
+      }
+    }
+  }, [isHaksaCourse, course?.id]);
 
   const fetchExams = async () => {
     if (!courseId || isHaksaCourse) return;
@@ -328,7 +374,7 @@ function ExamTab({ courseId }: { courseId: number }) {
     if (!isHaksaCourse) void fetchExams();
   }, [courseId, isHaksaCourse]);
 
-  // 왜: 학사 과목인 경우 빈 상태로 시작하여 교수자가 직접 시험을 등록할 수 있도록 합니다.
+  // 왜: 학사 과목인 경우 강의목차에서 등록한 시험을 표시합니다.
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
@@ -336,13 +382,50 @@ function ExamTab({ courseId }: { courseId: number }) {
           <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
             <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            시험을 직접 등록하여 관리할 수 있습니다.
+            강의목차에서 등록한 시험이 아래에 표시됩니다.
           </div>
         </div>
-        <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
-          <p className="mb-2">등록된 시험이 없습니다.</p>
-          <p className="text-sm text-gray-400">학사 연동 과목의 시험 직접 등록 기능은 추후 지원 예정입니다.</p>
-        </div>
+
+        {haksaExams.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">등록된 시험</h3>
+              <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">
+                총 {haksaExams.length}개
+              </span>
+            </div>
+            {haksaExams.map((exam: any) => (
+              <div
+                key={exam.id}
+                className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="w-5 h-5 text-red-600" />
+                      <span className="font-medium text-gray-900">{exam.title}</span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                        {exam.weekNumber}주차
+                      </span>
+                    </div>
+                    {exam.description && (
+                      <p className="text-sm text-gray-500 mt-1 ml-7">{exam.description}</p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {new Date(exam.createdAt).toLocaleDateString('ko-KR')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+            <ClipboardCheck className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="mb-2">등록된 시험이 없습니다.</p>
+            <p className="text-sm text-gray-400">강의목차에서 주차별로 시험을 추가할 수 있습니다.</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -831,16 +914,35 @@ function AssignmentTab({ courseId }: { courseId: number }) {
 }
 
 // 과제 관리 하위 탭
-function AssignmentManagementTab({ courseId }: { courseId: number }) {
+function AssignmentManagementTab({ courseId, course }: { courseId: number; course?: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
 
   const [homeworks, setHomeworks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 학사 과목의 경우 로컬스토리지에서 과제 목록 불러오기
+  const [haksaAssignments, setHaksaAssignments] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isHaksaCourse && course?.id) {
+      try {
+        const saved = localStorage.getItem(`haksa_curriculum_${course.id}`);
+        if (saved) {
+          const contents = JSON.parse(saved);
+          const assignmentContents = contents.filter((c: any) => c.type === 'assignment');
+          setHaksaAssignments(assignmentContents);
+        }
+      } catch {
+        setHaksaAssignments([]);
+      }
+    }
+  }, [isHaksaCourse, course?.id]);
+
   // 왜: 과제 탭은 "새로고침해도 유지되는 실데이터"가 핵심이라서, 화면이 뜰 때마다 DB(서버)에서 다시 읽어옵니다.
   const fetchHomeworks = async () => {
-    if (!courseId) return;
+    if (!courseId || isHaksaCourse) return;
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -864,8 +966,64 @@ function AssignmentManagementTab({ courseId }: { courseId: number }) {
   };
 
   useEffect(() => {
-    void fetchHomeworks();
-  }, [courseId]);
+    if (!isHaksaCourse) void fetchHomeworks();
+  }, [courseId, isHaksaCourse]);
+
+  // 학사 과목인 경우 강의목차에서 등록한 과제 표시
+  if (isHaksaCourse) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
+            강의목차에서 등록한 과제가 아래에 표시됩니다.
+          </div>
+        </div>
+
+        {haksaAssignments.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">등록된 과제</h3>
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
+                총 {haksaAssignments.length}개
+              </span>
+            </div>
+            {haksaAssignments.map((assignment: any) => (
+              <div
+                key={assignment.id}
+                className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-gray-900">{assignment.title}</span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                        {assignment.weekNumber}주차
+                      </span>
+                    </div>
+                    {assignment.description && (
+                      <p className="text-sm text-gray-500 mt-1 ml-7">{assignment.description}</p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {new Date(assignment.createdAt).toLocaleDateString('ko-KR')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+            <BookOpen className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="mb-2">등록된 과제가 없습니다.</p>
+            <p className="text-sm text-gray-400">강의목차에서 주차별로 과제를 추가할 수 있습니다.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const handleDeleteHomework = (homeworkId: number, title: string) => {
     void (async () => {

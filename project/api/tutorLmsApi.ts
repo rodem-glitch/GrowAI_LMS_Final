@@ -79,7 +79,34 @@ export type TutorCourseRow = {
   status_label?: string;
   // 왜: 담당과목(학사/프리즘) 탭 구분을 위해 서버에서 소스 타입을 내려줍니다.
   source_type?: 'prism' | 'haksa' | string;
+  // ===== 학사 View 25개 필드 =====
+  haksa_category?: string;        // 강좌형태
+  haksa_dept_name?: string;       // 학과/전공 이름
+  haksa_week?: string;            // 주차
+  haksa_open_term?: string;       // 학기
+  haksa_course_code?: string;     // 강좌코드
+  haksa_visible?: string;         // 강좌 폐강 여부 (Y=정상, N=폐강)
+  haksa_startdate?: string;       // 강좌시작일
+  haksa_bunban_code?: string;     // 분반코드
+  haksa_grade?: string;           // 학년
+  haksa_grad_name?: string;       // 단과대학 이름
+  haksa_day_cd?: string;          // 강의 요일
+  haksa_classroom?: string;       // 강의실 정보
+  haksa_curriculum_code?: string; // 과목구분 코드
+  haksa_course_ename?: string;    // 강좌명(영문)
+  haksa_type_syllabus?: string;   // 강의계획서 구분
+  haksa_open_year?: string;       // 연도
+  haksa_dept_code?: string;       // 학과/전공 코드
+  haksa_course_name?: string;     // 강좌명(한글)
+  haksa_group_code?: string;      // 학부/대학원 구분
+  haksa_enddate?: string;         // 강좌종료일
+  haksa_english?: string;         // 영문 강좌 여부
+  haksa_hour1?: string;           // 강의 시간
+  haksa_curriculum_name?: string; // 과목구분 이름
+  haksa_grad_code?: string;       // 단과대학 코드
+  haksa_is_syllabus?: string;     // 강의계획서 존재여부
 };
+
 
 // 통합 과목 타입 (API + 학사 View 모두 지원)
 export type UnifiedCourseRow = {
