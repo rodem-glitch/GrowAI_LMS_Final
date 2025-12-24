@@ -27,7 +27,7 @@ if(jsonRaw != null && !jsonRaw.trim().equals("")) {
             if(line.contains(":") && !line.startsWith("--")) {
                 int sep = line.indexOf(":");
                 String key = line.substring(0, sep).trim();
-                String val = line.substring(sep + 1).trim();
+                String val = line.substring(sep + 1).trim().replaceAll(",\\s*$", ""); // 끝의 쉼표 제거
                 if(!"".equals(key)) {
                     if(currentRow.containsKey(key)) { rs.addRow(currentRow); currentRow = new java.util.HashMap<String, String>(); }
                     currentRow.put(key, val);
