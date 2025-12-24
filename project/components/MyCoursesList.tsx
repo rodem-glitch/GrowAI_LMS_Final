@@ -319,18 +319,14 @@ export function MyCoursesList() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center">
-                        {course.sourceType === 'prism' ? (
-                          <button
-                            className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
-                            title="과목 관리"
-                            onClick={() => setSelectedCourse(course)}
-                          >
-                            <Settings className="w-4 h-4" />
-                            <span>관리</span>
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400">학사 연동</span>
-                        )}
+                        <button
+                          className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                          title="과목 관리"
+                          onClick={() => setSelectedCourse(course)}
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span>관리</span>
+                        </button>
                       </div>
                     </td>
                   </tr>

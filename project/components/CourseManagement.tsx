@@ -34,6 +34,8 @@ import { downloadCsv } from '../utils/csv';
 interface CourseManagementProps {
   course: {
     id: string;
+    // 왜: 학사/프리즘 탭에 따라 API 호출 및 편집 가능 여부를 결정합니다.
+    sourceType?: 'haksa' | 'prism';
     courseId: string;
     courseType: string;
     subjectName: string;
@@ -48,6 +50,9 @@ interface CourseManagementProps {
 
 type TabType =
   | 'info'
+  | 'info-basic'
+  | 'info-evaluation'
+  | 'info-completion'
   | 'curriculum'
   | 'students'
   | 'attendance'
@@ -62,7 +67,8 @@ type TabType =
 
 export function CourseManagement({ course: initialCourse, onBack }: CourseManagementProps) {
   const [course, setCourse] = useState(initialCourse);
-  const [activeTab, setActiveTab] = useState<TabType>('info');
+  const [activeTab, setActiveTab] = useState<TabType>('info-basic');
+  const [isInfoExpanded, setIsInfoExpanded] = useState(true);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(false);
 
   useEffect(() => {
@@ -70,7 +76,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   }, [initialCourse]);
 
   const tabs = [
-    { id: 'info' as TabType, label: '과목정보', icon: Info, isSubTab: false },
+    { id: 'info' as TabType, label: '과목정보', icon: Info, isSubTab: false, hasSubTabs: true },
     { id: 'curriculum' as TabType, label: '강의목차', icon: List, isSubTab: false },
     { id: 'students' as TabType, label: '수강생', icon: Users, isSubTab: false },
     { id: 'attendance' as TabType, label: '진도/출석', icon: ClipboardCheck, isSubTab: false },
@@ -82,22 +88,36 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
     { id: 'completion' as TabType, label: '수료관리', icon: CheckCircle, isSubTab: false },
   ];
 
+  // 왜: 과목정보 하위 탭 (info 탭 케럟 변경)
+  const infoSubTabs = [
+    { id: 'info-basic' as TabType, label: '기본 정보', icon: Info },
+    { id: 'info-evaluation' as TabType, label: '평가/수료 기준', icon: ClipboardCheck },
+    { id: 'info-completion' as TabType, label: '수료증', icon: Award },
+  ];
+
   const assignmentSubTabs = [
     { id: 'assignment-management' as TabType, label: '과제 관리', icon: Briefcase },
     { id: 'assignment-feedback' as TabType, label: '피드백 관리', icon: MessageSquare },
   ];
 
   const handleTabClick = (tabId: TabType) => {
-    if (tabId === 'assignment') {
+    if (tabId === 'info') {
+      setIsInfoExpanded(!isInfoExpanded);
+      if (!isInfoExpanded) {
+        setActiveTab('info-basic');
+      }
+    } else if (tabId === 'assignment') {
       setIsAssignmentExpanded(!isAssignmentExpanded);
       if (!isAssignmentExpanded) {
-        // 펼칠 때는 첫 번째 하위 탭으로 이동
         setActiveTab('assignment-management');
       }
     } else {
       setActiveTab(tabId);
-      // 다른 탭을 클릭하면 과제 탭 축소
-      if (tabId !== 'assignment-management' && tabId !== 'assignment-feedback') {
+      // 다른 탭을 클릭하면 해당 탭의 하위 탭만 유지
+      if (!['info-basic', 'info-evaluation', 'info-completion'].includes(tabId)) {
+        setIsInfoExpanded(false);
+      }
+      if (!['assignment-management', 'assignment-feedback'].includes(tabId)) {
         setIsAssignmentExpanded(false);
       }
     }
@@ -106,7 +126,12 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
-        return <CourseInfoTab course={course} onCourseUpdated={setCourse} />;
+      case 'info-basic':
+        return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="basic" />;
+      case 'info-evaluation':
+        return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="evaluation" />;
+      case 'info-completion':
+        return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
       case 'curriculum':
         return <CurriculumTab courseId={Number(course.id)} />;
       case 'students':
@@ -165,8 +190,10 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
             <nav className="flex flex-col">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
+                const isInfoTab = tab.id === 'info';
                 const isAssignmentTab = tab.id === 'assignment';
                 const isActive = activeTab === tab.id || 
+                  (isInfoTab && ['info-basic', 'info-evaluation', 'info-completion'].includes(activeTab)) ||
                   (isAssignmentTab && (activeTab === 'assignment-management' || activeTab === 'assignment-feedback'));
                 
                 return (
@@ -183,14 +210,39 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
                         <Icon className="w-5 h-5" />
                         <span>{tab.label}</span>
                       </div>
-                      {isAssignmentTab && (
-                        isAssignmentExpanded ? (
+                      {(isInfoTab || isAssignmentTab) && (
+                        (isInfoTab ? isInfoExpanded : isAssignmentExpanded) ? (
                           <ChevronDown className="w-4 h-4" />
                         ) : (
                           <ChevronRight className="w-4 h-4" />
                         )
                       )}
                     </button>
+                    
+                    {/* 과목정보 하위 탭 */}
+                    {isInfoTab && isInfoExpanded && (
+                      <div className="bg-gray-50">
+                        {infoSubTabs.map((subTab) => {
+                          const SubIcon = subTab.icon;
+                          return (
+                            <button
+                              key={subTab.id}
+                              onClick={() => {
+                                setActiveTab(subTab.id);
+                              }}
+                              className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 border-l-4 transition-colors text-left text-sm ${
+                                activeTab === subTab.id
+                                  ? 'border-blue-600 bg-blue-100 text-blue-700'
+                                  : 'border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
+                            >
+                              <SubIcon className="w-4 h-4" />
+                              <span>{subTab.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                     
                     {/* 과제 하위 탭 */}
                     {isAssignmentTab && isAssignmentExpanded && (
@@ -237,6 +289,9 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 // 과목정보 탭 (이제 CourseInfoTabs.tsx에서 import됨)
 
 function ExamTab({ courseId }: { courseId: number }) {
+  // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0;
+
   const [selectedExam, setSelectedExam] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -245,7 +300,7 @@ function ExamTab({ courseId }: { courseId: number }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchExams = async () => {
-    if (!courseId) return;
+    if (!courseId || isHaksaCourse) return;
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -270,8 +325,28 @@ function ExamTab({ courseId }: { courseId: number }) {
   };
 
   useEffect(() => {
-    void fetchExams();
-  }, [courseId]);
+    if (!isHaksaCourse) void fetchExams();
+  }, [courseId, isHaksaCourse]);
+
+  // 왜: 학사 과목인 경우 빈 상태로 시작하여 교수자가 직접 시험을 등록할 수 있도록 합니다.
+  if (isHaksaCourse) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
+            시험을 직접 등록하여 관리할 수 있습니다.
+          </div>
+        </div>
+        <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+          <p className="mb-2">등록된 시험이 없습니다.</p>
+          <p className="text-sm text-gray-400">학사 연동 과목의 시험 직접 등록 기능은 추후 지원 예정입니다.</p>
+        </div>
+      </div>
+    );
+  }
+
 
 
   if (selectedExam !== null) {

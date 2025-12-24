@@ -32,12 +32,15 @@ function clamp0to100(value: number) {
 export function CourseInfoTab({
   course,
   onCourseUpdated,
+  initialSubTab = 'basic',
 }: {
   course: any;
   onCourseUpdated?: (nextCourse: any) => void;
+  initialSubTab?: SubTab;
 }) {
+  const isHaksa = course?.sourceType === 'haksa';
   const courseId = toInt(course?.id, 0);
-  const [subTab, setSubTab] = useState<SubTab>('basic');
+  const [subTab, setSubTab] = useState<SubTab>(initialSubTab);
   const [detail, setDetail] = useState<TutorCourseInfoDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,6 +48,13 @@ export function CourseInfoTab({
   const passYn = toYn(detail?.pass_yn, 'N') === 'Y';
 
   const fetchCourseInfo = async () => {
+    // 왜: 학사 데이터는 외부 시스템(e-poly) 연동이라 상세 정보 API가 없으므로, 목록에서 받은 정보만 표시합니다.
+    if (isHaksa) {
+      setDetail(null);
+      setLoading(false);
+      return;
+    }
+
     // 왜: 목록에서 넘어온 `course`에는 과목소개/평가/증명서 같은 상세 컬럼이 없어서, 항상 DB에서 다시 조회해야 합니다.
     if (courseId <= 0) {
       setDetail(null);
@@ -76,53 +86,14 @@ export function CourseInfoTab({
     if (subTab === 'certificate' && !passYn) setSubTab('evaluation');
   }, [passYn, subTab]);
 
+  // 왜: 좌측 사이드바에서 하위 탭을 선택하면 initialSubTab이 변경되므로, subTab 상태를 동기화합니다.
+  useEffect(() => {
+    setSubTab(initialSubTab);
+  }, [initialSubTab]);
+
   return (
     <div className="space-y-6">
-      {/* 하위 탭 네비게이션 */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setSubTab('basic')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'basic'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          기본 정보
-        </button>
-        <button
-          onClick={() => setSubTab('evaluation')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'evaluation'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          평가/수료 기준
-        </button>
-        <button
-          onClick={() => setSubTab('completion')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'completion'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          수료증
-        </button>
-        {passYn && (
-          <button
-            onClick={() => setSubTab('certificate')}
-            className={`px-4 py-2 transition-colors ${
-              subTab === 'certificate'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            합격증
-          </button>
-        )}
-      </div>
+      {/* 왜: 하위 탭 네비게이션은 좌측 사이드바로 이동했으므로 제거합니다. */}
 
       {loading && (
         <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-gray-600">
@@ -143,18 +114,19 @@ export function CourseInfoTab({
           detail={detail}
           onReload={fetchCourseInfo}
           onCourseUpdated={onCourseUpdated}
+          isHaksa={isHaksa}
         />
       )}
 
-      {!loading && !errorMessage && subTab === 'evaluation' && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'evaluation' && (
         <EvaluationTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
 
-      {!loading && !errorMessage && subTab === 'completion' && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'completion' && (
         <CompletionCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
 
-      {!loading && !errorMessage && subTab === 'certificate' && passYn && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'certificate' && passYn && (
         <PassCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
     </div>
@@ -168,12 +140,14 @@ function BasicInfoTab({
   detail,
   onReload,
   onCourseUpdated,
+  isHaksa = false,
 }: {
   course: any;
   courseId: number;
   detail: TutorCourseInfoDetail | null;
   onReload: () => Promise<void> | void;
   onCourseUpdated?: (nextCourse: any) => void;
+  isHaksa?: boolean;
 }) {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -265,15 +239,25 @@ function BasicInfoTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-gray-900">과목 기본 정보</h3>
-        <button
-          onClick={() => setIsCourseModalOpen(true)}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Edit className="w-4 h-4" />
-          <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
-        </button>
+        {/* 왜: 학사 데이터는 외부 시스템(e-poly)에서 관리되므로 수정 버튼을 숨깁니다. */}
+        {!isHaksa && (
+          <button
+            onClick={() => setIsCourseModalOpen(true)}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Edit className="w-4 h-4" />
+            <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
+          </button>
+        )}
       </div>
+
+      {/* 왜: 학사 연동 데이터임을 사용자에게 알려줍니다. */}
+      {isHaksa && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
+          <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동된 데이터입니다. 기본 정보는 읽기 전용으로 표시됩니다.
+        </div>
+      )}
 
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -317,38 +301,41 @@ function BasicInfoTab({
         selectedCourse={selectedProgram}
       />
 
-      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과목 소개</label>
-          <textarea
-            value={content1}
-            onChange={(e) => setContent1(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="과목 소개를 입력해 주세요."
-          />
+      {/* 왜: 학사 데이터는 과목 소개/학습 목표를 수정할 수 없습니다. */}
+      {!isHaksa && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목 소개</label>
+            <textarea
+              value={content1}
+              onChange={(e) => setContent1(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="과목 소개를 입력해 주세요."
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
+            <textarea
+              value={content2}
+              onChange={(e) => setContent2(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="학습 목표를 입력해 주세요."
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => void handleSaveContents()}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? '저장 중...' : '저장'}</span>
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
-          <textarea
-            value={content2}
-            onChange={(e) => setContent2(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="학습 목표를 입력해 주세요."
-          />
-        </div>
-        <div className="flex justify-end">
-          <button
-            onClick={() => void handleSaveContents()}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? '저장 중...' : '저장'}</span>
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

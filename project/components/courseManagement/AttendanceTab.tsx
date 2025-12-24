@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Loader2, Search } from 'lucide-react';
+import { ChevronRight, Info, Loader2, Search } from 'lucide-react';
 import { tutorLmsApi, TutorProgressDetailRow, TutorProgressStudentRow, TutorProgressSummaryRow } from '../../api/tutorLmsApi';
 
 function ProgressDetailModal({
@@ -58,9 +58,8 @@ function ProgressDetailModal({
 }
 
 export function AttendanceTab({ courseId }: { courseId: number }) {
-  if (!courseId || Number.isNaN(courseId)) {
-    return <div className="text-sm text-red-600">과목 ID가 올바르지 않습니다.</div>;
-  }
+  // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0;
 
   const [summaryRows, setSummaryRows] = useState<TutorProgressSummaryRow[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -85,6 +84,9 @@ export function AttendanceTab({ courseId }: { courseId: number }) {
   }, [courseId]);
 
   useEffect(() => {
+    // 왜: 학사 과목은 courseId가 유효하지 않아 API 호출이 불가능하므로, 빈 상태로 시작합니다.
+    if (isHaksaCourse) return;
+
     let cancelled = false;
 
     // 왜: 진도 화면은 "요약(차시 목록)"이 먼저 있어야, 사용자가 차시를 선택할 수 있습니다.
@@ -109,7 +111,7 @@ export function AttendanceTab({ courseId }: { courseId: number }) {
     return () => {
       cancelled = true;
     };
-  }, [courseId]);
+  }, [courseId, isHaksaCourse]);
 
   const selectedSummary = useMemo(
     () => summaryRows.find((r) => Number(r.lesson_id) === Number(selectedLessonId)),
@@ -165,6 +167,25 @@ export function AttendanceTab({ courseId }: { courseId: number }) {
       setDetailOpen(false);
     }
   };
+
+  // 왜: 학사 과목인 경우 빈 상태로 시작하여 교수자가 직접 진도 정보를 관리할 수 있도록 합니다.
+  if (isHaksaCourse) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
+            강의목차 등록 후 진도/출석 현황을 확인할 수 있습니다.
+          </div>
+        </div>
+        <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+          <p className="mb-2">진도/출석 데이터가 없습니다.</p>
+          <p className="text-sm text-gray-400">먼저 강의목차를 등록해주세요.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

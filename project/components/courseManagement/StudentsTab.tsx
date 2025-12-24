@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, Plus, Search, Trash2 } from 'lucide-react';
+import { Download, Info, Plus, Search, Trash2 } from 'lucide-react';
 import { tutorLmsApi, TutorCourseStudentRow } from '../../api/tutorLmsApi';
 import { downloadCsv } from '../../utils/csv';
 
@@ -13,9 +13,8 @@ function parseUserIds(raw: string) {
 }
 
 export function StudentsTab({ courseId }: { courseId: number }) {
-  if (!courseId || Number.isNaN(courseId)) {
-    return <div className="text-sm text-red-600">과목 ID가 올바르지 않습니다.</div>;
-  }
+  // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0;
 
   const [rows, setRows] = useState<TutorCourseStudentRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +37,9 @@ export function StudentsTab({ courseId }: { courseId: number }) {
   };
 
   useEffect(() => {
+    // 왜: 학사 과목은 courseId가 유효하지 않아 API 호출이 불가능하므로, 빈 상태로 시작합니다.
+    if (isHaksaCourse) return;
+
     let cancelled = false;
 
     // 왜: 새로고침해도 동일한 DB 결과가 보여야 하므로, 탭 진입 시 서버에서 다시 가져옵니다.
@@ -59,7 +61,7 @@ export function StudentsTab({ courseId }: { courseId: number }) {
     return () => {
       cancelled = true;
     };
-  }, [courseId]);
+  }, [courseId, isHaksaCourse]);
 
   const totalCount = rows.length;
 
@@ -126,6 +128,25 @@ export function StudentsTab({ courseId }: { courseId: number }) {
 
     downloadCsv(filename, headers, body);
   };
+
+  // 왜: 학사 과목인 경우 빈 상태로 시작하여 교수자가 직접 수강생을 등록할 수 있도록 합니다.
+  if (isHaksaCourse) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
+            수강생을 직접 등록하여 관리할 수 있습니다.
+          </div>
+        </div>
+        <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+          <p className="mb-2">등록된 수강생이 없습니다.</p>
+          <p className="text-sm text-gray-400">학사 연동 과목의 수강생 직접 등록 기능은 추후 지원 예정입니다.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
