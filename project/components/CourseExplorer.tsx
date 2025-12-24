@@ -81,58 +81,53 @@ export function CourseExplorer() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 왜: "과정 탐색" 화면은 DB에 실제로 존재하는 내 과정(프로그램) 목록을 보여줘야 합니다.
-  useEffect(() => {
-    let cancelled = false;
+  const fetchPrograms = async () => {
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getPrograms();
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-    const fetchPrograms = async () => {
-      setLoading(true);
-      setErrorMessage(null);
-      try {
-        const res = await tutorLmsApi.getPrograms();
-        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      const rows = res.rst_data ?? [];
+      const mapped: Course[] = rows.map((row) => {
+        const plan = safeParsePlanJson(row.plan_json);
 
-        const rows = res.rst_data ?? [];
-        const mapped: Course[] = rows.map((row) => {
-          const plan = safeParsePlanJson(row.plan_json);
-
-          const trainingPeriod = plan?.training?.trainingPeriodText || row.training_period || '-';
-          const year = deriveYear({
-            startDateYmd: plan?.training?.startDateYmd,
-            startDate: row.start_date,
-            trainingPeriod,
-          });
-
-          return {
-            id: String(row.id),
-            courseCategory: plan?.basic?.courseCategory?.label || plan?.basic?.courseCategory?.value || '-',
-            classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
-            name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
-            department: plan?.basic?.department || '',
-            major: plan?.basic?.major || '',
-            departmentName: plan?.basic?.departmentName || '',
-            trainingPeriod,
-            trainingLevel: plan?.training?.trainingLevel?.label || plan?.training?.trainingLevel?.value || '-',
-            trainingTarget: plan?.training?.trainingTarget || '',
-            trainingGoal: plan?.training?.trainingGoal || '',
-            instructor: plan?.basic?.instructor || '',
-            year,
-            students: 0,
-            subjects: Number(row.course_cnt ?? 0),
-          };
+        const trainingPeriod = plan?.training?.trainingPeriodText || row.training_period || '-';
+        const year = deriveYear({
+          startDateYmd: plan?.training?.startDateYmd,
+          startDate: row.start_date,
+          trainingPeriod,
         });
 
-        if (!cancelled) setCourses(mapped);
-      } catch (e) {
-        if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+        return {
+          id: String(row.id),
+          courseCategory: plan?.basic?.courseCategory?.label || plan?.basic?.courseCategory?.value || '-',
+          classification: plan?.basic?.classification?.label || plan?.basic?.classification?.value || '미분류',
+          name: row.course_nm || plan?.basic?.courseName || `과정 ${row.id}`,
+          department: plan?.basic?.department || '',
+          major: plan?.basic?.major || '',
+          departmentName: plan?.basic?.departmentName || '',
+          trainingPeriod,
+          trainingLevel: plan?.training?.trainingLevel?.label || plan?.training?.trainingLevel?.value || '-',
+          trainingTarget: plan?.training?.trainingTarget || '',
+          trainingGoal: plan?.training?.trainingGoal || '',
+          instructor: plan?.basic?.instructor || '',
+          year,
+          students: 0,
+          subjects: Number(row.course_cnt ?? 0),
+        };
+      });
 
+      setCourses(mapped);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPrograms();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const yearOptions = useMemo(() => {
@@ -172,7 +167,10 @@ export function CourseExplorer() {
     return (
       <OperationalPlan
         course={selectedCourse}
-        onBack={() => setSelectedCourse(null)}
+        onBack={() => {
+          setSelectedCourse(null);
+          fetchPrograms(); // 삭제/수정 후 목록 갱신
+        }}
       />
     );
   }

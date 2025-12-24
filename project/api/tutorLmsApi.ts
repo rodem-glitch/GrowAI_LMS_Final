@@ -562,6 +562,17 @@ export const tutorLmsApi = {
     });
   },
 
+  async deleteProgram(payload: { id: number }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+
+    return requestJson<number>(`/tutor_lms/api/program_delete.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   async getCourseYears(params: { tutorId?: number } = {}) {
     const url = `/tutor_lms/api/course_years.jsp${buildQuery({ tutor_id: params.tutorId })}`;
     return requestJson<TutorCourseYearRow[]>(url);

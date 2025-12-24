@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileText, BookOpen, Layers, Settings, Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, FileText, BookOpen, Layers, Settings, Edit, Save, X, Trash2 } from 'lucide-react';
 import { tutorLmsApi, type TutorProgramDetail, type TutorCourseRow } from '../api/tutorLmsApi';
 import { CourseManagement } from './CourseManagement';
 
@@ -110,6 +110,7 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
   // 편집 모드 상태
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editForm, setEditForm] = useState({
     courseName: '',
     courseCategory: '',
@@ -118,6 +119,31 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
     major: '',
     courseDescription: '',
   });
+
+  // 삭제 핸들러
+  const handleDelete = async () => {
+    if (!detail) return;
+    
+    const confirmed = window.confirm('정말로 이 과정을 삭제하시겠습니까?\n삭제된 과정은 복구할 수 없습니다.');
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const res = await tutorLmsApi.deleteProgram({ id: Number(course.id) });
+
+      if (res.rst_code !== '0000') {
+        throw new Error(res.rst_message);
+      }
+
+      // 삭제 성공 시 목록으로 돌아가기
+      alert('과정이 삭제되었습니다.');
+      onBack();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -261,13 +287,23 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
         </div>
 
         {!loading && !errorMessage && detail && !isEditing && (
-          <button
-            onClick={startEditing}
-            className="flex items-center gap-2 px-4 py-2 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-          >
-            <Edit className="w-4 h-4" />
-            <span>수정</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-4 py-2 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{deleting ? '삭제 중...' : '삭제'}</span>
+            </button>
+            <button
+              onClick={startEditing}
+              className="flex items-center gap-2 px-4 py-2 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              <span>수정</span>
+            </button>
+          </div>
         )}
         {isEditing && (
           <div className="flex items-center gap-2">
