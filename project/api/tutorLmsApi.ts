@@ -305,6 +305,19 @@ export type TutorCourseStudentRow = {
   progress_ratio?: number;
 };
 
+export type HaksaCourseStudentRow = {
+  student_id?: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+  visible?: string;
+  course_code?: string;
+  open_year?: string;
+  open_term?: string;
+  bunban_code?: string;
+  group_code?: string;
+};
+
 export type TutorProgressSummaryRow = {
   chapter: number;
   section_id: number;
@@ -622,8 +635,14 @@ export const tutorLmsApi = {
   },
 
   // 왜: 담당과목 화면에서 학사/프리즘 탭을 분리하여 조회하기 위함
-  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string } = { tab: 'prism' }) {
-    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({ tab: params.tab, year: params.year, s_keyword: params.keyword })}`;
+  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string; page?: number; pageSize?: number } = { tab: 'prism' }) {
+    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({
+      tab: params.tab,
+      year: params.year,
+      s_keyword: params.keyword,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`;
     return requestJson<TutorCourseRow[]>(url);
   },
 
@@ -991,6 +1010,26 @@ export const tutorLmsApi = {
   async getCourseStudents(params: { courseId: number; keyword?: string }) {
     const url = `/tutor_lms/api/course_students_list.jsp${buildQuery({ course_id: params.courseId, s_keyword: params.keyword })}`;
     return requestJson<TutorCourseStudentRow[]>(url);
+  },
+
+  // ----- 학사 수강생(읽기 전용) -----
+  async getHaksaCourseStudents(params: {
+    courseCode: string;
+    openYear?: string;
+    openTerm?: string;
+    bunbanCode?: string;
+    groupCode?: string;
+    keyword?: string;
+  }) {
+    const url = `/tutor_lms/api/haksa_students_list.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+      s_keyword: params.keyword,
+    })}`;
+    return requestJson<HaksaCourseStudentRow[]>(url);
   },
 
   async addCourseStudents(payload: { courseId: number; userIds: number[] }) {

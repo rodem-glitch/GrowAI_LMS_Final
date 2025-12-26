@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, Info, Plus, Search, Trash2 } from 'lucide-react';
-import { tutorLmsApi, TutorCourseStudentRow } from '../../api/tutorLmsApi';
+import { tutorLmsApi, TutorCourseStudentRow, HaksaCourseStudentRow } from '../../api/tutorLmsApi';
 import { downloadCsv } from '../../utils/csv';
 
 function parseUserIds(raw: string) {
@@ -12,11 +12,21 @@ function parseUserIds(raw: string) {
     .filter((v) => v > 0);
 }
 
-export function StudentsTab({ courseId }: { courseId: number }) {
-  // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0;
+type StudentTabCourse = {
+  sourceType?: 'haksa' | 'prism';
+  haksaCourseCode?: string;
+  haksaOpenYear?: string;
+  haksaOpenTerm?: string;
+  haksaBunbanCode?: string;
+  haksaGroupCode?: string;
+};
+
+export function StudentsTab({ courseId, course }: { courseId: number; course?: StudentTabCourse }) {
+  // 왜: 학사 과목은 LMS DB를 쓰지 않으므로, 학사 전용 조회로 전환합니다.
+  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
 
   const [rows, setRows] = useState<TutorCourseStudentRow[]>([]);
+  const [haksaRows, setHaksaRows] = useState<HaksaCourseStudentRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -62,6 +72,36 @@ export function StudentsTab({ courseId }: { courseId: number }) {
       cancelled = true;
     };
   }, [courseId, isHaksaCourse]);
+
+  const refreshHaksa = async (nextKeyword: string) => {
+    if (!course?.haksaCourseCode) {
+      setErrorMessage('학사 과목 코드가 없습니다.');
+      return;
+    }
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await tutorLmsApi.getHaksaCourseStudents({
+        courseCode: course.haksaCourseCode,
+        openYear: course.haksaOpenYear,
+        openTerm: course.haksaOpenTerm,
+        bunbanCode: course.haksaBunbanCode,
+        groupCode: course.haksaGroupCode,
+        keyword: nextKeyword,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      setHaksaRows(res.rst_data ?? []);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '학사 수강생을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isHaksaCourse) return;
+    void refreshHaksa('');
+  }, [isHaksaCourse, course?.haksaCourseCode, course?.haksaOpenYear, course?.haksaOpenTerm, course?.haksaBunbanCode, course?.haksaGroupCode]);
 
   const totalCount = rows.length;
 
@@ -129,20 +169,102 @@ export function StudentsTab({ courseId }: { courseId: number }) {
     downloadCsv(filename, headers, body);
   };
 
-  // 왜: 학사 과목인 경우 빈 상태로 시작하여 교수자가 직접 수강생을 등록할 수 있도록 합니다.
+  // 왜: 학사 과목은 LMS 수강생을 저장하지 않으므로, 학사 View 조회 결과만 읽기 전용으로 보여줍니다.
   if (isHaksaCourse) {
+    const haksaCount = haksaRows.length;
+    const haksaSorted = [...haksaRows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    const handleHaksaDownloadCsv = () => {
+      const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const filename = `haksa_course_${course?.haksaCourseCode || 'unknown'}_students_${ymd}.csv`;
+      const headers = ['No', '학번', '이름', '이메일', '휴대폰', '상태'];
+      const body = haksaSorted.map((student, index) => [
+        index + 1,
+        student.student_id ?? '',
+        student.name ?? '',
+        student.email ?? '',
+        student.mobile ?? '',
+        student.visible === 'Y' ? '정상' : student.visible === 'N' ? '폐강' : student.visible ?? '',
+      ]);
+      downloadCsv(filename, headers, body);
+    };
+
     return (
       <div className="space-y-4">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
           <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
             <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            수강생을 직접 등록하여 관리할 수 있습니다.
+            수강생 목록은 학사 View를 읽어오는 방식으로 제공됩니다(읽기 전용).
           </div>
         </div>
-        <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
-          <p className="mb-2">등록된 수강생이 없습니다.</p>
-          <p className="text-sm text-gray-400">학사 연동 과목의 수강생 직접 등록 기능은 추후 지원 예정입니다.</p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm text-gray-600">총 {haksaCount}명</div>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="학번/이름/이메일 검색"
+                className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => refreshHaksa(keyword)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              검색
+            </button>
+            <button
+              onClick={handleHaksaDownloadCsv}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>엑셀 다운로드(CSV)</span>
+            </button>
+          </div>
+        </div>
+
+        {loading && <div className="text-sm text-gray-600">불러오는 중...</div>}
+        {errorMessage && <div className="text-sm text-red-600">{errorMessage}</div>}
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">No</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">학번</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">이메일</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">휴대폰</th>
+                <th className="px-4 py-3 text-center text-sm text-gray-700">상태</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {haksaSorted.map((student, index) => {
+                const visibleLabel =
+                  student.visible === 'Y' ? '정상' : student.visible === 'N' ? '폐강' : student.visible || '-';
+
+                return (
+                  <tr key={`${student.student_id}-${index}`} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">{student.student_id || '-'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">{student.name || '-'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{student.email || '-'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{student.mobile || '-'}</td>
+                    <td className="px-4 py-4 text-center text-sm text-gray-900">{visibleLabel}</td>
+                  </tr>
+                );
+              })}
+              {!loading && !errorMessage && haksaSorted.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                    수강생이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     );

@@ -54,10 +54,14 @@ export function MyCoursesList() {
   const [courseType, setCourseType] = useState('전체');
   const [status, setStatus] = useState('전체');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,14 +101,19 @@ export function MyCoursesList() {
   const filteredCourses = useMemo(() => courses.filter((course) => {
     const matchesCourseType = courseType === '전체' || course.courseType === courseType;
     const matchesStatus = status === '전체' || course.status === status;
-    const matchesSearch =
-      searchTerm === '' ||
-      course.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.programName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.courseId.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCourseType && matchesStatus;
+  }), [courses, courseType, status]);
 
-    return matchesCourseType && matchesStatus && matchesSearch;
-  }), [courses, courseType, status, searchTerm]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchKeyword(searchTerm.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, year, searchKeyword, pageSize]);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,10 +126,14 @@ export function MyCoursesList() {
         const res = await tutorLmsApi.getMyCoursesCombined({
           tab: activeTab,
           year: year === '전체' ? undefined : year,
+          keyword: searchKeyword || undefined,
+          page,
+          pageSize,
         });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         const rows = res.rst_data ?? [];
+        const serverTotal = Number(res.rst_total_count ?? rows.length);
         const mapped: Course[] = rows.map((row) => {
           const statusLabel = (row.status_label as Course['status']) ?? '대기';
           const typeParts = [
@@ -168,7 +181,10 @@ export function MyCoursesList() {
           };
         });
 
-        if (!cancelled) setCourses(mapped);
+        if (!cancelled) {
+          setCourses(mapped);
+          setTotalCount(Number.isNaN(serverTotal) ? rows.length : serverTotal);
+        }
       } catch (e) {
         if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
       } finally {
@@ -180,7 +196,12 @@ export function MyCoursesList() {
     return () => {
       cancelled = true;
     };
-  }, [year, activeTab]); // activeTab 의존성 추가
+  }, [year, activeTab, searchKeyword, page, pageSize]); // activeTab 의존성 추가
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [totalCount, pageSize, page]);
 
   const courseTypeOptions = useMemo(() => {
     const types = Array.from(new Set(courses.map((c) => c.courseType).filter((t) => t && t !== '미지정'))).sort((a, b) =>
@@ -203,6 +224,13 @@ export function MyCoursesList() {
         return 'bg-gray-100 text-gray-700';
     }
   };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const pageNumbers = useMemo(() => {
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+    return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
+  }, [page, totalPages]);
 
   // 선택된 과목이 있으면 관리 페이지 표시
   if (selectedCourse) {
@@ -340,7 +368,7 @@ export function MyCoursesList() {
               ) : filteredCourses.length > 0 ? (
                 filteredCourses.map((course, index) => (
                   <tr key={course.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex px-2 py-0.5 text-xs rounded-full ${
                         course.sourceType === 'prism' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
@@ -396,9 +424,75 @@ export function MyCoursesList() {
         </div>
       </div>
 
-      {/* 총 과목 수 */}
-      <div className="mt-4 text-sm text-gray-600">
-        총 <span className="text-blue-600">{filteredCourses.length}</span>개의 과목
+      {/* 페이지/카운트 */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600">
+        <div className="flex items-center gap-2">
+          <span>총</span>
+          <span className="text-blue-600">{totalCount}</span>
+          <span>개의 과목</span>
+          <span className="text-gray-400">/ 현재 {filteredCourses.length}개 표시</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="page-size" className="text-gray-600">페이지당</label>
+          <select
+            id="page-size"
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {[20, 50, 100].map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 페이지네이션 */}
+      <div className="mt-4 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPage(1)}
+          disabled={page === 1}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-40"
+        >
+          처음
+        </button>
+        <button
+          type="button"
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          disabled={page === 1}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-40"
+        >
+          이전
+        </button>
+        {pageNumbers.map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => setPage(num)}
+            className={`px-3 py-1.5 text-sm border rounded-md ${
+              num === page ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300'
+            }`}
+          >
+            {num}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+          disabled={page === totalPages}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-40"
+        >
+          다음
+        </button>
+        <button
+          type="button"
+          onClick={() => setPage(totalPages)}
+          disabled={page === totalPages}
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-40"
+        >
+          끝
+        </button>
       </div>
     </div>
   );

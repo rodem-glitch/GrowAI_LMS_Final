@@ -15,9 +15,15 @@ if("".equals(tab)) tab = "prism"; // 기본값: 프리즘
 String year = m.rs("year");
 String keyword = m.rs("s_keyword");
 String today = m.time("yyyyMMdd");
+int pageNo = m.ri("page", 1);
+int pageSize = m.ri("page_size", 20);
+if(pageNo < 1) pageNo = 1;
+if(pageSize != 20 && pageSize != 50 && pageSize != 100) pageSize = 20;
+int offset = (pageNo - 1) * pageSize;
 
 DataSet resultList = new DataSet();
 String message = "";
+int totalCount = 0;
 
 //==============================================================================
 // 프리즘 탭: 관리자 과정운영 기준 (43건 맞춤)
@@ -40,17 +46,27 @@ if("prism".equals(tab)) {
     // - LM_COURSE_TUTOR 조인 제거 (모든 과목 노출)
     // - display_yn = 'Y' 조건 추가 (노출 허용된 것만)
     try {
+        String baseSql =
+            " FROM " + course.table + " c "
+            + " LEFT JOIN " + subject.table + " s ON s.id = c.subject_id AND s.status != -1 "
+            + " WHERE c.site_id = " + siteId + " AND c.status != -1 AND c.display_yn = 'Y' "
+            + where;
+
+        totalCount = course.getOneInt("SELECT COUNT(*) " + baseSql, params.toArray());
+
+        ArrayList<Object> pageParams = new ArrayList<Object>(params);
+        pageParams.add(offset);
+        pageParams.add(pageSize);
+
         resultList = course.query(
             " SELECT c.id, c.course_cd, c.course_nm, c.course_type, c.onoff_type, c.year, c.status, c.display_yn "
             + " , c.study_sdate, c.study_edate, c.request_sdate, c.request_edate "
             + " , s.course_nm program_nm "
             + " , (SELECT COUNT(*) FROM " + courseUser.table + " cu WHERE cu.course_id = c.id AND cu.status IN (1,3)) student_cnt "
-            + " FROM " + course.table + " c "
-            + " LEFT JOIN " + subject.table + " s ON s.id = c.subject_id AND s.status != -1 "
-            + " WHERE c.site_id = " + siteId + " AND c.status != -1 AND c.display_yn = 'Y' "
-            + where
+            + baseSql
             + " ORDER BY c.id DESC "
-            , params.toArray()
+            + " LIMIT ?, ? "
+            , pageParams.toArray()
         );
     } catch(Exception e) {
         message = "[PErr:" + e.getMessage() + "]";
@@ -75,48 +91,100 @@ if("prism".equals(tab)) {
         resultList.put("status_label", statusLabel);
     }
     
-    message = "성공 (프리즘:" + resultList.size() + "건)" + message;
+    message = "성공 (프리즘:" + totalCount + "건)" + message;
 }
 
 //==============================================================================
 // 학사 탭: 폴리텍 COM.LMS_COURSE_VIEW 테이블
 //==============================================================================
 else if("haksa".equals(tab)) {
-    malgnsoft.util.Http http = new malgnsoft.util.Http("https://e-poly.kopo.ac.kr/main/vpn_test.jsp");
-    http.setParam("tb", "COM.LMS_COURSE_VIEW"); // COURSE_VIEW 테이블 사용
-    http.setParam("cnt", "500"); // 전체 조회
-    String jsonRaw = http.send("POST");
+    // 왜: 학사(View) 데이터는 cnt 제한 때문에 실시간 조회 시 누락이 생길 수 있어,
+    //     별도 동기화(`public_html/main/poly_sync.jsp`)로 우리 DB에 저장된 미러 테이블을 조회합니다.
+    PolyCourseDao polyCourse = new PolyCourseDao();
+    PolyStudentDao polyStudent = new PolyStudentDao();
+    PolySyncLogDao polySyncLog = new PolySyncLogDao();
 
-    if(jsonRaw != null && !jsonRaw.trim().equals("")) {
-        String trimmed = jsonRaw.trim();
-        
-        // 스마트 파서: JSON 또는 텍스트 형식 모두 처리 (poly_api_check.jsp와 동일)
-        if(trimmed.startsWith("[")) {
-            // JSON 배열 형식
-            try {
-                resultList = malgnsoft.util.Json.decode(trimmed);
-            } catch(Exception e) {
-                message = "[JSON Error:" + e.getMessage() + "]";
+    int mirrorCount = 0;
+    try { mirrorCount = polyCourse.findCount("1 = 1"); } catch(Exception ignore) {}
+
+    // 미러 데이터가 없으면(초기 구축 전) 기존 실시간 조회로 한 번 보여주되, 안내 메시지를 같이 내려줍니다.
+    if(mirrorCount <= 0) {
+        message = "학사 데이터가 아직 동기화되지 않았습니다. /main/poly_sync.jsp를 먼저 실행해 주세요.";
+
+        malgnsoft.util.Http http = new malgnsoft.util.Http("https://e-poly.kopo.ac.kr/main/vpn_test.jsp");
+        http.setParam("tb", "COM.LMS_COURSE_VIEW");
+        http.setParam("cnt", "500");
+        String jsonRaw = http.send("POST");
+
+        if(jsonRaw != null && !jsonRaw.trim().equals("")) {
+            // 왜: 응답이 <pre>로 감싸져 오는 경우가 있어, 내부만 추출합니다.
+            String body = jsonRaw;
+            int ps = jsonRaw.indexOf("<pre");
+            if(ps >= 0) {
+                int gt = jsonRaw.indexOf(">", ps);
+                int pe = jsonRaw.indexOf("</pre>", gt);
+                if(gt >= 0 && pe >= 0) body = jsonRaw.substring(gt + 1, pe);
             }
-        } else {
-            // 텍스트 형식 (key: value 라인 파싱)
-            String[] lines = jsonRaw.split("\n");
-            java.util.Map<String, String> currentRow = new java.util.HashMap<String, String>();
-            for(String line : lines) {
-                if(line.contains(":") && !line.startsWith("--")) {
-                    int sep = line.indexOf(":");
-                    String key = line.substring(0, sep).trim();
-                    String val = line.substring(sep + 1).trim().replaceAll(",\\s*$", ""); // 끝의 쉼표 제거
-                    if(!"".equals(key)) {
-                        if(currentRow.containsKey(key)) {
-                            resultList.addRow(currentRow);
-                            currentRow = new java.util.HashMap<String, String>();
+
+            String trimmed = body.trim();
+            if(trimmed.startsWith("[")) {
+                try { resultList = malgnsoft.util.Json.decode(trimmed); } catch(Exception ignore) {}
+            } else {
+                String[] lines = body.split("\n");
+                java.util.Map<String, String> currentRow = new java.util.HashMap<String, String>();
+                for(String line : lines) {
+                    if(line.contains(":") && !line.startsWith("--")) {
+                        int sep = line.indexOf(":");
+                        String key = line.substring(0, sep).trim();
+                        String val = line.substring(sep + 1).trim().replaceAll(",\\s*$", "");
+                        if(!"".equals(key)) {
+                            if(currentRow.containsKey(key)) { resultList.addRow(currentRow); currentRow = new java.util.HashMap<String, String>(); }
+                            currentRow.put(key, val);
                         }
-                        currentRow.put(key, val);
                     }
                 }
+                if(!currentRow.isEmpty()) resultList.addRow(currentRow);
             }
-            if(!currentRow.isEmpty()) resultList.addRow(currentRow);
+        }
+        totalCount = resultList.size();
+    } else {
+        String where = " WHERE 1 = 1 ";
+        ArrayList<Object> params = new ArrayList<Object>();
+
+        if(!"".equals(year) && !"전체".equals(year)) {
+            where += " AND c.open_year = ? ";
+            params.add(year);
+        }
+        if(!"".equals(keyword)) {
+            where += " AND (c.course_name LIKE ? OR c.dept_name LIKE ? OR c.course_code LIKE ?) ";
+            params.add("%" + keyword + "%");
+            params.add("%" + keyword + "%");
+            params.add("%" + keyword + "%");
+        }
+
+        try {
+            String baseSql = " FROM " + polyCourse.table + " c " + where;
+            totalCount = polyCourse.getOneInt("SELECT COUNT(*) " + baseSql, params.toArray());
+
+            ArrayList<Object> pageParams = new ArrayList<Object>(params);
+            pageParams.add(offset);
+            pageParams.add(pageSize);
+
+            resultList = polyCourse.query(
+                " SELECT c.* "
+                + " , (SELECT COUNT(*) FROM " + polyStudent.table + " s "
+                    + " WHERE s.course_code = c.course_code "
+                    + " AND s.open_year = c.open_year AND s.open_term = c.open_term "
+                    + " AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
+                + " ) student_cnt "
+                + baseSql
+                + " ORDER BY c.open_year DESC, c.open_term DESC, c.course_code DESC "
+                + " LIMIT ?, ? "
+                , pageParams.toArray()
+            );
+        } catch(Exception e) {
+            message = "[HErr:" + e.getMessage() + "]";
+            resultList = new DataSet();
         }
     }
 
@@ -262,16 +330,28 @@ else if("haksa".equals(tab)) {
         resultList.put("onoff_type_conv", "학사");
         resultList.put("period_conv", !"".equals(openYear) ? (openYear + "-" + openTerm + "학기") : "-");
         resultList.put("status_label", "Y".equals(visible) ? "학습기간" : "종료");
-        resultList.put("student_cnt", 0); // 학사 데이터에 수강생 수 없음
+        // 왜: 미러 테이블(LM_POLY_STUDENT)에서 과목별 학생 수를 계산해 같이 내려줍니다.
+        resultList.put("student_cnt", resultList.i("student_cnt"));
     }
-    
-    message = "성공 (학사:" + resultList.size() + "건)";
+
+    // 미러 조회가 성공했을 때만 마지막 동기화 시각을 붙입니다.
+    if(mirrorCount > 0 && !message.startsWith("[HErr")) {
+        String lastSync = "";
+        try { lastSync = polySyncLog.getOne("SELECT last_sync_date FROM " + polySyncLog.table + " WHERE sync_key = 'poly_mirror'"); }
+        catch(Exception ignore) {}
+
+        message = "성공 (학사:" + totalCount + "건)"
+            + (!"".equals(lastSync) ? (" / 동기화:" + lastSync) : "");
+    }
 }
 
 // 결과 출력
 result.put("rst_code", "0000");
 result.put("rst_message", message);
 result.put("rst_count", resultList.size());
+result.put("rst_total_count", totalCount);
+result.put("rst_page", pageNo);
+result.put("rst_page_size", pageSize);
 result.put("rst_data", resultList);
 result.print();
 
