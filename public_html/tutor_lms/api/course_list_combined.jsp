@@ -14,6 +14,11 @@ if("".equals(tab)) tab = "prism"; // 기본값: 프리즘
 
 String year = m.rs("year");
 String keyword = m.rs("s_keyword");
+String haksaCategory = m.rs("haksa_category");
+String haksaGrad = m.rs("haksa_grad");
+String haksaCurriculum = m.rs("haksa_curriculum");
+String sortOrder = m.rs("sort_order");
+if(!"asc".equals(sortOrder)) sortOrder = "desc";
 String today = m.time("yyyyMMdd");
 int pageNo = m.ri("page", 1);
 int pageSize = m.ri("page_size", 20);
@@ -161,6 +166,19 @@ else if("haksa".equals(tab)) {
             params.add("%" + keyword + "%");
             params.add("%" + keyword + "%");
         }
+        if(!"".equals(haksaCategory) && !"전체".equals(haksaCategory)) {
+            // 왜: 학사 유형은 대소문자 혼재가 있어 비교 시 소문자로 통일합니다.
+            where += " AND LOWER(c.category) = ? ";
+            params.add(haksaCategory.toLowerCase());
+        }
+        if(!"".equals(haksaGrad) && !"전체".equals(haksaGrad)) {
+            where += " AND c.grad_name LIKE ? ";
+            params.add("%" + haksaGrad + "%");
+        }
+        if(!"".equals(haksaCurriculum) && !"전체".equals(haksaCurriculum)) {
+            where += " AND c.curriculum_name = ? ";
+            params.add(haksaCurriculum);
+        }
 
         try {
             String baseSql = " FROM " + polyCourse.table + " c " + where;
@@ -174,14 +192,14 @@ else if("haksa".equals(tab)) {
                 " SELECT c.* "
                 + " , (SELECT COUNT(*) FROM " + polyStudent.table + " s "
                     + " WHERE s.course_code = c.course_code "
-                    + " AND s.open_year = c.open_year AND s.open_term = c.open_term "
-                    + " AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
-                + " ) student_cnt "
-                + baseSql
-                + " ORDER BY c.open_year DESC, c.open_term DESC, c.course_code DESC "
-                + " LIMIT ?, ? "
-                , pageParams.toArray()
-            );
+            + " AND s.open_year = c.open_year AND s.open_term = c.open_term "
+            + " AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
+        + " ) student_cnt "
+        + baseSql
+        + " ORDER BY c.open_year DESC, c.open_term DESC, c.course_code " + ("asc".equals(sortOrder) ? "ASC" : "DESC") + " "
+        + " LIMIT ?, ? "
+        , pageParams.toArray()
+    );
         } catch(Exception e) {
             message = "[HErr:" + e.getMessage() + "]";
             resultList = new DataSet();

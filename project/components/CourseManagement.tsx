@@ -99,6 +99,11 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   const [isInfoExpanded, setIsInfoExpanded] = useState(true);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(false);
 
+  // 페이지 진입 시 스크롤을 맨 위로 이동
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     setCourse(initialCourse);
   }, [initialCourse]);
@@ -189,122 +194,128 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>목록으로 돌아가기</span>
-        </button>
-        <h2 className="text-gray-900 mb-2">{course.subjectName}</h2>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span>과정ID: {course.courseId}</span>
-          <span className="text-gray-300">·</span>
-          <span>{course.courseType}</span>
-          <span className="text-gray-300">·</span>
-          <span>{course.period}</span>
-          <span className="text-gray-300">·</span>
-          <span>수강생: {course.students}명</span>
-        </div>
-      </div>
-
       {/* Vertical Tabs Layout */}
       <div className="flex gap-6">
-        {/* Left Sidebar - Vertical Tabs */}
+        {/* Left Sidebar - Vertical Tabs (Fixed Position) */}
         <div className="w-64 flex-shrink-0">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden sticky top-6">
-            <nav className="flex flex-col">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isInfoTab = tab.id === 'info';
-                const isAssignmentTab = tab.id === 'assignment';
-                const isActive = activeTab === tab.id || 
-                  (isInfoTab && ['info-basic', 'info-evaluation', 'info-completion'].includes(activeTab)) ||
-                  (isAssignmentTab && (activeTab === 'assignment-management' || activeTab === 'assignment-feedback'));
-                
-                return (
-                  <React.Fragment key={tab.id}>
-                    <button
-                      onClick={() => handleTabClick(tab.id)}
-                      className={`flex items-center justify-between px-4 py-3 border-l-4 transition-colors text-left ${
-                        isActive
-                          ? 'border-blue-600 bg-blue-50 text-blue-700'
-                          : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="w-5 h-5" />
-                        <span>{tab.label}</span>
-                      </div>
-                      {(isInfoTab || isAssignmentTab) && (
-                        (isInfoTab ? isInfoExpanded : isAssignmentExpanded) ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )
+          <div className="fixed w-64" style={{ maxHeight: 'calc(100vh - 40px)', overflowY: 'auto' }}>
+            {/* 목록으로 돌아가기 버튼 */}
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>목록으로 돌아가기</span>
+            </button>
+            
+            {/* 메뉴 네비게이션 */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <nav className="flex flex-col">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isInfoTab = tab.id === 'info';
+                  const isAssignmentTab = tab.id === 'assignment';
+                  const isActive = activeTab === tab.id || 
+                    (isInfoTab && ['info-basic', 'info-evaluation', 'info-completion'].includes(activeTab)) ||
+                    (isAssignmentTab && (activeTab === 'assignment-management' || activeTab === 'assignment-feedback'));
+                  
+                  return (
+                    <React.Fragment key={tab.id}>
+                      <button
+                        onClick={() => handleTabClick(tab.id)}
+                        className={`flex items-center justify-between px-4 py-3 border-l-4 transition-colors text-left ${
+                          isActive
+                            ? 'border-blue-600 bg-blue-50 text-blue-700'
+                            : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-5 h-5" />
+                          <span>{tab.label}</span>
+                        </div>
+                        {(isInfoTab || isAssignmentTab) && (
+                          (isInfoTab ? isInfoExpanded : isAssignmentExpanded) ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )
+                        )}
+                      </button>
+                      
+                      {/* 과목정보 하위 탭 */}
+                      {isInfoTab && isInfoExpanded && (
+                        <div className="bg-gray-50">
+                          {infoSubTabs.map((subTab) => {
+                            const SubIcon = subTab.icon;
+                            return (
+                              <button
+                                key={subTab.id}
+                                onClick={() => {
+                                  setActiveTab(subTab.id);
+                                }}
+                                className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 border-l-4 transition-colors text-left text-sm ${
+                                  activeTab === subTab.id
+                                    ? 'border-blue-600 bg-blue-100 text-blue-700'
+                                    : 'border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                }`}
+                              >
+                                <SubIcon className="w-4 h-4" />
+                                <span>{subTab.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
-                    </button>
-                    
-                    {/* 과목정보 하위 탭 */}
-                    {isInfoTab && isInfoExpanded && (
-                      <div className="bg-gray-50">
-                        {infoSubTabs.map((subTab) => {
-                          const SubIcon = subTab.icon;
-                          return (
-                            <button
-                              key={subTab.id}
-                              onClick={() => {
-                                setActiveTab(subTab.id);
-                              }}
-                              className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 border-l-4 transition-colors text-left text-sm ${
-                                activeTab === subTab.id
-                                  ? 'border-blue-600 bg-blue-100 text-blue-700'
-                                  : 'border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                              }`}
-                            >
-                              <SubIcon className="w-4 h-4" />
-                              <span>{subTab.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* 과제 하위 탭 */}
-                    {isAssignmentTab && isAssignmentExpanded && (
-                      <div className="bg-gray-50">
-                        {assignmentSubTabs.map((subTab) => {
-                          const SubIcon = subTab.icon;
-                          return (
-                            <button
-                              key={subTab.id}
-                              onClick={() => {
-                                setActiveTab(subTab.id);
-                              }}
-                              className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 border-l-4 transition-colors text-left text-sm ${
-                                activeTab === subTab.id
-                                  ? 'border-blue-600 bg-blue-100 text-blue-700'
-                                  : 'border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                              }`}
-                            >
-                              <SubIcon className="w-4 h-4" />
-                              <span>{subTab.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </nav>
+                      
+                      {/* 과제 하위 탭 */}
+                      {isAssignmentTab && isAssignmentExpanded && (
+                        <div className="bg-gray-50">
+                          {assignmentSubTabs.map((subTab) => {
+                            const SubIcon = subTab.icon;
+                            return (
+                              <button
+                                key={subTab.id}
+                                onClick={() => {
+                                  setActiveTab(subTab.id);
+                                }}
+                                className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 border-l-4 transition-colors text-left text-sm ${
+                                  activeTab === subTab.id
+                                    ? 'border-blue-600 bg-blue-100 text-blue-700'
+                                    : 'border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                }`}
+                              >
+                                <SubIcon className="w-4 h-4" />
+                                <span>{subTab.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </nav>
+            </div>
           </div>
         </div>
 
         {/* Right Content Area */}
         <div className="flex-1 min-w-0">
+          {/* 강좌 정보 헤더 (스크롤과 함께 이동) */}
+          <div className="mb-6">
+            <h2 className="text-gray-900 mb-2">{course.subjectName}</h2>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span>과정ID: {course.courseId}</span>
+              <span className="text-gray-300">·</span>
+              <span>{course.courseType}</span>
+              <span className="text-gray-300">·</span>
+              <span>{course.period}</span>
+              <span className="text-gray-300">·</span>
+              <span>수강생: {course.students}명</span>
+            </div>
+          </div>
+          
+          {/* 탭 콘텐츠 */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {renderTabContent()}
           </div>
@@ -378,14 +389,6 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            강의목차에서 등록한 시험이 아래에 표시됩니다.
-          </div>
-        </div>
-
         {haksaExams.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -973,14 +976,6 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            강의목차에서 등록한 과제가 아래에 표시됩니다.
-          </div>
-        </div>
-
         {haksaAssignments.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">

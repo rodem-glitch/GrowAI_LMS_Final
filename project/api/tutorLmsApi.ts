@@ -635,13 +635,27 @@ export const tutorLmsApi = {
   },
 
   // 왜: 담당과목 화면에서 학사/프리즘 탭을 분리하여 조회하기 위함
-  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string; page?: number; pageSize?: number } = { tab: 'prism' }) {
+  async getMyCoursesCombined(params: {
+    tab: 'prism' | 'haksa';
+    year?: string;
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+    haksaCategory?: string;
+    haksaGrad?: string;
+    haksaCurriculum?: string;
+    sortOrder?: 'asc' | 'desc';
+  } = { tab: 'prism' }) {
     const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({
       tab: params.tab,
       year: params.year,
       s_keyword: params.keyword,
       page: params.page,
       page_size: params.pageSize,
+      haksa_category: params.haksaCategory,
+      haksa_grad: params.haksaGrad,
+      haksa_curriculum: params.haksaCurriculum,
+      sort_order: params.sortOrder,
     })}`;
     return requestJson<TutorCourseRow[]>(url);
   },

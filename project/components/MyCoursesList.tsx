@@ -46,6 +46,33 @@ interface Course {
 
 type TabType = 'haksa' | 'prism';
 
+// 단과대학 옵션 (캠퍼스 이름만)
+const GRAD_OPTIONS = [
+  '전체',
+  // I대학
+  '서울정수', '서울강서', '성남', '분당융합', '제주',
+  // II대학
+  '인천', '남인천', '화성', '광명융합',
+  // III대학
+  '춘천', '원주', '강릉',
+  // IV대학
+  '대전', '청주', '아산', '충남', '충주',
+  // V대학
+  '광주', '전북', '전남', '익산', '순천',
+  // VI대학
+  '대구', '구미', '남대구', '포항', '영주', '영남융합기술',
+  // VII대학
+  '창원', '부산', '울산', '동부산', '진주', '석유화학공정',
+  // 특성화
+  '반도체융합', '바이오', '로봇', '항공', '신기술교육원',
+];
+
+// 과목구분 옵션
+const CURRICULUM_OPTIONS = ['전체', '전공필수', '전공교과', '전공선택', '교양선택', '교양교과', '교양필수'];
+
+// 유형 옵션
+const CATEGORY_OPTIONS = ['전체', 'off', 'elearning'];
+
 export function MyCoursesList() {
   const currentYear = String(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState<TabType>('haksa'); // 기본 탭: 학사
@@ -62,6 +89,12 @@ export function MyCoursesList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
+
+  // 학사 탭 전용 필터
+  const [haksaCategory, setHaksaCategory] = useState('전체'); // 유형: off/elearning
+  const [haksaGrad, setHaksaGrad] = useState('전체'); // 단과대학
+  const [haksaCurriculum, setHaksaCurriculum] = useState('전체'); // 과목구분
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // 정렬 순서
 
   useEffect(() => {
     let cancelled = false;
@@ -97,12 +130,21 @@ export function MyCoursesList() {
     };
   }, [currentYear]);
 
-  // 왜: 기존 화면 필터 UI를 그대로 살리면서, 데이터만 실제 DB 결과로 바꿉니다.
-  const filteredCourses = useMemo(() => courses.filter((course) => {
+  // 왜: 탭에 따라 필터 기준이 달라서 분기 처리합니다.
+  const filteredCourses = useMemo(() => {
+    if (activeTab === 'haksa') {
+      return courses.filter((course) => {
+        const matchesCategory = haksaCategory === '전체' || (course.haksaCategory || '').toLowerCase() === haksaCategory.toLowerCase();
+        const matchesGrad = haksaGrad === '전체' || (course.haksaGradName || '').includes(haksaGrad);
+        const matchesCurriculum = haksaCurriculum === '전체' || (course.haksaCurriculumName || '') === haksaCurriculum;
+        return matchesCategory && matchesGrad && matchesCurriculum;
+      });
+    }
+
     const matchesCourseType = courseType === '전체' || course.courseType === courseType;
     const matchesStatus = status === '전체' || course.status === status;
-    return matchesCourseType && matchesStatus;
-  }), [courses, courseType, status]);
+    return courses.filter((course) => matchesCourseType && matchesStatus);
+  }, [activeTab, courses, courseType, status, haksaCategory, haksaGrad, haksaCurriculum]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -112,8 +154,9 @@ export function MyCoursesList() {
   }, [searchTerm]);
 
   useEffect(() => {
+    // 왜: 필터/탭 변경 시 페이지가 어긋나지 않도록 첫 페이지로 복귀합니다.
     setPage(1);
-  }, [activeTab, year, searchKeyword, pageSize]);
+  }, [activeTab, year, searchKeyword, pageSize, haksaCategory, haksaGrad, haksaCurriculum, sortOrder]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,6 +172,10 @@ export function MyCoursesList() {
           keyword: searchKeyword || undefined,
           page,
           pageSize,
+          haksaCategory: activeTab === 'haksa' && haksaCategory !== '전체' ? haksaCategory : undefined,
+          haksaGrad: activeTab === 'haksa' && haksaGrad !== '전체' ? haksaGrad : undefined,
+          haksaCurriculum: activeTab === 'haksa' && haksaCurriculum !== '전체' ? haksaCurriculum : undefined,
+          sortOrder: activeTab === 'haksa' ? sortOrder : undefined,
         });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
@@ -196,7 +243,7 @@ export function MyCoursesList() {
     return () => {
       cancelled = true;
     };
-  }, [year, activeTab, searchKeyword, page, pageSize]); // activeTab 의존성 추가
+  }, [year, activeTab, searchKeyword, page, pageSize, haksaCategory, haksaGrad, haksaCurriculum, sortOrder]); // activeTab 의존성 추가
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -275,63 +322,150 @@ export function MyCoursesList() {
 
       {/* 필터 영역 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">년도</label>
-            <select
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">유형</label>
-            <select
-              value={courseType}
-              onChange={(e) => setCourseType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {courseTypeOptions.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">상태</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="전체">전체</option>
-              <option value="대기">대기</option>
-              <option value="신청기간">신청기간</option>
-              <option value="학습기간">학습기간</option>
-              <option value="종료">종료</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">검색</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="과목명, 과정명, 과정ID 검색"
-                className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        {activeTab === 'haksa' ? (
+          /* 학사 탭 필터: 유형, 단과대학, 과목구분, 정렬, 검색 */
+          <div className="grid grid-cols-6 gap-4 mb-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">년도</label>
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">유형</label>
+              <select
+                value={haksaCategory}
+                onChange={(e) => setHaksaCategory(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">단과대학</label>
+              <select
+                value={haksaGrad}
+                onChange={(e) => setHaksaGrad(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {GRAD_OPTIONS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">과목구분</label>
+              <select
+                value={haksaCurriculum}
+                onChange={(e) => setHaksaCurriculum(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {CURRICULUM_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">정렬</label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="desc">강좌코드 내림차순</option>
+                <option value="asc">강좌코드 오름차순</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">검색</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="과목명, 과정명, 과정ID 검색"
+                  className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          /* 프리즘 탭 필터: 연도, 유형, 상태, 검색 */
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">년도</label>
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">유형</label>
+              <select
+                value={courseType}
+                onChange={(e) => setCourseType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {courseTypeOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">상태</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="전체">전체</option>
+                <option value="대기">대기</option>
+                <option value="신청기간">신청기간</option>
+                <option value="학습기간">학습기간</option>
+                <option value="종료">종료</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">검색</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="과목명, 과정명, 과정ID 검색"
+                  className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 과목 목록 테이블 */}
@@ -345,7 +479,9 @@ export function MyCoursesList() {
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과정ID</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">유형</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과목명</th>
-                <th className="px-4 py-3 text-left text-sm text-gray-700">소속 과정명</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">
+                  {activeTab === 'haksa' ? '학과/전공' : '소속 과정명'}
+                </th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">기간</th>
                 <th className="px-4 py-3 text-center text-sm text-gray-700">수강생</th>
                 <th className="px-4 py-3 text-center text-sm text-gray-700">상태</th>
@@ -377,10 +513,16 @@ export function MyCoursesList() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.courseId}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{course.courseType}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {course.sourceType === 'haksa' && course.haksaCategory 
+                        ? course.haksaCategory 
+                        : course.courseType}
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.subjectName}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {course.programName}
+                      {course.sourceType === 'haksa' && course.haksaDeptName
+                        ? course.haksaDeptName
+                        : course.programName}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.period}</td>
                     <td className="px-4 py-4 text-center">
