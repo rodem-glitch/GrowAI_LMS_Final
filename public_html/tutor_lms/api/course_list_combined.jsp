@@ -265,6 +265,9 @@ else if("haksa".equals(tab)) {
         resultList.put("student_cnt", 0); // 학사 데이터에 수강생 수 없음
     }
     
+    // COURSE_CODE 기준 내림차순 정렬
+    resultList.sort("haksa_course_code", "desc");
+    
     message = "성공 (학사:" + resultList.size() + "건)";
 }
 
