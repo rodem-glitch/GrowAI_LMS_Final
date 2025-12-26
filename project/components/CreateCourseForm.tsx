@@ -707,6 +707,16 @@ function SubjectsStep({
   const [plismError, setPlismError] = React.useState<string | null>(null);
   const [plismSearchTerm, setPlismSearchTerm] = React.useState('');
 
+  // 과목 복사 모달 관련 state
+  const [isCopyModalOpen, setIsCopyModalOpen] = React.useState(false);
+  const [copySourceCourse, setCopySourceCourse] = React.useState<Subject | null>(null);
+  const [copyCourseName, setCopyCourseName] = React.useState('');
+  const [copyTutorId, setCopyTutorId] = React.useState<number | ''>('');
+  const [copySaving, setCopySaving] = React.useState(false);
+  const [tutorOptions, setTutorOptions] = React.useState<Array<{ id: number; name: string }>>([]);
+  const [tutorLoading, setTutorLoading] = React.useState(false);
+  const [tutorError, setTutorError] = React.useState<string | null>(null);
+
   // 차시 편집 관련 state
   const [editingCourse, setEditingCourse] = React.useState<Subject | null>(null);
   const [curriculumData, setCurriculumData] = React.useState<any[]>([]);
@@ -721,51 +731,12 @@ function SubjectsStep({
 
   // 차시 편집을 위해 과목 선택 시 차시 불러오기
   const handleEditCurriculum = async (course: Subject) => {
-    setCurriculumLoading(true);
-    setCurriculumError(null);
-    setEditingCourse(course);
-    
-    try {
-      const res = await tutorLmsApi.getCurriculum({ courseId: Number(course.id) });
-      if (res.rst_code !== '0000') throw new Error(res.rst_message);
-      
-      const rows = res.rst_data ?? [];
-      // 섹션별로 그룹화
-      const sectionsMap = new Map<number, { sectionId: number; sectionName: string; lessons: any[] }>();
-      rows.forEach((row: any) => {
-        const sectionId = row.section_id;
-        if (!sectionsMap.has(sectionId)) {
-          sectionsMap.set(sectionId, {
-            sectionId,
-            sectionName: row.section_nm || `${row.chapter}차시`,
-            lessons: [],
-          });
-        }
-        sectionsMap.get(sectionId)!.lessons.push({
-          lessonId: row.lesson_id,
-          lessonName: row.lesson_nm || '',
-          lessonType: row.lesson_type || '',
-          lessonTypeConv: row.lesson_type_conv || '',
-          onoffType: row.onoff_type || '',
-          onoffTypeConv: row.onoff_type_conv || '',
-          totalTime: row.total_time_min || 0,
-          completeTime: row.complete_time_min || 0,
-          duration: row.duration_conv || '',
-          chapter: row.chapter,
-          startDate: row.start_date_conv || '',
-          endDate: row.end_date_conv || '',
-          tutorId: row.tutor_id || 0,
-        });
-      });
-      
-      const data = Array.from(sectionsMap.values());
-      setCurriculumData(data);
-      setOriginalCurriculumData(JSON.parse(JSON.stringify(data))); // 깊은 복사하여 원본 저장
-    } catch (e) {
-      setCurriculumError(e instanceof Error ? e.message : '차시 정보를 불러오는 중 오류가 발생했습니다.');
-    } finally {
-      setCurriculumLoading(false);
-    }
+    // 왜: 원본 과목을 직접 편집하지 않도록 복사 모달을 먼저 띄웁니다.
+    setCopySourceCourse(course);
+    setCopyCourseName(`${course.name} (복사본)`);
+    setCopyTutorId('');
+    setTutorError(null);
+    setIsCopyModalOpen(true);
   };
 
   // 차시 편집 닫기
@@ -774,6 +745,84 @@ function SubjectsStep({
     setCurriculumData([]);
     setOriginalCurriculumData([]);
     setCurriculumError(null);
+  };
+
+  // 과목 복사 모달 닫기
+  const closeCopyModal = () => {
+    setIsCopyModalOpen(false);
+    setCopySourceCourse(null);
+    setCopyCourseName('');
+    setCopyTutorId('');
+    setTutorError(null);
+  };
+
+  // 담당 교수/강사 목록 로드
+  React.useEffect(() => {
+    if (!isCopyModalOpen) return;
+    let cancelled = false;
+
+    const fetchTutors = async () => {
+      setTutorLoading(true);
+      setTutorError(null);
+      try {
+        const res = await tutorLmsApi.getTutors();
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        const rows = res.rst_data ?? [];
+        const mapped = rows.map((row: any) => ({
+          id: Number(row.user_id),
+          name: String(row.tutor_nm || ''),
+        }));
+        if (!cancelled) setTutorOptions(mapped);
+      } catch (e) {
+        if (!cancelled) setTutorError(e instanceof Error ? e.message : '교수/강사 목록 조회 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setTutorLoading(false);
+      }
+    };
+
+    fetchTutors();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCopyModalOpen]);
+
+  // 과목 복사 실행
+  const submitCopyCourse = async () => {
+    if (!copySourceCourse) return;
+    if (!copyCourseName.trim()) {
+      alert('새 과목명을 입력해 주세요.');
+      return;
+    }
+    if (!copyTutorId) {
+      alert('담당 교수/강사를 선택해 주세요.');
+      return;
+    }
+
+    setCopySaving(true);
+    try {
+      const res = await tutorLmsApi.copyCourse({
+        sourceCourseId: Number(copySourceCourse.id),
+        courseName: copyCourseName.trim(),
+        tutorId: Number(copyTutorId),
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const newCourse: Subject = {
+        ...copySourceCourse,
+        id: String(res.rst_data),
+        name: copyCourseName.trim(),
+        instructor: tutorOptions.find((t) => t.id === Number(copyTutorId))?.name ?? '',
+      };
+
+      closeCopyModal();
+      setEditingCourse(newCourse);
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : '과목 복사 중 오류가 발생했습니다.';
+      setTutorError(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setCopySaving(false);
+    }
   };
 
   // 섹션 추가
@@ -1094,13 +1143,85 @@ function SubjectsStep({
 
   return (
     <>
+      {/* 과목 복사 모달 */}
+      {isCopyModalOpen && copySourceCourse && (
+        <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">과목 복사</h3>
+                <p className="text-sm text-gray-600">원본: {copySourceCourse.name}</p>
+              </div>
+              <button onClick={closeCopyModal} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">새 과목명</label>
+                <input
+                  type="text"
+                  value={copyCourseName}
+                  onChange={(e) => setCopyCourseName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="새 과목명을 입력해 주세요."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">담당 교수/강사</label>
+                <select
+                  value={copyTutorId}
+                  onChange={(e) => setCopyTutorId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={tutorLoading}
+                >
+                  <option value="">선택해 주세요</option>
+                  {tutorOptions.map((tutor) => (
+                    <option key={tutor.id} value={tutor.id}>
+                      {tutor.name}
+                    </option>
+                  ))}
+                </select>
+                {tutorLoading && <p className="text-xs text-gray-500 mt-2">목록을 불러오는 중...</p>}
+                {tutorError && <p className="text-xs text-red-600 mt-2">{tutorError}</p>}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={closeCopyModal}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                disabled={copySaving}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={submitCopyCourse}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                disabled={copySaving}
+              >
+                복사 후 차시 편집
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 차시 편집 - CurriculumEditor 공통 컴포넌트 사용 */}
       {editingCourse && (
         <CurriculumEditor
           courseId={Number(editingCourse.id)}
           courseName={editingCourse.name}
           onClose={closeCurriculumEditor}
-          onSaveComplete={() => {}}
+          onSaveComplete={() => {
+            // 왜: 복사본 차시 저장이 끝나면 선택 과목에 반영하고 모달을 닫습니다.
+            addSubject(editingCourse);
+            closeCurriculumEditor();
+          }}
         />
       )}
 

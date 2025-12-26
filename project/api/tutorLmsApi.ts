@@ -107,6 +107,11 @@ export type TutorCourseRow = {
   haksa_is_syllabus?: string;     // 강의계획서 존재여부
 };
 
+export type TutorListRow = {
+  user_id: number;
+  tutor_nm: string;
+};
+
 
 // 통합 과목 타입 (API + 학사 View 모두 지원)
 export type UnifiedCourseRow = {
@@ -620,6 +625,26 @@ export const tutorLmsApi = {
   async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string } = { tab: 'prism' }) {
     const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({ tab: params.tab, year: params.year, s_keyword: params.keyword })}`;
     return requestJson<TutorCourseRow[]>(url);
+  },
+
+  // 왜: 과목 복사 시 담당 교수/강사 선택 목록을 만들기 위함
+  async getTutors() {
+    const url = `/tutor_lms/api/tutor_list.jsp`;
+    return requestJson<TutorListRow[]>(url);
+  },
+
+  // 왜: 원본 과목을 복사해서 새 과목을 만들고 차시 편집으로 이어가기 위함
+  async copyCourse(payload: { sourceCourseId: number; courseName: string; tutorId: number }) {
+    const body = new URLSearchParams();
+    body.set('source_course_id', String(payload.sourceCourseId));
+    body.set('course_nm', payload.courseName);
+    body.set('tutor_id', String(payload.tutorId));
+
+    return requestJson<number>(`/tutor_lms/api/course_copy.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 
   async setCourseProgram(payload: { courseId: number; programId: number }) {
