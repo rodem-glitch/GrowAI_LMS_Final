@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart } from 'lucide-react';
+import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
 import { CourseExplorer } from './components/CourseExplorer';
@@ -9,6 +9,7 @@ import { ContentLibraryPage } from './components/ContentLibraryPage';
 export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>('dashboard');
   const [contentLibraryExpanded, setContentLibraryExpanded] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // 컴포넌트 재렌더링용 키
 
   // 콘텐츠 라이브러리 하위 메뉴 여부 확인
   const isContentLibrarySubMenu = activeMenu === 'content-all' || activeMenu === 'content-favorites';
@@ -22,12 +23,17 @@ export default function App() {
     }
   };
 
+  // 현재 화면 새로고침
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
         <div className="px-8 py-4">
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-3">
               <div className="bg-blue-600 p-2 rounded-lg">
@@ -38,6 +44,15 @@ export default function App() {
                 <p className="text-sm text-gray-500">Learning Management System</p>
               </div>
             </div>
+            
+            {/* 새로고침 버튼 */}
+            <button
+              onClick={handleRefresh}
+              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="현재 화면 새로고침"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -154,17 +169,17 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             {/* Empty content area - 추후 추가될 컨텐츠 영역 */}
             {activeMenu === 'dashboard' ? (
-              <Dashboard onNavigate={(menu) => setActiveMenu(menu)} />
+              <Dashboard key={refreshKey} onNavigate={(menu) => setActiveMenu(menu)} />
             ) : activeMenu === 'explore' ? (
-              <CourseExplorer />
+              <CourseExplorer key={refreshKey} />
             ) : activeMenu === 'courses' ? (
-              <MyCoursesList />
+              <MyCoursesList key={refreshKey} />
             ) : activeMenu === 'create-course' ? (
-              <CreateCourseForm />
+              <CreateCourseForm key={refreshKey} />
             ) : activeMenu === 'content-all' ? (
-              <ContentLibraryPage activeTab="all" />
+              <ContentLibraryPage key={refreshKey} activeTab="all" />
             ) : activeMenu === 'content-favorites' ? (
-              <ContentLibraryPage activeTab="favorites" />
+              <ContentLibraryPage key={`${refreshKey}-fav`} activeTab="favorites" />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
                 <div className="text-gray-400">
