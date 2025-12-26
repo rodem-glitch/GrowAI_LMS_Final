@@ -168,7 +168,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'curriculum':
         return <CurriculumTab courseId={Number(course.id)} course={course} />;
       case 'students':
-        return <StudentsTab courseId={Number(course.id)} />;
+        return <StudentsTab courseId={Number(course.id)} course={course} />;
       case 'attendance':
         return <AttendanceTab courseId={Number(course.id)} />;
       case 'exam':

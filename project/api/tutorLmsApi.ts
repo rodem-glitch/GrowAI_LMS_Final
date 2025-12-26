@@ -107,6 +107,11 @@ export type TutorCourseRow = {
   haksa_is_syllabus?: string;     // 강의계획서 존재여부
 };
 
+export type TutorListRow = {
+  user_id: number;
+  tutor_nm: string;
+};
+
 
 // 통합 과목 타입 (API + 학사 View 모두 지원)
 export type UnifiedCourseRow = {
@@ -298,6 +303,19 @@ export type TutorCourseStudentRow = {
   email?: string;
   progress?: number;
   progress_ratio?: number;
+};
+
+export type HaksaCourseStudentRow = {
+  student_id?: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+  visible?: string;
+  course_code?: string;
+  open_year?: string;
+  open_term?: string;
+  bunban_code?: string;
+  group_code?: string;
 };
 
 export type TutorProgressSummaryRow = {
@@ -617,9 +635,49 @@ export const tutorLmsApi = {
   },
 
   // 왜: 담당과목 화면에서 학사/프리즘 탭을 분리하여 조회하기 위함
-  async getMyCoursesCombined(params: { tab: 'prism' | 'haksa'; year?: string; keyword?: string } = { tab: 'prism' }) {
-    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({ tab: params.tab, year: params.year, s_keyword: params.keyword })}`;
+  async getMyCoursesCombined(params: {
+    tab: 'prism' | 'haksa';
+    year?: string;
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+    haksaCategory?: string;
+    haksaGrad?: string;
+    haksaCurriculum?: string;
+    sortOrder?: 'asc' | 'desc';
+  } = { tab: 'prism' }) {
+    const url = `/tutor_lms/api/course_list_combined.jsp${buildQuery({
+      tab: params.tab,
+      year: params.year,
+      s_keyword: params.keyword,
+      page: params.page,
+      page_size: params.pageSize,
+      haksa_category: params.haksaCategory,
+      haksa_grad: params.haksaGrad,
+      haksa_curriculum: params.haksaCurriculum,
+      sort_order: params.sortOrder,
+    })}`;
     return requestJson<TutorCourseRow[]>(url);
+  },
+
+  // 왜: 과목 복사 시 담당 교수/강사 선택 목록을 만들기 위함
+  async getTutors() {
+    const url = `/tutor_lms/api/tutor_list.jsp`;
+    return requestJson<TutorListRow[]>(url);
+  },
+
+  // 왜: 원본 과목을 복사해서 새 과목을 만들고 차시 편집으로 이어가기 위함
+  async copyCourse(payload: { sourceCourseId: number; courseName: string; tutorId: number }) {
+    const body = new URLSearchParams();
+    body.set('source_course_id', String(payload.sourceCourseId));
+    body.set('course_nm', payload.courseName);
+    body.set('tutor_id', String(payload.tutorId));
+
+    return requestJson<number>(`/tutor_lms/api/course_copy.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 
   async setCourseProgram(payload: { courseId: number; programId: number }) {
@@ -966,6 +1024,26 @@ export const tutorLmsApi = {
   async getCourseStudents(params: { courseId: number; keyword?: string }) {
     const url = `/tutor_lms/api/course_students_list.jsp${buildQuery({ course_id: params.courseId, s_keyword: params.keyword })}`;
     return requestJson<TutorCourseStudentRow[]>(url);
+  },
+
+  // ----- 학사 수강생(읽기 전용) -----
+  async getHaksaCourseStudents(params: {
+    courseCode: string;
+    openYear?: string;
+    openTerm?: string;
+    bunbanCode?: string;
+    groupCode?: string;
+    keyword?: string;
+  }) {
+    const url = `/tutor_lms/api/haksa_students_list.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+      s_keyword: params.keyword,
+    })}`;
+    return requestJson<HaksaCourseStudentRow[]>(url);
   },
 
   async addCourseStudents(payload: { courseId: number; userIds: number[] }) {
