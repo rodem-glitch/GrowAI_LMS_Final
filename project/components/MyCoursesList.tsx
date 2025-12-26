@@ -448,7 +448,9 @@ export function MyCoursesList() {
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과정ID</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">유형</th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">과목명</th>
-                <th className="px-4 py-3 text-left text-sm text-gray-700">소속 과정명</th>
+                <th className="px-4 py-3 text-left text-sm text-gray-700">
+                  {activeTab === 'haksa' ? '학과/전공' : '소속 과정명'}
+                </th>
                 <th className="px-4 py-3 text-left text-sm text-gray-700">기간</th>
                 <th className="px-4 py-3 text-center text-sm text-gray-700">수강생</th>
                 <th className="px-4 py-3 text-center text-sm text-gray-700">상태</th>
@@ -480,10 +482,16 @@ export function MyCoursesList() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.courseId}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{course.courseType}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {course.sourceType === 'haksa' && course.haksaCategory 
+                        ? course.haksaCategory 
+                        : course.courseType}
+                    </td>
                     <td className="px-4 py-4 text-sm text-gray-900">{course.subjectName}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {course.programName}
+                      {course.sourceType === 'haksa' && course.haksaDeptName
+                        ? course.haksaDeptName
+                        : course.programName}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{course.period}</td>
                     <td className="px-4 py-4 text-center">
