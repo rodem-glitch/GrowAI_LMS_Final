@@ -84,7 +84,7 @@ if("prism".equals(tab)) {
 else if("haksa".equals(tab)) {
     malgnsoft.util.Http http = new malgnsoft.util.Http("https://e-poly.kopo.ac.kr/main/vpn_test.jsp");
     http.setParam("tb", "COM.LMS_COURSE_VIEW"); // COURSE_VIEW 테이블 사용
-    http.setParam("cnt", "500"); // 전체 조회
+    http.setParam("cnt", "1000"); // 전체 조회 (1000개)
     String jsonRaw = http.send("POST");
 
     if(jsonRaw != null && !jsonRaw.trim().equals("")) {
