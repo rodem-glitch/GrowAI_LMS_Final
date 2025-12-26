@@ -696,7 +696,8 @@ function SubjectsStep({
   loading: boolean;
   courseName: string;
 }) {
-  const [activeTab, setActiveTab] = React.useState<'haksa' | 'plism'>('haksa');
+  // 왜: 학사 탭은 현재 사용하지 않으므로 기본 탭을 'plism'으로 설정합니다.
+  const [activeTab, setActiveTab] = React.useState<'haksa' | 'plism'>('plism');
   const [detailSubject, setDetailSubject] = React.useState<Subject | null>(null);
   const [showNewSubjectForm, setShowNewSubjectForm] = React.useState(false);
   
@@ -1230,8 +1231,9 @@ function SubjectsStep({
           </button>
         </div>
 
-        {/* 학사 / PLISM 탭 */}
+        {/* 학사 / PLISM 탭 - 학사 탭은 현재 숨김 처리 (나중에 필요시 주석 해제) */}
         <div className="flex border-b border-gray-200 mb-4">
+          {/* 학사 탭 버튼 - 현재 미사용으로 숨김 처리
           <button
             type="button"
             onClick={() => setActiveTab('haksa')}
@@ -1243,6 +1245,7 @@ function SubjectsStep({
           >
             학사
           </button>
+          */}
           <button
             type="button"
             onClick={() => setActiveTab('plism')}
@@ -1256,14 +1259,16 @@ function SubjectsStep({
           </button>
         </div>
 
-        {/* 탭 콘텐츠 */}
+        {/* 탭 콘텐츠 - 학사 탭 콘텐츠는 현재 숨김 처리 (나중에 필요시 주석 해제)
         {activeTab === 'haksa' ? (
           <div className="text-center py-12 text-gray-500">
             <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
             <p className="text-lg font-medium text-gray-600">학사 과목 검색</p>
             <p className="text-sm mt-2">추후 생성 예정입니다.</p>
           </div>
-        ) : (
+        ) : ( */}
+        {/* PLISM 탭 콘텐츠 */}
+        {activeTab === 'plism' && (
           <div className="space-y-4">
             {/* 검색 입력 */}
             <div className="relative">
@@ -1337,6 +1342,9 @@ function SubjectsStep({
             )}
           </div>
         )}
+        {/* 학사 탭 콘텐츠 닫는 괄호 - 나중에 필요시 주석 해제
+        )}
+        */}
       </div>
     </div>
     </>
