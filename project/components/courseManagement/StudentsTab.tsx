@@ -133,13 +133,6 @@ export function StudentsTab({ courseId }: { courseId: number }) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            수강생을 직접 등록하여 관리할 수 있습니다.
-          </div>
-        </div>
         <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
           <p className="mb-2">등록된 수강생이 없습니다.</p>
           <p className="text-sm text-gray-400">학사 연동 과목의 수강생 직접 등록 기능은 추후 지원 예정입니다.</p>

@@ -378,14 +378,6 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            강의목차에서 등록한 시험이 아래에 표시됩니다.
-          </div>
-        </div>
-
         {haksaExams.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -973,14 +965,6 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            강의목차에서 등록한 과제가 아래에 표시됩니다.
-          </div>
-        </div>
-
         {haksaAssignments.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">

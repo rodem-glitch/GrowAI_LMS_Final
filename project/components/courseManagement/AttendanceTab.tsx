@@ -172,13 +172,6 @@ export function AttendanceTab({ courseId }: { courseId: number }) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            강의목차 등록 후 진도/출석 현황을 확인할 수 있습니다.
-          </div>
-        </div>
         <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
           <p className="mb-2">진도/출석 데이터가 없습니다.</p>
           <p className="text-sm text-gray-400">먼저 강의목차를 등록해주세요.</p>

@@ -141,15 +141,6 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
-        {/* 안내 메시지 */}
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
-          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동되었습니다. 
-            아래에서 <strong>{weekCount}주차</strong> 기준으로 강의목차를 관리할 수 있습니다.
-          </div>
-        </div>
-
         {/* 주차 정보 헤더 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
