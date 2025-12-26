@@ -43,8 +43,8 @@ export default function App() {
       </header>
 
       <div className="flex">
-        {/* Left Navigation Sidebar */}
-        <aside className="w-64 bg-white border-r border-gray-200 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
+        {/* Left Navigation Sidebar - Fixed Position */}
+        <aside className="w-64 bg-white border-r border-gray-200 fixed top-[73px] left-0 h-[calc(100vh-73px)] overflow-y-auto z-40">
           <nav className="p-4 flex flex-col gap-2">
             <button
               onClick={() => setActiveMenu('dashboard')}
@@ -145,6 +145,9 @@ export default function App() {
             </div>
           </nav>
         </aside>
+
+        {/* Sidebar Spacer - Fixed 사이드바를 위한 공간 확보 */}
+        <div className="w-64 flex-shrink-0"></div>
 
         {/* Main Content Area */}
         <main className="flex-1 p-8">

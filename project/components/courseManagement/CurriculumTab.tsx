@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CurriculumEditor } from '../CurriculumEditor';
 import { Info, ChevronDown, ChevronRight, Plus, Video, FileText, BookOpen, ClipboardList, Trash2, Edit } from 'lucide-react';
 import { WeeklyContentModal, type WeekContentItem, type ContentType } from './WeeklyContentModal';
+import { EditContentModal } from './EditContentModal';
 
 interface CourseProps {
   id: string;
@@ -70,6 +71,10 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   // 모달 상태
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
+  
+  // 편집 모달 상태
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingContent, setEditingContent] = useState<WeekContentItem | null>(null);
 
   const toggleWeek = (weekNumber: number) => {
     setWeeks((prev) =>
@@ -82,6 +87,11 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   const openAddModal = (weekNumber: number) => {
     setSelectedWeek(weekNumber);
     setModalOpen(true);
+  };
+  
+  const openEditModal = (content: WeekContentItem) => {
+    setEditingContent(content);
+    setEditModalOpen(true);
   };
 
   const handleAddContent = (content: Omit<WeekContentItem, 'id' | 'createdAt'>) => {
@@ -97,6 +107,14 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
     if (confirm('이 콘텐츠를 삭제하시겠습니까?')) {
       setContents((prev) => prev.filter((c) => c.id !== contentId));
     }
+  };
+
+  const handleEditContent = (updatedContent: WeekContentItem) => {
+    setContents((prev) =>
+      prev.map((c) => (c.id === updatedContent.id ? updatedContent : c))
+    );
+    setEditModalOpen(false);
+    setEditingContent(null);
   };
 
   const getWeekContents = (weekNumber: number) => {
@@ -249,6 +267,13 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
                               </span>
                             )}
                             <button
+                              onClick={() => openEditModal(content)}
+                              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                              title="편집"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDeleteContent(content.id)}
                               className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
                               title="삭제"
@@ -260,14 +285,7 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-400">
-                        <p className="mb-3">등록된 콘텐츠가 없습니다.</p>
-                        <button
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                          onClick={() => openAddModal(week.weekNumber)}
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>콘텐츠 추가</span>
-                        </button>
+                        <p>등록된 콘텐츠가 없습니다.</p>
                       </div>
                     )}
                   </div>
@@ -283,6 +301,17 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
           onClose={() => setModalOpen(false)}
           weekNumber={selectedWeek}
           onAdd={handleAddContent}
+        />
+        
+        {/* 콘텐츠 편집 모달 */}
+        <EditContentModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setEditingContent(null);
+          }}
+          content={editingContent}
+          onSave={handleEditContent}
         />
       </div>
     );
