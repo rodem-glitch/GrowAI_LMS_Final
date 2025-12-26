@@ -34,8 +34,8 @@ if(!info.next()) {
 int ownerId = isAdmin ? info.i("user_id") : userId;
 
 f.addElement("course_nm", info.s("course_nm"), "hname:'과정명', required:'Y'");
-f.addElement("start_date", info.s("start_date"), "hname:'시작일', required:'Y'");
-f.addElement("end_date", info.s("end_date"), "hname:'종료일', required:'Y'");
+f.addElement("start_date", info.s("start_date"), "hname:'시작일'");
+f.addElement("end_date", info.s("end_date"), "hname:'종료일'");
 //왜: 화면의 상세 필드/반복 리스트는 JSON으로 한 번에 저장합니다. (없으면 기존 값 유지)
 f.addElement("plan_json", "", "hname:'운영계획서 JSON'");
 
@@ -47,15 +47,17 @@ if(!f.validate()) {
 }
 
 String courseNm = f.get("course_nm").trim();
-String startDate = m.time("yyyyMMdd", f.get("start_date"));
-String endDate = m.time("yyyyMMdd", f.get("end_date"));
+String startDate = !"".equals(f.get("start_date")) ? m.time("yyyyMMdd", f.get("start_date")) : "";
+String endDate = !"".equals(f.get("end_date")) ? m.time("yyyyMMdd", f.get("end_date")) : "";
 
-if(0 > m.diffDate("D", startDate, endDate)) {
+// 기간 검증 (둘 다 입력된 경우에만)
+if(!"".equals(startDate) && !"".equals(endDate) && 0 > m.diffDate("D", startDate, endDate)) {
 	result.put("rst_code", "1100");
 	result.put("rst_message", "종료일은 시작일보다 빠를 수 없습니다.");
 	result.print();
 	return;
 }
+
 
 //중복 방지(내 과정 내에서만)
 DataSet dup = subject.query(

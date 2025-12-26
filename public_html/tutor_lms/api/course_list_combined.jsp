@@ -106,7 +106,7 @@ else if("haksa".equals(tab)) {
                 if(line.contains(":") && !line.startsWith("--")) {
                     int sep = line.indexOf(":");
                     String key = line.substring(0, sep).trim();
-                    String val = line.substring(sep + 1).trim();
+                    String val = line.substring(sep + 1).trim().replaceAll(",\\s*$", ""); // 끝의 쉼표 제거
                     if(!"".equals(key)) {
                         if(currentRow.containsKey(key)) {
                             resultList.addRow(currentRow);
@@ -120,41 +120,138 @@ else if("haksa".equals(tab)) {
         }
     }
 
-    // 학사 데이터 정규화 (스프레드시트 기준 필드 매핑)
+    // 학사 데이터 정규화 (LMS_COURSE_VIEW 25개 필드 전체 매핑)
     resultList.first();
     while(resultList.next()) {
         resultList.put("source_type", "haksa");
         
-        // 강좌코드: COURSE_CODE
-        String courseCode = resultList.s("COURSE_CODE");
-        if("".equals(courseCode)) courseCode = resultList.s("course_code");
-        
-        // 강좌명: COURSE_NAME
-        String courseName = resultList.s("COURSE_NAME");
-        if("".equals(courseName)) courseName = resultList.s("course_name");
-        
-        // 학과명: DEPT_NAME
-        String deptName = resultList.s("DEPT_NAME");
-        if("".equals(deptName)) deptName = resultList.s("dept_name");
-        
-        // 강좌형태: CATEGORY
+        // ===== LMS_COURSE_VIEW 25개 필드 정규화 (대소문자 모두 처리) =====
+        // 1. CATEGORY - 강좌형태
         String category = resultList.s("CATEGORY");
         if("".equals(category)) category = resultList.s("category");
+        resultList.put("haksa_category", category);
         
-        // 연도+학기: OPEN_YEAR, OPEN_TERM
-        String openYear = resultList.s("OPEN_YEAR");
-        if("".equals(openYear)) openYear = resultList.s("open_year");
+        // 2. DEPT_NAME - 학과/전공 이름
+        String deptName = resultList.s("DEPT_NAME");
+        if("".equals(deptName)) deptName = resultList.s("dept_name");
+        resultList.put("haksa_dept_name", deptName);
+        
+        // 3. WEEK - 주차
+        String week = resultList.s("WEEK");
+        if("".equals(week)) week = resultList.s("week");
+        resultList.put("haksa_week", week);
+        
+        // 4. OPEN_TERM - 학기
         String openTerm = resultList.s("OPEN_TERM");
         if("".equals(openTerm)) openTerm = resultList.s("open_term");
+        resultList.put("haksa_open_term", openTerm);
         
-        // 폐강여부: VISIBLE (Y=정상, N=폐강)
+        // 5. COURSE_CODE - 강좌코드
+        String courseCode = resultList.s("COURSE_CODE");
+        if("".equals(courseCode)) courseCode = resultList.s("course_code");
+        resultList.put("haksa_course_code", courseCode);
+        
+        // 6. VISIBLE - 강좌 폐강 여부
         String visible = resultList.s("VISIBLE");
         if("".equals(visible)) visible = resultList.s("visible");
+        resultList.put("haksa_visible", visible);
         
-        // 분반코드: BUNBAN_CODE
+        // 7. STARTDATE - 강좌시작일
+        String startdate = resultList.s("STARTDATE");
+        if("".equals(startdate)) startdate = resultList.s("startdate");
+        resultList.put("haksa_startdate", startdate);
+        
+        // 8. BUNBAN_CODE - 분반코드
         String bunbanCode = resultList.s("BUNBAN_CODE");
         if("".equals(bunbanCode)) bunbanCode = resultList.s("bunban_code");
+        resultList.put("haksa_bunban_code", bunbanCode);
         
+        // 9. GRADE - 학년
+        String grade = resultList.s("GRADE");
+        if("".equals(grade)) grade = resultList.s("grade");
+        resultList.put("haksa_grade", grade);
+        
+        // 10. GRAD_NAME - 단과대학 이름
+        String gradName = resultList.s("GRAD_NAME");
+        if("".equals(gradName)) gradName = resultList.s("grad_name");
+        resultList.put("haksa_grad_name", gradName);
+        
+        // 11. DAY_CD - 강의 요일
+        String dayCd = resultList.s("DAY_CD");
+        if("".equals(dayCd)) dayCd = resultList.s("day_cd");
+        resultList.put("haksa_day_cd", dayCd);
+        
+        // 12. CLASSROOM - 강의실 정보
+        String classroom = resultList.s("CLASSROOM");
+        if("".equals(classroom)) classroom = resultList.s("classroom");
+        resultList.put("haksa_classroom", classroom);
+        
+        // 13. CURRICULUM_CODE - 과목구분 코드
+        String curriculumCode = resultList.s("CURRICULUM_CODE");
+        if("".equals(curriculumCode)) curriculumCode = resultList.s("curriculum_code");
+        resultList.put("haksa_curriculum_code", curriculumCode);
+        
+        // 14. COURSE_ENAME - 강좌명(영문)
+        String courseEname = resultList.s("COURSE_ENAME");
+        if("".equals(courseEname)) courseEname = resultList.s("course_ename");
+        resultList.put("haksa_course_ename", courseEname);
+        
+        // 15. TYPE_SYLLABUS - 강의계획서 구분
+        String typeSyllabus = resultList.s("TYPE_SYLLABUS");
+        if("".equals(typeSyllabus)) typeSyllabus = resultList.s("type_syllabus");
+        resultList.put("haksa_type_syllabus", typeSyllabus);
+        
+        // 16. OPEN_YEAR - 연도
+        String openYear = resultList.s("OPEN_YEAR");
+        if("".equals(openYear)) openYear = resultList.s("open_year");
+        resultList.put("haksa_open_year", openYear);
+        
+        // 17. DEPT_CODE - 학과/전공 코드
+        String deptCode = resultList.s("DEPT_CODE");
+        if("".equals(deptCode)) deptCode = resultList.s("dept_code");
+        resultList.put("haksa_dept_code", deptCode);
+        
+        // 18. COURSE_NAME - 강좌명(한글)
+        String courseName = resultList.s("COURSE_NAME");
+        if("".equals(courseName)) courseName = resultList.s("course_name");
+        resultList.put("haksa_course_name", courseName);
+        
+        // 19. GROUP_CODE - 학부/대학원 구분
+        String groupCode = resultList.s("GROUP_CODE");
+        if("".equals(groupCode)) groupCode = resultList.s("group_code");
+        resultList.put("haksa_group_code", groupCode);
+        
+        // 20. ENDDATE - 강좌종료일
+        String enddate = resultList.s("ENDDATE");
+        if("".equals(enddate)) enddate = resultList.s("enddate");
+        resultList.put("haksa_enddate", enddate);
+        
+        // 21. ENGLISH - 영문 강좌 여부
+        String english = resultList.s("ENGLISH");
+        if("".equals(english)) english = resultList.s("english");
+        resultList.put("haksa_english", english);
+        
+        // 22. HOUR1 - 강의 시간
+        String hour1 = resultList.s("HOUR1");
+        if("".equals(hour1)) hour1 = resultList.s("hour1");
+        resultList.put("haksa_hour1", hour1);
+        
+        // 23. CURRICULUM_NAME - 과목구분 이름
+        String curriculumName = resultList.s("CURRICULUM_NAME");
+        if("".equals(curriculumName)) curriculumName = resultList.s("curriculum_name");
+        resultList.put("haksa_curriculum_name", curriculumName);
+        
+        // 24. GRAD_CODE - 단과대학 코드
+        String gradCode = resultList.s("GRAD_CODE");
+        if("".equals(gradCode)) gradCode = resultList.s("grad_code");
+        resultList.put("haksa_grad_code", gradCode);
+        
+        // 25. IS_SYLLABUS - 강의계획서 존재여부
+        String isSyllabus = resultList.s("IS_SYLLABUS");
+        if("".equals(isSyllabus)) isSyllabus = resultList.s("is_syllabus");
+        resultList.put("haksa_is_syllabus", isSyllabus);
+        
+        // ===== 기존 호환 필드 (목록 화면용) =====
         resultList.put("id", "H_" + courseCode + "_" + bunbanCode);
         resultList.put("course_cd", courseCode);
         resultList.put("course_id_conv", courseCode);

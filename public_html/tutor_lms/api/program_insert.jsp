@@ -18,10 +18,10 @@ int ownerId = userId;
 int tutorId = m.ri("tutor_id"); //관리자용(선택)
 if(isAdmin && 0 < tutorId) ownerId = tutorId;
 
-//입력값(필수 최소)
+//입력값(과정명만 필수, 나머지는 선택)
 f.addElement("course_nm", null, "hname:'과정명', required:'Y'");
-f.addElement("start_date", null, "hname:'시작일', required:'Y'");
-f.addElement("end_date", null, "hname:'종료일', required:'Y'");
+f.addElement("start_date", "", "hname:'시작일'");
+f.addElement("end_date", "", "hname:'종료일'");
 //왜: 화면의 상세 필드/반복 리스트는 JSON으로 한 번에 저장합니다. (없으면 빈값 허용)
 f.addElement("plan_json", "", "hname:'운영계획서 JSON'");
 
@@ -33,16 +33,17 @@ if(!f.validate()) {
 }
 
 String courseNm = f.get("course_nm").trim();
-String startDate = m.time("yyyyMMdd", f.get("start_date"));
-String endDate = m.time("yyyyMMdd", f.get("end_date"));
+String startDate = !"".equals(f.get("start_date")) ? m.time("yyyyMMdd", f.get("start_date")) : "";
+String endDate = !"".equals(f.get("end_date")) ? m.time("yyyyMMdd", f.get("end_date")) : "";
 
-//기간 검증(왜: 시작/종료가 뒤집히면 화면/조회가 모두 꼬입니다)
-if(0 > m.diffDate("D", startDate, endDate)) {
+//기간 검증(왜: 시작/종료가 뒤집히면 화면/조회가 모두 꼬입니다) - 둘 다 입력된 경우에만 검증
+if(!"".equals(startDate) && !"".equals(endDate) && 0 > m.diffDate("D", startDate, endDate)) {
 	result.put("rst_code", "1100");
 	result.put("rst_message", "종료일은 시작일보다 빠를 수 없습니다.");
 	result.print();
 	return;
 }
+
 
 //중복 방지(같은 교수자/사이트에서 같은 과정명은 1개만)
 DataSet dup = subject.query(

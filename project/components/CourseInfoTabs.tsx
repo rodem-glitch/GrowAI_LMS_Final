@@ -32,12 +32,15 @@ function clamp0to100(value: number) {
 export function CourseInfoTab({
   course,
   onCourseUpdated,
+  initialSubTab = 'basic',
 }: {
   course: any;
   onCourseUpdated?: (nextCourse: any) => void;
+  initialSubTab?: SubTab;
 }) {
+  const isHaksa = course?.sourceType === 'haksa';
   const courseId = toInt(course?.id, 0);
-  const [subTab, setSubTab] = useState<SubTab>('basic');
+  const [subTab, setSubTab] = useState<SubTab>(initialSubTab);
   const [detail, setDetail] = useState<TutorCourseInfoDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,6 +48,13 @@ export function CourseInfoTab({
   const passYn = toYn(detail?.pass_yn, 'N') === 'Y';
 
   const fetchCourseInfo = async () => {
+    // 왜: 학사 데이터는 외부 시스템(e-poly) 연동이라 상세 정보 API가 없으므로, 목록에서 받은 정보만 표시합니다.
+    if (isHaksa) {
+      setDetail(null);
+      setLoading(false);
+      return;
+    }
+
     // 왜: 목록에서 넘어온 `course`에는 과목소개/평가/증명서 같은 상세 컬럼이 없어서, 항상 DB에서 다시 조회해야 합니다.
     if (courseId <= 0) {
       setDetail(null);
@@ -76,53 +86,14 @@ export function CourseInfoTab({
     if (subTab === 'certificate' && !passYn) setSubTab('evaluation');
   }, [passYn, subTab]);
 
+  // 왜: 좌측 사이드바에서 하위 탭을 선택하면 initialSubTab이 변경되므로, subTab 상태를 동기화합니다.
+  useEffect(() => {
+    setSubTab(initialSubTab);
+  }, [initialSubTab]);
+
   return (
     <div className="space-y-6">
-      {/* 하위 탭 네비게이션 */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setSubTab('basic')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'basic'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          기본 정보
-        </button>
-        <button
-          onClick={() => setSubTab('evaluation')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'evaluation'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          평가/수료 기준
-        </button>
-        <button
-          onClick={() => setSubTab('completion')}
-          className={`px-4 py-2 transition-colors ${
-            subTab === 'completion'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          수료증
-        </button>
-        {passYn && (
-          <button
-            onClick={() => setSubTab('certificate')}
-            className={`px-4 py-2 transition-colors ${
-              subTab === 'certificate'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            합격증
-          </button>
-        )}
-      </div>
+      {/* 왜: 하위 탭 네비게이션은 좌측 사이드바로 이동했으므로 제거합니다. */}
 
       {loading && (
         <div className="bg-white rounded-lg border border-gray-200 p-10 text-center text-gray-600">
@@ -143,18 +114,19 @@ export function CourseInfoTab({
           detail={detail}
           onReload={fetchCourseInfo}
           onCourseUpdated={onCourseUpdated}
+          isHaksa={isHaksa}
         />
       )}
 
-      {!loading && !errorMessage && subTab === 'evaluation' && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'evaluation' && (
         <EvaluationTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
 
-      {!loading && !errorMessage && subTab === 'completion' && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'completion' && (
         <CompletionCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
 
-      {!loading && !errorMessage && subTab === 'certificate' && passYn && (
+      {!loading && !errorMessage && !isHaksa && subTab === 'certificate' && passYn && (
         <PassCertificateTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
       )}
     </div>
@@ -168,12 +140,14 @@ function BasicInfoTab({
   detail,
   onReload,
   onCourseUpdated,
+  isHaksa = false,
 }: {
   course: any;
   courseId: number;
   detail: TutorCourseInfoDetail | null;
   onReload: () => Promise<void> | void;
   onCourseUpdated?: (nextCourse: any) => void;
+  isHaksa?: boolean;
 }) {
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -265,15 +239,25 @@ function BasicInfoTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-gray-900">과목 기본 정보</h3>
-        <button
-          onClick={() => setIsCourseModalOpen(true)}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Edit className="w-4 h-4" />
-          <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
-        </button>
+        {/* 왜: 학사 데이터는 외부 시스템(e-poly)에서 관리되므로 수정 버튼을 숨깁니다. */}
+        {!isHaksa && (
+          <button
+            onClick={() => setIsCourseModalOpen(true)}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Edit className="w-4 h-4" />
+            <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
+          </button>
+        )}
       </div>
+
+      {/* 왜: 학사 연동 데이터임을 사용자에게 알려줍니다. */}
+      {isHaksa && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
+          <strong>학사 연동 과목</strong>: 이 과목은 학사 시스템(e-poly)에서 연동된 데이터입니다. 기본 정보는 읽기 전용으로 표시됩니다.
+        </div>
+      )}
 
       {errorMessage && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -281,32 +265,185 @@ function BasicInfoTab({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과목명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{subjectName}</div>
+      {/* ===== 학사 과목: LMS_COURSE_VIEW 25개 필드 그룹별 표시 ===== */}
+      {isHaksa ? (
+        <div className="space-y-6">
+          {/* 그룹 1: 기본 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📚 기본 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌명(한글)</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCourseName || subjectName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌명(영문)</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCourseEname || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaCourseCode || courseIdLabel || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">분반코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaBunbanCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌형태</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCategory || course?.courseType || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">폐강여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaVisible === 'Y' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {course?.haksaVisible === 'Y' ? '정상' : course?.haksaVisible === 'N' ? '폐강' : course?.haksaVisible || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 2: 개설 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📅 개설 정보</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">개설연도</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaOpenYear || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">개설학기</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaOpenTerm || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">주차</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaWeek || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌시작일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaStartdate || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강좌종료일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaEnddate || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">대상학년</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaGrade ? `${course.haksaGrade}학년` : '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 3: 학과/과정 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">🏫 학과/과정 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학과/전공명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaDeptName || programName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학과/전공코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaDeptCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">단과대학명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaGradName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">단과대학코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaGradCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">과목구분명</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaCurriculumName || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">과목구분코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaCurriculumCode || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">학부/대학원 구분코드</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm font-mono">{course?.haksaGroupCode || '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 4: 강의 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">🎓 강의 정보</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의요일</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaDayCd || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의시간</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaHour1 || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의실</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaClassroom || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">영문강좌여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaEnglish === 'Y' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {course?.haksaEnglish === 'Y' ? '영문강좌' : course?.haksaEnglish === 'N' ? '국문강좌' : course?.haksaEnglish || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 그룹 5: 기타 정보 */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <h4 className="text-gray-900 font-medium mb-4 pb-2 border-b border-gray-100">📋 기타 정보</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의계획서 구분</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-gray-900 text-sm">{course?.haksaTypeSyllabus || '-'}</div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">강의계획서 존재여부</label>
+                <div className="px-4 py-2.5 bg-gray-50 rounded-lg text-sm">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${course?.haksaIsSyllabus === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {course?.haksaIsSyllabus === 'Y' ? '있음' : course?.haksaIsSyllabus === 'N' ? '없음' : course?.haksaIsSyllabus || '-'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과정ID</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{courseIdLabel}</div>
+      ) : (
+        /* ===== 프리즘 과목: 기존 기본 정보 표시 ===== */
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목명</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{subjectName}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정ID</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{courseIdLabel}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정구분</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{course?.courseType ?? '-'}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{programName}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">교육기간</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{period}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수강인원</label>
+            <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{students}명</div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과정구분</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{course?.courseType ?? '-'}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{programName}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">교육기간</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{period}</div>
-        </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">수강인원</label>
-          <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">{students}명</div>
-        </div>
-      </div>
+      )}
 
       <CourseSelectionModal
         isOpen={isCourseModalOpen}
@@ -317,38 +454,41 @@ function BasicInfoTab({
         selectedCourse={selectedProgram}
       />
 
-      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">과목 소개</label>
-          <textarea
-            value={content1}
-            onChange={(e) => setContent1(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="과목 소개를 입력해 주세요."
-          />
+      {/* 왜: 학사 데이터는 과목 소개/학습 목표를 수정할 수 없습니다. */}
+      {!isHaksa && (
+        <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목 소개</label>
+            <textarea
+              value={content1}
+              onChange={(e) => setContent1(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="과목 소개를 입력해 주세요."
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
+            <textarea
+              value={content2}
+              onChange={(e) => setContent2(e.target.value)}
+              rows={6}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="학습 목표를 입력해 주세요."
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => void handleSaveContents()}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? '저장 중...' : '저장'}</span>
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-700 mb-2">학습 목표</label>
-          <textarea
-            value={content2}
-            onChange={(e) => setContent2(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="학습 목표를 입력해 주세요."
-          />
-        </div>
-        <div className="flex justify-end">
-          <button
-            onClick={() => void handleSaveContents()}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? '저장 중...' : '저장'}</span>
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
