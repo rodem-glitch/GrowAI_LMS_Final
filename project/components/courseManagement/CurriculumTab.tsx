@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CurriculumEditor } from '../CurriculumEditor';
-import { Info, ChevronDown, ChevronRight, Plus, Video, FileText, BookOpen, ClipboardList, Trash2, Edit } from 'lucide-react';
+import { Info, ChevronDown, ChevronRight, Plus, Video, FileText, BookOpen, ClipboardList, Trash2, Edit, GripVertical } from 'lucide-react';
 import { WeeklyContentModal, type WeekContentItem, type ContentType } from './WeeklyContentModal';
 import { EditContentModal } from './EditContentModal';
 
@@ -19,141 +19,334 @@ interface CurriculumTabProps {
   course?: CourseProps;
 }
 
+// 차시(Session) 인터페이스 - 프리즘과 유사한 구조
+interface HaksaSession {
+  sessionId: string;
+  sessionName: string;
+  contents: WeekContentItem[];
+  isExpanded: boolean;
+}
+
 interface WeekData {
   weekNumber: number;
   title: string;
   isExpanded: boolean;
+  sessions: HaksaSession[];
 }
 
 // 로컬스토리지 키 생성
-const getStorageKey = (courseId: string) => `haksa_curriculum_${courseId}`;
+const getStorageKey = (courseId: string) => `haksa_curriculum_v2_${courseId}`;
+
+// 마이그레이션: 기존 v1 데이터를 v2로 변환
+const migrateV1ToV2 = (courseId: string): WeekData[] | null => {
+  const oldKey = `haksa_curriculum_${courseId}`;
+  try {
+    const oldData = localStorage.getItem(oldKey);
+    if (!oldData) return null;
+    
+    const oldContents: WeekContentItem[] = JSON.parse(oldData);
+    if (!oldContents.length) return null;
+    
+    // 주차별로 그룹화하여 각 주차에 1개의 차시 생성
+    const weekMap = new Map<number, WeekContentItem[]>();
+    oldContents.forEach(content => {
+      const week = content.weekNumber || 1;
+      if (!weekMap.has(week)) weekMap.set(week, []);
+      weekMap.get(week)!.push(content);
+    });
+    
+    // 변환된 데이터 생성 (null 반환 대신 빈 배열이 아닌 실제 데이터만)
+    const migratedWeeks: { weekNumber: number; sessions: HaksaSession[] }[] = [];
+    weekMap.forEach((contents, weekNumber) => {
+      migratedWeeks.push({
+        weekNumber,
+        sessions: [{
+          sessionId: `session_migrated_${weekNumber}_${Date.now()}`,
+          sessionName: `1차시`,
+          contents,
+          isExpanded: true,
+        }]
+      });
+    });
+    
+    // 마이그레이션 완료 후 기존 키 삭제
+    localStorage.removeItem(oldKey);
+    
+    return migratedWeeks.length > 0 ? migratedWeeks as any : null;
+  } catch {
+    return null;
+  }
+};
 
 export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
-  // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
   const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
   
-  // 주차 수 결정: 기본정보의 주차 정보 사용, 없으면 15주차 기본값
+  // 주차 수 결정
   const weekCount = (() => {
     if (course?.haksaWeek) {
       const parsed = parseInt(course.haksaWeek, 10);
       if (!isNaN(parsed) && parsed > 0) return parsed;
     }
-    return 15; // 기본값
+    return 15;
   })();
 
-  // 콘텐츠 목록 상태 (로컬스토리지에서 불러오기)
-  const [contents, setContents] = useState<WeekContentItem[]>(() => {
-    if (!course?.id) return [];
+  // 주차별 데이터 초기화 (차시 포함)
+  const [weeks, setWeeks] = useState<WeekData[]>(() => {
+    if (!course?.id) {
+      return Array.from({ length: weekCount }, (_, i) => ({
+        weekNumber: i + 1,
+        title: `${i + 1}주차`,
+        isExpanded: i === 0,
+        sessions: [],
+      }));
+    }
+
+    // 로컬스토리지에서 데이터 로드
     try {
       const saved = localStorage.getItem(getStorageKey(course.id));
-      return saved ? JSON.parse(saved) : [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // weekCount에 맞게 주차 배열 조정
+        return Array.from({ length: weekCount }, (_, i) => {
+          const existing = parsed.find((w: WeekData) => w.weekNumber === i + 1);
+          return existing || {
+            weekNumber: i + 1,
+            title: `${i + 1}주차`,
+            isExpanded: i === 0,
+            sessions: [],
+          };
+        });
+      }
+      
+      // v1 데이터 마이그레이션 시도
+      const migrated = migrateV1ToV2(course.id);
+      if (migrated) {
+        return Array.from({ length: weekCount }, (_, i) => {
+          const existing = migrated.find((w: any) => w.weekNumber === i + 1);
+          return {
+            weekNumber: i + 1,
+            title: `${i + 1}주차`,
+            isExpanded: i === 0,
+            sessions: existing?.sessions || [],
+          };
+        });
+      }
     } catch {
-      return [];
+      // 파싱 실패 시 빈 상태로 시작
     }
-  });
 
-  // 콘텐츠 변경시 로컬스토리지에 저장
-  useEffect(() => {
-    if (course?.id) {
-      localStorage.setItem(getStorageKey(course.id), JSON.stringify(contents));
-    }
-  }, [contents, course?.id]);
-
-  // 주차별 데이터 초기화
-  const [weeks, setWeeks] = useState<WeekData[]>(() =>
-    Array.from({ length: weekCount }, (_, i) => ({
+    return Array.from({ length: weekCount }, (_, i) => ({
       weekNumber: i + 1,
       title: `${i + 1}주차`,
-      isExpanded: i === 0, // 첫 주차만 펼침
-    }))
-  );
+      isExpanded: i === 0,
+      sessions: [],
+    }));
+  });
+
+  // 로컬스토리지에 저장
+  useEffect(() => {
+    if (course?.id) {
+      localStorage.setItem(getStorageKey(course.id), JSON.stringify(weeks));
+    }
+  }, [weeks, course?.id]);
 
   // 모달 상태
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   
   // 편집 모달 상태
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<WeekContentItem | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
+  // 주차 토글
   const toggleWeek = (weekNumber: number) => {
-    setWeeks((prev) =>
-      prev.map((w) =>
+    setWeeks(prev =>
+      prev.map(w =>
         w.weekNumber === weekNumber ? { ...w, isExpanded: !w.isExpanded } : w
       )
     );
   };
 
-  const openAddModal = (weekNumber: number) => {
+  // 차시 토글
+  const toggleSession = (weekNumber: number, sessionId: string) => {
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === sessionId ? { ...s, isExpanded: !s.isExpanded } : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
+  };
+
+  // 차시 추가
+  const addSession = (weekNumber: number) => {
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          const sessionCount = w.sessions.length + 1;
+          const newSession: HaksaSession = {
+            sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            sessionName: `${sessionCount}차시`,
+            contents: [],
+            isExpanded: true,
+          };
+          return { ...w, sessions: [...w.sessions, newSession] };
+        }
+        return w;
+      })
+    );
+  };
+
+  // 차시 이름 수정
+  const updateSessionName = (weekNumber: number, sessionId: string, name: string) => {
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === sessionId ? { ...s, sessionName: name } : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
+  };
+
+  // 차시 삭제
+  const removeSession = (weekNumber: number, sessionId: string) => {
+    if (!confirm('이 차시와 포함된 모든 콘텐츠를 삭제하시겠습니까?')) return;
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.filter(s => s.sessionId !== sessionId),
+          };
+        }
+        return w;
+      })
+    );
+  };
+
+  // 콘텐츠 추가 모달 열기
+  const openAddModal = (weekNumber: number, sessionId: string) => {
     setSelectedWeek(weekNumber);
+    setSelectedSessionId(sessionId);
     setModalOpen(true);
   };
-  
-  const openEditModal = (content: WeekContentItem) => {
+
+  // 콘텐츠 편집 모달 열기
+  const openEditModal = (content: WeekContentItem, sessionId: string) => {
     setEditingContent(content);
+    setEditingSessionId(sessionId);
     setEditModalOpen(true);
   };
 
+  // 콘텐츠 추가
   const handleAddContent = (content: Omit<WeekContentItem, 'id' | 'createdAt'>) => {
+    if (!selectedSessionId) return;
+    
     const newContent: WeekContentItem = {
       ...content,
       id: `content_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
     };
-    setContents((prev) => [...prev, newContent]);
+
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === selectedWeek) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === selectedSessionId
+                ? { ...s, contents: [...s.contents, newContent] }
+                : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
   };
 
-  const handleDeleteContent = (contentId: string) => {
-    if (confirm('이 콘텐츠를 삭제하시겠습니까?')) {
-      setContents((prev) => prev.filter((c) => c.id !== contentId));
-    }
+  // 콘텐츠 삭제
+  const handleDeleteContent = (weekNumber: number, sessionId: string, contentId: string) => {
+    if (!confirm('이 콘텐츠를 삭제하시겠습니까?')) return;
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === sessionId
+                ? { ...s, contents: s.contents.filter(c => c.id !== contentId) }
+                : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
   };
 
+  // 콘텐츠 편집
   const handleEditContent = (updatedContent: WeekContentItem) => {
-    setContents((prev) =>
-      prev.map((c) => (c.id === updatedContent.id ? updatedContent : c))
+    if (!editingSessionId) return;
+    
+    setWeeks(prev =>
+      prev.map(w => ({
+        ...w,
+        sessions: w.sessions.map(s =>
+          s.sessionId === editingSessionId
+            ? { ...s, contents: s.contents.map(c => c.id === updatedContent.id ? updatedContent : c) }
+            : s
+        ),
+      }))
     );
     setEditModalOpen(false);
     setEditingContent(null);
+    setEditingSessionId(null);
   };
 
-  const getWeekContents = (weekNumber: number) => {
-    return contents.filter((c) => c.weekNumber === weekNumber);
-  };
-
+  // 아이콘/뱃지 헬퍼
   const getContentIcon = (type: ContentType) => {
     switch (type) {
-      case 'video':
-        return <Video className="w-4 h-4 text-blue-600" />;
-      case 'exam':
-        return <ClipboardList className="w-4 h-4 text-red-600" />;
-      case 'assignment':
-        return <BookOpen className="w-4 h-4 text-purple-600" />;
-      case 'document':
-        return <FileText className="w-4 h-4 text-green-600" />;
+      case 'video': return <Video className="w-4 h-4 text-blue-600" />;
+      case 'exam': return <ClipboardList className="w-4 h-4 text-red-600" />;
+      case 'assignment': return <BookOpen className="w-4 h-4 text-purple-600" />;
+      case 'document': return <FileText className="w-4 h-4 text-green-600" />;
     }
   };
 
   const getContentTypeBadge = (type: ContentType) => {
     switch (type) {
-      case 'video':
-        return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">동영상</span>;
-      case 'exam':
-        return <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">시험</span>;
-      case 'assignment':
-        return <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">과제</span>;
-      case 'document':
-        return <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">자료</span>;
+      case 'video': return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">동영상</span>;
+      case 'exam': return <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded">시험</span>;
+      case 'assignment': return <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">과제</span>;
+      case 'document': return <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">자료</span>;
     }
   };
 
   // 통계 계산
+  const allContents = weeks.flatMap(w => w.sessions.flatMap(s => s.contents));
+  const totalSessions = weeks.reduce((sum, w) => sum + w.sessions.length, 0);
   const stats = {
-    total: contents.length,
-    videos: contents.filter((c) => c.type === 'video').length,
-    exams: contents.filter((c) => c.type === 'exam').length,
-    assignments: contents.filter((c) => c.type === 'assignment').length,
-    documents: contents.filter((c) => c.type === 'document').length,
+    sessions: totalSessions,
+    total: allContents.length,
+    videos: allContents.filter(c => c.type === 'video').length,
+    exams: allContents.filter(c => c.type === 'exam').length,
+    assignments: allContents.filter(c => c.type === 'assignment').length,
+    documents: allContents.filter(c => c.type === 'document').length,
   };
 
   if (isHaksaCourse) {
@@ -173,8 +366,12 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
         </div>
 
         {/* 콘텐츠 통계 */}
-        {stats.total > 0 && (
-          <div className="grid grid-cols-5 gap-3">
+        {(stats.sessions > 0 || stats.total > 0) && (
+          <div className="grid grid-cols-6 gap-3">
+            <div className="px-4 py-3 bg-indigo-50 rounded-lg text-center">
+              <div className="text-2xl font-semibold text-indigo-600">{stats.sessions}</div>
+              <div className="text-xs text-indigo-600">차시</div>
+            </div>
             <div className="px-4 py-3 bg-gray-50 rounded-lg text-center">
               <div className="text-2xl font-semibold text-gray-900">{stats.total}</div>
               <div className="text-xs text-gray-500">전체</div>
@@ -200,99 +397,174 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
 
         {/* 주차별 아코디언 */}
         <div className="space-y-2">
-          {weeks.map((week) => {
-            const weekContents = getWeekContents(week.weekNumber);
-            return (
+          {weeks.map(week => (
+            <div
+              key={week.weekNumber}
+              className="border border-gray-200 rounded-lg overflow-hidden"
+            >
+              {/* 주차 헤더 */}
               <div
-                key={week.weekNumber}
-                className="border border-gray-200 rounded-lg overflow-hidden"
+                className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleWeek(week.weekNumber)}
               >
-                {/* 주차 헤더 */}
-                <div
-                  className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => toggleWeek(week.weekNumber)}
-                >
-                  <div className="flex items-center gap-3">
-                    {week.isExpanded ? (
-                      <ChevronDown className="w-5 h-5 text-gray-500" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-gray-500" />
-                    )}
-                    <span className="font-medium text-gray-900">{week.title}</span>
-                    {weekContents.length > 0 && (
-                      <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
-                        {weekContents.length}개 콘텐츠
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openAddModal(week.weekNumber);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>추가</span>
-                  </button>
+                <div className="flex items-center gap-3">
+                  {week.isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-500" />
+                  )}
+                  <span className="font-medium text-gray-900">{week.title}</span>
+                  {week.sessions.length > 0 && (
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded">
+                      {week.sessions.length}개 차시
+                    </span>
+                  )}
                 </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addSession(week.weekNumber);
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>차시 추가</span>
+                </button>
+              </div>
 
-                {/* 주차 콘텐츠 */}
-                {week.isExpanded && (
-                  <div className="px-4 py-3 border-t border-gray-200 bg-white">
-                    {weekContents.length > 0 ? (
-                      <div className="space-y-2">
-                        {weekContents.map((content) => (
-                          <div
-                            key={content.id}
-                            className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors"
-                          >
-                            {getContentIcon(content.type)}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-800 truncate">
-                                  {content.title}
-                                </span>
-                                {getContentTypeBadge(content.type)}
-                              </div>
-                              {content.description && (
-                                <p className="text-sm text-gray-500 truncate mt-0.5">
-                                  {content.description}
-                                </p>
-                              )}
-                            </div>
-                            {content.duration && (
-                              <span className="text-sm text-gray-500 flex-shrink-0">
-                                {content.duration}
+              {/* 주차 콘텐츠 (차시 목록) */}
+              {week.isExpanded && (
+                <div className="px-4 py-3 border-t border-gray-200 bg-white space-y-3">
+                  {week.sessions.length > 0 ? (
+                    week.sessions.map((session, sessionIdx) => (
+                      <div
+                        key={session.sessionId}
+                        className="border border-gray-200 rounded-lg overflow-hidden"
+                      >
+                        {/* 차시 헤더 */}
+                        <div
+                          className="flex items-center justify-between px-4 py-2.5 bg-indigo-50/50 cursor-pointer hover:bg-indigo-50 transition-colors"
+                          onClick={() => toggleSession(week.weekNumber, session.sessionId)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {session.isExpanded ? (
+                              <ChevronDown className="w-4 h-4 text-indigo-500" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4 text-indigo-500" />
+                            )}
+                            <input
+                              type="text"
+                              value={session.sessionName}
+                              onChange={(e) => updateSessionName(week.weekNumber, session.sessionId, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-2 py-1 bg-white border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            {session.contents.length > 0 && (
+                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
+                                {session.contents.length}개 콘텐츠
                               </span>
                             )}
+                          </div>
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => openEditModal(content)}
-                              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                              title="편집"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAddModal(week.weekNumber, session.sessionId);
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>추가</span>
                             </button>
                             <button
-                              onClick={() => handleDeleteContent(content.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                              title="삭제"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSession(week.weekNumber, session.sessionId);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              title="차시 삭제"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        ))}
+                        </div>
+
+                        {/* 차시 콘텐츠 목록 */}
+                        {session.isExpanded && (
+                          <div className="px-4 py-3 border-t border-gray-100 bg-white">
+                            {session.contents.length > 0 ? (
+                              <div className="space-y-2">
+                                {session.contents.map(content => (
+                                  <div
+                                    key={content.id}
+                                    className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors"
+                                  >
+                                    {getContentIcon(content.type)}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-800 truncate">
+                                          {content.title}
+                                        </span>
+                                        {getContentTypeBadge(content.type)}
+                                      </div>
+                                      {content.description && (
+                                        <p className="text-sm text-gray-500 truncate mt-0.5">
+                                          {content.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {content.duration && (
+                                      <span className="text-sm text-gray-500 flex-shrink-0">
+                                        {content.duration}
+                                      </span>
+                                    )}
+                                    <button
+                                      onClick={() => openEditModal(content, session.sessionId)}
+                                      className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                      title="편집"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteContent(week.weekNumber, session.sessionId, content.id)}
+                                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                      title="삭제"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-6 text-gray-400">
+                                <p>등록된 콘텐츠가 없습니다.</p>
+                                <button
+                                  onClick={() => openAddModal(week.weekNumber, session.sessionId)}
+                                  className="mt-2 text-sm text-blue-600 hover:underline"
+                                >
+                                  + 콘텐츠 추가하기
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-400">
-                        <p>등록된 콘텐츠가 없습니다.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-400">
+                      <p>등록된 차시가 없습니다.</p>
+                      <button
+                        onClick={() => addSession(week.weekNumber)}
+                        className="mt-2 text-sm text-indigo-600 hover:underline"
+                      >
+                        + 차시 추가하기
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* 콘텐츠 추가 모달 */}
@@ -309,6 +581,7 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
           onClose={() => {
             setEditModalOpen(false);
             setEditingContent(null);
+            setEditingSessionId(null);
           }}
           content={editingContent}
           onSave={handleEditContent}
@@ -328,17 +601,25 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
 // 다른 탭에서 사용할 수 있도록 콘텐츠 조회 함수 export
 export function getHaksaCurriculumContents(courseId: string): WeekContentItem[] {
   try {
+    // v2 형식에서 로드
     const saved = localStorage.getItem(getStorageKey(courseId));
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      const weeks: WeekData[] = JSON.parse(saved);
+      return weeks.flatMap(w => w.sessions.flatMap(s => s.contents));
+    }
+    // v1 형식 fallback
+    const oldKey = `haksa_curriculum_${courseId}`;
+    const oldData = localStorage.getItem(oldKey);
+    return oldData ? JSON.parse(oldData) : [];
   } catch {
     return [];
   }
 }
 
 export function getHaksaExams(courseId: string): WeekContentItem[] {
-  return getHaksaCurriculumContents(courseId).filter((c) => c.type === 'exam');
+  return getHaksaCurriculumContents(courseId).filter(c => c.type === 'exam');
 }
 
 export function getHaksaAssignments(courseId: string): WeekContentItem[] {
-  return getHaksaCurriculumContents(courseId).filter((c) => c.type === 'assignment');
+  return getHaksaCurriculumContents(courseId).filter(c => c.type === 'assignment');
 }
