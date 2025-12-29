@@ -52,7 +52,12 @@ if("1".equals(hinfo.s("apply_type"))) { //기간
 
 //왜: 기본 과제는 '평가완료(confirm_yn)' 이후 수정이 막히는데, 추가 과제도 같은 기준으로 제출/수정을 막아야 혼선이 없습니다.
 boolean isOpen = !isReady && !isEnd && "I".equals(progress) && !info.b("confirm_yn") && "N".equals(hinfo.s("onoff_type"));
+
+//왜: 피드백을 받은 후에는 기간이 종료되었더라도 재제출을 허용합니다.
+boolean isResubmit = info.b("confirm_yn") && "I".equals(progress) && "N".equals(hinfo.s("onoff_type"));
+
 info.put("open_block", isOpen);
+info.put("resubmit_block", isResubmit);
 
 //폼객체
 f.addElement("subject", info.s("subject"), "hname:'제목', required:'Y'");
@@ -61,7 +66,7 @@ f.addElement("content", null, "hname:'내용', allowhtml:'Y'");
 //제출/수정
 if(m.isPost() && f.validate()) {
 
-	if(!isOpen) { m.jsAlert(_message.get("alert.common.abnormal_access")); return; }
+	if(!isOpen && !isResubmit) { m.jsAlert(_message.get("alert.common.abnormal_access")); return; }
 
 	String content = f.get("content");
 	//제한-이미지URI및용량
@@ -78,12 +83,20 @@ if(m.isPost() && f.validate()) {
 	homeworkTask.item("submit_date", m.time("yyyyMMddHHmmss"));
 	homeworkTask.item("ip_addr", userIp);
 	homeworkTask.item("mod_date", m.time("yyyyMMddHHmmss"));
+	
+	//왜: 재제출 시 confirm_yn을 N으로 변경하여 교수자가 다시 평가할 수 있도록 합니다.
+	if(isResubmit) {
+		homeworkTask.item("confirm_yn", "N");
+		homeworkTask.item("feedback", "");
+		homeworkTask.item("confirm_date", "");
+		homeworkTask.item("confirm_user_id", 0);
+	}
 
 	if(!homeworkTask.update("id = " + tid + " AND homework_id = " + hid + " AND course_user_id = " + cuid + "")) {
 		m.jsAlert(_message.get("alert.common.error_modify")); return;
 	}
 
-	m.jsAlert("제출이 완료되었습니다.");
+	m.jsAlert(isResubmit ? "재제출이 완료되었습니다." : "제출이 완료되었습니다.");
 	m.jsReplace("homework_task_view.jsp?cuid=" + cuid + "&hid=" + hid + "&tid=" + tid, "parent");
 	return;
 }

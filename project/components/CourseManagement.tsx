@@ -26,6 +26,7 @@ import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
 import { ExamCreateModal } from './ExamCreateModal';
 import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { HomeworkTaskDetailModal } from './HomeworkTaskDetailModal';
 import { tutorLmsApi, type HaksaCourseKey } from '../api/tutorLmsApi';
 import { buildHaksaCourseKey } from '../utils/haksa';
 import { CurriculumTab } from './courseManagement/CurriculumTab';
@@ -1711,6 +1712,31 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
     })();
   };
 
+  // 왜: 학생별 추가 과제 목록을 조회하여 재제출 현황을 확인합니다.
+  const [homeworkTasks, setHomeworkTasks] = useState<any[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+
+  const fetchHomeworkTasks = async (homeworkId: number, courseUserId: number) => {
+    setLoadingTasks(true);
+    try {
+      const res = await tutorLmsApi.getHomeworkTasks({ courseId, homeworkId, courseUserId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      setHomeworkTasks(res.rst_data ?? []);
+    } catch (e) {
+      setHomeworkTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const handleSelectStudentWithTasks = (courseUserId: number) => {
+    handleSelectStudent(courseUserId);
+    if (selectedHomeworkId) {
+      void fetchHomeworkTasks(selectedHomeworkId, courseUserId);
+    }
+  };
+
   const summary = {
     total: students.length,
     needFeedback: students.filter((s: any) => s.submitted && !s.confirm).length,
@@ -1777,7 +1803,8 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                   return (
                     <button
                       key={student.courseUserId}
-                      onClick={() => handleSelectStudent(student.courseUserId)}
+                      onClick={() => handleSelectStudentWithTasks(student.courseUserId)}
+
                       className={`w-full p-4 text-left transition-colors ${
                         isSelected
                           ? 'bg-blue-50 border-l-4 border-blue-600'
@@ -1882,8 +1909,60 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                         <br />- 오프라인 과제처럼 제출 기록이 없어도, 필요하면 점수 입력이 가능합니다.
                       </div>
                     </div>
+
+                    {/* 추가 과제 목록 */}
+                    {homeworkTasks.length > 0 && (
+                      <div className="mt-4">
+                        <div className="text-sm font-medium text-gray-700 mb-2">추가 과제 목록 ({homeworkTasks.length}건)</div>
+                        <div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-[300px] overflow-y-auto">
+                          {homeworkTasks.map((task: any) => (
+                            <button
+                              key={task.id}
+                              onClick={() => setSelectedTask(task)}
+                              className="w-full text-left p-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <div className="text-sm text-gray-900 font-medium group-hover:text-blue-600">
+                                  {task.task_preview}
+                                </div>
+                                <div className="flex gap-1 flex-shrink-0 ml-2">
+                                  {task.need_review ? (
+                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded border border-orange-200">재평가 필요</span>
+                                  ) : (
+                                    <>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        task.submit_yn === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                      }`}>{task.submit_yn_label}</span>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        task.confirm_yn === 'Y' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                      }`}>{task.confirm_yn_label}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                부여: {task.reg_date_conv}
+                                {task.submit_yn === 'Y' && <span className="ml-3">제출: {task.submit_date_conv}</span>}
+                              </div>
+                              {task.subject && (
+                                <div className="mt-1 text-xs text-gray-700">
+                                  <span className="font-medium">제출 제목:</span> {task.subject}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-[11px] text-gray-400">
+                          * 각 항목을 클릭하면 제출 상세 내용 확인 및 평가가 가능합니다.
+                        </div>
+                      </div>
+                    )}
+                    {loadingTasks && (
+                      <div className="text-center text-gray-500 text-sm py-2">추가 과제 목록 불러오는 중...</div>
+                    )}
                   </div>
                 </div>
+
               ) : (
                 <div className="border border-gray-200 rounded-lg">
                   <div className="p-12 text-center text-gray-500">
@@ -1913,6 +1992,20 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
           </div>
         </>
       )}
+
+      {/* 추가과제 상세 모달 */}
+      <HomeworkTaskDetailModal
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        courseId={courseId}
+        task={selectedTask}
+        onRefresh={() => {
+          if (selectedHomeworkId && selectedCourseUserId) {
+            void fetchHomeworkTasks(selectedHomeworkId, selectedCourseUserId);
+            void fetchHomeworkUsers(selectedHomeworkId);
+          }
+        }}
+      />
     </div>
   );
 }

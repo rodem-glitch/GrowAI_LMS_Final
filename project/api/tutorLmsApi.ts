@@ -1542,6 +1542,30 @@ export const tutorLmsApi = {
     });
   },
 
+  // 왜: 학생이 제출한 추가 과제 내용을 확인하고 교수자가 "확인(평가완료)" 처리합니다.
+  async confirmHomeworkTask(payload: { courseId: number; taskId: number; feedback: string }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('task_id', String(payload.taskId));
+    body.set('feedback', payload.feedback);
+
+    return requestJson<number>(`/tutor_lms/api/homework_task_confirm.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 피드백 관리에서 학생별 추가 과제 목록(재제출 현황 포함)을 조회합니다.
+  async getHomeworkTasks(params: { courseId: number; homeworkId: number; courseUserId: number }) {
+    const url = `/tutor_lms/api/homework_task_list.jsp${buildQuery({
+      course_id: params.courseId,
+      homework_id: params.homeworkId,
+      course_user_id: params.courseUserId,
+    })}`;
+    return requestJson<any[]>(url);
+  },
+
   // =========================
   // 마감 운영: 자료
   // =========================
