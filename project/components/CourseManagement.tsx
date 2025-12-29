@@ -341,6 +341,26 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   // 학사 과목의 경우 로컬스토리지에서 시험 목록 불러오기
   const [haksaExams, setHaksaExams] = useState<any[]>([]);
 
+  // 프리즘 과목 시험 수정 관련 상태
+  const [editingPrismExam, setEditingPrismExam] = useState<any | null>(null);
+  const [prismExamSettings, setPrismExamSettings] = useState<Record<number, any>>({});
+
+  // 오늘 날짜 기본값
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const [examEditSettings, setExamEditSettings] = useState({
+    startDate: today,
+    startTime: '09:00',
+    endDate: nextWeek,
+    endTime: '18:00',
+    points: 0,
+    allowRetake: false,
+    retakeScore: 0,
+    retakeCount: 0,
+    showResults: true,
+  });
+
   useEffect(() => {
     if (isHaksaCourse && course?.id) {
       try {
@@ -355,6 +375,20 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
       }
     }
   }, [isHaksaCourse, course?.id]);
+
+  // 프리즘 과목 시험 설정 로컬스토리지에서 불러오기
+  useEffect(() => {
+    if (courseId && !isHaksaCourse) {
+      try {
+        const saved = localStorage.getItem(`prism_exam_settings_${courseId}`);
+        if (saved) {
+          setPrismExamSettings(JSON.parse(saved));
+        }
+      } catch {
+        setPrismExamSettings({});
+      }
+    }
+  }, [courseId, isHaksaCourse]);
 
   const fetchExams = async () => {
     if (!courseId || isHaksaCourse) return;
@@ -384,6 +418,69 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   useEffect(() => {
     if (!isHaksaCourse) void fetchExams();
   }, [courseId, isHaksaCourse]);
+
+  // 프리즘 시험 수정 시작
+  const handleEditPrismExam = (exam: any) => {
+    const settings = prismExamSettings[exam.id] || {};
+    setEditingPrismExam(exam);
+    setExamEditSettings({
+      startDate: settings.startDate || today,
+      startTime: settings.startTime || '09:00',
+      endDate: settings.endDate || nextWeek,
+      endTime: settings.endTime || '18:00',
+      points: settings.points || 0,
+      allowRetake: settings.allowRetake || false,
+      retakeScore: settings.retakeScore || 0,
+      retakeCount: settings.retakeCount || 0,
+      showResults: settings.showResults !== false,
+    });
+  };
+
+  // 프리즘 시험 수정 저장
+  const handleSavePrismExamEdit = () => {
+    if (!editingPrismExam) return;
+
+    const updated = {
+      ...prismExamSettings,
+      [editingPrismExam.id]: { ...examEditSettings },
+    };
+    setPrismExamSettings(updated);
+
+    // 로컬스토리지 저장
+    if (courseId) {
+      try {
+        localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(updated));
+      } catch {}
+    }
+
+    setEditingPrismExam(null);
+  };
+
+  // 프리즘 시험 삭제
+  const handleDeletePrismExam = async (examId: number) => {
+    if (!confirm('이 시험을 삭제하시겠습니까?')) return;
+    
+    try {
+      // TODO: API 호출로 시험 삭제
+      // const res = await tutorLmsApi.deleteExam({ courseId, examId });
+      // if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      // 로컬스토리지에서 설정 삭제
+      const updated = { ...prismExamSettings };
+      delete updated[examId];
+      setPrismExamSettings(updated);
+      if (courseId) {
+        try {
+          localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(updated));
+        } catch {}
+      }
+      
+      await fetchExams();
+      alert('시험이 삭제되었습니다.');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '시험 삭제 중 오류가 발생했습니다.');
+    }
+  };
 
   // 왜: 학사 과목인 경우 시험관리에서 등록한 시험을 표시하고 추가할 수 있습니다.
   if (isHaksaCourse) {
@@ -436,31 +533,78 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
           <div className="p-6 text-center text-gray-500">시험 목록을 불러오는 중...</div>
         )}
 
-        {!loading && exams.length > 0 && exams.map((exam) => (
-          <button
-            key={exam.id}
-            onClick={() => setSelectedExam(exam.id)}
-            className="w-full p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="text-gray-900 mb-1">{exam.title}</div>
-                <div className="text-sm text-gray-600">
-                  시험일: {exam.date} · 시험시간: {exam.duration}
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">제출 현황</div>
-                  <div className="text-gray-900">
-                    {exam.submitted} / {exam.total}명
+        {!loading && exams.length > 0 && (
+          <div className="space-y-3">
+            {exams.map((exam) => {
+              const settings = prismExamSettings[exam.id] || {};
+              return (
+                <div
+                  key={exam.id}
+                  className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 cursor-pointer" onClick={() => setSelectedExam(exam.id)}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <ClipboardCheck className="w-5 h-5 text-red-600" />
+                        <span className="font-medium text-gray-900">{exam.title}</span>
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">
+                          {exam.submitted}/{exam.total}명 제출
+                        </span>
+                      </div>
+                      
+                      {/* 설정 항목들 테이블 형태로 표시 */}
+                      <div className="ml-7 text-sm space-y-2 bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center">
+                          <span className="w-24 text-gray-500">응시기간</span>
+                          <span className="text-gray-900">
+                            {settings.startDate || exam.date || '-'} {settings.startTime || ''} ~ {settings.endDate || '-'} {settings.endTime || ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-gray-500">시험시간</span>
+                          <span className="text-gray-900">{exam.duration}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-gray-500">배점</span>
+                          <span className="text-gray-900">{settings.points || 0}점</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-gray-500">재응시 가능</span>
+                          <span className="text-gray-900">
+                            {settings.allowRetake ? (
+                              <>가능 ({settings.retakeScore}점 미만, {settings.retakeCount}회)</>
+                            ) : '불가'}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="w-24 text-gray-500">시험결과노출</span>
+                          <span className="text-gray-900">{settings.showResults !== false ? '노출' : '비노출'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-1 ml-4">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEditPrismExam(exam); }}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="수정"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeletePrismExam(exam.id); }}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-          </button>
-        ))}
+              );
+            })}
+          </div>
+        )}
 
         {!loading && exams.length === 0 && (
           <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
@@ -490,6 +634,29 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
               onoffType: 'F',
             });
             if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+            // 시험 설정 저장
+            if (res.rst_data?.exam_id) {
+              const newSettings = {
+                ...prismExamSettings,
+                [res.rst_data.exam_id]: {
+                  startDate: examData.startDate,
+                  startTime: '09:00',
+                  endDate: examData.endDate,
+                  endTime: '18:00',
+                  points: examData.points,
+                  allowRetake: examData.allowRetake,
+                  retakeScore: examData.retakeScore || 0,
+                  retakeCount: examData.retakeCount || 0,
+                  showResults: examData.showResults,
+                },
+              };
+              setPrismExamSettings(newSettings);
+              try {
+                localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(newSettings));
+              } catch {}
+            }
+
             await fetchExams();
             alert('시험이 등록되었습니다.');
           } catch (e) {
@@ -497,6 +664,160 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
           }
         }}
       />
+
+      {/* 프리즘 시험 수정 모달 */}
+      {editingPrismExam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setEditingPrismExam(null)} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">시험 수정</h3>
+              <button
+                onClick={() => setEditingPrismExam(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* 시험 제목 (수정 불가) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">시험 선택</label>
+                <div className="px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-gray-700">
+                  {editingPrismExam.title}
+                </div>
+              </div>
+
+              {/* 시험 상세 설정 */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                {/* 응시 가능 기간 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">응시 가능 기간</label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="date"
+                      value={examEditSettings.startDate}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="time"
+                      value={examEditSettings.startTime}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, startTime: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-500">부터</span>
+                    <input
+                      type="date"
+                      value={examEditSettings.endDate}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, endDate: e.target.value }))}
+                      min={examEditSettings.startDate}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="time"
+                      value={examEditSettings.endTime}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, endTime: e.target.value }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-500">까지</span>
+                  </div>
+                </div>
+
+                {/* 배점 */}
+                <div className="flex items-center gap-3">
+                  <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">배점</label>
+                  <input
+                    type="number"
+                    value={examEditSettings.points}
+                    onChange={(e) => setExamEditSettings(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
+                    min={0}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">점</span>
+                </div>
+
+                {/* 재응시 가능여부 */}
+                <div className="flex items-center gap-3">
+                  <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능여부</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={examEditSettings.allowRetake}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, allowRetake: e.target.checked }))}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-600">재응시 가능</span>
+                  </label>
+                  <span className="text-xs text-gray-400">▶ 재응시를 지정하면 기준점수 미만일 경우 횟수제한 범위안에서 재응시할 수 있습니다.</span>
+                </div>
+
+                {/* 재응시 기준 점수 */}
+                {examEditSettings.allowRetake && (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 기준 점수</label>
+                      <input
+                        type="number"
+                        value={examEditSettings.retakeScore}
+                        onChange={(e) => setExamEditSettings(prev => ({ ...prev, retakeScore: parseInt(e.target.value) || 0 }))}
+                        min={0}
+                        max={100}
+                        className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">점 미만일때 재응시가 가능합니다.</span>
+                      <span className="text-xs text-gray-400">▶ 100점 만점 기준입니다.</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능 횟수</label>
+                      <input
+                        type="number"
+                        value={examEditSettings.retakeCount}
+                        onChange={(e) => setExamEditSettings(prev => ({ ...prev, retakeCount: parseInt(e.target.value) || 0 }))}
+                        min={0}
+                        className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">회까지 재응시가 가능합니다.</span>
+                    </div>
+                  </>
+                )}
+
+                {/* 시험결과노출 */}
+                <div className="flex items-center gap-3">
+                  <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">시험결과노출</label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={examEditSettings.showResults}
+                      onChange={(e) => setExamEditSettings(prev => ({ ...prev, showResults: e.target.checked }))}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-600">노출</span>
+                  </label>
+                  <span className="text-xs text-gray-400">▶ 응시 후 수강생이 정답을 확인할 수 있습니다.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
+              <button
+                onClick={() => setEditingPrismExam(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSavePrismExamEdit}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                시험수정
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
