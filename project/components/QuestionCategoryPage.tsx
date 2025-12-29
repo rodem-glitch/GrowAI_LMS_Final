@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, FolderTree, ChevronRight, ChevronDown, Save, X } from 'lucide-react';
+import { Plus, Edit, Trash2, FolderTree, ChevronRight, ChevronDown, Save, X, Loader2 } from 'lucide-react';
+import { tutorLmsApi, type TutorQuestionCategoryRow } from '../api/tutorLmsApi';
 
-// 문제 카테고리 타입
+// 문제 카테고리 타입 (프론트엔드용)
 export interface QuestionCategory {
   id: string;
   name: string;
@@ -10,22 +11,13 @@ export interface QuestionCategory {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'tutor_question_categories';
-
-// 로컬스토리지에서 데이터 로드
-const loadCategories = (): QuestionCategory[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
-};
-
-// 로컬스토리지에 데이터 저장
-const saveCategories = (categories: QuestionCategory[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
-};
+// 서버 데이터를 프론트엔드 형식으로 변환
+const serverToLocal = (row: TutorQuestionCategoryRow): QuestionCategory => ({
+  id: String(row.id),
+  name: row.category_nm,
+  parentId: row.parent_id > 0 ? String(row.parent_id) : null,
+  createdAt: new Date().toISOString(),
+});
 
 // 플랫 목록을 트리 구조로 변환
 const buildTree = (categories: QuestionCategory[]): QuestionCategory[] => {
@@ -49,8 +41,11 @@ const buildTree = (categories: QuestionCategory[]): QuestionCategory[] => {
 };
 
 export function QuestionCategoryPage() {
-  const [categories, setCategories] = useState<QuestionCategory[]>(() => loadCategories());
+  const [categories, setCategories] = useState<QuestionCategory[]>([]);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // 추가/편집 모달 상태
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,10 +53,26 @@ export function QuestionCategoryPage() {
   const [newName, setNewName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
 
-  // 저장
+  // 서버에서 카테고리 목록 로드
+  const loadCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await tutorLmsApi.getQuestionCategories();
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      const localCategories = (res.rst_data ?? []).map(serverToLocal);
+      setCategories(localCategories);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '카테고리를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    saveCategories(categories);
-  }, [categories]);
+    loadCategories();
+  }, []);
 
   const tree = buildTree(categories);
 
@@ -88,35 +99,43 @@ export function QuestionCategoryPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newName.trim()) return;
 
-    if (editingCategory) {
-      // 수정
-      setCategories(prev =>
-        prev.map(c =>
-          c.id === editingCategory.id
-            ? { ...c, name: newName.trim(), parentId: selectedParentId }
-            : c
-        )
-      );
-    } else {
-      // 추가
-      const newCategory: QuestionCategory = {
-        id: `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: newName.trim(),
-        parentId: selectedParentId,
-        createdAt: new Date().toISOString(),
-      };
-      setCategories(prev => [...prev, newCategory]);
-    }
+    try {
+      setSaving(true);
+      setError(null);
 
-    setIsModalOpen(false);
-    setEditingCategory(null);
-    setNewName('');
+      if (editingCategory) {
+        // 수정
+        const res = await tutorLmsApi.updateQuestionCategory({
+          id: Number(editingCategory.id),
+          categoryName: newName.trim(),
+          parentId: selectedParentId ? Number(selectedParentId) : 0,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      } else {
+        // 추가
+        const res = await tutorLmsApi.createQuestionCategory({
+          categoryName: newName.trim(),
+          parentId: selectedParentId ? Number(selectedParentId) : 0,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      }
+
+      // 목록 새로고침
+      await loadCategories();
+      setIsModalOpen(false);
+      setEditingCategory(null);
+      setNewName('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     // 하위 카테고리가 있는지 확인
     const hasChildren = categories.some(c => c.parentId === id);
     if (hasChildren) {
@@ -124,7 +143,18 @@ export function QuestionCategoryPage() {
       return;
     }
     if (!confirm('이 카테고리를 삭제하시겠습니까?')) return;
-    setCategories(prev => prev.filter(c => c.id !== id));
+
+    try {
+      setSaving(true);
+      const res = await tutorLmsApi.deleteQuestionCategory({ id: Number(id) });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      await loadCategories();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 카테고리 트리 렌더링
@@ -162,6 +192,7 @@ export function QuestionCategoryPage() {
             onClick={() => openAddModal(category.id)}
             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
             title="하위 카테고리 추가"
+            disabled={saving}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -169,6 +200,7 @@ export function QuestionCategoryPage() {
             onClick={() => openEditModal(category)}
             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
             title="수정"
+            disabled={saving}
           >
             <Edit className="w-4 h-4" />
           </button>
@@ -176,6 +208,7 @@ export function QuestionCategoryPage() {
             onClick={() => handleDelete(category.id)}
             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             title="삭제"
+            disabled={saving}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -200,16 +233,29 @@ export function QuestionCategoryPage() {
         </div>
         <button
           onClick={() => openAddModal(null)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           <Plus className="w-5 h-5" />
           <span>카테고리 추가</span>
         </button>
       </div>
 
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
       {/* 카테고리 목록 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {tree.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-gray-400">
+            <Loader2 className="w-8 h-8 animate-spin mr-2" />
+            <span>불러오는 중...</span>
+          </div>
+        ) : tree.length > 0 ? (
           <div>
             {tree.map(category => renderCategory(category))}
           </div>
@@ -287,10 +333,14 @@ export function QuestionCategoryPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!newName.trim()}
+                disabled={!newName.trim() || saving}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
-                <Save className="w-4 h-4" />
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 <span>저장</span>
               </button>
             </div>

@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, ClipboardList, Calendar, Clock, FileQuestion, X, Save, Check } from 'lucide-react';
-import { Question } from './QuestionBankPage';
-import { QuestionCategory } from './QuestionCategoryPage';
+import { Plus, Edit, Trash2, Search, ClipboardList, Clock, FileQuestion, X, Save, Check, Loader2 } from 'lucide-react';
+import { tutorLmsApi, type TutorQuestionBankRow, type TutorQuestionCategoryRow, type TutorExamTemplateRow } from '../api/tutorLmsApi';
 
-// 시험 타입
+// 프론트엔드용 시험 타입
 export interface Exam {
   id: string;
   title: string;
   description: string;
   questionIds: string[];
-  duration: number; // 분
+  duration: number;
   totalPoints: number;
   passingScore: number;
   shuffleQuestions: boolean;
@@ -17,62 +16,74 @@ export interface Exam {
   createdAt: string;
 }
 
-const EXAM_STORAGE_KEY = 'tutor_exams';
-const QUESTION_STORAGE_KEY = 'tutor_question_bank';
-const CATEGORY_STORAGE_KEY = 'tutor_question_categories';
+// 프론트엔드용 문제 타입 (간소화)
+interface Question {
+  id: string;
+  type: 'multiple_choice' | 'short_answer' | 'ox';
+  title: string;
+  content?: string;
+  points: number;
+  categoryId?: string;
+}
 
-const loadExams = (): Exam[] => {
+// 서버 데이터를 프론트엔드 형식으로 변환
+const serverExamToLocal = (row: TutorExamTemplateRow): Exam => ({
+  id: String(row.id),
+  title: row.exam_nm,
+  description: row.content || '',
+  questionIds: row.range_idx ? row.range_idx.split(',').filter(Boolean) : [],
+  duration: row.exam_time || 60,
+  totalPoints: row.total_points || 0,
+  passingScore: row.assign1 || 60,
+  shuffleQuestions: row.shuffle_yn === 'Y',
+  showResults: true,
+  createdAt: row.reg_date || new Date().toISOString(),
+});
+
+const serverQuestionToLocal = (row: TutorQuestionBankRow): Question => {
+  let type: 'multiple_choice' | 'short_answer' | 'ox' = 'multiple_choice';
+  if (row.question_type === 3 || row.question_type === 4) type = 'short_answer';
+  
+  return {
+    id: String(row.id),
+    type,
+    title: row.question,
+    content: row.question_text,
+    points: row.score || 5,
+    categoryId: row.category_id ? String(row.category_id) : undefined,
+  };
+};
+
+// 시험 목록을 외부에서도 사용할 수 있도록 export (API 버전)
+export const getExamList = async (): Promise<Exam[]> => {
   try {
-    const saved = localStorage.getItem(EXAM_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    const res = await tutorLmsApi.getExamTemplates();
+    if (res.rst_code === '0000') {
+      return (res.rst_data ?? []).map(serverExamToLocal);
+    }
+    return [];
   } catch {
     return [];
   }
 };
-
-const saveExams = (exams: Exam[]) => {
-  localStorage.setItem(EXAM_STORAGE_KEY, JSON.stringify(exams));
-};
-
-const loadQuestions = (): Question[] => {
-  try {
-    const saved = localStorage.getItem(QUESTION_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
-};
-
-const loadCategories = (): QuestionCategory[] => {
-  try {
-    const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
-};
-
-// 시험 목록을 외부에서도 사용할 수 있도록 export
-export const getExamList = (): Exam[] => loadExams();
 
 // 시험 상세 조회
-export const getExamById = (examId: string): Exam | null => {
-  const exams = loadExams();
-  return exams.find(e => e.id === examId) || null;
-};
-
-// 시험에 포함된 문제 목록 조회
-export const getExamQuestions = (examId: string): Question[] => {
-  const exam = getExamById(examId);
-  if (!exam) return [];
-  const questions = loadQuestions();
-  return exam.questionIds.map(id => questions.find(q => q.id === id)).filter(Boolean) as Question[];
+export const getExamById = async (examId: string): Promise<Exam | null> => {
+  try {
+    const exams = await getExamList();
+    return exams.find(e => e.id === examId) || null;
+  } catch {
+    return null;
+  }
 };
 
 export function ExamManagementPage() {
-  const [exams, setExams] = useState<Exam[]>(() => loadExams());
-  const [questions] = useState<Question[]>(() => loadQuestions());
-  const [categories] = useState<QuestionCategory[]>(() => loadCategories());
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [categories, setCategories] = useState<TutorQuestionCategoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // 검색
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +96,7 @@ export function ExamManagementPage() {
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
   const [questionFilterCategory, setQuestionFilterCategory] = useState<string>('');
+  const [questionsLoading, setQuestionsLoading] = useState(false);
   
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -97,16 +109,64 @@ export function ExamManagementPage() {
     showResults: true,
   });
 
+  // 시험 목록 로드
+  const loadExams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await tutorLmsApi.getExamTemplates();
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      const localExams = (res.rst_data ?? []).map(serverExamToLocal);
+      setExams(localExams);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '시험 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    saveExams(exams);
-  }, [exams]);
+    loadExams();
+  }, []);
+
+  // 카테고리 로드
+  const loadCategories = async () => {
+    try {
+      const res = await tutorLmsApi.getQuestionCategories();
+      if (res.rst_code === '0000') {
+        setCategories(res.rst_data ?? []);
+      }
+    } catch (e) {
+      console.error('카테고리 로드 실패:', e);
+    }
+  };
+
+  // 문제 목록 로드
+  const loadQuestions = async (categoryId?: string) => {
+    try {
+      setQuestionsLoading(true);
+      const res = await tutorLmsApi.getQuestionBankList({
+        categoryId: categoryId ? Number(categoryId) : undefined,
+        limit: 200,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      const localQuestions = (res.rst_data ?? []).map(serverQuestionToLocal);
+      setQuestions(localQuestions);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '문제 목록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setQuestionsLoading(false);
+    }
+  };
 
   // 필터링된 시험 목록
   const filteredExams = exams.filter(e =>
     !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 필터링된 문제 목록 (문제 선택 모달용)
+  // 필터링된 문제 목록
   const filteredQuestions = questions.filter(q =>
     !questionFilterCategory || q.categoryId === questionFilterCategory
   );
@@ -139,52 +199,75 @@ export function ExamManagementPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title.trim()) return;
 
-    const totalPoints = formData.questionIds.reduce((sum, id) => {
-      const q = questions.find(q => q.id === id);
-      return sum + (q?.points || 0);
-    }, 0);
+    try {
+      setSaving(true);
+      setError(null);
 
-    const examData = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      questionIds: formData.questionIds,
-      duration: formData.duration,
-      totalPoints,
-      passingScore: formData.passingScore,
-      shuffleQuestions: formData.shuffleQuestions,
-      showResults: formData.showResults,
-    };
+      if (editingExam) {
+        // 수정
+        const res = await tutorLmsApi.updateExamTemplate({
+          id: Number(editingExam.id),
+          examName: formData.title.trim(),
+          examTime: formData.duration,
+          questionCnt: formData.questionIds.length,
+          shuffleYn: formData.shuffleQuestions,
+          passingScore: formData.passingScore,
+          questionIds: formData.questionIds,
+          content: formData.description.trim(),
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      } else {
+        // 추가
+        const res = await tutorLmsApi.createExamTemplate({
+          examName: formData.title.trim(),
+          examTime: formData.duration,
+          questionCnt: formData.questionIds.length,
+          shuffleYn: formData.shuffleQuestions,
+          passingScore: formData.passingScore,
+          questionIds: formData.questionIds,
+          content: formData.description.trim(),
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      }
 
-    if (editingExam) {
-      setExams(prev =>
-        prev.map(e =>
-          e.id === editingExam.id ? { ...e, ...examData } : e
-        )
-      );
-    } else {
-      const newExam: Exam = {
-        id: `exam_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        ...examData,
-        createdAt: new Date().toISOString(),
-      };
-      setExams(prev => [...prev, newExam]);
+      await loadExams();
+      setIsModalOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('이 시험을 삭제하시겠습니까?')) return;
-    setExams(prev => prev.filter(e => e.id !== id));
+
+    try {
+      setSaving(true);
+      const res = await tutorLmsApi.deleteExamTemplate({ id: Number(id) });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      await loadExams();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 문제 선택 모달 열기
-  const openQuestionModal = () => {
+  const openQuestionModal = async () => {
     setSelectedQuestionIds(new Set(formData.questionIds));
     setIsQuestionModalOpen(true);
+    await Promise.all([loadCategories(), loadQuestions()]);
+  };
+
+  // 카테고리 필터 변경
+  const handleCategoryFilterChange = async (categoryId: string) => {
+    setQuestionFilterCategory(categoryId);
+    await loadQuestions(categoryId || undefined);
   };
 
   // 문제 선택 토글
@@ -206,7 +289,7 @@ export function ExamManagementPage() {
     setIsQuestionModalOpen(false);
   };
 
-  // 선택된 문제 정보 가져오기
+  // 선택된 문제 정보
   const getSelectedQuestionsInfo = () => {
     const selected = formData.questionIds.map(id => questions.find(q => q.id === id)).filter(Boolean) as Question[];
     const totalPoints = selected.reduce((sum, q) => sum + q.points, 0);
@@ -225,12 +308,21 @@ export function ExamManagementPage() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           <Plus className="w-5 h-5" />
           <span>시험 생성</span>
         </button>
       </div>
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+          <button onClick={() => setError(null)} className="ml-2 underline">닫기</button>
+        </div>
+      )}
 
       {/* 검색 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -247,70 +339,75 @@ export function ExamManagementPage() {
       </div>
 
       {/* 시험 목록 */}
-      <div className="grid gap-4">
-        {filteredExams.length > 0 ? (
-          filteredExams.map(exam => (
-            <div
-              key={exam.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">{exam.title}</h3>
-                  {exam.description && (
-                    <p className="text-gray-500 mt-1">{exam.description}</p>
-                  )}
-                  <div className="flex items-center gap-6 mt-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <FileQuestion className="w-4 h-4 text-indigo-500" />
-                      <span>{exam.questionIds.length}문제</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-blue-500" />
-                      <span>{exam.duration}분</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500">총점:</span>
-                      <span className="font-medium">{exam.totalPoints}점</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500">합격:</span>
-                      <span className="font-medium">{exam.passingScore}점</span>
+      {loading ? (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-center py-16 text-gray-400">
+          <Loader2 className="w-8 h-8 animate-spin mr-2" />
+          <span>불러오는 중...</span>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredExams.length > 0 ? (
+            filteredExams.map(exam => (
+              <div
+                key={exam.id}
+                className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900">{exam.title}</h3>
+                    {exam.description && (
+                      <p className="text-gray-500 mt-1">{exam.description}</p>
+                    )}
+                    <div className="flex items-center gap-6 mt-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <FileQuestion className="w-4 h-4 text-indigo-500" />
+                        <span>{exam.questionIds.length}문제</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-blue-500" />
+                        <span>{exam.duration}분</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">합격:</span>
+                        <span className="font-medium">{exam.passingScore}점</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => openEditModal(exam)}
-                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="수정"
-                  >
-                    <Edit className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(exam.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => openEditModal(exam)}
+                      disabled={saving}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="수정"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(exam.id)}
+                      disabled={saving}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-16 text-gray-400">
+              <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>등록된 시험이 없습니다.</p>
+              <button
+                onClick={openAddModal}
+                className="mt-4 text-indigo-600 hover:underline"
+              >
+                + 첫 번째 시험 생성하기
+              </button>
             </div>
-          ))
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-16 text-gray-400">
-            <ClipboardList className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>등록된 시험이 없습니다.</p>
-            <button
-              onClick={openAddModal}
-              className="mt-4 text-indigo-600 hover:underline"
-            >
-              + 첫 번째 시험 생성하기
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* 시험 생성/수정 모달 */}
       {isModalOpen && (
@@ -373,7 +470,7 @@ export function ExamManagementPage() {
                 </button>
               </div>
 
-              {/* 시험 시간 */}
+              {/* 시험 시간 & 합격 점수 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">시험 시간 (분)</label>
@@ -429,10 +526,14 @@ export function ExamManagementPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!formData.title.trim()}
+                disabled={!formData.title.trim() || saving}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
-                <Save className="w-4 h-4" />
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 <span>저장</span>
               </button>
             </div>
@@ -461,19 +562,24 @@ export function ExamManagementPage() {
             <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 bg-gray-50">
               <select
                 value={questionFilterCategory}
-                onChange={(e) => setQuestionFilterCategory(e.target.value)}
+                onChange={(e) => handleCategoryFilterChange(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">전체 카테고리</option>
                 {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>{c.category_nm}</option>
                 ))}
               </select>
             </div>
 
             {/* 문제 목록 */}
             <div className="flex-1 overflow-y-auto">
-              {filteredQuestions.length > 0 ? (
+              {questionsLoading ? (
+                <div className="flex items-center justify-center py-12 text-gray-400">
+                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                  <span>문제 불러오는 중...</span>
+                </div>
+              ) : filteredQuestions.length > 0 ? (
                 <div className="divide-y divide-gray-100">
                   {filteredQuestions.map(question => (
                     <div
