@@ -33,9 +33,12 @@
 							<h5 class="tb_title">수강 중인 과정 <span style="font-size:0.7em;">(최근 수강시작일순 10개)</span></h5>
 							<button type="button" class="button small white btn_course_more" onclick="location.href = '../mypage/course_list.jsp';" style="position: absolute; right: 0; bottom: 15px;">+ 더보기</button>
 						</div>
-						<div class="tb_box type_list mypage_course_user_list" >
-							<table summary="수강 중인 과정 및 기간 학습율을 나타냅니다.">
-								<caption>수강 중인 과정</caption>
+
+						<!-- 정규(학사) 과정 -->
+						<h6 class="tb_title2" style="padding: 10px 0 5px 0;">정규(학사)</h6>
+						<div class="tb_box type_list mypage_course_user_list" style="margin-bottom:20px;">
+							<table summary="정규(학사) 수강 중인 과정 목록">
+								<caption>정규(학사) 수강 중인 과정</caption>
 								<colgroup>
 									<col style="width: 7%" />
 									<col />
@@ -53,31 +56,75 @@
 									</tr>
 								</thead>
 								<tbody>
-									<!--@loop(courses)-->
+									<!--@loop(courses_haksa)-->
 									<tr>
-										<td class="tac"><span class="label small">{{courses.onoff_type_conv}}</span></td>
+										<td class="tac"><span class="label small sky">{{courses_haksa.onoff_type_conv}}</span></td>
 										<td class="tal">
 											<p class="subject">
-												<a href="../classroom/index.jsp?cuid={{courses.id}}">
-													<!--@if(courses.course_type:R)--><!--[{{courses.year}}년/{{courses.step}}기]--><!--/if(courses.course_type:R)-->
-													{{courses.course_nm_conv}}
+												<a href="../classroom/index.jsp?haksa_cuid={{courses_haksa.haksa_cuid}}">
+													{{courses_haksa.course_nm_conv}}
+												</a>
+											</p>
+										</td>
+										<td class="tac">{{courses_haksa.study_date_conv}}</td>
+										<td class="tac">{{courses_haksa.progress_ratio_conv}}%</td>
+										<td class="tac"><a href="../classroom/index.jsp?haksa_cuid={{courses_haksa.haksa_cuid}}" class="button small blue">강의실 입장</a></td>
+									</tr>
+									<!--/loop(courses_haksa)-->
+									<!--@nif(courses_haksa)-->
+									<tr>
+										<td class="nodata" colspan="5">수강 중인 정규(학사) 과정이 없습니다.</td>
+									</tr>
+									<!--/nif(courses_haksa)-->
+								</tbody>
+							</table>
+						</div>
+
+						<!-- 비정규(LMS) 과정 -->
+						<h6 class="tb_title2" style="padding: 10px 0 5px 0;">비정규(LMS)</h6>
+						<div class="tb_box type_list mypage_course_user_list" >
+							<table summary="비정규(LMS) 수강 중인 과정 목록">
+								<caption>비정규(LMS) 수강 중인 과정</caption>
+								<colgroup>
+									<col style="width: 7%" />
+									<col />
+									<col style="width: 27%" />
+									<col style="width: 8%" />
+									<col style="width: 13%" />
+								</colgroup>
+								<thead>
+									<tr>
+										<th scope="col">구분</th>
+										<th scope="col">수강 교과목</th>
+										<th scope="col">학습기간</th>
+										<th scope="col">진도율</th>
+										<th scope="col">강의실</th>
+									</tr>
+								</thead>
+								<tbody>
+									<!--@loop(courses_prism)-->
+									<tr>
+										<td class="tac"><span class="label small">{{courses_prism.onoff_type_conv}}</span></td>
+										<td class="tal">
+											<p class="subject">
+												<a href="../classroom/index.jsp?cuid={{courses_prism.id}}">
+													{{courses_prism.course_nm_conv}}
 												</a>
 											</p>
 										</td>
 										<td class="tac">
-											{{courses.study_date_conv}}
-											<!--@if(courses.renew_block)--><button type="button" class="button mini red" onclick="goRenew('{{courses.id}}');">연장</button><!--/if(courses.renew_block)-->
+											{{courses_prism.study_date_conv}}
+											<!--@if(courses_prism.renew_block)--><button type="button" class="button mini red" onclick="goRenew('{{courses_prism.id}}');">연장</button><!--/if(courses_prism.renew_block)-->
 										</td>
-										<td class="tac">{{courses.progress_ratio_conv}}%</td>
-										<td class="tac"><a href="../classroom/index.jsp?cuid={{courses.id}}" class="button small blue">강의실 입장</a></td>
+										<td class="tac">{{courses_prism.progress_ratio_conv}}%</td>
+										<td class="tac"><a href="../classroom/index.jsp?cuid={{courses_prism.id}}" class="button small blue">강의실 입장</a></td>
 									</tr>
-									<!--/loop(courses)-->
-
-									<!--@nif(courses)-->
+									<!--/loop(courses_prism)-->
+									<!--@nif(courses_prism)-->
 									<tr>
-										<td class="nodata" colspan="5">수강 중인 과정이 없습니다.</td>
+										<td class="nodata" colspan="5">수강 중인 비정규(LMS) 과정이 없습니다.</td>
 									</tr>
-									<!--/nif(courses)-->
+									<!--/nif(courses_prism)-->
 								</tbody>
 							</table>
 						</div>

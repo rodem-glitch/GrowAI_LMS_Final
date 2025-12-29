@@ -282,7 +282,7 @@ while(list.next()) {
 }
 
 //정렬
-if(!"A".equals(cinfo.s("lesson_display_ord"))) {
+if("D".equals(cinfo.s("lesson_display_ord"))) {
 	list.sort("chapter", "desc");
 }
 

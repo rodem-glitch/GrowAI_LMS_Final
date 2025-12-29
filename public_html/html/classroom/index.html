@@ -126,19 +126,29 @@
 
 					<h5 class="tb_title">강의목차</h5>
 				
-				<!-- 탭 메뉴 -->
-				<div class="curriculum_tab_wrap">
+				<!-- 탭 메뉴 (정규/비정규 과정에 따라 조건부 노출) -->
+				<!--@nif(cuinfo.id:0)-->
+				<div class="curriculum_tab_wrap" style="display:none;">
 					<ul class="curriculum_tabs">
-						<li class="tab_item active" data-tab="regular">
-							<a href="#curriculum_regular">정규(학사)</a>
-						</li>
 						<li class="tab_item" data-tab="irregular">
 							<a href="#curriculum_irregular">비정규(LMS)</a>
 						</li>
 					</ul>
 				</div>
+				<!--/nif(cuinfo.id:0)-->
+
+				<!--@if(cuinfo.id:0)-->
+				<div class="curriculum_tab_wrap" style="display:none;">
+					<ul class="curriculum_tabs">
+						<li class="tab_item active" data-tab="regular">
+							<a href="#curriculum_regular">정규(학사)</a>
+						</li>
+					</ul>
+				</div>
+				<!--/if(cuinfo.id:0)-->
 				
 				<!-- 정규(학사) 탭: 주차별 아코디언 (Mock) -->
+				<!--@if(cuinfo.id:0)-->
 				<div id="curriculum_regular" class="curriculum_tab_content active">
 					<div class="curriculum_week_wrap">
 						<div class="curriculum_stats">
@@ -182,9 +192,11 @@
 						<p class="curriculum_notice">※ 학사 연동이 완료되면 교수자가 등록한 주차별 콘텐츠가 표시됩니다.</p>
 					</div>
 				</div>
+				<!--/if(cuinfo.id:0)-->
 				
 				<!-- 비정규(LMS) 탭: 기존 차시별 테이블 -->
-				<div id="curriculum_irregular" class="curriculum_tab_content" style="display:none;">
+				<!--@nif(cuinfo.id:0)-->
+				<div id="curriculum_irregular" class="curriculum_tab_content active">
 					<div class="tb_box tb_list tb_list_resp">
 						<table summary="현과정의 목차를 알수 있습니다.">
 							<caption>강의목차</caption>
@@ -310,6 +322,7 @@
 						<!--/nif(list)-->
 					</div>
 				</div>
+				<!--/nif(cuinfo.id:0)-->
 				</div>
 			</div>
 			<script>

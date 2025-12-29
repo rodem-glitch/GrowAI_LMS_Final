@@ -7,6 +7,10 @@ CourseDao course = new CourseDao();
 CourseUserDao courseUser = new CourseUserDao();
 LmCategoryDao lmCategory = new LmCategoryDao("course");
 
+PolyStudentDao polyStudent = new PolyStudentDao();
+PolyCourseDao polyCourse = new PolyCourseDao();
+PolyMemberKeyDao polyMemberKey = new PolyMemberKeyDao();
+
 BookDao book = new BookDao();
 BookUserDao bookUser = new BookUserDao();
 
@@ -26,8 +30,8 @@ CategoryDao category = new CategoryDao();
 String type = m.rs("type");
 String today = m.time("yyyyMMdd");
 
-//목록-수강중인과정
-DataSet courses = courseUser.query(
+//목록-수강중인과정(비정규/LMS)
+DataSet coursesPrism = courseUser.query(
 	" SELECT a.*, c.year, c.step, c.course_nm, c.course_type, c.onoff_type, c.course_file, c.credit, c.lesson_time, c.renew_max_cnt, c.renew_yn, c.mobile_yn, ct.category_nm "
 	+ " FROM " + courseUser.table + " a "
 	+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
@@ -38,50 +42,97 @@ DataSet courses = courseUser.query(
 	+ " ORDER BY a.start_date DESC, a.id DESC "
 	, 10
 );
-while(courses.next()) {
-	courses.put("start_date_conv", m.time(_message.get("format.date.dot"), courses.s("start_date")));
-	courses.put("end_date_conv", m.time(_message.get("format.date.dot"), courses.s("end_date")));
-	courses.put("study_date_conv", m.time(_message.get("format.date.dot"), courses.s("start_date")) + " - " + m.time(_message.get("format.date.dot"), courses.s("end_date")));
-	courses.put("course_nm_conv", m.cutString(m.htt(courses.s("course_nm")), 60));
-	courses.put("progress_ratio_conv", m.nf(courses.d("progress_ratio"), 0));
-	courses.put("total_score", m.nf(courses.d("total_score"), 1).replace(".0", ""));
-	courses.put("type_conv", "A".equals(courses.s("course_type")) ? "상시" : "정규");
-	courses.put("onoff_type_conv", m.getValue(courses.s("onoff_type"), course.onoffTypesMsg));
-	courses.put("credit", courses.i("credit"));
-	courses.put("mobile_block", courses.b("mobile_yn"));
+while(coursesPrism.next()) {
+	coursesPrism.put("start_date_conv", m.time(_message.get("format.date.dot"), coursesPrism.s("start_date")));
+	coursesPrism.put("end_date_conv", m.time(_message.get("format.date.dot"), coursesPrism.s("end_date")));
+	coursesPrism.put("study_date_conv", m.time(_message.get("format.date.dot"), coursesPrism.s("start_date")) + " - " + m.time(_message.get("format.date.dot"), coursesPrism.s("end_date")));
+	coursesPrism.put("course_nm_conv", m.cutString(m.htt(coursesPrism.s("course_nm")), 60));
+	coursesPrism.put("progress_ratio_conv", m.nf(coursesPrism.d("progress_ratio"), 0));
+	coursesPrism.put("total_score", m.nf(coursesPrism.d("total_score"), 1).replace(".0", ""));
+	coursesPrism.put("type_conv", "A".equals(coursesPrism.s("course_type")) ? "상시" : "정규");
+	coursesPrism.put("onoff_type_conv", m.getValue(coursesPrism.s("onoff_type"), course.onoffTypesMsg));
+	coursesPrism.put("credit", coursesPrism.i("credit"));
+	coursesPrism.put("mobile_block", coursesPrism.b("mobile_yn"));
 
-	courses.put("renew_block", courseUser.setRenewBlock(courses.getRow()));
+	coursesPrism.put("renew_block", courseUser.setRenewBlock(coursesPrism.getRow()));
 
-	if(!"".equals(courses.s("course_file"))) {
-		courses.put("course_file_url", m.getUploadUrl(courses.s("course_file")));
+	if(!"".equals(coursesPrism.s("course_file"))) {
+		coursesPrism.put("course_file_url", m.getUploadUrl(coursesPrism.s("course_file")));
 	} else {
-		courses.put("course_file_url", "/html/images/common/noimage_course.gif");
+		coursesPrism.put("course_file_url", "/html/images/common/noimage_course.gif");
 	}
 
 	String status = "";
 	boolean isOpen = false;
 	boolean isCancel = false;
-	if(courses.i("status") == 0) {
+	if(coursesPrism.i("status") == 0) {
 		status = _message.get("list.course_user.etc.waiting_approve");
-		if(0 == courses.i("order_id")) isCancel = true;
-	} else if(0 > m.diffDate("D", courses.s("start_date"), today)) {
+		if(0 == coursesPrism.i("order_id")) isCancel = true;
+	} else if(0 > m.diffDate("D", coursesPrism.s("start_date"), today)) {
 		status = _message.get("list.course_user.etc.waiting_learning");
-		//if(0 == courses.i("order_id")) isCancel = true;
 		isCancel = true;
 	} else {
-		if(courses.b("complete_yn")) {
+		if(coursesPrism.b("complete_yn")) {
 			status = _message.get("list.course_user.etc.complete_success");
 		} else {
 			status = _message.get("list.course_user.etc.learning");
-			//if(0 == courses.i("order_id") && "A".equals(courses.s("course_type"))) isCancel = true;
-			if(0 == courses.i("order_id")) isCancel = true;
+			if(0 == coursesPrism.i("order_id")) isCancel = true;
 		}
 		isOpen = true;
 	}
 
-	courses.put("status_conv", status);
-	courses.put("open_block", isOpen);
-	courses.put("cancel_block", isCancel);
+	coursesPrism.put("status_conv", status);
+	coursesPrism.put("open_block", isOpen);
+	coursesPrism.put("cancel_block", isCancel);
+}
+
+//===== 정규(학사) 수강중인 과정 =====
+String memberKey = "";
+DataSet memberKeyInfo = polyMemberKey.find("alias_key = '" + uinfo.s("login_id") + "'");
+if(memberKeyInfo.next()) {
+	memberKey = memberKeyInfo.s("member_key");
+} else {
+	memberKey = uinfo.s("login_id");
+}
+
+String currentYear = m.time("yyyy");
+DataSet coursesHaksa = polyStudent.query(
+	" SELECT s.*, c.course_name, c.course_ename, c.dept_name, c.grad_name, c.week, c.grade "
+	+ " , c.curriculum_name, c.category, c.startdate, c.enddate, c.hour1, c.classroom "
+	+ " FROM " + polyStudent.table + " s "
+	+ " INNER JOIN " + polyCourse.table + " c ON s.course_code = c.course_code "
+	+ "   AND s.open_year = c.open_year AND s.open_term = c.open_term "
+	+ "   AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
+	+ " WHERE s.member_key = '" + memberKey + "' "
+	+ " AND s.open_year = '" + currentYear + "' "
+	+ " ORDER BY c.startdate DESC, c.course_name ASC "
+	, 10
+);
+while(coursesHaksa.next()) {
+	// 학습기간 변환
+	String startdate = coursesHaksa.s("startdate");
+	String enddate = coursesHaksa.s("enddate");
+	if(startdate.length() >= 8) {
+		coursesHaksa.put("start_date_conv", m.time(_message.get("format.date.dot"), startdate));
+	} else {
+		coursesHaksa.put("start_date_conv", startdate);
+	}
+	if(enddate.length() >= 8) {
+		coursesHaksa.put("end_date_conv", m.time(_message.get("format.date.dot"), enddate));
+	} else {
+		coursesHaksa.put("end_date_conv", enddate);
+	}
+	coursesHaksa.put("study_date_conv", coursesHaksa.s("start_date_conv") + " - " + coursesHaksa.s("end_date_conv"));
+	coursesHaksa.put("course_nm_conv", m.cutString(coursesHaksa.s("course_name"), 40));
+	coursesHaksa.put("progress_ratio_conv", "0");
+	coursesHaksa.put("status_conv", "학습중");
+	coursesHaksa.put("open_block", true);
+	coursesHaksa.put("source_type", "haksa");
+	coursesHaksa.put("onoff_type_conv", "".equals(coursesHaksa.s("category")) ? "정규" : coursesHaksa.s("category"));
+	
+	String haksaCuid = coursesHaksa.s("course_code") + "_" + coursesHaksa.s("open_year") 
+		+ "_" + coursesHaksa.s("open_term") + "_" + coursesHaksa.s("bunban_code");
+	coursesHaksa.put("haksa_cuid", haksaCuid);
 }
 
 uinfo.put("dept_nm_conv", 0 < uinfo.i("dept_id") ? userDept.getNames(uinfo.i("dept_id")) : "-");
@@ -182,7 +233,8 @@ p.setVar("list_query", m.qs("id"));
 p.setVar("form_script", f.getScript());
 
 p.setVar("user", uinfo);
-p.setLoop("courses", courses);
+p.setLoop("courses_haksa", coursesHaksa);
+p.setLoop("courses_prism", coursesPrism);
 p.setLoop("books", books);
 p.setLoop("qna_list", qnaList);
 p.setLoop("notice_list", noticeList);
