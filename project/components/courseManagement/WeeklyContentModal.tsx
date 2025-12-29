@@ -64,10 +64,22 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
 
   // 시험 목록 로드
   useEffect(() => {
-    if (isOpen && selectedType === 'exam') {
-      const exams = getExamList();
-      setExamList(exams);
-    }
+    if (!isOpen || selectedType !== 'exam') return;
+    let cancelled = false;
+
+    const loadExams = async () => {
+      try {
+        const exams = await getExamList();
+        if (!cancelled) setExamList(exams);
+      } catch {
+        if (!cancelled) setExamList([]);
+      }
+    };
+
+    void loadExams();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, selectedType]);
 
   // 선택한 시험 정보

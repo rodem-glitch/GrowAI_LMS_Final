@@ -152,6 +152,124 @@ else if("haksa".equals(tab)) {
             }
         }
         totalCount = resultList.size();
+
+        // 왜: 미러가 없어도 학사 키(코드/연도/학기/분반/그룹)를 채워 내려야 화면 저장/조회가 동작합니다.
+        resultList.first();
+        while(resultList.next()) {
+            // ===== LMS_COURSE_VIEW 25개 필드 정규화 (대소문자 모두 처리) =====
+            String category = resultList.s("CATEGORY");
+            if("".equals(category)) category = resultList.s("category");
+            resultList.put("haksa_category", category);
+
+            String deptName = resultList.s("DEPT_NAME");
+            if("".equals(deptName)) deptName = resultList.s("dept_name");
+            resultList.put("haksa_dept_name", deptName);
+
+            String week = resultList.s("WEEK");
+            if("".equals(week)) week = resultList.s("week");
+            resultList.put("haksa_week", week);
+
+            String openTerm = resultList.s("OPEN_TERM");
+            if("".equals(openTerm)) openTerm = resultList.s("open_term");
+            resultList.put("haksa_open_term", openTerm);
+
+            String courseCode = resultList.s("COURSE_CODE");
+            if("".equals(courseCode)) courseCode = resultList.s("course_code");
+            resultList.put("haksa_course_code", courseCode);
+
+            String visible = resultList.s("VISIBLE");
+            if("".equals(visible)) visible = resultList.s("visible");
+            resultList.put("haksa_visible", visible);
+
+            String startdate = resultList.s("STARTDATE");
+            if("".equals(startdate)) startdate = resultList.s("startdate");
+            resultList.put("haksa_startdate", startdate);
+
+            String bunbanCode = resultList.s("BUNBAN_CODE");
+            if("".equals(bunbanCode)) bunbanCode = resultList.s("bunban_code");
+            resultList.put("haksa_bunban_code", bunbanCode);
+
+            String grade = resultList.s("GRADE");
+            if("".equals(grade)) grade = resultList.s("grade");
+            resultList.put("haksa_grade", grade);
+
+            String gradName = resultList.s("GRAD_NAME");
+            if("".equals(gradName)) gradName = resultList.s("grad_name");
+            resultList.put("haksa_grad_name", gradName);
+
+            String dayCd = resultList.s("DAY_CD");
+            if("".equals(dayCd)) dayCd = resultList.s("day_cd");
+            resultList.put("haksa_day_cd", dayCd);
+
+            String classroom = resultList.s("CLASSROOM");
+            if("".equals(classroom)) classroom = resultList.s("classroom");
+            resultList.put("haksa_classroom", classroom);
+
+            String curriculumCode = resultList.s("CURRICULUM_CODE");
+            if("".equals(curriculumCode)) curriculumCode = resultList.s("curriculum_code");
+            resultList.put("haksa_curriculum_code", curriculumCode);
+
+            String courseEname = resultList.s("COURSE_ENAME");
+            if("".equals(courseEname)) courseEname = resultList.s("course_ename");
+            resultList.put("haksa_course_ename", courseEname);
+
+            String typeSyllabus = resultList.s("TYPE_SYLLABUS");
+            if("".equals(typeSyllabus)) typeSyllabus = resultList.s("type_syllabus");
+            resultList.put("haksa_type_syllabus", typeSyllabus);
+
+            String openYear = resultList.s("OPEN_YEAR");
+            if("".equals(openYear)) openYear = resultList.s("open_year");
+            resultList.put("haksa_open_year", openYear);
+
+            String deptCode = resultList.s("DEPT_CODE");
+            if("".equals(deptCode)) deptCode = resultList.s("dept_code");
+            resultList.put("haksa_dept_code", deptCode);
+
+            String courseName = resultList.s("COURSE_NAME");
+            if("".equals(courseName)) courseName = resultList.s("course_name");
+            resultList.put("haksa_course_name", courseName);
+
+            String groupCode = resultList.s("GROUP_CODE");
+            if("".equals(groupCode)) groupCode = resultList.s("group_code");
+            resultList.put("haksa_group_code", groupCode);
+
+            String enddate = resultList.s("ENDDATE");
+            if("".equals(enddate)) enddate = resultList.s("enddate");
+            resultList.put("haksa_enddate", enddate);
+
+            String english = resultList.s("ENGLISH");
+            if("".equals(english)) english = resultList.s("english");
+            resultList.put("haksa_english", english);
+
+            String hour1 = resultList.s("HOUR1");
+            if("".equals(hour1)) hour1 = resultList.s("hour1");
+            resultList.put("haksa_hour1", hour1);
+
+            String curriculumName = resultList.s("CURRICULUM_NAME");
+            if("".equals(curriculumName)) curriculumName = resultList.s("curriculum_name");
+            resultList.put("haksa_curriculum_name", curriculumName);
+
+            String gradCode = resultList.s("GRAD_CODE");
+            if("".equals(gradCode)) gradCode = resultList.s("grad_code");
+            resultList.put("haksa_grad_code", gradCode);
+
+            String isSyllabus = resultList.s("IS_SYLLABUS");
+            if("".equals(isSyllabus)) isSyllabus = resultList.s("is_syllabus");
+            resultList.put("haksa_is_syllabus", isSyllabus);
+
+            // ===== 기존 호환 필드 (목록 화면용) =====
+            resultList.put("source_type", "haksa");
+            resultList.put("id", "H_" + courseCode + "_" + bunbanCode);
+            resultList.put("course_cd", courseCode);
+            resultList.put("course_id_conv", courseCode);
+            resultList.put("course_nm", courseName);
+            resultList.put("course_nm_conv", courseName);
+            resultList.put("program_nm_conv", !"".equals(deptName) ? deptName : "-");
+            resultList.put("course_type_conv", !"".equals(category) ? category : "-");
+            resultList.put("onoff_type_conv", "학사");
+            resultList.put("period_conv", !"".equals(openYear) ? (openYear + "-" + openTerm + "학기") : "-");
+            resultList.put("status_label", "Y".equals(visible) ? "학습기간" : "종료");
+        }
     } else {
         String where = " WHERE 1 = 1 ";
         ArrayList<Object> params = new ArrayList<Object>();

@@ -166,6 +166,37 @@
 
 ---
 
+## 7) 학사 과목(미러) 전용 저장
+
+### DDL
+- `public_html/ddl_poly_haksa_settings.sql`
+
+### 평가/수료 기준: `CourseInfoTabs.tsx`
+- API: `/tutor_lms/api/haksa_course_eval_get.jsp`, `haksa_course_eval_update.jsp`
+- 체크
+  - [ ] 학사 과목 평가 기준이 DB에서 불러와 표시됩니다
+  - [ ] 저장 시 DB에 반영됩니다
+
+### 강의목차: `courseManagement/CurriculumTab.tsx`
+- API: `/tutor_lms/api/haksa_curriculum_get.jsp`, `haksa_curriculum_update.jsp`
+- 체크
+  - [ ] 학사 과목 강의목차가 DB에서 불러와 표시됩니다
+  - [ ] 주차/차시/콘텐츠 변경이 DB에 반영됩니다
+
+### 시험 관리: `CourseManagement.tsx` 내부 탭
+- API: `/tutor_lms/api/haksa_exam_get.jsp`, `haksa_exam_update.jsp`
+- 체크
+  - [ ] 학사 과목 시험 목록/설정이 DB에서 불러와 표시됩니다
+  - [ ] 시험 추가/수정/삭제가 DB에 반영됩니다
+
+### 성적(A/B/C/D/F): `CourseManagement.tsx` 내부 탭
+- API: `/tutor_lms/api/haksa_grade_list.jsp`, `haksa_grade_update.jsp`
+- 체크
+  - [ ] 학사 수강생 목록과 성적이 함께 표시됩니다
+  - [ ] 성적 변경/일괄 적용이 DB에 반영됩니다
+
+---
+
 ## 6) 과정/과목 개설
 
 ### `project/components/CreateCourseForm.tsx` (과정개설)

@@ -221,6 +221,64 @@ export type TutorCertificateTemplateRow = {
   status?: number;
 };
 
+// 문제 카테고리 타입 (교수자용)
+export type TutorQuestionCategoryRow = {
+  id: number;
+  category_nm: string;
+  parent_id: number;
+  depth?: number;
+  sort?: number;
+  manager_id?: number;
+  name_conv?: string; // 경로명 (예: "프로그래밍 > Java > 기초")
+  label?: string; // 프론트엔드용 라벨
+  status?: number;
+};
+
+// 문제은행 문제 타입 (교수자용)
+export type TutorQuestionBankRow = {
+  id: number;
+  category_id?: number;
+  category_nm?: string;
+  question_type: number; // 1=단일선택, 2=다중선택, 3=단답형, 4=서술형
+  question_type_conv?: string;
+  question: string;
+  question_text?: string;
+  grade?: number; // 난이도 (1=A ~ 6=F)
+  grade_conv?: string;
+  item_cnt?: number;
+  item1?: string;
+  item2?: string;
+  item3?: string;
+  item4?: string;
+  item5?: string;
+  answer?: string;
+  description?: string;
+  score?: number; // 배점
+  manager_id?: number;
+  reg_date?: string;
+  reg_date_conv?: string;
+  status?: number;
+  choices?: { id: string; text: string; file?: string }[];
+};
+
+// 시험 템플릿 타입 (교수자용)
+export type TutorExamTemplateRow = {
+  id: number;
+  exam_nm: string;
+  exam_time?: number;
+  question_cnt?: number;
+  shuffle_yn?: string;
+  auto_complete_yn?: string;
+  content?: string;
+  range_idx?: string; // 선택된 문제 ID 목록 (쉼표 구분)
+  assign1?: number; // 합격 점수로 활용
+  total_points?: number; // 계산된 총점
+  manager_id?: number;
+  reg_date?: string;
+  reg_date_conv?: string;
+  status?: number;
+};
+
 export type TutorLearnerRow = {
   id: number;
   name?: string;
@@ -316,6 +374,36 @@ export type HaksaCourseStudentRow = {
   open_term?: string;
   bunban_code?: string;
   group_code?: string;
+};
+
+export type HaksaCourseKey = {
+  courseCode: string;
+  openYear: string;
+  openTerm: string;
+  bunbanCode: string;
+  groupCode: string;
+};
+
+export type HaksaEvalSettings = {
+  weights: {
+    attendance: number;
+    exam: number;
+    assignment: number;
+    etc: number;
+  };
+  cutoffs: {
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    F: number;
+  };
+};
+
+export type HaksaGradeRow = {
+  student_id: string;
+  grade?: string;
+  score?: number;
 };
 
 export type TutorProgressSummaryRow = {
@@ -1046,6 +1134,117 @@ export const tutorLmsApi = {
     return requestJson<HaksaCourseStudentRow[]>(url);
   },
 
+  // =========================
+  // 학사 과목: 평가/강의목차/시험/성적
+  // =========================
+  async getHaksaCourseEval(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_course_eval_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ eval_json?: string }>(url);
+  },
+
+  async updateHaksaCourseEval(params: HaksaCourseKey & { evalJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('eval_json', params.evalJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_course_eval_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaCurriculum(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_curriculum_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ curriculum_json?: string }>(url);
+  },
+
+  async updateHaksaCurriculum(params: HaksaCourseKey & { curriculumJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('curriculum_json', params.curriculumJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_curriculum_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaExams(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_exam_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ exams_json?: string }>(url);
+  },
+
+  async updateHaksaExams(params: HaksaCourseKey & { examsJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('exams_json', params.examsJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_exam_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaGrades(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_grade_list.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<HaksaGradeRow[]>(url);
+  },
+
+  async updateHaksaGrades(params: HaksaCourseKey & { gradesJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('grades_json', params.gradesJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_grade_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   async addCourseStudents(payload: { courseId: number; userIds: number[] }) {
     const body = new URLSearchParams();
     body.set('course_id', String(payload.courseId));
@@ -1415,5 +1614,227 @@ export const tutorLmsApi = {
   async issueCertificate(payload: { courseUserId: number; type: 'C' | 'P' }) {
     const url = `/tutor_lms/api/certificate_issue.jsp${buildQuery({ course_user_id: payload.courseUserId, type: payload.type })}`;
     return requestJson<string>(url);
+  },
+
+  // =========================
+  // 문제 카테고리 (교수자용)
+  // =========================
+  async getQuestionCategories() {
+    const url = `/tutor_lms/api/question_category_list.jsp`;
+    return requestJson<TutorQuestionCategoryRow[]>(url);
+  },
+
+  async createQuestionCategory(payload: { categoryName: string; parentId?: number }) {
+    const body = new URLSearchParams();
+    body.set('category_nm', payload.categoryName);
+    if (payload.parentId !== undefined) body.set('parent_id', String(payload.parentId));
+
+    return requestJson<number>(`/tutor_lms/api/question_category_insert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateQuestionCategory(payload: { id: number; categoryName: string; parentId?: number }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+    body.set('category_nm', payload.categoryName);
+    if (payload.parentId !== undefined) body.set('parent_id', String(payload.parentId));
+
+    return requestJson<number>(`/tutor_lms/api/question_category_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async deleteQuestionCategory(payload: { id: number }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+
+    return requestJson<number>(`/tutor_lms/api/question_category_delete.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // =========================
+  // 문제은행 (교수자용)
+  // =========================
+  async getQuestionBankList(params: {
+    categoryId?: number;
+    questionType?: number;
+    keyword?: string;
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const url = `/tutor_lms/api/question_bank_list.jsp${buildQuery({
+      category_id: params.categoryId,
+      question_type: params.questionType,
+      s_keyword: params.keyword,
+      page: params.page,
+      limit: params.limit,
+    })}`;
+    return requestJson<TutorQuestionBankRow[]>(url);
+  },
+
+  async createQuestion(payload: {
+    categoryId?: number;
+    questionType: number; // 1=단일선택, 2=다중선택, 3=단답형, 4=서술형
+    question: string;
+    questionText?: string;
+    grade?: number;
+    answer: string;
+    description?: string;
+    points?: number;
+    items?: string[]; // 객관식 보기 (최대 5개)
+  }) {
+    const body = new URLSearchParams();
+    if (payload.categoryId) body.set('category_id', String(payload.categoryId));
+    body.set('question_type', String(payload.questionType));
+    body.set('question', payload.question);
+    if (payload.questionText) body.set('question_text', payload.questionText);
+    if (payload.grade) body.set('grade', String(payload.grade));
+    body.set('answer', payload.answer);
+    if (payload.description) body.set('description', payload.description);
+    if (payload.points) body.set('points', String(payload.points));
+    // 객관식 보기 처리
+    if (payload.items) {
+      payload.items.forEach((item, idx) => {
+        body.set(`item${idx + 1}`, item);
+      });
+    }
+
+    return requestJson<number>(`/tutor_lms/api/question_bank_insert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateQuestion(payload: {
+    id: number;
+    categoryId?: number;
+    questionType?: number;
+    question?: string;
+    questionText?: string;
+    grade?: number;
+    answer?: string;
+    description?: string;
+    points?: number;
+    items?: string[];
+  }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+    if (payload.categoryId !== undefined) body.set('category_id', String(payload.categoryId));
+    if (payload.questionType !== undefined) body.set('question_type', String(payload.questionType));
+    if (payload.question !== undefined) body.set('question', payload.question);
+    if (payload.questionText !== undefined) body.set('question_text', payload.questionText);
+    if (payload.grade !== undefined) body.set('grade', String(payload.grade));
+    if (payload.answer !== undefined) body.set('answer', payload.answer);
+    if (payload.description !== undefined) body.set('description', payload.description);
+    if (payload.points !== undefined) body.set('points', String(payload.points));
+    if (payload.items) {
+      payload.items.forEach((item, idx) => {
+        body.set(`item${idx + 1}`, item);
+      });
+    }
+
+    return requestJson<number>(`/tutor_lms/api/question_bank_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async deleteQuestion(payload: { id: number }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+
+    return requestJson<number>(`/tutor_lms/api/question_bank_delete.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // =========================
+  // 시험 템플릿 (교수자용)
+  // =========================
+  async getExamTemplates(params: { page?: number; limit?: number } = {}) {
+    const url = `/tutor_lms/api/exam_template_list.jsp${buildQuery({
+      page: params.page,
+      limit: params.limit,
+    })}`;
+    return requestJson<TutorExamTemplateRow[]>(url);
+  },
+
+  async createExamTemplate(payload: {
+    examName: string;
+    examTime?: number;
+    questionCnt?: number;
+    shuffleYn?: boolean;
+    showResultYn?: boolean;
+    passingScore?: number;
+    questionIds?: string[];
+    content?: string;
+  }) {
+    const body = new URLSearchParams();
+    body.set('exam_nm', payload.examName);
+    if (payload.examTime) body.set('exam_time', String(payload.examTime));
+    if (payload.questionCnt !== undefined) body.set('question_cnt', String(payload.questionCnt));
+    if (payload.shuffleYn !== undefined) body.set('shuffle_yn', payload.shuffleYn ? 'Y' : 'N');
+    if (payload.showResultYn !== undefined) body.set('show_result_yn', payload.showResultYn ? 'Y' : 'N');
+    if (payload.passingScore !== undefined) body.set('passing_score', String(payload.passingScore));
+    if (payload.questionIds) body.set('question_ids', payload.questionIds.join(','));
+    if (payload.content) body.set('content', payload.content);
+
+    return requestJson<number>(`/tutor_lms/api/exam_template_insert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async updateExamTemplate(payload: {
+    id: number;
+    examName?: string;
+    examTime?: number;
+    questionCnt?: number;
+    shuffleYn?: boolean;
+    showResultYn?: boolean;
+    passingScore?: number;
+    questionIds?: string[];
+    content?: string;
+  }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+    if (payload.examName) body.set('exam_nm', payload.examName);
+    if (payload.examTime) body.set('exam_time', String(payload.examTime));
+    if (payload.questionCnt !== undefined) body.set('question_cnt', String(payload.questionCnt));
+    if (payload.shuffleYn !== undefined) body.set('shuffle_yn', payload.shuffleYn ? 'Y' : 'N');
+    if (payload.showResultYn !== undefined) body.set('show_result_yn', payload.showResultYn ? 'Y' : 'N');
+    if (payload.passingScore !== undefined) body.set('passing_score', String(payload.passingScore));
+    if (payload.questionIds) body.set('question_ids', payload.questionIds.join(','));
+    if (payload.content !== undefined) body.set('content', payload.content);
+
+    return requestJson<number>(`/tutor_lms/api/exam_template_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async deleteExamTemplate(payload: { id: number }) {
+    const body = new URLSearchParams();
+    body.set('id', String(payload.id));
+
+    return requestJson<number>(`/tutor_lms/api/exam_template_delete.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 };

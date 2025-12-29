@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, Filter, FileQuestion, CheckCircle, Circle, X, Save, ChevronDown } from 'lucide-react';
-import { QuestionCategory } from './QuestionCategoryPage';
+import { Plus, Edit, Trash2, Search, FileQuestion, X, Save, Loader2 } from 'lucide-react';
+import { tutorLmsApi, type TutorQuestionCategoryRow, type TutorQuestionBankRow } from '../api/tutorLmsApi';
 
 // 문제 타입
 export type QuestionType = 'multiple_choice' | 'short_answer' | 'ox';
@@ -17,35 +17,61 @@ export interface Question {
   type: QuestionType;
   title: string;
   content: string;
-  choices?: QuestionChoice[]; // 객관식
-  correctAnswer?: string; // 주관식/OX
+  choices?: QuestionChoice[];
+  correctAnswer?: string;
   points: number;
   createdAt: string;
 }
 
-const STORAGE_KEY = 'tutor_question_bank';
-const CATEGORY_STORAGE_KEY = 'tutor_question_categories';
-
-const loadQuestions = (): Question[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
+// 서버 question_type을 프론트엔드 타입으로 변환
+const serverTypeToLocal = (serverType: number): QuestionType => {
+  if (serverType === 1) return 'multiple_choice'; // 단일선택
+  if (serverType === 2) return 'multiple_choice'; // 다중선택도 객관식으로 처리
+  if (serverType === 3) return 'short_answer';    // 단답형
+  if (serverType === 4) return 'short_answer';    // 서술형도 주관식으로 처리
+  return 'multiple_choice';
 };
 
-const saveQuestions = (questions: Question[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(questions));
+// 프론트엔드 타입을 서버 question_type으로 변환
+const localTypeToServer = (localType: QuestionType): number => {
+  if (localType === 'multiple_choice') return 1; // 단일선택
+  if (localType === 'short_answer') return 3;    // 단답형
+  if (localType === 'ox') return 1;              // OX도 단일선택으로
+  return 1;
 };
 
-const loadCategories = (): QuestionCategory[] => {
-  try {
-    const saved = localStorage.getItem(CATEGORY_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
+// 서버 데이터를 프론트엔드 형식으로 변환
+const serverToLocal = (row: TutorQuestionBankRow): Question => {
+  const type = serverTypeToLocal(row.question_type);
+  const choices: QuestionChoice[] = [];
+  
+  // 객관식인 경우 보기 변환
+  if (row.question_type === 1 || row.question_type === 2) {
+    for (let i = 1; i <= (row.item_cnt || 4); i++) {
+      const itemKey = `item${i}` as keyof TutorQuestionBankRow;
+      const itemText = row[itemKey] as string;
+      if (itemText) {
+        const answerParts = (row.answer || '').split('||');
+        choices.push({
+          id: String(i),
+          text: itemText,
+          isCorrect: answerParts.includes(String(i)),
+        });
+      }
+    }
   }
+
+  return {
+    id: String(row.id),
+    categoryId: row.category_id ? String(row.category_id) : null,
+    type,
+    title: row.question,
+    content: row.question_text || '',
+    choices: type === 'multiple_choice' ? choices : undefined,
+    correctAnswer: type !== 'multiple_choice' ? row.answer : undefined,
+    points: row.score || 5,
+    createdAt: row.reg_date || new Date().toISOString(),
+  };
 };
 
 const questionTypeLabels: Record<QuestionType, string> = {
@@ -61,8 +87,11 @@ const questionTypeColors: Record<QuestionType, string> = {
 };
 
 export function QuestionBankPage() {
-  const [questions, setQuestions] = useState<Question[]>(() => loadQuestions());
-  const [categories] = useState<QuestionCategory[]>(() => loadCategories());
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [categories, setCategories] = useState<TutorQuestionCategoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // 필터
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,20 +118,41 @@ export function QuestionBankPage() {
     correctAnswer: '',
   });
 
-  useEffect(() => {
-    saveQuestions(questions);
-  }, [questions]);
+  // 카테고리 및 문제 목록 로드
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // 필터링된 문제 목록
-  const filteredQuestions = questions.filter(q => {
-    if (searchQuery && !q.title.toLowerCase().includes(searchQuery.toLowerCase()) && 
-        !q.content.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
+      // 카테고리 목록 먼저 로드
+      const catRes = await tutorLmsApi.getQuestionCategories();
+      if (catRes.rst_code === '0000') {
+        setCategories(catRes.rst_data ?? []);
+      }
+
+      // 문제 목록 로드
+      const questionType = filterType === 'multiple_choice' ? 1 : filterType === 'short_answer' ? 3 : undefined;
+      const res = await tutorLmsApi.getQuestionBankList({
+        categoryId: filterCategory ? Number(filterCategory) : undefined,
+        questionType,
+        keyword: searchQuery || undefined,
+        limit: 100,
+      });
+
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      const localQuestions = (res.rst_data ?? []).map(serverToLocal);
+      setQuestions(localQuestions);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '문제를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
-    if (filterCategory && q.categoryId !== filterCategory) return false;
-    if (filterType && q.type !== filterType) return false;
-    return true;
-  });
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [searchQuery, filterCategory, filterType]);
 
   const openAddModal = () => {
     setEditingQuestion(null);
@@ -142,48 +192,84 @@ export function QuestionBankPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title.trim()) return;
 
-    const questionData = {
-      categoryId: formData.categoryId || null,
-      type: formData.type,
-      title: formData.title.trim(),
-      content: formData.content.trim(),
-      points: formData.points,
-      choices: formData.type === 'multiple_choice' ? formData.choices : undefined,
-      correctAnswer: formData.type !== 'multiple_choice' ? formData.correctAnswer : undefined,
-    };
+    try {
+      setSaving(true);
+      setError(null);
 
-    if (editingQuestion) {
-      setQuestions(prev =>
-        prev.map(q =>
-          q.id === editingQuestion.id
-            ? { ...q, ...questionData }
-            : q
-        )
-      );
-    } else {
-      const newQuestion: Question = {
-        id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        ...questionData,
-        createdAt: new Date().toISOString(),
-      };
-      setQuestions(prev => [...prev, newQuestion]);
+      // 정답 계산
+      let answer = '';
+      if (formData.type === 'multiple_choice') {
+        const correctIdx = formData.choices.findIndex(c => c.isCorrect);
+        answer = correctIdx >= 0 ? String(correctIdx + 1) : '1';
+      } else if (formData.type === 'ox') {
+        answer = formData.correctAnswer;
+      } else {
+        answer = formData.correctAnswer;
+      }
+
+      // 객관식 보기 배열
+      const items = formData.type === 'multiple_choice' 
+        ? formData.choices.map(c => c.text).filter(t => t.trim())
+        : undefined;
+
+      if (editingQuestion) {
+        // 수정
+        const res = await tutorLmsApi.updateQuestion({
+          id: Number(editingQuestion.id),
+          categoryId: formData.categoryId ? Number(formData.categoryId) : undefined,
+          questionType: localTypeToServer(formData.type),
+          question: formData.title.trim(),
+          questionText: formData.content.trim(),
+          answer,
+          points: formData.points,
+          items,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      } else {
+        // 추가
+        const res = await tutorLmsApi.createQuestion({
+          categoryId: formData.categoryId ? Number(formData.categoryId) : undefined,
+          questionType: localTypeToServer(formData.type),
+          question: formData.title.trim(),
+          questionText: formData.content.trim(),
+          answer,
+          points: formData.points,
+          items,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      }
+
+      await loadData();
+      setIsModalOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('이 문제를 삭제하시겠습니까?')) return;
-    setQuestions(prev => prev.filter(q => q.id !== id));
+
+    try {
+      setSaving(true);
+      const res = await tutorLmsApi.deleteQuestion({ id: Number(id) });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '삭제 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getCategoryName = (categoryId: string | null) => {
     if (!categoryId) return '-';
-    const category = categories.find(c => c.id === categoryId);
-    return category?.name || '-';
+    const category = categories.find(c => String(c.id) === categoryId);
+    return category?.category_nm || '-';
   };
 
   const updateChoice = (index: number, field: 'text' | 'isCorrect', value: string | boolean) => {
@@ -193,7 +279,6 @@ export function QuestionBankPage() {
         if (i === index) {
           return { ...c, [field]: value };
         }
-        // 정답 선택 시 다른 선택지는 오답으로
         if (field === 'isCorrect' && value === true) {
           return { ...c, isCorrect: false };
         }
@@ -212,12 +297,20 @@ export function QuestionBankPage() {
         </div>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           <Plus className="w-5 h-5" />
           <span>문제 추가</span>
         </button>
       </div>
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {/* 필터 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -241,7 +334,7 @@ export function QuestionBankPage() {
           >
             <option value="">전체 카테고리</option>
             {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.category_nm}</option>
             ))}
           </select>
           <select
@@ -259,7 +352,12 @@ export function QuestionBankPage() {
 
       {/* 문제 목록 */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {filteredQuestions.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-gray-400">
+            <Loader2 className="w-8 h-8 animate-spin mr-2" />
+            <span>불러오는 중...</span>
+          </div>
+        ) : questions.length > 0 ? (
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -271,7 +369,7 @@ export function QuestionBankPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredQuestions.map(question => (
+              {questions.map(question => (
                 <tr key={question.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{question.title}</div>
@@ -296,6 +394,7 @@ export function QuestionBankPage() {
                         onClick={() => openEditModal(question)}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="수정"
+                        disabled={saving}
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -303,6 +402,7 @@ export function QuestionBankPage() {
                         onClick={() => handleDelete(question.id)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                         title="삭제"
+                        disabled={saving}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -328,7 +428,7 @@ export function QuestionBankPage() {
 
       {/* 통계 */}
       <div className="text-sm text-gray-500">
-        총 {questions.length}개 문제 | 표시: {filteredQuestions.length}개
+        총 {questions.length}개 문제
       </div>
 
       {/* 문제 추가/수정 모달 */}
@@ -380,7 +480,7 @@ export function QuestionBankPage() {
                 >
                   <option value="">카테고리 없음</option>
                   {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{c.category_nm}</option>
                   ))}
                 </select>
               </div>
@@ -427,7 +527,7 @@ export function QuestionBankPage() {
                               : 'border-gray-300 hover:border-green-400'
                           }`}
                         >
-                          {choice.isCorrect && <CheckCircle className="w-4 h-4" />}
+                          {choice.isCorrect && <span className="text-xs">✓</span>}
                         </button>
                         <span className="text-sm text-gray-500 w-6">{index + 1}.</span>
                         <input
@@ -512,10 +612,14 @@ export function QuestionBankPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!formData.title.trim()}
+                disabled={!formData.title.trim() || saving}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
-                <Save className="w-4 h-4" />
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 <span>저장</span>
               </button>
             </div>
