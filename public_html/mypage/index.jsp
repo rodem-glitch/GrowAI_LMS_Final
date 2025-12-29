@@ -37,6 +37,9 @@ DataSet coursesPrism = courseUser.query(
 	+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 	+ " LEFT JOIN " + lmCategory.table + " ct ON c.category_id = ct.id AND ct.module = 'course' AND ct.status = 1 "
 	+ " WHERE a.user_id = " + userId + " AND a.status IN (1, 3) "
+	// 왜: 학사(정규) 과목은 기능 제공을 위해 "숨김 LMS 과정"으로 매핑하지만,
+	//     마이페이지에서는 정규(학사)/비정규(LMS)를 분리해 보여야 중복 노출이 없습니다.
+	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
 	+ " AND a.close_yn = 'N' AND a.end_date >= '" + today + "' "
 	+ " ORDER BY a.start_date DESC, a.id DESC "
@@ -131,7 +134,7 @@ while(coursesHaksa.next()) {
 	coursesHaksa.put("onoff_type_conv", "".equals(coursesHaksa.s("category")) ? "정규" : coursesHaksa.s("category"));
 	
 	String haksaCuid = coursesHaksa.s("course_code") + "_" + coursesHaksa.s("open_year") 
-		+ "_" + coursesHaksa.s("open_term") + "_" + coursesHaksa.s("bunban_code");
+		+ "_" + coursesHaksa.s("open_term") + "_" + coursesHaksa.s("bunban_code") + "_" + coursesHaksa.s("group_code");
 	coursesHaksa.put("haksa_cuid", haksaCuid);
 }
 

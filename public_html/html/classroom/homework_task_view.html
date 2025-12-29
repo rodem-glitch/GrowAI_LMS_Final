@@ -25,7 +25,7 @@
 								<tr>
 									<th>기본 과제</th>
 									<td>
-										<a href="homework_view.jsp?id={{hid}}&cuid={{cuid}}">{{homework.homework_nm}}</a>
+										<a href="homework_view.jsp?id={{hid}}&{{course_qs}}">{{homework.homework_nm}}</a>
 									</td>
 								</tr>
 								<tr>
@@ -84,7 +84,7 @@
 						</table>
 					</div>
 					<div class="board btn">
-						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&cuid={{cuid}}'" value="기본 과제" />
+						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&{{course_qs}}'" value="기본 과제" />
 						<input type="submit" class="button red right" value="제출" />
 					</div>
 					</form>
@@ -204,8 +204,8 @@
 
 					<!--@nif(task.resubmit_block)-->
 					<div class="board btn">
-						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&cuid={{cuid}}'" value="기본 과제" />
-						<input type="button" class="button white right" onclick="location.href='homework.jsp?cuid={{cuid}}'" value="목록" />
+						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&{{course_qs}}'" value="기본 과제" />
+						<input type="button" class="button white right" onclick="location.href='homework.jsp?{{course_qs}}'" value="목록" />
 					</div>
 					<!--/nif(task.resubmit_block)-->
 					<!--/nif(task.open_block)-->

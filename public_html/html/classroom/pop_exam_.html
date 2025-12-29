@@ -29,7 +29,7 @@
 				}
 
 				function unloadTime() {
-					call("pop_exam.jsp?cuid={{cuid}}&eid={{eid}}&ek={{ek}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
+					call("pop_exam.jsp?{{course_qs}}&eid={{eid}}&ek={{ek}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
 				}
 				function viewImg(url) {
 					var img = document.createElement("img");
@@ -240,7 +240,7 @@
 			}
 
 			function setRetime() {
-				call("pop_exam.jsp?cuid={{cuid}}&eid={{eid}}&ek={{ek}}&mode=call_retime&d=" + new Date());
+				call("pop_exam.jsp?{{course_qs}}&eid={{eid}}&ek={{ek}}&mode=call_retime&d=" + new Date());
 			}
 			</script>
 

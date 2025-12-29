@@ -194,7 +194,7 @@
 			}
 
 			function unloadTime() {
-				call("exam_apply.jsp?cuid={{cuid}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
+				call("exam_apply.jsp?{{course_qs}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
 			}
 
 			function viewImg(url) {
@@ -309,7 +309,7 @@
 			}
 
 			function setRetime() {
-				call("exam_apply.jsp?cuid={{cuid}}&eid={{eid}}&estep={{estep}}&ek={{ek}}&mode=call_retime&d={{SYS_NOW}}");
+				call("exam_apply.jsp?{{course_qs}}&eid={{eid}}&estep={{estep}}&ek={{ek}}&mode=call_retime&d={{SYS_NOW}}");
 			}
 
 			function getBytes() {
@@ -374,7 +374,7 @@
 						if(blurTriggered) return;
 						blurCount++;
 
-						call("exam_apply.jsp?cuid={{cuid}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_blur&blc=" + blurCount);
+						call("exam_apply.jsp?{{course_qs}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_blur&blc=" + blurCount);
 						setTimeout(function() {
 							if (blurCount >= 3) {
 								alert("창을 벗어났습니다. (" + blurCount + "/3 회) \n3회 이상 반복시도 시 해당 시험이 감점 또는 0점 처리됩니다.");

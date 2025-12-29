@@ -194,7 +194,7 @@
 			}
 
 			function unloadTime() {
-				call("exam_apply.jsp?cuid={{cuid}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
+				call("exam_apply.jsp?{{course_qs}}&eid={{eid}}&ek={{ek}}&estep={{estep}}&mode=call_unload&ba=" + document.forms['form1']['ba_cnt'].value * 1);
 			}
 
 			function viewImg(url) {
@@ -309,7 +309,7 @@
 			}
 
 			function setRetime() {
-				call("exam_apply.jsp?cuid={{cuid}}&eid={{eid}}&estep={{estep}}&ek={{ek}}&mode=call_retime&d={{SYS_NOW}}");
+				call("exam_apply.jsp?{{course_qs}}&eid={{eid}}&estep={{estep}}&ek={{ek}}&mode=call_retime&d={{SYS_NOW}}");
 			}
 
 			function getBytes() {

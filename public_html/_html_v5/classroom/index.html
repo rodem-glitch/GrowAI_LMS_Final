@@ -63,7 +63,7 @@
 							<ul class="my_bbs_in">
 								<!--@loop(notice_list)-->
 								<li>
-									<p><a href="/classroom/cpost_view.jsp?id={{notice_list.id}}&cuid={{cuid}}&code=notice">{{notice_list.subject_conv}}</a></p>
+									<p><a href="/classroom/cpost_view.jsp?id={{notice_list.id}}&{{course_qs}}&code=notice">{{notice_list.subject_conv}}</a></p>
 									<span class="note_day">{{notice_list.reg_date_conv}}</span>
 								</li>
 								<!--/loop(notice_list)-->
@@ -71,14 +71,14 @@
 								<li class="nodata">공지사항이 없습니다.</li>
 								<!--/nif(notice_list)-->
 							</ul>
-							<span class="btn_more"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=notice" title="더보기"><img src="/common/images/default/btn_more.png" alt="더보기" /></a></span>
+							<span class="btn_more"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=notice" title="더보기"><img src="/common/images/default/btn_more.png" alt="더보기" /></a></span>
 						</div>
 						<div class="my_bbs my_bbs_right">
 							<h6>Q&A</h6>
 							<ul class="my_bbs_in">
 								<!--@loop(qna_list)-->
 								<li>
-									<p><a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&cuid={{cuid}}&code=qna">{{qna_list.subject_conv}}</a></p>
+									<p><a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&{{course_qs}}&code=qna">{{qna_list.subject_conv}}</a></p>
 									<span class="note_day">{{qna_list.reg_date_conv}}</span>
 								</li>
 								<!--/loop(qna_list)-->
@@ -87,7 +87,7 @@
 								<!--/nif(qna_list)-->
 
 							</ul>
-							<span class="btn_more"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=qna" title="더보기"><img src="/common/images/default/btn_more.png" alt="더보기" /></a></span>
+							<span class="btn_more"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=qna" title="더보기"><img src="/common/images/default/btn_more.png" alt="더보기" /></a></span>
 						</div>
 					</div>
 					<!--/nif(SITE_INFO.skin_cd:1)-->
@@ -127,7 +127,7 @@
 									</td>
 									<td class="col_module_summary_status"><span>{{module_list.status_conv}}</span></td>
 									<td class="col_module_summary_go">
-										<a href="{{module_list.module}}_view.jsp?id={{module_list.module_id}}&cuid={{cuid}}" class="button small blue">바로가기</a>
+										<a href="{{module_list.module}}_view.jsp?id={{module_list.module_id}}&{{course_qs}}" class="button small blue">바로가기</a>
 									</td>
 								</tr>
 								<!--/loop(module_list)-->
@@ -204,7 +204,7 @@
 											<div class="lesson_file_contents">&nbsp;</div>
 										</div>
 										<!--@loop(files)-->
-										<a href="../main/download.jsp?id={{files.id}}&ek={{files.ek}}&cuid={{cuid}}&cek={{files.cek}}" title="{{files.file_nm}}" __onclick="javascript:showFile('{{list.chapter}}', '{{files.filesize_conv}} / {{files.file_nm}}');" __onmouseover="javascript:showFile('{{list.chapter}}', '{{files.filesize_conv}} / {{files.file_nm}}');" __onmouseout="javascript:hideInfo();">{{files.ext}}</a>
+										<a href="../main/download.jsp?id={{files.id}}&ek={{files.ek}}&{{course_qs}}&cek={{files.cek}}" title="{{files.file_nm}}" __onclick="javascript:showFile('{{list.chapter}}', '{{files.filesize_conv}} / {{files.file_nm}}');" __onmouseover="javascript:showFile('{{list.chapter}}', '{{files.filesize_conv}} / {{files.file_nm}}');" __onmouseout="javascript:hideInfo();">{{files.ext}}</a>
 										<!--/loop(files)-->
 									</td>
 									<td class="col_lesson_length">
@@ -225,10 +225,10 @@
 										<!--/nif(SYS_VIEWER_VERSION:2)-->
 										<!--@if(SYS_VIEWER_VERSION:2)-->
 										<!--@if(list.download_block)-->
-										<a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}&download=Y" target="_KV01" title="콜러스영상다운로드" class="button small green btn_download">다운로드</a>
+										<a href="viewer.jsp?{{course_qs}}&lid={{list.lesson_id}}&download=Y" target="_KV01" title="콜러스영상다운로드" class="button small green btn_download">다운로드</a>
 										<!--/if(list.download_block)-->
 
-										<a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}" target="_V01" class="button small blue btn_study">학습하기</a>
+										<a href="viewer.jsp?{{course_qs}}&lid={{list.lesson_id}}" target="_V01" class="button small blue btn_study">학습하기</a>
 										<!--/if(SYS_VIEWER_VERSION:2)-->
 										<!--/if(list.open_block)-->
 
@@ -298,7 +298,7 @@
 			});
 			$(document).ready(function() {
 				<!--@if(push_survey_block)-->
-				OpenLayer('alert_survey.jsp?cuid={{cuid}}', 'alert_survey', 500, 180);
+				OpenLayer('alert_survey.jsp?{{course_qs}}', 'alert_survey', 500, 180);
 				<!--/if(push_survey_block)-->
 			});
 			</script>
