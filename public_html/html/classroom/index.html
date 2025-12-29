@@ -65,7 +65,7 @@
 							<ul class="my_bbs_in">
 								<!--@loop(notice_list)-->
 								<li>
-									<p><a href="/classroom/cpost_view.jsp?id={{notice_list.id}}&cuid={{cuid}}&code=notice">{{notice_list.subject_conv}}</a></p>
+									<p><a href="/classroom/cpost_view.jsp?id={{notice_list.id}}&{{course_qs}}&code=notice">{{notice_list.subject_conv}}</a></p>
 									<span class="note_day">{{notice_list.reg_date_conv}}</span>
 								</li>
 								<!--/loop(notice_list)-->
@@ -73,14 +73,14 @@
 								<li class="nodata">공지사항이 없습니다.</li>
 								<!--/nif(notice_list)-->
 							</ul>
-							<span class="btn_more"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=notice" title="더보기"><img src="/html/images/common/btn_more.png" alt="더보기" /></a></span>
+							<span class="btn_more"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=notice" title="더보기"><img src="/html/images/common/btn_more.png" alt="더보기" /></a></span>
 						</div>
 						<div class="my_bbs my_bbs_right">
 							<h6>Q&A</h6>
 							<ul class="my_bbs_in">
 								<!--@loop(qna_list)-->
 								<li>
-									<p><a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&cuid={{cuid}}&code=qna">{{qna_list.subject_conv}}</a></p>
+									<p><a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&{{course_qs}}&code=qna">{{qna_list.subject_conv}}</a></p>
 									<span class="note_day">{{qna_list.reg_date_conv}}</span>
 								</li>
 								<!--/loop(qna_list)-->
@@ -89,7 +89,7 @@
 								<!--/nif(qna_list)-->
 
 							</ul>
-							<span class="btn_more"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=qna" title="더보기"><img src="/html/images/common/btn_more.png" alt="더보기" /></a></span>
+							<span class="btn_more"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=qna" title="더보기"><img src="/html/images/common/btn_more.png" alt="더보기" /></a></span>
 						</div>
 					</div>
 
@@ -128,7 +128,7 @@
 									</td>
 									<td class="col_module_summary_status"><span>{{module_list.status_conv}}</span></td>
 									<td class="col_module_summary_go">
-										<a href="{{module_list.module}}_view.jsp?id={{module_list.module_id}}&cuid={{cuid}}" class="button small blue">바로가기</a>
+										<a href="{{module_list.module}}_view.jsp?id={{module_list.module_id}}&{{course_qs}}" class="button small blue">바로가기</a>
 									</td>
 								</tr>
 								<!--/loop(module_list)-->
@@ -140,7 +140,7 @@
 					<h5 class="tb_title">강의목차</h5>
 				
 				<!-- 탭 메뉴 (정규/비정규 과정에 따라 조건부 노출) -->
-				<!--@nif(cuinfo.id:0)-->
+				<!--@nif(cuinfo.is_haksa)-->
 				<div class="curriculum_tab_wrap" style="display:none;">
 					<ul class="curriculum_tabs">
 						<li class="tab_item" data-tab="irregular">
@@ -148,9 +148,9 @@
 						</li>
 					</ul>
 				</div>
-				<!--/nif(cuinfo.id:0)-->
+				<!--/nif(cuinfo.is_haksa)-->
 
-				<!--@if(cuinfo.id:0)-->
+				<!--@if(cuinfo.is_haksa)-->
 				<div class="curriculum_tab_wrap" style="display:none;">
 					<ul class="curriculum_tabs">
 						<li class="tab_item active" data-tab="regular">
@@ -158,10 +158,10 @@
 						</li>
 					</ul>
 				</div>
-				<!--/if(cuinfo.id:0)-->
+				<!--/if(cuinfo.is_haksa)-->
 				
 					<!-- 정규(학사) 탭: 주차별 아코디언 (Mock) -->
-					<!--@if(cuinfo.id:0)-->
+					<!--@if(cuinfo.is_haksa)-->
 					<div id="curriculum_regular" class="curriculum_tab_content active">
 						<div class="curriculum_week_wrap">
 							<div class="curriculum_stats">
@@ -177,10 +177,10 @@
 						<script type="application/json" id="haksa_video_ek_map_json">{{haksa_video_ek_map_json}}</script>
 						<script type="application/json" id="haksa_week_count">{{haksa_week_count}}</script>
 					</div>
-					<!--/if(cuinfo.id:0)-->
+					<!--/if(cuinfo.is_haksa)-->
 				
 				<!-- 비정규(LMS) 탭: 기존 차시별 테이블 -->
-				<!--@nif(cuinfo.id:0)-->
+				<!--@nif(cuinfo.is_haksa)-->
 				<div id="curriculum_irregular" class="curriculum_tab_content active">
 					<div class="tb_box tb_list tb_list_resp">
 						<table summary="현과정의 목차를 알수 있습니다.">
@@ -245,7 +245,7 @@
 												<ul>
 													<!--@loop(sub_video_list)-->
 													<li><span class="no">{{sub_video_list.ord}}.</span> {{sub_video_list.lesson_nm}} <span class="time">({{sub_video_list.total_time}}분 / 인정 {{sub_video_list.complete_time}}분)</span>
-														<!--@if(list.online_block)--><a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}&chapter={{list.chapter}}&vid={{sub_video_list.video_id}}" class="button xxsmall blue" style="margin-left:6px;">바로보기</a><!--/if(list.online_block)-->
+														<!--@if(list.online_block)--><a href="viewer.jsp?{{course_qs}}&lid={{list.lesson_id}}&chapter={{list.chapter}}&vid={{sub_video_list.video_id}}" class="button xxsmall blue" style="margin-left:6px;">바로보기</a><!--/if(list.online_block)-->
 													</li>
 													<!--/loop(sub_video_list)-->
 												</ul>
@@ -268,7 +268,7 @@
 											<div class="lesson_file_contents">&nbsp;</div>
 										</div>
 										<!--@loop(files)-->
-										<a href="../main/download.jsp?id={{files.id}}&ek={{files.ek}}&cuid={{cuid}}&cek={{files.cek}}" title="{{files.file_nm}}">{{files.ext}}</a>
+										<a href="../main/download.jsp?id={{files.id}}&ek={{files.ek}}&{{course_qs}}&cek={{files.cek}}" title="{{files.file_nm}}">{{files.ext}}</a>
 										<!--/loop(files)-->
 									</td>
 									<td class="col_lesson_length">
@@ -287,9 +287,9 @@
 										<!--/nif(SYS_VIEWER_VERSION:2)-->
 										<!--@if(SYS_VIEWER_VERSION:2)-->
 										<!--@if(list.download_block)-->
-										<a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}&download=Y" target="_KV01" class="button small green btn_download">다운로드</a>
+										<a href="viewer.jsp?{{course_qs}}&lid={{list.lesson_id}}&download=Y" target="_KV01" class="button small green btn_download">다운로드</a>
 										<!--/if(list.download_block)-->
-										<a href="viewer.jsp?cuid={{cuid}}&lid={{list.lesson_id}}" target="_V01" class="button small blue btn_study">학습하기</a>
+										<a href="viewer.jsp?{{course_qs}}&lid={{list.lesson_id}}" target="_V01" class="button small blue btn_study">학습하기</a>
 										<!--/if(SYS_VIEWER_VERSION:2)-->
 										<!--/if(list.open_block)-->
 										<!--@nif(list.open_block)-->
@@ -307,7 +307,7 @@
 						<!--/nif(list)-->
 					</div>
 				</div>
-				<!--/nif(cuinfo.id:0)-->
+				<!--/nif(cuinfo.is_haksa)-->
 				</div>
 			</div>
 			<script>
@@ -373,7 +373,7 @@
 			});
 				$(document).ready(function() {
 					<!--@if(push_survey_block)-->
-					OpenLayer('alert_survey.jsp?cuid={{cuid}}', 'alert_survey', 500, 180);
+					OpenLayer('alert_survey.jsp?{{course_qs}}', 'alert_survey', 500, 180);
 					<!--/if(push_survey_block)-->
 					
 					// 탭 전환 기능 초기화
@@ -401,7 +401,41 @@
 				}
 				
 				// 정규(학사) 커리큘럼 렌더링
+				var courseQs = "{{course_qs}}";
 				var haksaVideoEkMap = {};
+				// 왜: 학사 커리큘럼 JSON에 링크가 없을 때, 기존 강의실 화면으로 안전하게 이어줍니다.
+				function pickFirstId(item, keys) {
+					for(var i = 0; i < keys.length; i++) {
+						var v = item[keys[i]];
+						if(v !== undefined && v !== null && v !== "") return v;
+					}
+					return 0;
+				}
+				function appendCourseQs(url) {
+					if(!url) return "";
+					if(url.indexOf("cuid=") > -1 || url.indexOf("haksa_cuid=") > -1) return url;
+					return url + (url.indexOf("?") > -1 ? "&" : "?") + courseQs;
+				}
+				function buildHaksaContentLink(item) {
+					if(item.link) return appendCourseQs(item.link);
+					var t = String(item.type || "").toLowerCase();
+					if(t === "homework") t = "assignment";
+					if(t === "file") t = "document";
+					if(t === "library") t = "document";
+					if(t === "exam") {
+						var examId = pickFirstId(item, ["examModuleId", "exam_module_id"]);
+						return examId ? ("/classroom/exam_view.jsp?id=" + examId + "&" + courseQs) : "";
+					}
+					if(t === "assignment") {
+						var homeworkId = pickFirstId(item, ["homeworkId", "homework_id"]);
+						return homeworkId ? ("/classroom/homework_view.jsp?id=" + homeworkId + "&" + courseQs) : "";
+					}
+					if(t === "document") {
+						var libraryId = pickFirstId(item, ["libraryId", "library_id"]);
+						return libraryId ? ("/classroom/library_view.jsp?id=" + libraryId + "&" + courseQs) : "";
+					}
+					return "";
+				}
 				function parseHaksaJson(id) {
 					var el = document.getElementById(id);
 					if(!el) return null;
@@ -484,15 +518,16 @@
 										if(!item) return;
 										contentCount++;
 
-										if(item.type === 'video') videoCount++;
-										if(item.type === 'exam') examCount++;
-										if(item.type === 'assignment') assignmentCount++;
+										var itemType = String(item.type || '').toLowerCase();
+										if(itemType === 'video') videoCount++;
+										if(itemType === 'exam') examCount++;
+										if(itemType === 'assignment' || itemType === 'homework') assignmentCount++;
 
 										var typeLabel = '학습자료';
 										var typeClass = 'type-document';
-										if(item.type === 'video') { typeLabel = '동영상'; typeClass = 'type-video'; }
-										else if(item.type === 'exam') { typeLabel = '시험'; typeClass = 'type-exam'; }
-										else if(item.type === 'assignment') { typeLabel = '과제'; typeClass = 'type-assignment'; }
+										if(itemType === 'video') { typeLabel = '동영상'; typeClass = 'type-video'; }
+										else if(itemType === 'exam') { typeLabel = '시험'; typeClass = 'type-exam'; }
+										else if(itemType === 'assignment' || itemType === 'homework') { typeLabel = '과제'; typeClass = 'type-assignment'; }
 
 										var $li = $('<li class="haksa_content_item">');
 										$li.append($('<span class="haksa_type">').addClass(typeClass).text(typeLabel));
@@ -501,7 +536,7 @@
 											$li.append($('<span class="haksa_content_meta">').text(item.duration));
 										}
 
-										if(item.type === 'video') {
+										if(itemType === 'video') {
 											var lessonId = item.lessonId || 0;
 											var mediaKey = item.mediaKey || '';
 											var $btn = $('<a href="#" class="button xxsmall blue">').text('학습하기');
@@ -511,7 +546,17 @@
 											});
 											$li.append($btn);
 										} else {
-											$li.append($('<span class="haksa_content_meta">').text('보기'));
+											// 왜: UI는 기존(보기 텍스트) 그대로 두고, 클릭만 되도록 연결합니다.
+											var link = buildHaksaContentLink(item);
+											var $view = $('<span class="haksa_content_meta">').text('보기');
+											if(link) {
+												$view.css('cursor', 'pointer');
+												$view.on('click', function(e) {
+													e.preventDefault();
+													location.href = link;
+												});
+											}
+											$li.append($view);
 										}
 										$ul.append($li);
 									});

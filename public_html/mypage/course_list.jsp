@@ -28,6 +28,9 @@ DataSet list1_prism = courseUser.query(
 	+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 	+ " LEFT JOIN " + category.table + " ct ON c.category_id = ct.id AND ct.module = 'course' AND ct.status = 1 "
 	+ " WHERE a.user_id = " + userId + " AND a.status IN (0, 1, 3) "
+	// 왜: 학사(정규) 과목은 기능 제공을 위해 "숨김 LMS 과정"으로 매핑하지만,
+	//     비정규(LMS) 목록에는 나오면 안 되므로 표식(etc2)으로 제외합니다.
+	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
 	+ " AND a.close_yn = 'N' AND a.end_date >= '" + today + "' "
 	+ " ORDER BY " + ord + ", a.id DESC "
@@ -126,7 +129,7 @@ while(list1_haksa.next()) {
 	
 	// 학사 과목은 강의실 URL 형식이 다름 (course_code 기반)
 	String haksaCuid = list1_haksa.s("course_code") + "_" + list1_haksa.s("open_year") 
-		+ "_" + list1_haksa.s("open_term") + "_" + list1_haksa.s("bunban_code");
+		+ "_" + list1_haksa.s("open_term") + "_" + list1_haksa.s("bunban_code") + "_" + list1_haksa.s("group_code");
 	list1_haksa.put("haksa_cuid", haksaCuid);
 }
 
@@ -139,6 +142,7 @@ DataSet list2 = courseUser.query(
 	+ " INNER JOIN " + course.table + " c ON a.course_id = c.id "
 	+ " LEFT JOIN " + category.table + " ct ON c.category_id = ct.id AND ct.module = 'course' AND ct.status = 1 "
 	+ " WHERE a.user_id = " + userId + " AND a.status IN (1, 3) "
+	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
 	+ " AND (a.end_date < '" + today + "' OR a.close_yn = 'Y') "
 	+ " ORDER BY " + ord + ", a.id DESC "

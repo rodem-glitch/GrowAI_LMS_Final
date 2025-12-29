@@ -43,17 +43,17 @@
 					<h3 class="hide">lnb영역</h3>
 					<h3 class="lnb_title">강의실</h3>
 					<ul class="lnb_list">
-						<li class="li1" id="LNB_MAIN"><a href="/classroom/index.jsp?cuid={{cuid}}" title="강의목차">강의목차</a></li>
-						<!--@if(course.evaluation_yn)--><!-- li class="li2" id="LNB_COURSE"><a href="/classroom/course_info.jsp?cuid={{cuid}}" title="과정정보">과정정보</a></li --><!--/if(course.evaluation_yn)-->
-						<li class="li3" id="LNB_NOTICE"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=notice" title="공지사항 페이지로 이동">공지사항</a></li>
-						<!--@if(course.exam_yn)--><li class="li4" id="LNB_EXAM"><a href="/classroom/exam.jsp?cuid={{cuid}}" title="시험방 페이지로 이동">시험방</a></li><!--/if(course.exam_yn)-->
-						<!--@if(course.homework_yn)--><li class="li5" id="LNB_HOMEWORK"><a href="/classroom/homework.jsp?cuid={{cuid}}" title="과제방 페이지로 이동">과제방</a></li><!--/if(course.homework_yn)-->
-						<!--@if(course.forum_yn)--><li class="li6" id="LNB_FORUM"><a href="/classroom/forum.jsp?cuid={{cuid}}" title="토론방 페이지로 이동">토론방</a></li><!--/if(course.forum_yn)-->
-						<!--@if(course.survey_yn)--><li class="li7" id="LNB_SURVEY"><a href="/classroom/survey.jsp?cuid={{cuid}}" title="설문방 페이지로 이동">설문방</a></li><!--/if(course.survey_yn)-->
-						<li class="li8" id="LNB_LIBRARY"><a href="/classroom/library.jsp?cuid={{cuid}}" title="강의자료 페이지로 이동">강의자료</a></li>
-						<li class="li11" id="LNB_FREE"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=free" title="자유게시판 페이지로 이동">자유게시판</a></li>
-						<li class="li9" id="LNB_QNA"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=qna" title="QNA 페이지로 이동">Q&A</a></li>
-						<!--@if(course.review_yn)--><li class="li10" id="LNB_REVIEW"><a href="/classroom/cpost_list.jsp?cuid={{cuid}}&code=review" title="수강후기 페이지로 이동">수강후기</a></li><!--/if(course.review_yn)-->
+						<li class="li1" id="LNB_MAIN"><a href="/classroom/index.jsp?{{course_qs}}" title="강의목차">강의목차</a></li>
+						<!--@if(course.evaluation_yn)--><!-- li class="li2" id="LNB_COURSE"><a href="/classroom/course_info.jsp?{{course_qs}}" title="과정정보">과정정보</a></li --><!--/if(course.evaluation_yn)-->
+						<li class="li3" id="LNB_NOTICE"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=notice" title="공지사항 페이지로 이동">공지사항</a></li>
+						<!--@if(course.exam_yn)--><li class="li4" id="LNB_EXAM"><a href="/classroom/exam.jsp?{{course_qs}}" title="시험방 페이지로 이동">시험방</a></li><!--/if(course.exam_yn)-->
+						<!--@if(course.homework_yn)--><li class="li5" id="LNB_HOMEWORK"><a href="/classroom/homework.jsp?{{course_qs}}" title="과제방 페이지로 이동">과제방</a></li><!--/if(course.homework_yn)-->
+						<!--@if(course.forum_yn)--><li class="li6" id="LNB_FORUM"><a href="/classroom/forum.jsp?{{course_qs}}" title="토론방 페이지로 이동">토론방</a></li><!--/if(course.forum_yn)-->
+						<!--@if(course.survey_yn)--><li class="li7" id="LNB_SURVEY"><a href="/classroom/survey.jsp?{{course_qs}}" title="설문방 페이지로 이동">설문방</a></li><!--/if(course.survey_yn)-->
+						<li class="li8" id="LNB_LIBRARY"><a href="/classroom/library.jsp?{{course_qs}}" title="강의자료 페이지로 이동">강의자료</a></li>
+						<li class="li11" id="LNB_FREE"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=free" title="자유게시판 페이지로 이동">자유게시판</a></li>
+						<li class="li9" id="LNB_QNA"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=qna" title="QNA 페이지로 이동">Q&A</a></li>
+						<!--@if(course.review_yn)--><li class="li10" id="LNB_REVIEW"><a href="/classroom/cpost_list.jsp?{{course_qs}}&code=review" title="수강후기 페이지로 이동">수강후기</a></li><!--/if(course.review_yn)-->
 					</ul>
 					<div class="lnb_mask"></div>
 					<!-- <div class="sp_center">
@@ -116,7 +116,7 @@ $(document).ready(function() {
 	});
 	
 	$(".sub_fixtop_classroom .top_title").click(function() {
-		location.href = "/classroom/index.jsp?cuid={{cuid}}";
+		location.href = "/classroom/index.jsp?{{course_qs}}";
 	});
 	/*
 	$(window).scroll(function() {

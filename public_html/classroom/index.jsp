@@ -11,6 +11,8 @@ CourseLessonVideoDao courseLessonVideo = new CourseLessonVideoDao();
 
 ExamDao exam = new ExamDao();
 HomeworkDao homework = new HomeworkDao();
+LibraryDao library = new LibraryDao();
+CourseLibraryDao courseLibrary = new CourseLibraryDao();
 ForumDao forum = new ForumDao();
 SurveyDao survey = new SurveyDao();
 ExamUserDao examUser = new ExamUserDao();
@@ -381,6 +383,12 @@ if(cuinfo.b("is_haksa")) {
 	// 왜: 동영상 재생을 위해 lessonId별 ek를 서버에서 미리 만들어 둡니다.
 	try {
 		if(!"".equals(haksaCurriculumJson)) {
+			int haksaCourseId = m.parseInt(courseId);
+			boolean curriculumChanged = false;
+			String endDateTime = "";
+			if(cuinfo.s("end_date").length() >= 8) endDateTime = cuinfo.s("end_date").substring(0, 8) + "235959";
+			if("".equals(endDateTime)) endDateTime = now;
+
 			JSONObject ekMap = new JSONObject();
 			int maxWeek = 0;
 			JSONArray weeks = new JSONArray(haksaCurriculumJson);
@@ -399,7 +407,151 @@ if(cuinfo.b("is_haksa")) {
 					for(int c = 0; c < contents.length(); c++) {
 						JSONObject content = contents.optJSONObject(c);
 						if(content == null) continue;
-						if(!"video".equalsIgnoreCase(content.optString("type"))) continue;
+
+						String contentType = content.optString("type", "");
+						String title = content.optString("title", "");
+						String safeTitle = m.replace(title, "'", "''");
+
+						// 왜: 학사 커리큘럼에 등록된 과제/시험/자료가 실제 LMS 모듈과 연결되어야 학생이 제출/열람할 수 있습니다.
+						if(haksaCourseId > 0 && "assignment".equalsIgnoreCase(contentType)) {
+							int homeworkId = content.optInt("homeworkId", 0);
+							if(homeworkId <= 0 && !"".equals(safeTitle)) {
+								DataSet hwLink = courseModule.query(
+									"SELECT module_id FROM " + courseModule.table
+									+ " WHERE course_id = " + haksaCourseId + " AND module = 'homework' AND module_nm = '" + safeTitle + "' AND status = 1"
+								);
+								if(hwLink.next()) homeworkId = hwLink.i("module_id");
+							}
+							if(homeworkId <= 0) {
+								String desc = content.optString("description", "");
+								int newHomeworkId = homework.getSequence();
+								homework.item("id", newHomeworkId);
+								homework.item("site_id", siteId);
+								homework.item("onoff_type", "N");
+								homework.item("category_id", 0);
+								homework.item("homework_nm", !"".equals(title) ? title : "과제");
+								homework.item("content", desc);
+								homework.item("manager_id", -99);
+								homework.item("reg_date", m.time("yyyyMMddHHmmss"));
+								homework.item("status", 1);
+								if(homework.insert()) {
+									courseModule.item("course_id", haksaCourseId);
+									courseModule.item("site_id", siteId);
+									courseModule.item("module", "homework");
+									courseModule.item("module_id", newHomeworkId);
+									courseModule.item("module_nm", !"".equals(title) ? title : "과제");
+									courseModule.item("parent_id", 0);
+									courseModule.item("item_type", "R");
+									courseModule.item("assign_score", 0);
+									courseModule.item("apply_type", "1");
+									courseModule.item("start_day", 0);
+									courseModule.item("period", 0);
+									courseModule.item("start_date", now);
+									courseModule.item("end_date", endDateTime);
+									courseModule.item("chapter", 0);
+									courseModule.item("retry_yn", "N");
+									courseModule.item("retry_score", 0);
+									courseModule.item("retry_cnt", 0);
+									courseModule.item("review_yn", "N");
+									courseModule.item("result_yn", "Y");
+									courseModule.item("status", 1);
+									if(courseModule.insert()) homeworkId = newHomeworkId;
+									else {
+										homework.item("status", -1);
+										homework.update("id = " + newHomeworkId);
+									}
+								}
+							}
+							if(homeworkId > 0) {
+								content.put("homeworkId", homeworkId);
+								curriculumChanged = true;
+							}
+						} else if(haksaCourseId > 0 && "document".equalsIgnoreCase(contentType)) {
+							int libraryId = content.optInt("libraryId", 0);
+							if(libraryId <= 0 && !"".equals(safeTitle)) {
+								DataSet libLink = courseLibrary.query(
+									"SELECT l.id FROM " + courseLibrary.table + " cl "
+									+ " INNER JOIN " + library.table + " l ON l.id = cl.library_id AND l.status = 1 "
+									+ " WHERE cl.course_id = " + haksaCourseId + " AND l.library_nm = '" + safeTitle + "' "
+								);
+								if(libLink.next()) libraryId = libLink.i("id");
+							}
+							if(libraryId <= 0) {
+								String desc = content.optString("description", "-");
+								if("".equals(desc)) desc = "-";
+								int newLibraryId = library.getSequence();
+								library.item("id", newLibraryId);
+								library.item("site_id", siteId);
+								library.item("category_id", 0);
+								library.item("library_nm", !"".equals(title) ? title : "학습자료");
+								library.item("content", desc);
+								library.item("library_file", "");
+								library.item("library_link", "");
+								library.item("download_cnt", 0);
+								library.item("manager_id", -99);
+								library.item("reg_date", m.time("yyyyMMddHHmmss"));
+								library.item("status", 1);
+								if(library.insert()) {
+									courseLibrary.item("course_id", haksaCourseId);
+									courseLibrary.item("library_id", newLibraryId);
+									courseLibrary.item("site_id", siteId);
+									if(courseLibrary.insert()) libraryId = newLibraryId;
+									else {
+										library.item("status", -1);
+										library.update("id = " + newLibraryId);
+									}
+								}
+							}
+							if(libraryId > 0) {
+								content.put("libraryId", libraryId);
+								curriculumChanged = true;
+							}
+						} else if(haksaCourseId > 0 && "exam".equalsIgnoreCase(contentType)) {
+							int examModuleId = content.optInt("examModuleId", 0);
+							int examTemplateId = 0;
+							try { examTemplateId = Integer.parseInt(content.optString("examId", "0")); } catch(Exception ignore) {}
+
+							if(examModuleId <= 0 && examTemplateId > 0) {
+								if(0 < courseModule.findCount("course_id = " + haksaCourseId + " AND module = 'exam' AND module_id = " + examTemplateId + " AND status = 1")) {
+									examModuleId = examTemplateId;
+								} else {
+									JSONObject examSettings = content.optJSONObject("examSettings");
+									boolean allowRetake = examSettings != null && examSettings.optBoolean("allowRetake", false);
+									int retakeScore = examSettings != null ? examSettings.optInt("retakeScore", 0) : 0;
+									int retakeCount = examSettings != null ? examSettings.optInt("retakeCount", 0) : 0;
+									boolean showResults = examSettings == null || examSettings.optBoolean("showResults", true);
+									int assignScore = examSettings != null ? examSettings.optInt("points", 0) : 0;
+
+									courseModule.item("course_id", haksaCourseId);
+									courseModule.item("site_id", siteId);
+									courseModule.item("module", "exam");
+									courseModule.item("module_id", examTemplateId);
+									courseModule.item("module_nm", !"".equals(title) ? title : "시험");
+									courseModule.item("parent_id", 0);
+									courseModule.item("item_type", "R");
+									courseModule.item("assign_score", assignScore);
+									courseModule.item("apply_type", "1");
+									courseModule.item("start_day", 0);
+									courseModule.item("period", 0);
+									courseModule.item("start_date", now);
+									courseModule.item("end_date", endDateTime);
+									courseModule.item("chapter", 0);
+									courseModule.item("retry_yn", allowRetake ? "Y" : "N");
+									courseModule.item("retry_score", retakeScore);
+									courseModule.item("retry_cnt", retakeCount);
+									courseModule.item("review_yn", "N");
+									courseModule.item("result_yn", showResults ? "Y" : "N");
+									courseModule.item("status", 1);
+									if(courseModule.insert()) examModuleId = examTemplateId;
+								}
+							}
+							if(examModuleId > 0) {
+								content.put("examModuleId", examModuleId);
+								curriculumChanged = true;
+							}
+						}
+
+						if(!"video".equalsIgnoreCase(contentType)) continue;
 						int lid = content.optInt("lessonId", 0);
 						if(lid <= 0) continue;
 						String lidKey = "" + lid;
@@ -409,6 +561,29 @@ if(cuinfo.b("is_haksa")) {
 					}
 				}
 			}
+
+			if(curriculumChanged) {
+				haksaCurriculumJson = weeks.toString();
+				haksaSetting.PK = "site_id,course_code,open_year,open_term,bunban_code,group_code";
+				haksaSetting.useSeq = "N";
+				haksaSetting.item("curriculum_json", haksaCurriculumJson);
+				haksaSetting.item("mod_date", now);
+				String safeCourseCode = m.replace(hkCourseCode, "'", "''");
+				String safeOpenYear = m.replace(hkOpenYear, "'", "''");
+				String safeOpenTerm = m.replace(hkOpenTerm, "'", "''");
+				String safeBunbanCode = m.replace(hkBunbanCode, "'", "''");
+				String safeGroupCode = m.replace(hkGroupCode, "'", "''");
+				haksaSetting.update(
+					"site_id = " + siteId
+					+ " AND course_code = '" + safeCourseCode + "'"
+					+ " AND open_year = '" + safeOpenYear + "'"
+					+ " AND open_term = '" + safeOpenTerm + "'"
+					+ " AND bunban_code = '" + safeBunbanCode + "'"
+					+ " AND group_code = '" + safeGroupCode + "'"
+					+ " AND status != -1"
+				);
+			}
+
 			if(haksaWeekCount <= 0) haksaWeekCount = maxWeek;
 			if(haksaWeekCount <= 0) haksaWeekCount = 15;
 			haksaVideoEkMapJson = ekMap.toString();

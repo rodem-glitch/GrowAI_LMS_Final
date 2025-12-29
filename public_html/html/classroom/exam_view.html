@@ -68,7 +68,7 @@
 						<!--/if(retry_block)-->
 						<!--@if(result_block)-->
 						<!-- @if(open_block) -->
-						<input type="button" class="button blue right" onclick="OpenWindowr('exam_result.jsp?cuid={{cuid}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);" value="결과보기" />
+						<input type="button" class="button blue right" onclick="OpenWindowr('exam_result.jsp?{{course_qs}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);" value="결과보기" />
 						<!-- /if(open_block) -->
 						<!--/if(result_block)-->
 					</div>
@@ -78,12 +78,12 @@
 			<script language="javascript">
 			function retryExam() {
 				if(confirm("재응시 할 경우 이전 시험결과는 삭제 됩니다.\n그래도 계속하시겠습니까?")) {
-					OpenWindowr('exam_retry.jsp?cuid={{cuid}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);
+					OpenWindowr('exam_retry.jsp?{{course_qs}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);
 				}
 			}
 			function goExam() {
 				if(confirm("시험을 응시하시겠습니까?")) {
-					OpenWindowr('exam_apply.jsp?cuid={{cuid}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);
+					OpenWindowr('exam_apply.jsp?{{course_qs}}&eid={{id}}&ek={{ek}}', '_CLASSROOM', 960, 800);
 				}
 			}
 			</script>
