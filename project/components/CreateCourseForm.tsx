@@ -142,7 +142,7 @@ function parseTrainingPeriod(input: string) {
   return { start, end };
 }
 
-export function CreateCourseForm() {
+export function CreateCourseForm({ onCreated }: { onCreated?: () => void } = {}) {
   const [currentStep, setCurrentStep] = useState<Step>('basic');
   const [courseCategory, setCourseCategory] = useState('');
   const [classification, setClassification] = useState('');
@@ -398,7 +398,7 @@ export function CreateCourseForm() {
       }
 
       alert('과정이 개설되었습니다.');
-      resetForm();
+      onCreated?.();
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
     } finally {

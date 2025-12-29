@@ -252,7 +252,7 @@ export default function App() {
             ) : activeMenu === 'courses' ? (
               <MyCoursesList key={refreshKey} />
             ) : activeMenu === 'create-course' ? (
-              <CreateCourseForm key={refreshKey} />
+              <CreateCourseForm key={refreshKey} onCreated={() => setActiveMenu('explore')} />
             ) : activeMenu === 'content-all' ? (
               <ContentLibraryPage key={refreshKey} activeTab="all" />
             ) : activeMenu === 'content-favorites' ? (

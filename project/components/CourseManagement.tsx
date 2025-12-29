@@ -703,42 +703,40 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
         onClose={() => setShowCreateModal(false)}
         onSave={async (examData) => {
           try {
-            const res = await tutorLmsApi.createExam({
+            // 왜: 기존 시험을 과목에 연결만 합니다 (시험 복사 없음)
+            const startDateTime = (examData.startDate || new Date().toISOString().split('T')[0]).replace(/-/g, '') + '090000';
+            const endDateTime = (examData.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]).replace(/-/g, '') + '180000';
+            
+            const res = await tutorLmsApi.linkExam({
               courseId,
-              title: examData.title,
-              description: examData.description || '',
-              examDate: new Date().toISOString().split('T')[0],
-              examTime: '09:00',
-              duration: examData.duration || 60,
-              questionCount: examData.questionCount || 0,
-              totalScore: examData.points || 100,
+              examId: examData.examId,
+              startDate: startDateTime,
+              endDate: endDateTime,
+              assignScore: examData.points || 100,
               allowRetake: examData.allowRetake || false,
-              showResults: examData.showResults || true,
-              onoffType: 'F',
+              showResults: examData.showResults !== false,
             });
             if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
             // 시험 설정 저장
-            if (res.rst_data?.exam_id) {
-              const newSettings = {
-                ...prismExamSettings,
-                [res.rst_data.exam_id]: {
-                  startDate: examData.startDate,
-                  startTime: '09:00',
-                  endDate: examData.endDate,
-                  endTime: '18:00',
-                  points: examData.points,
-                  allowRetake: examData.allowRetake,
-                  retakeScore: examData.retakeScore || 0,
-                  retakeCount: examData.retakeCount || 0,
-                  showResults: examData.showResults,
-                },
-              };
-              setPrismExamSettings(newSettings);
-              try {
-                localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(newSettings));
-              } catch {}
-            }
+            const newSettings = {
+              ...prismExamSettings,
+              [examData.examId]: {
+                startDate: examData.startDate,
+                startTime: '09:00',
+                endDate: examData.endDate,
+                endTime: '18:00',
+                points: examData.points,
+                allowRetake: examData.allowRetake,
+                retakeScore: 0,
+                retakeCount: 0,
+                showResults: examData.showResults,
+              },
+            };
+            setPrismExamSettings(newSettings);
+            try {
+              localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(newSettings));
+            } catch {}
 
             await fetchExams();
             alert('시험이 등록되었습니다.');
@@ -3638,6 +3636,7 @@ function ExamSelectModal({
   isOpen: boolean;
   onClose: () => void;
   onSave: (examData: {
+    examId: number;
     title: string;
     description?: string;
     duration: number;
@@ -3645,10 +3644,14 @@ function ExamSelectModal({
     points: number;
     allowRetake: boolean;
     showResults: boolean;
+    startDate?: string;
+    endDate?: string;
   }) => void;
 }) {
   const [examList, setExamList] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -3711,6 +3714,7 @@ function ExamSelectModal({
     if (!selectedExamId || !selectedExam) return;
     
     onSave({
+      examId: parseInt(selectedExamId, 10),
       title: selectedExam.title,
       description: selectedExam.description,
       duration: selectedExam.duration || 60,

@@ -90,15 +90,27 @@ String startH = (startHm != null && 5 <= startHm.length()) ? startHm.substring(0
 String startM = (startHm != null && 5 <= startHm.length()) ? startHm.substring(3, 5) : "00";
 String startDateTime = startYmd + startH + startM + "00";
 
-String endDateTime = startDateTime;
-try {
-	java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyyMMddHHmmss");
-	java.util.Date d = sdf.parse(startDateTime);
-	java.util.Calendar cal = java.util.Calendar.getInstance();
-	cal.setTime(d);
-	cal.add(java.util.Calendar.MINUTE, Math.max(0, examTimeMin));
-	endDateTime = sdf.format(cal.getTime());
-} catch(Exception ignore) {}
+// 마감일시 처리: examEndDate, examEndTime이 있으면 사용, 없으면 시작일시+duration으로 계산
+String endYmd = m.time("yyyyMMdd", m.rs("examEndDate"));
+String endHm = m.rs("examEndTime");
+String endDateTime = "";
+
+if(!"".equals(endYmd) && endYmd.length() >= 8 && !"".equals(endHm)) {
+	String endH = (endHm != null && 5 <= endHm.length()) ? endHm.substring(0, 2) : "23";
+	String endMm = (endHm != null && 5 <= endHm.length()) ? endHm.substring(3, 5) : "59";
+	endDateTime = endYmd + endH + endMm + "00";
+} else {
+	// 기존 로직: 시작일시 + duration
+	endDateTime = startDateTime;
+	try {
+		java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyyMMddHHmmss");
+		java.util.Date d = sdf.parse(startDateTime);
+		java.util.Calendar cal = java.util.Calendar.getInstance();
+		cal.setTime(d);
+		cal.add(java.util.Calendar.MINUTE, Math.max(0, examTimeMin));
+		endDateTime = sdf.format(cal.getTime());
+	} catch(Exception ignore) {}
+}
 
 String retakeYn = ("true".equalsIgnoreCase(f.get("allowRetake")) || "Y".equalsIgnoreCase(f.get("allowRetake"))) ? "Y" : "N";
 String resultYn = ("false".equalsIgnoreCase(f.get("showResults")) || "N".equalsIgnoreCase(f.get("showResults"))) ? "N" : "Y";

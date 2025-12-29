@@ -1303,6 +1303,8 @@ export const tutorLmsApi = {
     description?: string;
     examDate: string;
     examTime: string;
+    examEndDate?: string;
+    examEndTime?: string;
     duration: number;
     questionCount?: number;
     totalScore?: number;
@@ -1316,6 +1318,8 @@ export const tutorLmsApi = {
     body.set('description', payload.description ?? '');
     body.set('examDate', payload.examDate);
     body.set('examTime', payload.examTime);
+    if (payload.examEndDate) body.set('examEndDate', payload.examEndDate);
+    if (payload.examEndTime) body.set('examEndTime', payload.examEndTime);
     body.set('duration', String(payload.duration));
     body.set('questionCount', String(payload.questionCount ?? 0));
     body.set('totalScore', String(payload.totalScore ?? 100));
@@ -1337,6 +1341,8 @@ export const tutorLmsApi = {
     description?: string;
     examDate: string;
     examTime: string;
+    examEndDate?: string;
+    examEndTime?: string;
     duration: number;
     questionCount?: number;
     totalScore?: number;
@@ -1351,6 +1357,8 @@ export const tutorLmsApi = {
     body.set('description', payload.description ?? '');
     body.set('examDate', payload.examDate);
     body.set('examTime', payload.examTime);
+    if (payload.examEndDate) body.set('examEndDate', payload.examEndDate);
+    if (payload.examEndTime) body.set('examEndTime', payload.examEndTime);
     body.set('duration', String(payload.duration));
     body.set('questionCount', String(payload.questionCount ?? 0));
     body.set('totalScore', String(payload.totalScore ?? 100));
@@ -1359,6 +1367,32 @@ export const tutorLmsApi = {
     body.set('onoff_type', payload.onoffType ?? 'F');
 
     return requestJson<number>(`/tutor_lms/api/exam_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 기존 시험을 과목에 연결만 합니다 (시험 복사 없음)
+  async linkExam(payload: {
+    courseId: number;
+    examId: number;
+    startDate?: string;
+    endDate?: string;
+    assignScore?: number;
+    allowRetake?: boolean;
+    showResults?: boolean;
+  }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('exam_id', String(payload.examId));
+    if (payload.startDate) body.set('start_date', payload.startDate);
+    if (payload.endDate) body.set('end_date', payload.endDate);
+    if (payload.assignScore !== undefined) body.set('assign_score', String(payload.assignScore));
+    if (payload.allowRetake !== undefined) body.set('retry_yn', payload.allowRetake ? 'Y' : 'N');
+    if (payload.showResults !== undefined) body.set('result_yn', payload.showResults ? 'Y' : 'N');
+
+    return requestJson<number>(`/tutor_lms/api/exam_link.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,

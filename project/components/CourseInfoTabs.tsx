@@ -159,14 +159,48 @@ function BasicInfoTab({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [content1, setContent1] = useState('');
   const [content2, setContent2] = useState('');
+  
+  // 편집 모드 상태
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    courseName: '',
+    courseType: '',
+    programId: 0,
+    programName: '',
+  });
 
   useEffect(() => {
     setContent1(detail?.content1 ?? '');
     setContent2(detail?.content2 ?? '');
   }, [detail?.content1, detail?.content2]);
 
+  // 편집 모드 진입 시 폼 초기화
+  const startEditing = () => {
+    setEditForm({
+      courseName: course?.subjectName ?? detail?.course_nm ?? '',
+      courseType: course?.courseType ?? '',
+      programId: toInt(course?.programId ?? 0, 0),
+      programName: course?.programName ?? detail?.program_nm ?? '-',
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setErrorMessage(null);
+  };
+
   const selectedProgram: ProgramOption | null =
-    course && 0 < toInt(course.programId, 0)
+    isEditing && editForm.programId > 0
+      ? {
+          id: String(editForm.programId),
+          classification: '과정',
+          name: editForm.programName,
+          department: '-',
+          major: '-',
+          departmentName: '-',
+        }
+      : course && 0 < toInt(course.programId, 0)
       ? {
           id: String(course.programId),
           classification: '과정',
@@ -178,6 +212,18 @@ function BasicInfoTab({
       : null;
 
   const handleProgramSelect = async (program: ProgramOption | null) => {
+    if (isEditing) {
+      // 편집 모드에서는 폼 상태만 업데이트
+      setEditForm(prev => ({
+        ...prev,
+        programId: program ? toInt(program.id, 0) : 0,
+        programName: program ? program.name : '-',
+      }));
+      setIsCourseModalOpen(false);
+      return;
+    }
+
+    // 기존 로직 (편집 모드 아닐 때)
     if (!courseId) {
       setErrorMessage('과목 ID가 올바르지 않습니다.');
       return;
@@ -206,6 +252,37 @@ function BasicInfoTab({
     } finally {
       setSaving(false);
       setIsCourseModalOpen(false);
+    }
+  };
+
+  // 편집 모드에서 저장
+  const handleSaveEdit = async () => {
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      // 소속 과정 변경
+      const currentProgramId = toInt(course?.programId ?? 0, 0);
+      if (editForm.programId !== currentProgramId) {
+        const res = await tutorLmsApi.setCourseProgram({ courseId, programId: editForm.programId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      }
+
+      onCourseUpdated?.({
+        ...course,
+        programId: editForm.programId,
+        programName: editForm.programName,
+      });
+      await onReload();
+      setIsEditing(false);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -245,17 +322,37 @@ function BasicInfoTab({
       <div className="flex items-center justify-between">
         <h3 className="text-gray-900">과목 기본 정보</h3>
         {/* 왜: 학사 데이터는 외부 시스템(e-poly)에서 관리되므로 수정 버튼을 숨깁니다. */}
-        {!isHaksa && (
+        {!isHaksa && !isEditing && (
           <button
-            onClick={() => setIsCourseModalOpen(true)}
+            onClick={startEditing}
             disabled={saving}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Edit className="w-4 h-4" />
-            <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
+            <span>수정</span>
           </button>
         )}
+        {!isHaksa && isEditing && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelEditing}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60"
+            >
+              <span>취소</span>
+            </button>
+            <button
+              onClick={() => void handleSaveEdit()}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? '저장 중...' : '저장'}</span>
+            </button>
+          </div>
+        )}
       </div>
+
 
       {/* 왜: 학사 연동 데이터임을 사용자에게 알려줍니다. */}
       {isHaksa && (
@@ -420,8 +517,45 @@ function BasicInfoTab({
             </div>
           </div>
         </div>
+      ) : isEditing ? (
+        /* ===== 프리즘 과목: 편집 모드 ===== */
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목명</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{subjectName}</div>
+            <p className="text-xs text-gray-400 mt-1">과목명은 수정할 수 없습니다.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정ID</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{courseIdLabel}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정구분</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{course?.courseType ?? '-'}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
+            <button
+              type="button"
+              onClick={() => setIsCourseModalOpen(true)}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 text-left hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-colors flex items-center justify-between"
+            >
+              <span>{editForm.programName}</span>
+              <Edit className="w-4 h-4 text-gray-400" />
+            </button>
+            <p className="text-xs text-blue-600 mt-1">클릭하여 소속 과정을 변경할 수 있습니다.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">교육기간</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{period}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수강인원</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{students}명</div>
+          </div>
+        </div>
       ) : (
-        /* ===== 프리즘 과목: 기존 기본 정보 표시 ===== */
+        /* ===== 프리즘 과목: 읽기 모드 ===== */
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm text-gray-700 mb-2">과목명</label>
