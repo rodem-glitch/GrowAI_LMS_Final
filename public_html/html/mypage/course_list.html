@@ -39,58 +39,129 @@
 
 							</div>
 							<div class="tab_con_wrap">
-								<div class="tab_con">
-									<div class="tb_box type_list course_user_list" >
-										<table summary="수강 중인 과정및  기간  진도율을 나타냅니다.">
-											<caption>수강 중인과정</caption>
-											<colgroup>
-												<col style="width: 7%" />
-												<col />
-												<col style="width: 27%" />
-												<col style="width: 8%" />
-												<col style="width: 11%" />
-												<col style="width: 13%" />
-											</colgroup>
-											<thead>
-												<tr>
-													<th scope="col">구분</th>
-													<th scope="col">수강 교과목</th>
-													<th scope="col">학습기간</th>
-													<th scope="col">진도율</th>
-													<th scope="col">상태</th>
-													<th scope="col">강의실</th>
-												</tr>
-											</thead>
-											<tbody>
-												<!--@loop(list1)-->
-												<tr>
-													<td class="tac"><span class="label small w30">{{list1.onoff_type_conv}}</span></td>
-													<td class="tal">
-														<p class="subject">
-															<a href="../classroom/index.jsp?cuid={{list1.id}}">{{list1.course_nm_conv}}</a>
-														</p>
-													</td>
-													<td class="tac">
-														{{list1.study_date_conv}}
-														<!--@if(list1.renew_block)--><button type="button" class="button mini red" onclick="goRenew('{{list1.id}}');">연장</button><!--/if(list1.renew_block)-->
-													</td>
-													<td align="right">{{list1.progress_ratio}}%</td>
-													<td class="tac">{{list1.status_conv}}</td>
-													<td class="tac">
-														<a href="../classroom/index.jsp?cuid={{list1.id}}" class="button small blue">강의실 입장</a>
-													</td>
-												</tr>
-												<!--/loop(list1)-->
+				<div class="tab_con">
+					<!-- 정규/비정규 하위 탭 -->
+					<style>
+					.course_type_tabs { display:flex; gap:0; margin-bottom:15px; border-bottom:2px solid #e0e0e0; }
+					.course_type_tabs .type_tab { padding:10px 20px; cursor:pointer; color:#666; font-weight:500; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s; }
+					.course_type_tabs .type_tab:hover { color:#0066cc; background:#f5f8fa; }
+					.course_type_tabs .type_tab.active { color:#0066cc; border-bottom-color:#0066cc; font-weight:600; background:#fff; }
+					.course_type_content { display:none; }
+					.course_type_content.active { display:block; }
+					.source_badge { display:inline-block; padding:2px 6px; font-size:11px; border-radius:3px; margin-left:5px; }
+					.source_badge.haksa { background:#e3f2fd; color:#1976d2; }
+					.source_badge.prism { background:#f3e5f5; color:#7b1fa2; }
+					</style>
+					
+					<div class="course_type_tabs">
+						<div class="type_tab active" data-type="haksa" onclick="switchCourseType('haksa')">정규(학사)</div>
+						<div class="type_tab" data-type="prism" onclick="switchCourseType('prism')">비정규(LMS)</div>
+					</div>
+					
+					<!-- 정규(학사) 과정 목록 -->
+					<div id="course_type_haksa" class="course_type_content active">
+						<div class="tb_box type_list course_user_list">
+							<table summary="정규(학사) 수강 중인 과정 목록">
+								<caption>정규(학사) 수강 중인 과정</caption>
+								<colgroup>
+									<col style="width: 7%" />
+									<col />
+									<col style="width: 27%" />
+									<col style="width: 8%" />
+									<col style="width: 11%" />
+									<col style="width: 13%" />
+								</colgroup>
+								<thead>
+									<tr>
+										<th scope="col">구분</th>
+										<th scope="col">수강 교과목</th>
+										<th scope="col">학습기간</th>
+										<th scope="col">진도율</th>
+										<th scope="col">상태</th>
+										<th scope="col">강의실</th>
+									</tr>
+								</thead>
+								<tbody>
+									<!--@loop(list1_haksa)-->
+									<tr>
+										<td class="tac"><span class="label small w30 source_badge haksa">{{list1_haksa.onoff_type_conv}}</span></td>
+										<td class="tal">
+											<p class="subject">
+												<a href="../classroom/index.jsp?haksa_cuid={{list1_haksa.haksa_cuid}}">{{list1_haksa.course_nm_conv}}</a>
+											</p>
+										</td>
+										<td class="tac">{{list1_haksa.study_date_conv}}</td>
+										<td align="right">{{list1_haksa.progress_ratio}}%</td>
+										<td class="tac">{{list1_haksa.status_conv}}</td>
+										<td class="tac">
+											<a href="../classroom/index.jsp?haksa_cuid={{list1_haksa.haksa_cuid}}" class="button small blue">강의실 입장</a>
+										</td>
+									</tr>
+									<!--/loop(list1_haksa)-->
+									<!--@nif(list1_haksa)-->
+									<tr>
+										<td class="nodata" colspan="6">정규(학사) 수강 중인 과정이 없습니다.</td>
+									</tr>
+									<!--/nif(list1_haksa)-->
+								</tbody>
+							</table>
+						</div>
+					</div>
+					
+					<!-- 비정규(LMS) 과정 목록 -->
+					<div id="course_type_prism" class="course_type_content">
+						<div class="tb_box type_list course_user_list">
+							<table summary="비정규(LMS) 수강 중인 과정 목록">
+								<caption>비정규(LMS) 수강 중인 과정</caption>
+								<colgroup>
+									<col style="width: 7%" />
+									<col />
+									<col style="width: 27%" />
+									<col style="width: 8%" />
+									<col style="width: 11%" />
+									<col style="width: 13%" />
+								</colgroup>
+								<thead>
+									<tr>
+										<th scope="col">구분</th>
+										<th scope="col">수강 교과목</th>
+										<th scope="col">학습기간</th>
+										<th scope="col">진도율</th>
+										<th scope="col">상태</th>
+										<th scope="col">강의실</th>
+									</tr>
+								</thead>
+								<tbody>
+									<!--@loop(list1_prism)-->
+									<tr>
+										<td class="tac"><span class="label small w30">{{list1_prism.onoff_type_conv}}</span></td>
+										<td class="tal">
+											<p class="subject">
+												<a href="../classroom/index.jsp?cuid={{list1_prism.id}}">{{list1_prism.course_nm_conv}}</a>
+											</p>
+										</td>
+										<td class="tac">
+											{{list1_prism.study_date_conv}}
+											<!--@if(list1_prism.renew_block)--><button type="button" class="button mini red" onclick="goRenew('{{list1_prism.id}}');">연장</button><!--/if(list1_prism.renew_block)-->
+										</td>
+										<td align="right">{{list1_prism.progress_ratio}}%</td>
+										<td class="tac">{{list1_prism.status_conv}}</td>
+										<td class="tac">
+											<a href="../classroom/index.jsp?cuid={{list1_prism.id}}" class="button small blue">강의실 입장</a>
+										</td>
+									</tr>
+									<!--/loop(list1_prism)-->
+									<!--@nif(list1_prism)-->
+									<tr>
+										<td class="nodata" colspan="6">비정규(LMS) 수강 중인 과정이 없습니다.</td>
+									</tr>
+									<!--/nif(list1_prism)-->
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
 
-												<!--@nif(list1)-->
-												<tr>
-													<td class="nodata" colspan="6">수강 중인 과정이 없습니다.</td>
-												</tr>
-												<!--/nif(list1)-->
-											</tbody>
-										</table>
-									</div>
-								</div>
 								<div class="tab_con">
 									<div class="tb_box type_list course_user_close_list" >
 										<table summary="종료된 과정 및 수료여부등을 나타냅니다.">
@@ -176,6 +247,15 @@
 						var v = $(this).html();
 						$(this).addClass(progresses[v]);
 					});
+				}
+				// 정규/비정규 탭 전환
+				function switchCourseType(type) {
+					// 탭 버튼 활성화
+					$('.course_type_tabs .type_tab').removeClass('active');
+					$('.course_type_tabs .type_tab[data-type="' + type + '"]').addClass('active');
+					// 콘텐츠 영역 전환
+					$('.course_type_content').removeClass('active').hide();
+					$('#course_type_' + type).addClass('active').show();
 				}
 				addEvent("onload", function() { setLabel(); } );
 				</script>
