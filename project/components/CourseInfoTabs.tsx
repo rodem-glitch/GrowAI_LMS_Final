@@ -118,8 +118,12 @@ export function CourseInfoTab({
         />
       )}
 
-      {!loading && !errorMessage && !isHaksa && subTab === 'evaluation' && (
-        <EvaluationTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
+      {!loading && !errorMessage && subTab === 'evaluation' && (
+        isHaksa ? (
+          <HaksaEvaluationTab course={course} />
+        ) : (
+          <EvaluationTab courseId={courseId} detail={detail} onReload={fetchCourseInfo} />
+        )
       )}
 
       {!loading && !errorMessage && !isHaksa && subTab === 'completion' && (
@@ -1177,6 +1181,235 @@ function PassCertificateTab({
       <div className="flex justify-end">
         <button
           onClick={() => void handleSave()}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <Save className="w-4 h-4" />
+          <span>{saving ? '저장 중...' : '저장'}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 학사 과목 평가/수료 기준 탭
+function HaksaEvaluationTab({ course }: { course: any }) {
+  const courseId = course?.id;
+  
+  // 배점 비율
+  const [weights, setWeights] = useState({
+    attendance: 20,
+    exam: 40,
+    assignment: 30,
+    etc: 10,
+  });
+
+  // 성적 컷오프
+  const [cutoffs, setCutoffs] = useState({
+    A: 90,
+    B: 80,
+    C: 70,
+    D: 60,
+    F: 0, // F는 D 미만
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  // 로컬스토리지에서 불러오기
+  useEffect(() => {
+    if (courseId) {
+      try {
+        const savedWeights = localStorage.getItem(`haksa_eval_weights_${courseId}`);
+        if (savedWeights) {
+          setWeights(JSON.parse(savedWeights));
+        }
+        const savedCutoffs = localStorage.getItem(`haksa_eval_cutoffs_${courseId}`);
+        if (savedCutoffs) {
+          setCutoffs(JSON.parse(savedCutoffs));
+        }
+      } catch {}
+    }
+  }, [courseId]);
+
+  const totalWeight = weights.attendance + weights.exam + weights.assignment + weights.etc;
+
+  const handleSave = () => {
+    if (!courseId) return;
+    setSaving(true);
+    try {
+      localStorage.setItem(`haksa_eval_weights_${courseId}`, JSON.stringify(weights));
+      localStorage.setItem(`haksa_eval_cutoffs_${courseId}`, JSON.stringify(cutoffs));
+      alert('저장되었습니다.');
+    } catch {
+      alert('저장 중 오류가 발생했습니다.');
+    }
+    setSaving(false);
+  };
+
+  const numberInputClass =
+    'w-full px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500';
+
+  return (
+    <div className="space-y-6">
+      {/* 학사 과목 안내 */}
+      <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
+        <strong>학사 연동 과목</strong>: 아래 설정은 이 과목의 성적 판정 기준으로 사용됩니다.
+      </div>
+
+      {/* 배점 비율 */}
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h4 className="text-gray-900 mb-1">배점 비율</h4>
+            <p className="text-sm text-gray-600">총점 100점 기준으로 입력해 주세요.</p>
+          </div>
+          <div className={`text-sm font-medium ${totalWeight === 100 ? 'text-green-700' : 'text-orange-700'}`}>
+            합계: {totalWeight}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">출석</label>
+            <input
+              type="number"
+              value={weights.attendance}
+              onChange={(e) => setWeights(prev => ({ ...prev, attendance: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+              min={0}
+              max={100}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">시험</label>
+            <input
+              type="number"
+              value={weights.exam}
+              onChange={(e) => setWeights(prev => ({ ...prev, exam: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+              min={0}
+              max={100}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과제</label>
+            <input
+              type="number"
+              value={weights.assignment}
+              onChange={(e) => setWeights(prev => ({ ...prev, assignment: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+              min={0}
+              max={100}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">기타</label>
+            <input
+              type="number"
+              value={weights.etc}
+              onChange={(e) => setWeights(prev => ({ ...prev, etc: toInt(e.target.value, 0) }))}
+              className={numberInputClass}
+              min={0}
+              max={100}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 성적 컷오프 */}
+      <div className="border border-gray-200 rounded-lg p-6 space-y-4">
+        <div>
+          <h4 className="text-gray-900 mb-1">성적 등급 기준</h4>
+          <p className="text-sm text-gray-600">각 등급의 최소 점수를 입력해 주세요. (해당 점수 이상이면 해당 등급)</p>
+        </div>
+
+        <div className="grid grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-blue-700 mb-2 text-center">A 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs.A}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, A: toInt(e.target.value, 90) }))}
+                className={`${numberInputClass} bg-blue-50 border-blue-200`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~100점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-green-700 mb-2 text-center">B 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs.B}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, B: toInt(e.target.value, 80) }))}
+                className={`${numberInputClass} bg-green-50 border-green-200`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.A - 1}점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-yellow-700 mb-2 text-center">C 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs.C}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, C: toInt(e.target.value, 70) }))}
+                className={`${numberInputClass} bg-yellow-50 border-yellow-200`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.B - 1}점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-orange-700 mb-2 text-center">D 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs.D}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, D: toInt(e.target.value, 60) }))}
+                className={`${numberInputClass} bg-orange-50 border-orange-200`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.C - 1}점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-red-700 mb-2 text-center">F 등급</label>
+            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-center text-gray-700">
+              {cutoffs.D - 1}점 이하
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">0~{cutoffs.D - 1}점</p>
+          </div>
+        </div>
+
+        {/* 등급 요약 */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <h5 className="text-sm font-medium text-gray-700 mb-2">등급 요약</h5>
+          <div className="flex flex-wrap gap-3 text-sm">
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">A: {cutoffs.A}~100점</span>
+            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">B: {cutoffs.B}~{cutoffs.A - 1}점</span>
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">C: {cutoffs.C}~{cutoffs.B - 1}점</span>
+            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full">D: {cutoffs.D}~{cutoffs.C - 1}점</span>
+            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full">F: 0~{cutoffs.D - 1}점</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 저장 버튼 */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
           disabled={saving}
           className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
         >
