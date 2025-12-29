@@ -29,6 +29,30 @@ function clamp0to100(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+function getFieldValue(row: unknown, key: string) {
+  // 왜: 일부 API는 DataSet 컬럼명이 대문자(ASSIGN_PROGRESS)로 내려와서
+  //     프론트에서 `assign_progress` 같은 소문자 키로 읽으면 undefined가 됩니다.
+  //     그래서 "소문자 키/대문자 키" 둘 다 지원해서 실제 DB 값을 화면에 반영합니다.
+  const normalized = Array.isArray(row) ? row[0] : row;
+  if (!normalized || typeof normalized !== 'object') return undefined;
+  const obj = normalized as Record<string, unknown>;
+  return obj[key] ?? obj[key.toUpperCase()];
+}
+
+function getStr(row: unknown, key: string, fallback = '') {
+  const v = getFieldValue(row, key);
+  if (v === undefined || v === null) return fallback;
+  return String(v);
+}
+
+function getInt(row: unknown, key: string, fallback = 0) {
+  return toInt(getFieldValue(row, key), fallback);
+}
+
+function getYn(row: unknown, key: string, fallback: 'Y' | 'N' = 'N') {
+  return toYn(getFieldValue(row, key), fallback);
+}
+
 // 과목정보 메인 탭
 export function CourseInfoTab({
   course,
@@ -46,7 +70,7 @@ export function CourseInfoTab({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const passYn = toYn(detail?.pass_yn, 'N') === 'Y';
+  const passYn = getYn(detail, 'pass_yn', 'N') === 'Y';
 
   const fetchCourseInfo = async () => {
     // 왜: 학사 데이터는 외부 시스템(e-poly) 연동이라 상세 정보 API가 없으므로, 목록에서 받은 정보만 표시합니다.
@@ -78,9 +102,9 @@ export function CourseInfoTab({
   };
 
   useEffect(() => {
+    // 왜: 관리자에서 평가/수료 기준을 바꿔도 탭 이동 시 최신 값을 다시 불러오도록 합니다.
     void fetchCourseInfo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
+  }, [courseId, subTab]);
 
   useEffect(() => {
     // 왜: 합격증 탭은 pass_yn=Y일 때만 의미가 있습니다.
@@ -159,14 +183,48 @@ function BasicInfoTab({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [content1, setContent1] = useState('');
   const [content2, setContent2] = useState('');
+  
+  // 편집 모드 상태
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    courseName: '',
+    courseType: '',
+    programId: 0,
+    programName: '',
+  });
 
   useEffect(() => {
-    setContent1(detail?.content1 ?? '');
-    setContent2(detail?.content2 ?? '');
-  }, [detail?.content1, detail?.content2]);
+    setContent1(getStr(detail, 'content1', ''));
+    setContent2(getStr(detail, 'content2', ''));
+  }, [detail]);
+
+  // 편집 모드 진입 시 폼 초기화
+  const startEditing = () => {
+    setEditForm({
+      courseName: course?.subjectName ?? getStr(detail, 'course_nm', ''),
+      courseType: course?.courseType ?? '',
+      programId: toInt(course?.programId ?? 0, 0),
+      programName: course?.programName ?? getStr(detail, 'program_nm', '-'),
+    });
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setErrorMessage(null);
+  };
 
   const selectedProgram: ProgramOption | null =
-    course && 0 < toInt(course.programId, 0)
+    isEditing && editForm.programId > 0
+      ? {
+          id: String(editForm.programId),
+          classification: '과정',
+          name: editForm.programName,
+          department: '-',
+          major: '-',
+          departmentName: '-',
+        }
+      : course && 0 < toInt(course.programId, 0)
       ? {
           id: String(course.programId),
           classification: '과정',
@@ -178,6 +236,18 @@ function BasicInfoTab({
       : null;
 
   const handleProgramSelect = async (program: ProgramOption | null) => {
+    if (isEditing) {
+      // 편집 모드에서는 폼 상태만 업데이트
+      setEditForm(prev => ({
+        ...prev,
+        programId: program ? toInt(program.id, 0) : 0,
+        programName: program ? program.name : '-',
+      }));
+      setIsCourseModalOpen(false);
+      return;
+    }
+
+    // 기존 로직 (편집 모드 아닐 때)
     if (!courseId) {
       setErrorMessage('과목 ID가 올바르지 않습니다.');
       return;
@@ -206,6 +276,37 @@ function BasicInfoTab({
     } finally {
       setSaving(false);
       setIsCourseModalOpen(false);
+    }
+  };
+
+  // 편집 모드에서 저장
+  const handleSaveEdit = async () => {
+    if (!courseId) {
+      setErrorMessage('과목 ID가 올바르지 않습니다.');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage(null);
+    try {
+      // 소속 과정 변경
+      const currentProgramId = toInt(course?.programId ?? 0, 0);
+      if (editForm.programId !== currentProgramId) {
+        const res = await tutorLmsApi.setCourseProgram({ courseId, programId: editForm.programId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      }
+
+      onCourseUpdated?.({
+        ...course,
+        programId: editForm.programId,
+        programName: editForm.programName,
+      });
+      await onReload();
+      setIsEditing(false);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -245,17 +346,37 @@ function BasicInfoTab({
       <div className="flex items-center justify-between">
         <h3 className="text-gray-900">과목 기본 정보</h3>
         {/* 왜: 학사 데이터는 외부 시스템(e-poly)에서 관리되므로 수정 버튼을 숨깁니다. */}
-        {!isHaksa && (
+        {!isHaksa && !isEditing && (
           <button
-            onClick={() => setIsCourseModalOpen(true)}
+            onClick={startEditing}
             disabled={saving}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Edit className="w-4 h-4" />
-            <span>{saving ? '저장 중...' : '소속 과정 변경'}</span>
+            <span>수정</span>
           </button>
         )}
+        {!isHaksa && isEditing && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelEditing}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-60"
+            >
+              <span>취소</span>
+            </button>
+            <button
+              onClick={() => void handleSaveEdit()}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              <span>{saving ? '저장 중...' : '저장'}</span>
+            </button>
+          </div>
+        )}
       </div>
+
 
       {/* 왜: 학사 연동 데이터임을 사용자에게 알려줍니다. */}
       {isHaksa && (
@@ -420,8 +541,45 @@ function BasicInfoTab({
             </div>
           </div>
         </div>
+      ) : isEditing ? (
+        /* ===== 프리즘 과목: 편집 모드 ===== */
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과목명</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{subjectName}</div>
+            <p className="text-xs text-gray-400 mt-1">과목명은 수정할 수 없습니다.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정ID</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{courseIdLabel}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">과정구분</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{course?.courseType ?? '-'}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">소속 과정명</label>
+            <button
+              type="button"
+              onClick={() => setIsCourseModalOpen(true)}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 text-left hover:border-blue-500 hover:ring-1 hover:ring-blue-500 transition-colors flex items-center justify-between"
+            >
+              <span>{editForm.programName}</span>
+              <Edit className="w-4 h-4 text-gray-400" />
+            </button>
+            <p className="text-xs text-blue-600 mt-1">클릭하여 소속 과정을 변경할 수 있습니다.</p>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">교육기간</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{period}</div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-2">수강인원</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-500">{students}명</div>
+          </div>
+        </div>
       ) : (
-        /* ===== 프리즘 과목: 기존 기본 정보 표시 ===== */
+        /* ===== 프리즘 과목: 읽기 모드 ===== */
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm text-gray-700 mb-2">과목명</label>
@@ -519,10 +677,7 @@ function EvaluationTab({
 
     limitTotalScore: 60,
     limitProgress: 60,
-    limitExam: 0,
-    limitHomework: 0,
-    limitForum: 0,
-    limitEtc: 0,
+
 
     completeLimitProgress: 60,
     completeLimitTotalScore: 60,
@@ -536,25 +691,21 @@ function EvaluationTab({
     // 왜: DB 값을 그대로 가져와서, 사용자가 “현재 설정”을 보고 수정할 수 있어야 합니다.
     if (!detail) return;
     setForm({
-      assignProgress: toInt(detail.assign_progress, 100),
-      assignExam: toInt(detail.assign_exam, 0),
-      assignHomework: toInt(detail.assign_homework, 0),
-      assignForum: toInt(detail.assign_forum, 0),
-      assignEtc: toInt(detail.assign_etc, 0),
+      assignProgress: getInt(detail, 'assign_progress', 100),
+      assignExam: getInt(detail, 'assign_exam', 0),
+      assignHomework: getInt(detail, 'assign_homework', 0),
+      assignForum: getInt(detail, 'assign_forum', 0),
+      assignEtc: getInt(detail, 'assign_etc', 0),
 
-      limitTotalScore: toInt(detail.limit_total_score, 60),
-      limitProgress: toInt(detail.limit_progress, 60),
-      limitExam: toInt(detail.limit_exam, 0),
-      limitHomework: toInt(detail.limit_homework, 0),
-      limitForum: toInt(detail.limit_forum, 0),
-      limitEtc: toInt(detail.limit_etc, 0),
+      limitTotalScore: getInt(detail, 'limit_total_score', 60),
+      limitProgress: getInt(detail, 'limit_progress', 60),
 
-      completeLimitProgress: toInt(detail.complete_limit_progress, 60),
-      completeLimitTotalScore: toInt(detail.complete_limit_total_score, 60),
+      completeLimitProgress: getInt(detail, 'complete_limit_progress', 60),
+      completeLimitTotalScore: getInt(detail, 'complete_limit_total_score', 60),
 
-      assignSurveyYn: toYn(detail.assign_survey_yn, 'N'),
-      pushSurveyYn: toYn(detail.push_survey_yn, 'N'),
-      passYn: toYn(detail.pass_yn, 'N'),
+      assignSurveyYn: getYn(detail, 'assign_survey_yn', 'N'),
+      pushSurveyYn: getYn(detail, 'push_survey_yn', 'N'),
+      passYn: getYn(detail, 'pass_yn', 'N'),
     });
   }, [detail]);
 
@@ -588,10 +739,6 @@ function EvaluationTab({
 
         limitTotalScore: clamp0to100(form.limitTotalScore),
         limitProgress: clamp0to100(form.limitProgress),
-        limitExam: clamp0to100(form.limitExam),
-        limitHomework: clamp0to100(form.limitHomework),
-        limitForum: clamp0to100(form.limitForum),
-        limitEtc: clamp0to100(form.limitEtc),
 
         completeLimitProgress: clamp0to100(form.completeLimitProgress),
         completeLimitTotalScore: clamp0to100(form.completeLimitTotalScore),
@@ -706,49 +853,6 @@ function EvaluationTab({
               type="number"
               value={form.limitProgress}
               onChange={(e) => setForm((prev) => ({ ...prev, limitProgress: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">시험 기준</label>
-            <input
-              type="number"
-              value={form.limitExam}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitExam: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">과제 기준</label>
-            <input
-              type="number"
-              value={form.limitHomework}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitHomework: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">토론 기준</label>
-            <input
-              type="number"
-              value={form.limitForum}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitForum: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">기타 기준</label>
-            <input
-              type="number"
-              value={form.limitEtc}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitEtc: toInt(e.target.value, 0) }))}
               className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
               disabled={!passEnabled}
             />
@@ -903,13 +1007,13 @@ function CompletionCertificateTab({
   useEffect(() => {
     // 왜: DB에서 내려온 현재 설정을 그대로 보여줘야 “어디가 문제인지/무엇이 바뀌는지” 사용자가 알 수 있습니다.
     if (!detail) return;
-    setCertCompleteYn(toYn(detail.cert_complete_yn, 'Y'));
-    setCertTemplateId(toInt(detail.cert_template_id, 0));
-    setCompleteNoYn(toYn(detail.complete_no_yn, 'N'));
-    setCompletePrefix(detail.complete_prefix ?? '');
-    setPostfixCnt(toInt(detail.postfix_cnt, 0));
-    setPostfixType(detail.postfix_type === 'C' ? 'C' : 'R');
-    setPostfixOrd(detail.postfix_ord === 'D' ? 'D' : 'A');
+    setCertCompleteYn(getYn(detail, 'cert_complete_yn', 'Y'));
+    setCertTemplateId(getInt(detail, 'cert_template_id', 0));
+    setCompleteNoYn(getYn(detail, 'complete_no_yn', 'N'));
+    setCompletePrefix(getStr(detail, 'complete_prefix', ''));
+    setPostfixCnt(getInt(detail, 'postfix_cnt', 0));
+    setPostfixType(getStr(detail, 'postfix_type', 'R') === 'C' ? 'C' : 'R');
+    setPostfixOrd(getStr(detail, 'postfix_ord', 'A') === 'D' ? 'D' : 'A');
   }, [detail]);
 
   const handleSave = async () => {
@@ -931,7 +1035,7 @@ function CompletionCertificateTab({
         certCompleteYn,
         certTemplateId,
         // 왜: 수료증 탭에서 저장할 때 합격증 템플릿이 초기화되면 안 되므로, 현재 값을 함께 보냅니다.
-        passCertTemplateId: toInt(detail.pass_cert_template_id, 0),
+        passCertTemplateId: getInt(detail, 'pass_cert_template_id', 0),
         completeNoYn,
         completePrefix,
         postfixCnt: Math.max(0, toInt(postfixCnt, 0)),
@@ -1112,7 +1216,7 @@ function PassCertificateTab({
 
   useEffect(() => {
     if (!detail) return;
-    setPassCertTemplateId(toInt(detail.pass_cert_template_id, 0));
+    setPassCertTemplateId(getInt(detail, 'pass_cert_template_id', 0));
   }, [detail]);
 
   const handleSave = async () => {
@@ -1130,14 +1234,14 @@ function PassCertificateTab({
     try {
       const res = await tutorLmsApi.updateCourseCertificateSettings({
         courseId,
-        certCompleteYn: toYn(detail.cert_complete_yn, 'Y'),
-        certTemplateId: toInt(detail.cert_template_id, 0),
+        certCompleteYn: getYn(detail, 'cert_complete_yn', 'Y'),
+        certTemplateId: getInt(detail, 'cert_template_id', 0),
         passCertTemplateId,
-        completeNoYn: toYn(detail.complete_no_yn, 'N'),
-        completePrefix: detail.complete_prefix ?? '',
-        postfixCnt: toInt(detail.postfix_cnt, 0),
-        postfixType: detail.postfix_type === 'C' ? 'C' : 'R',
-        postfixOrd: detail.postfix_ord === 'D' ? 'D' : 'A',
+        completeNoYn: getYn(detail, 'complete_no_yn', 'N'),
+        completePrefix: getStr(detail, 'complete_prefix', ''),
+        postfixCnt: getInt(detail, 'postfix_cnt', 0),
+        postfixType: getStr(detail, 'postfix_type', 'R') === 'C' ? 'C' : 'R',
+        postfixOrd: getStr(detail, 'postfix_ord', 'A') === 'D' ? 'D' : 'A',
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 

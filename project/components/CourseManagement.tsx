@@ -26,6 +26,7 @@ import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
 import { ExamCreateModal } from './ExamCreateModal';
 import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { HomeworkTaskDetailModal } from './HomeworkTaskDetailModal';
 import { tutorLmsApi, type HaksaCourseKey } from '../api/tutorLmsApi';
 import { buildHaksaCourseKey } from '../utils/haksa';
 import { CurriculumTab } from './courseManagement/CurriculumTab';
@@ -703,42 +704,40 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
         onClose={() => setShowCreateModal(false)}
         onSave={async (examData) => {
           try {
-            const res = await tutorLmsApi.createExam({
+            // 왜: 기존 시험을 과목에 연결만 합니다 (시험 복사 없음)
+            const startDateTime = (examData.startDate || new Date().toISOString().split('T')[0]).replace(/-/g, '') + '090000';
+            const endDateTime = (examData.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]).replace(/-/g, '') + '180000';
+            
+            const res = await tutorLmsApi.linkExam({
               courseId,
-              title: examData.title,
-              description: examData.description || '',
-              examDate: new Date().toISOString().split('T')[0],
-              examTime: '09:00',
-              duration: examData.duration || 60,
-              questionCount: examData.questionCount || 0,
-              totalScore: examData.points || 100,
+              examId: examData.examId,
+              startDate: startDateTime,
+              endDate: endDateTime,
+              assignScore: examData.points || 100,
               allowRetake: examData.allowRetake || false,
-              showResults: examData.showResults || true,
-              onoffType: 'F',
+              showResults: examData.showResults !== false,
             });
             if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
             // 시험 설정 저장
-            if (res.rst_data?.exam_id) {
-              const newSettings = {
-                ...prismExamSettings,
-                [res.rst_data.exam_id]: {
-                  startDate: examData.startDate,
-                  startTime: '09:00',
-                  endDate: examData.endDate,
-                  endTime: '18:00',
-                  points: examData.points,
-                  allowRetake: examData.allowRetake,
-                  retakeScore: examData.retakeScore || 0,
-                  retakeCount: examData.retakeCount || 0,
-                  showResults: examData.showResults,
-                },
-              };
-              setPrismExamSettings(newSettings);
-              try {
-                localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(newSettings));
-              } catch {}
-            }
+            const newSettings = {
+              ...prismExamSettings,
+              [examData.examId]: {
+                startDate: examData.startDate,
+                startTime: '09:00',
+                endDate: examData.endDate,
+                endTime: '18:00',
+                points: examData.points,
+                allowRetake: examData.allowRetake,
+                retakeScore: 0,
+                retakeCount: 0,
+                showResults: examData.showResults,
+              },
+            };
+            setPrismExamSettings(newSettings);
+            try {
+              localStorage.setItem(`prism_exam_settings_${courseId}`, JSON.stringify(newSettings));
+            } catch {}
 
             await fetchExams();
             alert('시험이 등록되었습니다.');
@@ -1713,6 +1712,31 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
     })();
   };
 
+  // 왜: 학생별 추가 과제 목록을 조회하여 재제출 현황을 확인합니다.
+  const [homeworkTasks, setHomeworkTasks] = useState<any[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+
+  const fetchHomeworkTasks = async (homeworkId: number, courseUserId: number) => {
+    setLoadingTasks(true);
+    try {
+      const res = await tutorLmsApi.getHomeworkTasks({ courseId, homeworkId, courseUserId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      setHomeworkTasks(res.rst_data ?? []);
+    } catch (e) {
+      setHomeworkTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const handleSelectStudentWithTasks = (courseUserId: number) => {
+    handleSelectStudent(courseUserId);
+    if (selectedHomeworkId) {
+      void fetchHomeworkTasks(selectedHomeworkId, courseUserId);
+    }
+  };
+
   const summary = {
     total: students.length,
     needFeedback: students.filter((s: any) => s.submitted && !s.confirm).length,
@@ -1779,7 +1803,8 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                   return (
                     <button
                       key={student.courseUserId}
-                      onClick={() => handleSelectStudent(student.courseUserId)}
+                      onClick={() => handleSelectStudentWithTasks(student.courseUserId)}
+
                       className={`w-full p-4 text-left transition-colors ${
                         isSelected
                           ? 'bg-blue-50 border-l-4 border-blue-600'
@@ -1884,8 +1909,60 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                         <br />- 오프라인 과제처럼 제출 기록이 없어도, 필요하면 점수 입력이 가능합니다.
                       </div>
                     </div>
+
+                    {/* 추가 과제 목록 */}
+                    {homeworkTasks.length > 0 && (
+                      <div className="mt-4">
+                        <div className="text-sm font-medium text-gray-700 mb-2">추가 과제 목록 ({homeworkTasks.length}건)</div>
+                        <div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-[300px] overflow-y-auto">
+                          {homeworkTasks.map((task: any) => (
+                            <button
+                              key={task.id}
+                              onClick={() => setSelectedTask(task)}
+                              className="w-full text-left p-3 hover:bg-gray-50 transition-colors"
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <div className="text-sm text-gray-900 font-medium group-hover:text-blue-600">
+                                  {task.task_preview}
+                                </div>
+                                <div className="flex gap-1 flex-shrink-0 ml-2">
+                                  {task.need_review ? (
+                                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded border border-orange-200">재평가 필요</span>
+                                  ) : (
+                                    <>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        task.submit_yn === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                      }`}>{task.submit_yn_label}</span>
+                                      <span className={`px-2 py-0.5 text-xs rounded ${
+                                        task.confirm_yn === 'Y' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                                      }`}>{task.confirm_yn_label}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                부여: {task.reg_date_conv}
+                                {task.submit_yn === 'Y' && <span className="ml-3">제출: {task.submit_date_conv}</span>}
+                              </div>
+                              {task.subject && (
+                                <div className="mt-1 text-xs text-gray-700">
+                                  <span className="font-medium">제출 제목:</span> {task.subject}
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-2 text-[11px] text-gray-400">
+                          * 각 항목을 클릭하면 제출 상세 내용 확인 및 평가가 가능합니다.
+                        </div>
+                      </div>
+                    )}
+                    {loadingTasks && (
+                      <div className="text-center text-gray-500 text-sm py-2">추가 과제 목록 불러오는 중...</div>
+                    )}
                   </div>
                 </div>
+
               ) : (
                 <div className="border border-gray-200 rounded-lg">
                   <div className="p-12 text-center text-gray-500">
@@ -1915,6 +1992,20 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
           </div>
         </>
       )}
+
+      {/* 추가과제 상세 모달 */}
+      <HomeworkTaskDetailModal
+        isOpen={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+        courseId={courseId}
+        task={selectedTask}
+        onRefresh={() => {
+          if (selectedHomeworkId && selectedCourseUserId) {
+            void fetchHomeworkTasks(selectedHomeworkId, selectedCourseUserId);
+            void fetchHomeworkUsers(selectedHomeworkId);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -2461,6 +2552,16 @@ function GradesTab({ courseId }: { courseId: number }) {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const getCourseValue = (key: string) => {
+    // 왜: 서버에서 내려오는 DataSet 컬럼명이 환경에 따라 대문자(ASSIGN_EXAM)로 내려올 수 있어,
+    //     프론트에서는 소문자/대문자 키를 모두 지원해 화면 표시를 안정화합니다.
+    //     또한 DataSet이 JSON으로 변환될 때 배열 형태로 내려올 수 있어 첫 번째 요소로 접근합니다.
+    if (!courseInfo) return undefined;
+    const obj = Array.isArray(courseInfo) ? courseInfo[0] : courseInfo;
+    if (!obj || typeof obj !== 'object') return undefined;
+    return (obj as any)[key] ?? (obj as any)[key.toUpperCase()];
+  };
+
   // 왜: 성적 화면은 "현재 DB 점수"가 기준이므로, 탭 진입/재계산 후에는 서버에서 다시 불러옵니다.
   const fetchGrades = async () => {
     if (!courseId) return;
@@ -2502,14 +2603,24 @@ function GradesTab({ courseId }: { courseId: number }) {
   };
 
   const completionCriteria = {
-    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
-    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+    progressRate: toNum(getCourseValue('complete_limit_progress'), 0),
+    totalScore: toNum(getCourseValue('complete_limit_total_score'), 0),
   };
-  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passEnabled = String(getCourseValue('pass_yn') || '') === 'Y';
   const passCriteria = {
-    progressRate: toNum(courseInfo?.limit_progress, 0),
-    totalScore: toNum(courseInfo?.limit_total_score, 0),
+    progressRate: toNum(getCourseValue('limit_progress'), 0),
+    totalScore: toNum(getCourseValue('limit_total_score'), 0),
   };
+
+  const scoreWeights = {
+    progress: toNum(getCourseValue('assign_progress'), 0),
+    exam: toNum(getCourseValue('assign_exam'), 0),
+    homework: toNum(getCourseValue('assign_homework'), 0),
+    forum: toNum(getCourseValue('assign_forum'), 0),
+    etc: toNum(getCourseValue('assign_etc'), 0),
+  };
+  const scoreWeightSum =
+    scoreWeights.progress + scoreWeights.exam + scoreWeights.homework + scoreWeights.forum + scoreWeights.etc;
 
   const handleRecalc = () => {
     void (async () => {
@@ -2579,7 +2690,15 @@ function GradesTab({ courseId }: { courseId: number }) {
 
       {/* 기준 안내 */}
       <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="mb-3 text-sm">
+          <div className="text-gray-700 mb-1">배점 비율</div>
+          <div className="text-gray-600">
+            진도 {scoreWeights.progress} / 시험 {scoreWeights.exam} / 과제 {scoreWeights.homework}
+            {scoreWeights.forum > 0 ? ` / 토론 ${scoreWeights.forum}` : ''} / 기타 {scoreWeights.etc}
+            {scoreWeightSum > 0 ? ` (합계 ${scoreWeightSum})` : ''}
+          </div>
+        </div>
+        <div className={`grid gap-4 text-sm ${passEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
             <div className="text-gray-600">
@@ -2587,14 +2706,14 @@ function GradesTab({ courseId }: { courseId: number }) {
               {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
             </div>
           </div>
-          <div>
-            <div className="text-gray-700 mb-1">합격 기준</div>
-            <div className="text-gray-600">
-              {passEnabled
-                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
-                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
+          {passEnabled && (
+            <div>
+              <div className="text-gray-700 mb-1">합격 기준</div>
+              <div className="text-gray-600">
+                진도율 {passCriteria.progressRate}% 이상{passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2678,6 +2797,14 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const getCourseValue = (key: string) => {
+    // 왜: DataSet이 JSON으로 변환될 때 배열 형태로 내려올 수 있어 첫 번째 요소로 접근합니다.
+    if (!courseInfo) return undefined;
+    const obj = Array.isArray(courseInfo) ? courseInfo[0] : courseInfo;
+    if (!obj || typeof obj !== 'object') return undefined;
+    return (obj as any)[key] ?? (obj as any)[key.toUpperCase()];
+  };
+
   // 왜: 수료/종료/증명서 출력은 "운영 DB 상태"가 기준이므로, 화면 진입/처리 후에는 반드시 다시 조회합니다.
   const fetchCompletions = async () => {
     if (!courseId) return;
@@ -2720,13 +2847,13 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
   }, [courseId]);
 
   const completionCriteria = {
-    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
-    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+    progressRate: toNum(getCourseValue('complete_limit_progress'), 0),
+    totalScore: toNum(getCourseValue('complete_limit_total_score'), 0),
   };
-  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passEnabled = String(getCourseValue('pass_yn') || '') === 'Y';
   const passCriteria = {
-    progressRate: toNum(courseInfo?.limit_progress, 0),
-    totalScore: toNum(courseInfo?.limit_total_score, 0),
+    progressRate: toNum(getCourseValue('limit_progress'), 0),
+    totalScore: toNum(getCourseValue('limit_total_score'), 0),
   };
 
   const canPrintCompletion = (row: any) => row.completeStatus === 'C' || row.completeStatus === 'P';
@@ -2869,7 +2996,7 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
   return (
     <div>
       <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className={`grid gap-4 text-sm ${passEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
             <div className="text-gray-600">
@@ -2877,14 +3004,14 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
               {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
             </div>
           </div>
-          <div>
-            <div className="text-gray-700 mb-1">합격 기준</div>
-            <div className="text-gray-600">
-              {passEnabled
-                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
-                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
+          {passEnabled && (
+            <div>
+              <div className="text-gray-700 mb-1">합격 기준</div>
+              <div className="text-gray-600">
+                진도율 {passCriteria.progressRate}% 이상{passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2897,11 +3024,11 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
           새로고침
         </button>
         <button
-          onClick={() => handleAction('complete_y', '수료/합격 처리')}
+          onClick={() => handleAction('complete_y', passEnabled ? '수료/합격 처리' : '수료 처리')}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
           disabled={actionLoading}
         >
-          수료/합격 처리
+          {passEnabled ? '수료/합격 처리' : '수료 처리'}
         </button>
         <button
           onClick={() => handleAction('complete_n', '판정 초기화')}
@@ -2935,14 +3062,16 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
           <Download className="w-4 h-4" />
           <span>수료증 일괄출력 ({selectedCourseUserIds.length})</span>
         </button>
-        <button
-          onClick={() => handlePrintBulk('P')}
-          disabled={selectedCourseUserIds.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          <Download className="w-4 h-4" />
-          <span>합격증 일괄출력 ({passEligibleCount})</span>
-        </button>
+        {passEnabled && (
+          <button
+            onClick={() => handlePrintBulk('P')}
+            disabled={selectedCourseUserIds.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            <span>합격증 일괄출력 ({passEligibleCount})</span>
+          </button>
+        )}
       </div>
 
       {errorMessage && (
@@ -3012,13 +3141,15 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
                       >
                         수료증
                       </button>
-                      <button
-                        onClick={() => openCertificate(data.courseUserId, 'P')}
-                        disabled={!canPrintPass(data)}
-                        className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      >
-                        합격증
-                      </button>
+                      {passEnabled && (
+                        <button
+                          onClick={() => openCertificate(data.courseUserId, 'P')}
+                          disabled={!canPrintPass(data)}
+                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          합격증
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -3638,6 +3769,7 @@ function ExamSelectModal({
   isOpen: boolean;
   onClose: () => void;
   onSave: (examData: {
+    examId: number;
     title: string;
     description?: string;
     duration: number;
@@ -3645,10 +3777,14 @@ function ExamSelectModal({
     points: number;
     allowRetake: boolean;
     showResults: boolean;
+    startDate?: string;
+    endDate?: string;
   }) => void;
 }) {
   const [examList, setExamList] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -3711,6 +3847,7 @@ function ExamSelectModal({
     if (!selectedExamId || !selectedExam) return;
     
     onSave({
+      examId: parseInt(selectedExamId, 10),
       title: selectedExam.title,
       description: selectedExam.description,
       duration: selectedExam.duration || 60,

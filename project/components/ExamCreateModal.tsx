@@ -13,6 +13,8 @@ export function ExamCreateModal({ isOpen, onClose, onSave }: ExamCreateModalProp
     description: '',
     examDate: '',
     examTime: '',
+    examEndDate: '',
+    examEndTime: '',
     duration: '',
     totalScore: 100,
     passingScore: 60,
@@ -92,6 +94,34 @@ export function ExamCreateModal({ isOpen, onClose, onSave }: ExamCreateModalProp
                 type="time"
                 value={examData.examTime}
                 onChange={(e) => setExamData({ ...examData, examTime: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+
+          {/* 시험 마감 일시 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">
+                마감 날짜 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={examData.examEndDate}
+                onChange={(e) => setExamData({ ...examData, examEndDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-2">
+                마감 시간 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={examData.examEndTime}
+                onChange={(e) => setExamData({ ...examData, examEndTime: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />

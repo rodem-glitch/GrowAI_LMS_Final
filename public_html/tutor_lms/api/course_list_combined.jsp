@@ -83,6 +83,7 @@ if("prism".equals(tab)) {
         resultList.put("source_type", "prism");
         resultList.put("course_nm_conv", resultList.s("course_nm"));
         resultList.put("onoff_type_conv", m.getItem(resultList.s("onoff_type"), course.onoffTypes));
+        resultList.put("program_nm_conv", !"".equals(resultList.s("program_nm")) ? resultList.s("program_nm") : "-");
         
         String ss = resultList.s("study_sdate");
         String se = resultList.s("study_edate");

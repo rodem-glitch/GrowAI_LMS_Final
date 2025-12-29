@@ -161,10 +161,54 @@
 					</div>
 					<!--/if(task.confirm_yn)-->
 
+					<!--@if(task.resubmit_block)-->
+					<form name="form1" method="post" target="sysfrm">
+					<h5 class="tb_title mt30">재제출</h5>
+					<div class="alert_info" style="margin-bottom:10px; padding:10px; background:#fff3cd; border:1px solid #ffc107; border-radius:4px;">
+						<strong>안내:</strong> 교수자의 피드백을 확인하신 후 수정된 내용을 재제출해 주세요.
+					</div>
+					<div class="tb_box tb_insert tb_insert_resp">
+						<table summary="추가 과제를 재제출할 수 있습니다.">
+							<caption>재제출</caption>
+							<tbody>
+								<tr>
+									<th>제목</th>
+									<td><input type="text" class="w555" name="subject" value="{{task.subject}}" /></td>
+								</tr>
+								<tr>
+									<td colspan="2" class="single_contents">
+										<div style="width:100%">
+											<p style="line-height:26px; vertical-align:middle; font-weight:bold;"><span class="label red">안내</span> 한글/워드 등에서 콘텐츠를 복사해 올 경우 내용 용량 초과로 글 등록시 오류가 발생할 수 있습니다.</p>
+											<textarea name="content" class="db_ta" style="width:96%;height:250px;">{{task.content}}</textarea>
+										</div>
+									</td>
+								</tr>
+								<tr>
+									<th colspan="2" class="single_contents">첨부파일</th>
+								</tr>
+								<tr>
+									<td colspan="2" class="single_contents">
+										<iframe id="fileupload" name="fileupload" frameborder="0" src="attach.jsp?md=homework_task_{{tid}}&mid={{cuid}}&allow_count=1" width="100%" height="160" scrolling="no"></iframe>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div class="board btn">
+						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&cuid={{cuid}}'" value="기본 과제" />
+						<input type="submit" class="button red right" value="재제출" />
+					</div>
+					</form>
+					{{form_script}}
+					<!--/if(task.resubmit_block)-->
+
+					<!--@nif(task.resubmit_block)-->
 					<div class="board btn">
 						<input type="button" class="button white left" onclick="location.href='homework_view.jsp?id={{hid}}&{{course_qs}}'" value="기본 과제" />
 						<input type="button" class="button white right" onclick="location.href='homework.jsp?{{course_qs}}'" value="목록" />
 					</div>
+					<!--/nif(task.resubmit_block)-->
 					<!--/nif(task.open_block)-->
+
 				</div>
 			</div>

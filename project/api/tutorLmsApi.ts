@@ -193,10 +193,6 @@ export type TutorCourseInfoDetail = {
 
   limit_total_score?: number;
   limit_progress?: number;
-  limit_exam?: number;
-  limit_homework?: number;
-  limit_forum?: number;
-  limit_etc?: number;
   complete_limit_progress?: number;
   complete_limit_total_score?: number;
 
@@ -784,7 +780,8 @@ export const tutorLmsApi = {
   // 과목정보(소개/목표/평가/증명서 설정)
   // =========================
   async getCourseInfo(params: { courseId: number }) {
-    const url = `/tutor_lms/api/course_info_get.jsp${buildQuery({ course_id: params.courseId })}`;
+    // 왜: 캐시 무효화를 위해 타임스탬프 추가 - 저장 후 최신 데이터를 보장합니다.
+    const url = `/tutor_lms/api/course_info_get.jsp${buildQuery({ course_id: params.courseId, _t: Date.now() })}`;
     return requestJson<TutorCourseInfoDetail>(url);
   },
 
@@ -813,10 +810,6 @@ export const tutorLmsApi = {
     passYn: 'Y' | 'N';
     limitTotalScore: number;
     limitProgress: number;
-    limitExam: number;
-    limitHomework: number;
-    limitForum: number;
-    limitEtc: number;
     completeLimitProgress: number;
     completeLimitTotalScore: number;
   }) {
@@ -835,10 +828,6 @@ export const tutorLmsApi = {
 
     body.set('limit_total_score', String(payload.limitTotalScore));
     body.set('limit_progress', String(payload.limitProgress));
-    body.set('limit_exam', String(payload.limitExam));
-    body.set('limit_homework', String(payload.limitHomework));
-    body.set('limit_forum', String(payload.limitForum));
-    body.set('limit_etc', String(payload.limitEtc));
 
     body.set('complete_limit_progress', String(payload.completeLimitProgress));
     body.set('complete_limit_total_score', String(payload.completeLimitTotalScore));
@@ -1303,6 +1292,8 @@ export const tutorLmsApi = {
     description?: string;
     examDate: string;
     examTime: string;
+    examEndDate?: string;
+    examEndTime?: string;
     duration: number;
     questionCount?: number;
     totalScore?: number;
@@ -1316,6 +1307,8 @@ export const tutorLmsApi = {
     body.set('description', payload.description ?? '');
     body.set('examDate', payload.examDate);
     body.set('examTime', payload.examTime);
+    if (payload.examEndDate) body.set('examEndDate', payload.examEndDate);
+    if (payload.examEndTime) body.set('examEndTime', payload.examEndTime);
     body.set('duration', String(payload.duration));
     body.set('questionCount', String(payload.questionCount ?? 0));
     body.set('totalScore', String(payload.totalScore ?? 100));
@@ -1337,6 +1330,8 @@ export const tutorLmsApi = {
     description?: string;
     examDate: string;
     examTime: string;
+    examEndDate?: string;
+    examEndTime?: string;
     duration: number;
     questionCount?: number;
     totalScore?: number;
@@ -1351,6 +1346,8 @@ export const tutorLmsApi = {
     body.set('description', payload.description ?? '');
     body.set('examDate', payload.examDate);
     body.set('examTime', payload.examTime);
+    if (payload.examEndDate) body.set('examEndDate', payload.examEndDate);
+    if (payload.examEndTime) body.set('examEndTime', payload.examEndTime);
     body.set('duration', String(payload.duration));
     body.set('questionCount', String(payload.questionCount ?? 0));
     body.set('totalScore', String(payload.totalScore ?? 100));
@@ -1359,6 +1356,32 @@ export const tutorLmsApi = {
     body.set('onoff_type', payload.onoffType ?? 'F');
 
     return requestJson<number>(`/tutor_lms/api/exam_modify.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 기존 시험을 과목에 연결만 합니다 (시험 복사 없음)
+  async linkExam(payload: {
+    courseId: number;
+    examId: number;
+    startDate?: string;
+    endDate?: string;
+    assignScore?: number;
+    allowRetake?: boolean;
+    showResults?: boolean;
+  }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('exam_id', String(payload.examId));
+    if (payload.startDate) body.set('start_date', payload.startDate);
+    if (payload.endDate) body.set('end_date', payload.endDate);
+    if (payload.assignScore !== undefined) body.set('assign_score', String(payload.assignScore));
+    if (payload.allowRetake !== undefined) body.set('retry_yn', payload.allowRetake ? 'Y' : 'N');
+    if (payload.showResults !== undefined) body.set('result_yn', payload.showResults ? 'Y' : 'N');
+
+    return requestJson<number>(`/tutor_lms/api/exam_link.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -1506,6 +1529,30 @@ export const tutorLmsApi = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
+  },
+
+  // 왜: 학생이 제출한 추가 과제 내용을 확인하고 교수자가 "확인(평가완료)" 처리합니다.
+  async confirmHomeworkTask(payload: { courseId: number; taskId: number; feedback: string }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('task_id', String(payload.taskId));
+    body.set('feedback', payload.feedback);
+
+    return requestJson<number>(`/tutor_lms/api/homework_task_confirm.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 피드백 관리에서 학생별 추가 과제 목록(재제출 현황 포함)을 조회합니다.
+  async getHomeworkTasks(params: { courseId: number; homeworkId: number; courseUserId: number }) {
+    const url = `/tutor_lms/api/homework_task_list.jsp${buildQuery({
+      course_id: params.courseId,
+      homework_id: params.homeworkId,
+      course_user_id: params.courseUserId,
+    })}`;
+    return requestJson<any[]>(url);
   },
 
   // =========================

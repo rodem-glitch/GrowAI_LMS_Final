@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, FileText, BookOpen, Layers, Settings, Edit, Save, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, BookOpen, Layers, Settings, Edit, Save, X, Trash2, Plus, Search } from 'lucide-react';
 import { tutorLmsApi, type TutorProgramDetail, type TutorCourseRow } from '../api/tutorLmsApi';
 import { CourseManagement } from './CourseManagement';
 
@@ -106,6 +106,14 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
   
   // 과목 관리 화면 상태
   const [managingCourse, setManagingCourse] = useState<ManagementCourse | null>(null);
+  
+  // 소속과목 추가 모달 상태
+  const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState<TutorCourseRow[]>([]);
+  const [coursesSearchTerm, setCoursesSearchTerm] = useState('');
+  const [loadingAvailableCourses, setLoadingAvailableCourses] = useState(false);
+  const [addingCourseId, setAddingCourseId] = useState<number | null>(null);
+  const [detachingCourseId, setDetachingCourseId] = useState<number | null>(null);
   
   // 편집 모드 상태
   const [isEditing, setIsEditing] = useState(false);
@@ -247,6 +255,77 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
     }
   };
 
+  // 소속과목 추가 모달 열기
+  const openAddSubjectModal = async () => {
+    setShowAddSubjectModal(true);
+    setCoursesSearchTerm('');
+    setLoadingAvailableCourses(true);
+    
+    try {
+      const res = await tutorLmsApi.getMyCourses({});
+      if (res.rst_code === '0000') {
+        // 이미 소속된 과목 제외
+        const existingIds = new Set(courses.map(c => c.id));
+        const filtered = (res.rst_data ?? []).filter(c => !existingIds.has(c.id));
+        setAvailableCourses(filtered);
+      }
+    } catch (e) {
+      console.error('과목 목록 조회 실패:', e);
+    } finally {
+      setLoadingAvailableCourses(false);
+    }
+  };
+
+  // 과목을 과정에 연결
+  const handleAddSubject = async (courseId: number) => {
+    setAddingCourseId(courseId);
+    try {
+      const programId = Number(course.id);
+      const res = await tutorLmsApi.setCourseProgram({ courseId, programId });
+      if (res.rst_code !== '0000') {
+        throw new Error(res.rst_message);
+      }
+      // 목록 갱신
+      await fetchData();
+      // 추가된 과목은 available 목록에서 제거
+      setAvailableCourses(prev => prev.filter(c => c.id !== courseId));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '과목 추가 중 오류가 발생했습니다.');
+    } finally {
+      setAddingCourseId(null);
+    }
+  };
+
+  // 과목을 과정에서 분리 (연결 해제)
+  const handleDetachSubject = async (courseId: number) => {
+    const confirmed = window.confirm('이 과목을 과정에서 분리하시겠습니까?');
+    if (!confirmed) return;
+
+    setDetachingCourseId(courseId);
+    try {
+      const res = await tutorLmsApi.setCourseProgram({ courseId, programId: 0 });
+      if (res.rst_code !== '0000') {
+        throw new Error(res.rst_message);
+      }
+      // 목록 갱신
+      await fetchData();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '과목 분리 중 오류가 발생했습니다.');
+    } finally {
+      setDetachingCourseId(null);
+    }
+  };
+
+  // 검색어로 필터링된 과목 목록
+  const filteredAvailableCourses = useMemo(() => {
+    if (!coursesSearchTerm.trim()) return availableCourses;
+    const term = coursesSearchTerm.toLowerCase();
+    return availableCourses.filter(c =>
+      (c.course_nm?.toLowerCase().includes(term)) ||
+      (c.course_id_conv?.toLowerCase().includes(term)) ||
+      (c.course_cd?.toLowerCase().includes(term))
+    );
+  }, [availableCourses, coursesSearchTerm]);
 
   // 과목 관리 화면이 선택되었으면 CourseManagement 표시
   if (managingCourse) {
@@ -463,14 +542,32 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
                   <Layers className="w-5 h-5 text-blue-600" />
                   <h3 className="text-lg text-gray-900">소속 과목</h3>
                 </div>
-                <span className="text-sm text-gray-500">{courses.length}개 과목</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-500">{courses.length}개 과목</span>
+                  <button
+                    onClick={openAddSubjectModal}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>과목 추가</span>
+                  </button>
+                </div>
               </div>
             </div>
             <div className="p-6">
               {coursesLoading ? (
                 <p className="text-gray-500 text-center py-4">불러오는 중...</p>
               ) : courses.length === 0 ? (
-                <p className="text-gray-400 italic text-center py-4">소속된 과목이 없습니다.</p>
+                <div className="text-center py-8">
+                  <p className="text-gray-400 italic mb-4">소속된 과목이 없습니다.</p>
+                  <button
+                    onClick={openAddSubjectModal}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>과목 추가하기</span>
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {courses.map((c) => (
@@ -485,7 +582,7 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
                           {c.year && ` · ${c.year}년`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 text-xs rounded ${
                           c.status_label === '진행중' ? 'bg-green-100 text-green-700' :
                           c.status_label === '종료' ? 'bg-gray-100 text-gray-600' :
@@ -501,11 +598,94 @@ export function OperationalPlan({ course, onBack }: OperationalPlanProps) {
                           <Settings className="w-4 h-4" />
                           <span>관리</span>
                         </button>
+                        <button
+                          onClick={() => handleDetachSubject(c.id)}
+                          disabled={detachingCourseId === c.id}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs text-red-700 bg-red-50 rounded hover:bg-red-100 transition-colors disabled:opacity-50"
+                          title="과정에서 분리"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>{detachingCourseId === c.id ? '분리 중...' : '분리'}</span>
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 과목 추가 모달 */}
+      {showAddSubjectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">소속 과목 추가</h3>
+              <button
+                onClick={() => setShowAddSubjectModal(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="과목명 또는 과목코드로 검색..."
+                  value={coursesSearchTerm}
+                  onChange={(e) => setCoursesSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingAvailableCourses ? (
+                <p className="text-center text-gray-500 py-8">과목 목록을 불러오는 중...</p>
+              ) : filteredAvailableCourses.length === 0 ? (
+                <p className="text-center text-gray-400 py-8">
+                  {coursesSearchTerm ? '검색 결과가 없습니다.' : '추가할 수 있는 과목이 없습니다.'}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {filteredAvailableCourses.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <p className="text-gray-900 font-medium">{c.course_nm}</p>
+                        <p className="text-sm text-gray-500">
+                          {c.course_id_conv ?? c.course_cd ?? `ID: ${c.id}`}
+                          {c.year && ` · ${c.year}년`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleAddSubject(c.id)}
+                        disabled={addingCourseId === c.id}
+                        className="flex items-center gap-1 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>{addingCourseId === c.id ? '추가 중...' : '추가'}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowAddSubjectModal(false)}
+                className="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                닫기
+              </button>
             </div>
           </div>
         </div>
