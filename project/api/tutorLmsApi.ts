@@ -376,6 +376,36 @@ export type HaksaCourseStudentRow = {
   group_code?: string;
 };
 
+export type HaksaCourseKey = {
+  courseCode: string;
+  openYear: string;
+  openTerm: string;
+  bunbanCode: string;
+  groupCode: string;
+};
+
+export type HaksaEvalSettings = {
+  weights: {
+    attendance: number;
+    exam: number;
+    assignment: number;
+    etc: number;
+  };
+  cutoffs: {
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    F: number;
+  };
+};
+
+export type HaksaGradeRow = {
+  student_id: string;
+  grade?: string;
+  score?: number;
+};
+
 export type TutorProgressSummaryRow = {
   chapter: number;
   section_id: number;
@@ -1102,6 +1132,117 @@ export const tutorLmsApi = {
       s_keyword: params.keyword,
     })}`;
     return requestJson<HaksaCourseStudentRow[]>(url);
+  },
+
+  // =========================
+  // 학사 과목: 평가/강의목차/시험/성적
+  // =========================
+  async getHaksaCourseEval(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_course_eval_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ eval_json?: string }>(url);
+  },
+
+  async updateHaksaCourseEval(params: HaksaCourseKey & { evalJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('eval_json', params.evalJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_course_eval_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaCurriculum(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_curriculum_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ curriculum_json?: string }>(url);
+  },
+
+  async updateHaksaCurriculum(params: HaksaCourseKey & { curriculumJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('curriculum_json', params.curriculumJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_curriculum_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaExams(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_exam_get.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<{ exams_json?: string }>(url);
+  },
+
+  async updateHaksaExams(params: HaksaCourseKey & { examsJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('exams_json', params.examsJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_exam_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  async getHaksaGrades(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_grade_list.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<HaksaGradeRow[]>(url);
+  },
+
+  async updateHaksaGrades(params: HaksaCourseKey & { gradesJson: string }) {
+    const body = new URLSearchParams();
+    body.set('course_code', params.courseCode);
+    body.set('open_year', params.openYear);
+    body.set('open_term', params.openTerm);
+    body.set('bunban_code', params.bunbanCode);
+    body.set('group_code', params.groupCode);
+    body.set('grades_json', params.gradesJson);
+
+    return requestJson<number>(`/tutor_lms/api/haksa_grade_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 
   async addCourseStudents(payload: { courseId: number; userIds: number[] }) {

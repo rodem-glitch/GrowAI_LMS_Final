@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Info,
   List,
@@ -26,7 +26,8 @@ import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
 import { ExamCreateModal } from './ExamCreateModal';
 import { AssignmentCreateModal } from './AssignmentCreateModal';
-import { tutorLmsApi } from '../api/tutorLmsApi';
+import { tutorLmsApi, type HaksaCourseKey } from '../api/tutorLmsApi';
+import { buildHaksaCourseKey } from '../utils/haksa';
 import { CurriculumTab } from './courseManagement/CurriculumTab';
 import { StudentsTab } from './courseManagement/StudentsTab';
 import { AttendanceTab } from './courseManagement/AttendanceTab';
@@ -156,6 +157,13 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
     }
   };
 
+  const courseIdNum = Number(course.id);
+  const isHaksaCourse =
+    !courseIdNum ||
+    Number.isNaN(courseIdNum) ||
+    courseIdNum <= 0 ||
+    course?.sourceType === 'haksa';
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
@@ -166,27 +174,27 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'info-completion':
         return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
       case 'curriculum':
-        return <CurriculumTab courseId={Number(course.id)} course={course} />;
+        return <CurriculumTab courseId={courseIdNum} course={course} />;
       case 'students':
-        return <StudentsTab courseId={Number(course.id)} course={course} />;
+        return <StudentsTab courseId={courseIdNum} course={course} />;
       case 'attendance':
-        return <AttendanceTab courseId={Number(course.id)} />;
+        return <AttendanceTab courseId={courseIdNum} />;
       case 'exam':
-        return <ExamTab courseId={Number(course.id)} course={course} />;
+        return <ExamTab courseId={courseIdNum} course={course} />;
       case 'assignment':
-        return <AssignmentTab courseId={Number(course.id)} />;
+        return <AssignmentTab courseId={courseIdNum} />;
       case 'assignment-management':
-        return <AssignmentManagementTab courseId={Number(course.id)} course={course} />;
+        return <AssignmentManagementTab courseId={courseIdNum} course={course} />;
       case 'assignment-feedback':
-        return <AssignmentFeedbackTab courseId={Number(course.id)} />;
+        return <AssignmentFeedbackTab courseId={courseIdNum} />;
       case 'materials':
-        return <MaterialsTab courseId={Number(course.id)} />;
+        return <MaterialsTab courseId={courseIdNum} />;
       case 'qna':
-        return <QnaTab courseId={Number(course.id)} />;
+        return <QnaTab courseId={courseIdNum} />;
       case 'grades':
-        return <GradesTab courseId={Number(course.id)} />;
+        return isHaksaCourse ? <HaksaGradingContent course={course} /> : <GradesTab courseId={courseIdNum} />;
       case 'completion':
-        return <CompletionTab courseId={Number(course.id)} course={course} />;
+        return <CompletionTab courseId={courseIdNum} course={course} />;
       default:
         return null;
     }
@@ -330,6 +338,23 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
   const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
 
   const [selectedExam, setSelectedExam] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -340,6 +365,9 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
 
   // 학사 과목의 경우 로컬스토리지에서 시험 목록 불러오기
   const [haksaExams, setHaksaExams] = useState<any[]>([]);
+  const [haksaExamsLoaded, setHaksaExamsLoaded] = useState(false);
+  const latestHaksaExamsRef = useRef<any[]>([]);
+  const latestHaksaKeyRef = useRef(haksaKey);
 
   // 프리즘 과목 시험 수정 관련 상태
   const [editingPrismExam, setEditingPrismExam] = useState<any | null>(null);
@@ -362,19 +390,75 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   });
 
   useEffect(() => {
-    if (isHaksaCourse && course?.id) {
+    if (!isHaksaCourse || !haksaKey) return;
+    let cancelled = false;
+
+    const fetchHaksaExams = async () => {
+      setHaksaExamsLoaded(false);
+      setErrorMessage(null);
       try {
-        const saved = localStorage.getItem(`haksa_curriculum_${course.id}`);
-        if (saved) {
-          const contents = JSON.parse(saved);
-          const examContents = contents.filter((c: any) => c.type === 'exam');
-          setHaksaExams(examContents);
+        const res = await tutorLmsApi.getHaksaExams(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        // 왜: DataSet 응답이 배열로 올 수 있어 첫 번째 행을 기준으로 해석합니다.
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.exams_json || '';
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (!cancelled) setHaksaExams(Array.isArray(parsed) ? parsed : []);
+          return;
         }
-      } catch {
-        setHaksaExams([]);
+
+        // 왜: 기존 로컬스토리지 데이터를 DB로 이전합니다(이전 데이터 손실 방지).
+        if (course?.id) {
+          try {
+            const saved = localStorage.getItem(`haksa_exams_${course.id}`);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (!cancelled) setHaksaExams(Array.isArray(parsed) ? parsed : []);
+              await tutorLmsApi.updateHaksaExams({
+                ...haksaKey,
+                examsJson: saved,
+              });
+            }
+          } catch {
+            if (!cancelled) setHaksaExams([]);
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setErrorMessage(e instanceof Error ? e.message : '시험 목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setHaksaExamsLoaded(true);
       }
+    };
+
+    void fetchHaksaExams();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, haksaKey, course?.id]);
+  useEffect(() => {
+    if (isHaksaCourse && !haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 시험 저장/조회가 불가능합니다.');
     }
-  }, [isHaksaCourse, course?.id]);
+  }, [isHaksaCourse, haksaKey]);
+  useEffect(() => {
+    latestHaksaExamsRef.current = haksaExams;
+  }, [haksaExams]);
+  useEffect(() => {
+    latestHaksaKeyRef.current = haksaKey;
+  }, [haksaKey]);
+  useEffect(() => {
+    return () => {
+      if (!isHaksaCourse || !latestHaksaKeyRef.current || !haksaExamsLoaded) return;
+      // 왜: 탭 이동/언마운트 시 마지막 상태 저장이 누락될 수 있어 한 번 더 보장합니다.
+      void tutorLmsApi.updateHaksaExams({
+        ...latestHaksaKeyRef.current,
+        examsJson: JSON.stringify(latestHaksaExamsRef.current),
+      });
+    };
+  }, [isHaksaCourse, haksaExamsLoaded]);
 
   // 프리즘 과목 시험 설정 로컬스토리지에서 불러오기
   useEffect(() => {
@@ -461,9 +545,8 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
     if (!confirm('이 시험을 삭제하시겠습니까?')) return;
     
     try {
-      // TODO: API 호출로 시험 삭제
-      // const res = await tutorLmsApi.deleteExam({ courseId, examId });
-      // if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      const res = await tutorLmsApi.deleteExam({ courseId, examId });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
       
       // 로컬스토리지에서 설정 삭제
       const updated = { ...prismExamSettings };
@@ -486,7 +569,7 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   if (isHaksaCourse) {
     return (
       <HaksaExamContent
-        courseId={course?.id}
+        haksaKey={haksaKey}
         haksaExams={haksaExams}
         setHaksaExams={setHaksaExams}
       />
@@ -1212,6 +1295,23 @@ function AssignmentTab({ courseId }: { courseId: number }) {
 function AssignmentManagementTab({ courseId, course }: { courseId: number; course?: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
 
   const [homeworks, setHomeworks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1219,21 +1319,44 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
 
   // 학사 과목의 경우 로컬스토리지에서 과제 목록 불러오기
   const [haksaAssignments, setHaksaAssignments] = useState<any[]>([]);
+  const [haksaLoading, setHaksaLoading] = useState(false);
 
   useEffect(() => {
-    if (isHaksaCourse && course?.id) {
+    if (!isHaksaCourse || !haksaKey) return;
+    let cancelled = false;
+
+    const fetchHaksaAssignments = async () => {
+      setHaksaLoading(true);
+      setErrorMessage(null);
       try {
-        const saved = localStorage.getItem(`haksa_curriculum_${course.id}`);
-        if (saved) {
-          const contents = JSON.parse(saved);
-          const assignmentContents = contents.filter((c: any) => c.type === 'assignment');
-          setHaksaAssignments(assignmentContents);
+        const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        const raw = res.rst_data?.curriculum_json || '';
+        if (!raw) {
+          if (!cancelled) setHaksaAssignments([]);
+          return;
         }
-      } catch {
-        setHaksaAssignments([]);
+        const parsed = JSON.parse(raw);
+        const contents = Array.isArray(parsed)
+          ? parsed.flatMap((w: any) => (w.sessions || []).flatMap((s: any) => s.contents || []))
+          : [];
+        const assignmentContents = contents.filter((c: any) => c.type === 'assignment');
+        if (!cancelled) setHaksaAssignments(assignmentContents);
+      } catch (e) {
+        if (!cancelled) {
+          setHaksaAssignments([]);
+          setErrorMessage(e instanceof Error ? e.message : '과제 목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setHaksaLoading(false);
       }
-    }
-  }, [isHaksaCourse, course?.id]);
+    };
+
+    void fetchHaksaAssignments();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, haksaKey]);
 
   // 왜: 과제 탭은 "새로고침해도 유지되는 실데이터"가 핵심이라서, 화면이 뜰 때마다 DB(서버)에서 다시 읽어옵니다.
   const fetchHomeworks = async () => {
@@ -1268,6 +1391,16 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
+        {errorMessage && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
+        )}
+
+        {haksaLoading && (
+          <div className="p-6 text-center text-gray-500">과제 목록을 불러오는 중...</div>
+        )}
+
         {haksaAssignments.length > 0 ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -2728,9 +2861,7 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
   // 학사 과목: A/B/C/D/F 성적 판정 UI
   if (isHaksaCourse) {
     return (
-      <HaksaGradingContent
-        courseId={course?.id}
-      />
+      <HaksaGradingContent course={course} />
     );
   }
 
@@ -2910,11 +3041,11 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
 
 // 학사 과목 시험 관리 컴포넌트
 function HaksaExamContent({
-  courseId,
+  haksaKey,
   haksaExams,
   setHaksaExams,
 }: {
-  courseId?: string;
+  haksaKey: HaksaCourseKey | null;
   haksaExams: any[];
   setHaksaExams: React.Dispatch<React.SetStateAction<any[]>>;
 }) {
@@ -2922,6 +3053,7 @@ function HaksaExamContent({
   const [editingExam, setEditingExam] = useState<any | null>(null); // 수정 중인 시험
   const [examList, setExamList] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -2939,18 +3071,37 @@ function HaksaExamContent({
     showResults: true,
   });
 
-  // 시험관리 목록 불러오기
+  // 시험관리(템플릿) 목록 불러오기
   useEffect(() => {
-    if (showAddModal) {
+    if (!showAddModal) return;
+    let cancelled = false;
+
+    const fetchTemplates = async () => {
+      setErrorMessage(null);
       try {
-        const saved = localStorage.getItem('tutor_exams');
-        if (saved) {
-          setExamList(JSON.parse(saved));
+        const res = await tutorLmsApi.getExamTemplates({ limit: 200 });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        const rows = res.rst_data ?? [];
+        const mapped = rows.map((row: any) => ({
+          id: String(row.id),
+          title: row.exam_nm || '시험',
+          description: row.content || '',
+          questionCount: Number(row.question_cnt ?? 0),
+          totalPoints: Number(row.total_points ?? 0),
+        }));
+        if (!cancelled) setExamList(mapped);
+      } catch (e) {
+        if (!cancelled) {
+          setExamList([]);
+          setErrorMessage(e instanceof Error ? e.message : '시험 템플릿을 불러오는 중 오류가 발생했습니다.');
         }
-      } catch {
-        setExamList([]);
       }
-    }
+    };
+
+    void fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
   }, [showAddModal]);
 
   // 선택한 시험 정보
@@ -2977,6 +3128,20 @@ function HaksaExamContent({
     });
   };
 
+  const persistHaksaExams = async (next: any[]) => {
+    setHaksaExams(next);
+    if (!haksaKey) return;
+    try {
+      const res = await tutorLmsApi.updateHaksaExams({
+        ...haksaKey,
+        examsJson: JSON.stringify(next),
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '시험 저장 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleAddExam = () => {
     if (!selectedExamId || !selectedExam) return;
 
@@ -2985,7 +3150,7 @@ function HaksaExamContent({
       examId: selectedExamId,
       title: selectedExam.title,
       description: selectedExam.description,
-      questionCount: selectedExam.questionIds?.length || 0,
+      questionCount: selectedExam.questionCount || 0,
       totalPoints: selectedExam.totalPoints,
       type: 'exam',
       weekNumber: 0,
@@ -2994,14 +3159,7 @@ function HaksaExamContent({
     };
 
     const updated = [...haksaExams, newExam];
-    setHaksaExams(updated);
-
-    // 로컬스토리지 저장
-    if (courseId) {
-      try {
-        localStorage.setItem(`haksa_exams_${courseId}`, JSON.stringify(updated));
-      } catch {}
-    }
+    void persistHaksaExams(updated);
 
     setShowAddModal(false);
     resetSettings();
@@ -3037,13 +3195,8 @@ function HaksaExamContent({
       }
       return e;
     });
-    
-    setHaksaExams(updated);
-    if (courseId) {
-      try {
-        localStorage.setItem(`haksa_exams_${courseId}`, JSON.stringify(updated));
-      } catch {}
-    }
+
+    void persistHaksaExams(updated);
 
     setEditingExam(null);
     resetSettings();
@@ -3052,28 +3205,17 @@ function HaksaExamContent({
   const handleDeleteExam = (examId: string) => {
     if (!confirm('이 시험을 삭제하시겠습니까?')) return;
     const updated = haksaExams.filter(e => e.id !== examId);
-    setHaksaExams(updated);
-    if (courseId) {
-      try {
-        localStorage.setItem(`haksa_exams_${courseId}`, JSON.stringify(updated));
-      } catch {}
-    }
+    void persistHaksaExams(updated);
   };
-
-  // 과목의 시험 목록 로드 (초기화)
-  useEffect(() => {
-    if (courseId) {
-      try {
-        const saved = localStorage.getItem(`haksa_exams_${courseId}`);
-        if (saved) {
-          setHaksaExams(JSON.parse(saved));
-        }
-      } catch {}
-    }
-  }, [courseId]);
 
   return (
     <div className="space-y-4">
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900">등록된 시험</h3>
         <button
@@ -3187,7 +3329,7 @@ function HaksaExamContent({
                     <option value="">시험을 선택하세요</option>
                     {examList.map(exam => (
                       <option key={exam.id} value={exam.id}>
-                        {exam.title} ({exam.questionIds?.length || 0}문제, {exam.totalPoints}점)
+                        {exam.title} ({exam.questionCount || 0}문제, {exam.totalPoints}점)
                       </option>
                     ))}
                   </select>
@@ -3524,16 +3666,36 @@ function ExamSelectModal({
 
   // 시험관리 목록 불러오기
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+    let cancelled = false;
+
+    const fetchTemplates = async () => {
+      setErrorMessage(null);
       try {
-        const saved = localStorage.getItem('tutor_exams');
-        if (saved) {
-          setExamList(JSON.parse(saved));
+        const res = await tutorLmsApi.getExamTemplates({ limit: 200 });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        const rows = res.rst_data ?? [];
+        const mapped = rows.map((row: any) => ({
+          id: String(row.id),
+          title: row.exam_nm || '시험',
+          description: row.content || '',
+          duration: Number(row.exam_time ?? 60),
+          questionCount: Number(row.question_cnt ?? 0),
+          totalPoints: Number(row.total_points ?? 0),
+        }));
+        if (!cancelled) setExamList(mapped);
+      } catch (e) {
+        if (!cancelled) {
+          setExamList([]);
+          setErrorMessage(e instanceof Error ? e.message : '시험 템플릿을 불러오는 중 오류가 발생했습니다.');
         }
-      } catch {
-        setExamList([]);
       }
-    }
+    };
+
+    void fetchTemplates();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
   // 선택한 시험 정보
@@ -3552,7 +3714,7 @@ function ExamSelectModal({
       title: selectedExam.title,
       description: selectedExam.description,
       duration: selectedExam.duration || 60,
-      questionCount: selectedExam.questionIds?.length || 0,
+      questionCount: selectedExam.questionCount || 0,
       points: examSettings.points,
       allowRetake: examSettings.allowRetake,
       showResults: examSettings.showResults,
@@ -3605,7 +3767,7 @@ function ExamSelectModal({
                 <option value="">시험을 선택하세요</option>
                 {examList.map(exam => (
                   <option key={exam.id} value={exam.id}>
-                    {exam.title} ({exam.questionIds?.length || 0}문제, {exam.totalPoints}점)
+                    {exam.title} ({exam.questionCount || 0}문제, {exam.totalPoints}점)
                   </option>
                 ))}
               </select>
@@ -3716,6 +3878,12 @@ function ExamSelectModal({
           )}
         </div>
 
+        {errorMessage && (
+          <div className="px-6 pb-2 text-sm text-red-600">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
           <button
             onClick={onClose}
@@ -3737,13 +3905,34 @@ function ExamSelectModal({
 
 // 학사 과목 성적 판정 컴포넌트 (A/B/C/D/F)
 function HaksaGradingContent({
-  courseId,
+  course,
 }: {
-  courseId?: string;
+  course?: any;
 }) {
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
+  const courseId = course?.id;
   const [students, setStudents] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkGrade, setBulkGrade] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 성적 기준
   const GRADES = [
@@ -3763,60 +3952,114 @@ function HaksaGradingContent({
     return 'F';
   };
 
-  // API에서 수강생 데이터 로드
+  // API에서 수강생 + 저장된 성적 로드
   useEffect(() => {
-    const numericCourseId = Number(courseId);
-    
-    const loadStudents = async () => {
-      // 저장된 성적 데이터 먼저 로드
-      let savedGrades: Record<string, string> = {};
-      if (courseId) {
-        try {
-          const saved = localStorage.getItem(`haksa_grades_${courseId}`);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            // id -> grade 맵 생성
-            savedGrades = parsed.reduce((acc: any, s: any) => {
-              acc[s.id] = s.grade;
-              return acc;
-            }, {});
-          }
-        } catch {}
-      }
+    if (!haksaKey) return;
+    let cancelled = false;
 
-      // API 호출이 가능한 경우 실제 학생 데이터 로드
-      if (numericCourseId && !Number.isNaN(numericCourseId) && numericCourseId > 0) {
-        try {
-          const res = await tutorLmsApi.getCourseStudents({ courseId: numericCourseId });
-          if (res.rst_code === '0000' && res.rst_data) {
-            const mapped = res.rst_data.map((row: any) => ({
-              id: String(row.course_user_id || row.user_id),
-              name: row.name || '-',
-              studentId: row.student_id || row.login_id || '-',
-              score: Number(row.total_score ?? row.progress ?? 0),
-              grade: savedGrades[String(row.course_user_id || row.user_id)] || '',
-            }));
-            setStudents(mapped);
-            return;
-          }
-        } catch {}
+    const loadStudents = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const [studentRes, gradeRes] = await Promise.all([
+          tutorLmsApi.getHaksaCourseStudents({
+            courseCode: haksaKey.courseCode,
+            openYear: haksaKey.openYear,
+            openTerm: haksaKey.openTerm,
+            bunbanCode: haksaKey.bunbanCode,
+            groupCode: haksaKey.groupCode,
+          }),
+          tutorLmsApi.getHaksaGrades(haksaKey),
+        ]);
+
+        if (studentRes.rst_code !== '0000') throw new Error(studentRes.rst_message);
+        if (gradeRes.rst_code !== '0000') throw new Error(gradeRes.rst_message);
+
+        const gradeMap = new Map<string, { grade?: string; score?: number }>();
+        (gradeRes.rst_data ?? []).forEach((row: any) => {
+          if (!row.student_id) return;
+          gradeMap.set(String(row.student_id), {
+            grade: row.grade || '',
+            score: Number(row.score ?? 0),
+          });
+        });
+
+        const mapped = (studentRes.rst_data ?? []).map((row: any) => {
+          const studentId = String(row.student_id || '');
+          const saved = gradeMap.get(studentId);
+          return {
+            id: studentId,
+            name: row.name || '-',
+            studentId: studentId || '-',
+            score: saved?.score ?? 0,
+            grade: saved?.grade ?? '',
+          };
+        });
+
+        // 왜: 이전 로컬스토리지 성적이 있다면 초기 한 번 DB로 마이그레이션합니다.
+        if (courseId && mapped.length > 0 && gradeMap.size === 0) {
+          try {
+            const saved = localStorage.getItem(`haksa_grades_${courseId}`);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              const migrated = mapped.map((row: any) => {
+                const found = parsed.find((s: any) => String(s.id) === row.id);
+                return { ...row, grade: found?.grade || row.grade, score: Number(found?.score ?? row.score ?? 0) };
+              });
+              await tutorLmsApi.updateHaksaGrades({
+                ...haksaKey,
+                gradesJson: JSON.stringify(
+                  migrated.map((s: any) => ({
+                    student_id: s.id,
+                    grade: s.grade,
+                    score: s.score ?? 0,
+                  }))
+                ),
+              });
+              if (!cancelled) setStudents(migrated);
+              return;
+            }
+          } catch {}
+        }
+
+        if (!cancelled) setStudents(mapped);
+      } catch (e) {
+        if (!cancelled) {
+          setStudents([]);
+          setErrorMessage(e instanceof Error ? e.message : '성적을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      
-      // API 호출 실패 또는 학사 과목인 경우 빈 배열
-      setStudents([]);
     };
 
-    loadStudents();
-  }, [courseId]);
+    void loadStudents();
+  }, [haksaKey, courseId]);
 
   // 저장
+  const persistGrades = async (updatedStudents: any[]) => {
+    if (!haksaKey) return false;
+    try {
+      const payload = updatedStudents.map((s) => ({
+        student_id: s.id,
+        grade: s.grade,
+        score: Number(s.score ?? 0),
+      }));
+      const res = await tutorLmsApi.updateHaksaGrades({
+        ...haksaKey,
+        gradesJson: JSON.stringify(payload),
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      return true;
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : '성적 저장 중 오류가 발생했습니다.');
+      return false;
+    }
+  };
+
   const saveGrades = (updatedStudents: any[]) => {
     setStudents(updatedStudents);
-    if (courseId) {
-      try {
-        localStorage.setItem(`haksa_grades_${courseId}`, JSON.stringify(updatedStudents));
-      } catch {}
-    }
+    void persistGrades(updatedStudents);
   };
 
   // 개별 성적 변경
@@ -3827,13 +4070,21 @@ function HaksaGradingContent({
     saveGrades(updated);
   };
 
-  // 점수 기반 자동 성적 부여
-  const handleAutoGrade = () => {
-    const updated = students.map(s => ({
-      ...s,
-      grade: calculateGrade(s.score),
-    }));
-    saveGrades(updated);
+  // 성적 재계산(점수 기반)
+  const handleRecalc = () => {
+    void (async () => {
+      const ok = confirm('성적을 재계산하시겠습니까?\n\n(현재 점수를 기준으로 A/B/C/D/F가 다시 판정됩니다.)');
+      if (!ok) return;
+      setRecalcLoading(true);
+      const updated = students.map(s => ({
+        ...s,
+        grade: calculateGrade(s.score),
+      }));
+      setStudents(updated);
+      const saved = await persistGrades(updated);
+      if (saved) alert('재계산이 완료되었습니다.');
+      setRecalcLoading(false);
+    })();
   };
 
   // 선택된 학생 일괄 성적 적용
@@ -3872,6 +4123,12 @@ function HaksaGradingContent({
 
   return (
     <div className="space-y-6">
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
+
       {/* 성적 기준 안내 */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h4 className="font-medium text-blue-900 mb-2">학사 과목 성적 기준</h4>
@@ -3887,10 +4144,11 @@ function HaksaGradingContent({
       {/* 액션 버튼 */}
       <div className="flex items-center gap-3 flex-wrap">
         <button
-          onClick={handleAutoGrade}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={handleRecalc}
+          disabled={recalcLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          점수 기반 자동 성적 부여
+          {recalcLoading ? '재계산 중...' : '성적 재계산'}
         </button>
 
         {selectedIds.length > 0 && (
@@ -3937,7 +4195,15 @@ function HaksaGradingContent({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {students.map((student) => (
+            {loading && (
+              <tr>
+                <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                  불러오는 중...
+                </td>
+              </tr>
+            )}
+
+            {!loading && students.map((student) => (
               <tr key={student.id} className="hover:bg-gray-50">
                 <td className="px-4 py-4 text-center">
                   <input
@@ -3974,7 +4240,7 @@ function HaksaGradingContent({
               </tr>
             ))}
 
-            {students.length === 0 && (
+            {!loading && students.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
                   등록된 학생이 없습니다.

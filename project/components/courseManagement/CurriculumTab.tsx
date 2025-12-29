@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CurriculumEditor } from '../CurriculumEditor';
 import { Info, ChevronDown, ChevronRight, Plus, Video, FileText, BookOpen, ClipboardList, Trash2, Edit, GripVertical } from 'lucide-react';
 import { WeeklyContentModal, type WeekContentItem, type ContentType } from './WeeklyContentModal';
 import { EditContentModal } from './EditContentModal';
+import { tutorLmsApi } from '../../api/tutorLmsApi';
+import { buildHaksaCourseKey } from '../../utils/haksa';
 
 interface CourseProps {
   id: string;
@@ -34,7 +36,7 @@ interface WeekData {
   sessions: HaksaSession[];
 }
 
-// 로컬스토리지 키 생성
+// 로컬스토리지 키 (마이그레이션용)
 const getStorageKey = (courseId: string) => `haksa_curriculum_v2_${courseId}`;
 
 // 마이그레이션: 기존 v1 데이터를 v2로 변환
@@ -78,8 +80,44 @@ const migrateV1ToV2 = (courseId: string): WeekData[] | null => {
   }
 };
 
+const createDefaultWeeks = (weekCount: number) =>
+  Array.from({ length: weekCount }, (_, i) => ({
+    weekNumber: i + 1,
+    title: `${i + 1}주차`,
+    isExpanded: i === 0,
+    sessions: [],
+  }));
+
+const normalizeWeeks = (source: WeekData[], weekCount: number) =>
+  Array.from({ length: weekCount }, (_, i) => {
+    const existing = source.find((w) => w.weekNumber === i + 1);
+    return existing || {
+      weekNumber: i + 1,
+      title: `${i + 1}주차`,
+      isExpanded: i === 0,
+      sessions: [],
+    };
+  });
+
 export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
   
   // 주차 수 결정
   const weekCount = (() => {
@@ -91,64 +129,116 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   })();
 
   // 주차별 데이터 초기화 (차시 포함)
-  const [weeks, setWeeks] = useState<WeekData[]>(() => {
-    if (!course?.id) {
-      return Array.from({ length: weekCount }, (_, i) => ({
-        weekNumber: i + 1,
-        title: `${i + 1}주차`,
-        isExpanded: i === 0,
-        sessions: [],
-      }));
-    }
+  const [weeks, setWeeks] = useState<WeekData[]>(() => createDefaultWeeks(weekCount));
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const isMountedRef = useRef(true);
+  const latestWeeksRef = useRef<WeekData[]>([]);
+  const latestHaksaKeyRef = useRef(haksaKey);
 
-    // 로컬스토리지에서 데이터 로드
-    try {
-      const saved = localStorage.getItem(getStorageKey(course.id));
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // weekCount에 맞게 주차 배열 조정
-        return Array.from({ length: weekCount }, (_, i) => {
-          const existing = parsed.find((w: WeekData) => w.weekNumber === i + 1);
-          return existing || {
-            weekNumber: i + 1,
-            title: `${i + 1}주차`,
-            isExpanded: i === 0,
-            sessions: [],
-          };
-        });
-      }
-      
-      // v1 데이터 마이그레이션 시도
-      const migrated = migrateV1ToV2(course.id);
-      if (migrated) {
-        return Array.from({ length: weekCount }, (_, i) => {
-          const existing = migrated.find((w: any) => w.weekNumber === i + 1);
-          return {
-            weekNumber: i + 1,
-            title: `${i + 1}주차`,
-            isExpanded: i === 0,
-            sessions: existing?.sessions || [],
-          };
-        });
-      }
-    } catch {
-      // 파싱 실패 시 빈 상태로 시작
-    }
-
-    return Array.from({ length: weekCount }, (_, i) => ({
-      weekNumber: i + 1,
-      title: `${i + 1}주차`,
-      isExpanded: i === 0,
-      sessions: [],
-    }));
-  });
-
-  // 로컬스토리지에 저장
+  const normalizedWeeks = useMemo(() => normalizeWeeks(weeks, weekCount), [weekCount, weeks]);
   useEffect(() => {
-    if (course?.id) {
-      localStorage.setItem(getStorageKey(course.id), JSON.stringify(weeks));
+    latestWeeksRef.current = normalizedWeeks;
+  }, [normalizedWeeks]);
+  useEffect(() => {
+    latestHaksaKeyRef.current = haksaKey;
+  }, [haksaKey]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isHaksaCourse && !haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 저장/조회가 불가능합니다.');
     }
-  }, [weeks, course?.id]);
+  }, [isHaksaCourse, haksaKey]);
+
+  useEffect(() => {
+    if (!isHaksaCourse || !haksaKey) return;
+    let cancelled = false;
+
+    const fetchCurriculum = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        // 왜: Malgn DataSet은 배열 형태로 내려오는 경우가 있어 첫 번째 행을 꺼내옵니다.
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.curriculum_json || '';
+        if (raw) {
+          const parsed = JSON.parse(raw) as WeekData[];
+          if (!cancelled) setWeeks(normalizeWeeks(parsed, weekCount));
+        } else if (course?.id) {
+          // 왜: 기존 로컬스토리지 데이터를 DB로 이전합니다(이전 데이터 손실 방지).
+          let migrated: WeekData[] | null = null;
+          try {
+            const saved = localStorage.getItem(getStorageKey(course.id));
+            if (saved) migrated = JSON.parse(saved) as WeekData[];
+          } catch {}
+          if (!migrated) migrated = migrateV1ToV2(course.id);
+
+          if (migrated && !cancelled) {
+            const normalized = normalizeWeeks(migrated, weekCount);
+            setWeeks(normalized);
+            await tutorLmsApi.updateHaksaCurriculum({
+              ...haksaKey,
+              curriculumJson: JSON.stringify(normalized),
+            });
+          }
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setErrorMessage(e instanceof Error ? e.message : '강의목차를 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setIsLoaded(true);
+        }
+      }
+    };
+
+    void fetchCurriculum();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, haksaKey, course?.id, weekCount]);
+
+  useEffect(() => {
+    if (!isHaksaCourse || !haksaKey || !isLoaded) return;
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await tutorLmsApi.updateHaksaCurriculum({
+            ...haksaKey,
+            curriculumJson: JSON.stringify(normalizedWeeks),
+          });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        } catch (e) {
+          if (isMountedRef.current) {
+            setErrorMessage(e instanceof Error ? e.message : '강의목차 저장 중 오류가 발생했습니다.');
+          }
+        }
+      })();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [isHaksaCourse, haksaKey, isLoaded, normalizedWeeks]);
+  useEffect(() => {
+    return () => {
+      if (!isHaksaCourse || !latestHaksaKeyRef.current || !isLoaded) return;
+      // 왜: 탭 이동/언마운트 시 디바운스 저장이 취소될 수 있어 마지막 상태를 즉시 저장합니다.
+      void tutorLmsApi.updateHaksaCurriculum({
+        ...latestHaksaKeyRef.current,
+        curriculumJson: JSON.stringify(latestWeeksRef.current),
+      });
+    };
+  }, [isHaksaCourse, isLoaded]);
 
   // 모달 상태
   const [modalOpen, setModalOpen] = useState(false);
@@ -185,6 +275,7 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
       })
     );
   };
+
 
   // 차시 추가
   const addSession = (weekNumber: number) => {
@@ -338,8 +429,8 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   };
 
   // 통계 계산
-  const allContents = weeks.flatMap(w => w.sessions.flatMap(s => s.contents));
-  const totalSessions = weeks.reduce((sum, w) => sum + w.sessions.length, 0);
+  const allContents = normalizedWeeks.flatMap(w => w.sessions.flatMap(s => s.contents));
+  const totalSessions = normalizedWeeks.reduce((sum, w) => sum + w.sessions.length, 0);
   const stats = {
     sessions: totalSessions,
     total: allContents.length,
@@ -352,6 +443,18 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
   if (isHaksaCourse) {
     return (
       <div className="space-y-4">
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {errorMessage}
+          </div>
+        )}
+
+        {loading && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-gray-600">
+            불러오는 중...
+          </div>
+        )}
+
         {/* 주차 정보 헤더 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -397,7 +500,7 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
 
         {/* 주차별 아코디언 */}
         <div className="space-y-2">
-          {weeks.map(week => (
+          {normalizedWeeks.map(week => (
             <div
               key={week.weekNumber}
               className="border border-gray-200 rounded-lg overflow-hidden"

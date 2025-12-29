@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Edit, Save } from 'lucide-react';
-import { tutorLmsApi, type TutorCertificateTemplateRow, type TutorCourseInfoDetail } from '../api/tutorLmsApi';
+import { tutorLmsApi, type HaksaEvalSettings, type TutorCertificateTemplateRow, type TutorCourseInfoDetail } from '../api/tutorLmsApi';
 import { CourseSelectionModal } from './CourseSelectionModal';
+import { buildHaksaCourseKey } from '../utils/haksa';
 
 type SubTab = 'basic' | 'evaluation' | 'completion' | 'certificate';
 
@@ -1194,6 +1195,23 @@ function PassCertificateTab({
 
 // 학사 과목 평가/수료 기준 탭
 function HaksaEvaluationTab({ course }: { course: any }) {
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
   const courseId = course?.id;
   
   // 배점 비율
@@ -1214,36 +1232,95 @@ function HaksaEvaluationTab({ course }: { course: any }) {
   });
 
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 로컬스토리지에서 불러오기
+  // DB에서 불러오기 (없으면 로컬스토리지 마이그레이션)
   useEffect(() => {
-    if (courseId) {
+    if (!haksaKey) return;
+    let cancelled = false;
+
+    const fetchEval = async () => {
+      setLoading(true);
+      setErrorMessage(null);
       try {
-        const savedWeights = localStorage.getItem(`haksa_eval_weights_${courseId}`);
-        if (savedWeights) {
-          setWeights(JSON.parse(savedWeights));
+        const res = await tutorLmsApi.getHaksaCourseEval(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        // 왜: DataSet은 배열 형태로 내려올 수 있으므로 첫 번째 행을 사용합니다.
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.eval_json || '';
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw) as HaksaEvalSettings;
+            if (!cancelled) {
+              setWeights(parsed.weights);
+              setCutoffs(parsed.cutoffs);
+            }
+            return;
+          } catch {}
         }
-        const savedCutoffs = localStorage.getItem(`haksa_eval_cutoffs_${courseId}`);
-        if (savedCutoffs) {
-          setCutoffs(JSON.parse(savedCutoffs));
+
+        // 왜: 기존 로컬스토리지 데이터를 DB로 이전해 둡니다(이전 데이터 손실 방지).
+        if (courseId) {
+          try {
+            const savedWeights = localStorage.getItem(`haksa_eval_weights_${courseId}`);
+            const savedCutoffs = localStorage.getItem(`haksa_eval_cutoffs_${courseId}`);
+            if (savedWeights && savedCutoffs) {
+              const next = {
+                weights: JSON.parse(savedWeights),
+                cutoffs: JSON.parse(savedCutoffs),
+              } as HaksaEvalSettings;
+              if (!cancelled) {
+                setWeights(next.weights);
+                setCutoffs(next.cutoffs);
+              }
+              await tutorLmsApi.updateHaksaCourseEval({
+                ...haksaKey,
+                evalJson: JSON.stringify(next),
+              });
+            }
+          } catch {}
         }
-      } catch {}
-    }
-  }, [courseId]);
+      } catch (e) {
+        if (!cancelled) {
+          setErrorMessage(e instanceof Error ? e.message : '평가 기준을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void fetchEval();
+    return () => {
+      cancelled = true;
+    };
+  }, [haksaKey, courseId]);
 
   const totalWeight = weights.attendance + weights.exam + weights.assignment + weights.etc;
 
   const handleSave = () => {
-    if (!courseId) return;
-    setSaving(true);
-    try {
-      localStorage.setItem(`haksa_eval_weights_${courseId}`, JSON.stringify(weights));
-      localStorage.setItem(`haksa_eval_cutoffs_${courseId}`, JSON.stringify(cutoffs));
-      alert('저장되었습니다.');
-    } catch {
-      alert('저장 중 오류가 발생했습니다.');
+    if (!haksaKey) {
+      setErrorMessage('학사 과목 키가 올바르지 않습니다.');
+      return;
     }
-    setSaving(false);
+    setSaving(true);
+    setErrorMessage(null);
+    void (async () => {
+      try {
+        const payload: HaksaEvalSettings = { weights, cutoffs };
+        const res = await tutorLmsApi.updateHaksaCourseEval({
+          ...haksaKey,
+          evalJson: JSON.stringify(payload),
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        alert('저장되었습니다.');
+      } catch (e) {
+        setErrorMessage(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
+      } finally {
+        setSaving(false);
+      }
+    })();
   };
 
   const numberInputClass =
@@ -1251,6 +1328,18 @@ function HaksaEvaluationTab({ course }: { course: any }) {
 
   return (
     <div className="space-y-6">
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          {errorMessage}
+        </div>
+      )}
+
+      {loading && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-gray-600">
+          불러오는 중...
+        </div>
+      )}
+
       {/* 학사 과목 안내 */}
       <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm">
         <strong>학사 연동 과목</strong>: 아래 설정은 이 과목의 성적 판정 기준으로 사용됩니다.

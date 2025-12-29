@@ -386,11 +386,16 @@ export function CreateCourseForm() {
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-      // TODO: 선택된 과목들을 과정에 연결하는 API 호출 (추후 구현)
-      // const programId = res.rst_data;
-      // for (const subject of selectedSubjects) {
-      //   await tutorLmsApi.linkCourseToProgram({ programId, courseId: subject.id });
-      // }
+      // 왜: 과정 생성 직후 선택된 과목을 소속 과정으로 연결합니다.
+      const programId = Number(res.rst_data ?? 0);
+      if (programId > 0 && selectedSubjects.length > 0) {
+        for (const subject of selectedSubjects) {
+          const courseId = Number(subject.id);
+          if (!courseId) continue;
+          const linkRes = await tutorLmsApi.setCourseProgram({ courseId, programId });
+          if (linkRes.rst_code !== '0000') throw new Error(linkRes.rst_message);
+        }
+      }
 
       alert('과정이 개설되었습니다.');
       resetForm();
