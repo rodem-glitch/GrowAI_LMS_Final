@@ -53,12 +53,8 @@ f.addElement("assign_homework", 0, "hname:'과제 배점', option:'number'");
 f.addElement("assign_forum", 0, "hname:'토론 배점', option:'number'");
 f.addElement("assign_etc", 0, "hname:'기타 배점', option:'number'");
 
-//수료 기준
+//수료 기준 (총점, 진도만 사용)
 f.addElement("limit_progress", 60, "hname:'진도 기준', option:'number'");
-f.addElement("limit_exam", 0, "hname:'시험 기준', option:'number'");
-f.addElement("limit_homework", 0, "hname:'과제 기준', option:'number'");
-f.addElement("limit_forum", 0, "hname:'토론 기준', option:'number'");
-f.addElement("limit_etc", 0, "hname:'기타 기준', option:'number'");
 f.addElement("limit_total_score", 60, "hname:'총점 기준', option:'number'");
 
 //수료(완료) 기준 - 선택적 (컬럼이 없을 수 있음)
@@ -76,10 +72,6 @@ course.item("assign_forum", f.getInt("assign_forum"));
 course.item("assign_etc", f.getInt("assign_etc"));
 
 course.item("limit_progress", f.getInt("limit_progress"));
-course.item("limit_exam", f.getInt("limit_exam"));
-course.item("limit_homework", f.getInt("limit_homework"));
-course.item("limit_forum", f.getInt("limit_forum"));
-course.item("limit_etc", f.getInt("limit_etc"));
 course.item("limit_total_score", f.getInt("limit_total_score"));
 
 course.item("assign_survey_yn", f.get("assign_survey_yn", "N"));

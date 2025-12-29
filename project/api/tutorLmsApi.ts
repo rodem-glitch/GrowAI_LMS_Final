@@ -193,10 +193,6 @@ export type TutorCourseInfoDetail = {
 
   limit_total_score?: number;
   limit_progress?: number;
-  limit_exam?: number;
-  limit_homework?: number;
-  limit_forum?: number;
-  limit_etc?: number;
   complete_limit_progress?: number;
   complete_limit_total_score?: number;
 
@@ -813,10 +809,6 @@ export const tutorLmsApi = {
     passYn: 'Y' | 'N';
     limitTotalScore: number;
     limitProgress: number;
-    limitExam: number;
-    limitHomework: number;
-    limitForum: number;
-    limitEtc: number;
     completeLimitProgress: number;
     completeLimitTotalScore: number;
   }) {
@@ -835,10 +827,6 @@ export const tutorLmsApi = {
 
     body.set('limit_total_score', String(payload.limitTotalScore));
     body.set('limit_progress', String(payload.limitProgress));
-    body.set('limit_exam', String(payload.limitExam));
-    body.set('limit_homework', String(payload.limitHomework));
-    body.set('limit_forum', String(payload.limitForum));
-    body.set('limit_etc', String(payload.limitEtc));
 
     body.set('complete_limit_progress', String(payload.completeLimitProgress));
     body.set('complete_limit_total_score', String(payload.completeLimitTotalScore));

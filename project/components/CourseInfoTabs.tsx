@@ -653,10 +653,7 @@ function EvaluationTab({
 
     limitTotalScore: 60,
     limitProgress: 60,
-    limitExam: 0,
-    limitHomework: 0,
-    limitForum: 0,
-    limitEtc: 0,
+
 
     completeLimitProgress: 60,
     completeLimitTotalScore: 60,
@@ -678,10 +675,6 @@ function EvaluationTab({
 
       limitTotalScore: toInt(detail.limit_total_score, 60),
       limitProgress: toInt(detail.limit_progress, 60),
-      limitExam: toInt(detail.limit_exam, 0),
-      limitHomework: toInt(detail.limit_homework, 0),
-      limitForum: toInt(detail.limit_forum, 0),
-      limitEtc: toInt(detail.limit_etc, 0),
 
       completeLimitProgress: toInt(detail.complete_limit_progress, 60),
       completeLimitTotalScore: toInt(detail.complete_limit_total_score, 60),
@@ -722,10 +715,6 @@ function EvaluationTab({
 
         limitTotalScore: clamp0to100(form.limitTotalScore),
         limitProgress: clamp0to100(form.limitProgress),
-        limitExam: clamp0to100(form.limitExam),
-        limitHomework: clamp0to100(form.limitHomework),
-        limitForum: clamp0to100(form.limitForum),
-        limitEtc: clamp0to100(form.limitEtc),
 
         completeLimitProgress: clamp0to100(form.completeLimitProgress),
         completeLimitTotalScore: clamp0to100(form.completeLimitTotalScore),
@@ -840,49 +829,6 @@ function EvaluationTab({
               type="number"
               value={form.limitProgress}
               onChange={(e) => setForm((prev) => ({ ...prev, limitProgress: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">시험 기준</label>
-            <input
-              type="number"
-              value={form.limitExam}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitExam: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">과제 기준</label>
-            <input
-              type="number"
-              value={form.limitHomework}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitHomework: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">토론 기준</label>
-            <input
-              type="number"
-              value={form.limitForum}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitForum: toInt(e.target.value, 0) }))}
-              className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
-              disabled={!passEnabled}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-2">기타 기준</label>
-            <input
-              type="number"
-              value={form.limitEtc}
-              onChange={(e) => setForm((prev) => ({ ...prev, limitEtc: toInt(e.target.value, 0) }))}
               className={`${numberInputClass}${!passEnabled ? ' bg-gray-100 text-gray-500' : ''}`}
               disabled={!passEnabled}
             />
