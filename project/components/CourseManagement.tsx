@@ -2670,7 +2670,7 @@ function GradesTab({ courseId }: { courseId: number }) {
 
       {/* 기준 안내 */}
       <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className={`grid gap-4 text-sm ${passEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
             <div className="text-gray-600">
@@ -2678,14 +2678,14 @@ function GradesTab({ courseId }: { courseId: number }) {
               {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
             </div>
           </div>
-          <div>
-            <div className="text-gray-700 mb-1">합격 기준</div>
-            <div className="text-gray-600">
-              {passEnabled
-                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
-                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
+          {passEnabled && (
+            <div>
+              <div className="text-gray-700 mb-1">합격 기준</div>
+              <div className="text-gray-600">
+                진도율 {passCriteria.progressRate}% 이상{passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2960,7 +2960,7 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
   return (
     <div>
       <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className={`grid gap-4 text-sm ${passEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
             <div className="text-gray-600">
@@ -2968,14 +2968,14 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
               {completionCriteria.totalScore > 0 ? `, 총점 ${completionCriteria.totalScore}점 이상` : ''}
             </div>
           </div>
-          <div>
-            <div className="text-gray-700 mb-1">합격 기준</div>
-            <div className="text-gray-600">
-              {passEnabled
-                ? `진도율 ${passCriteria.progressRate}% 이상${passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}`
-                : '미사용(과목 설정에서 pass_yn=Y일 때 적용)'}
+          {passEnabled && (
+            <div>
+              <div className="text-gray-700 mb-1">합격 기준</div>
+              <div className="text-gray-600">
+                진도율 {passCriteria.progressRate}% 이상{passCriteria.totalScore > 0 ? `, 총점 ${passCriteria.totalScore}점 이상` : ''}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -2988,11 +2988,11 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
           새로고침
         </button>
         <button
-          onClick={() => handleAction('complete_y', '수료/합격 처리')}
+          onClick={() => handleAction('complete_y', passEnabled ? '수료/합격 처리' : '수료 처리')}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300"
           disabled={actionLoading}
         >
-          수료/합격 처리
+          {passEnabled ? '수료/합격 처리' : '수료 처리'}
         </button>
         <button
           onClick={() => handleAction('complete_n', '판정 초기화')}
@@ -3026,14 +3026,16 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
           <Download className="w-4 h-4" />
           <span>수료증 일괄출력 ({selectedCourseUserIds.length})</span>
         </button>
-        <button
-          onClick={() => handlePrintBulk('P')}
-          disabled={selectedCourseUserIds.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
-          <Download className="w-4 h-4" />
-          <span>합격증 일괄출력 ({passEligibleCount})</span>
-        </button>
+        {passEnabled && (
+          <button
+            onClick={() => handlePrintBulk('P')}
+            disabled={selectedCourseUserIds.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            <span>합격증 일괄출력 ({passEligibleCount})</span>
+          </button>
+        )}
       </div>
 
       {errorMessage && (
@@ -3103,13 +3105,15 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
                       >
                         수료증
                       </button>
-                      <button
-                        onClick={() => openCertificate(data.courseUserId, 'P')}
-                        disabled={!canPrintPass(data)}
-                        className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      >
-                        합격증
-                      </button>
+                      {passEnabled && (
+                        <button
+                          onClick={() => openCertificate(data.courseUserId, 'P')}
+                          disabled={!canPrintPass(data)}
+                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                          합격증
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
