@@ -29,6 +29,30 @@ function clamp0to100(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
+function getFieldValue(row: unknown, key: string) {
+  // 왜: 일부 API는 DataSet 컬럼명이 대문자(ASSIGN_PROGRESS)로 내려와서
+  //     프론트에서 `assign_progress` 같은 소문자 키로 읽으면 undefined가 됩니다.
+  //     그래서 "소문자 키/대문자 키" 둘 다 지원해서 실제 DB 값을 화면에 반영합니다.
+  const normalized = Array.isArray(row) ? row[0] : row;
+  if (!normalized || typeof normalized !== 'object') return undefined;
+  const obj = normalized as Record<string, unknown>;
+  return obj[key] ?? obj[key.toUpperCase()];
+}
+
+function getStr(row: unknown, key: string, fallback = '') {
+  const v = getFieldValue(row, key);
+  if (v === undefined || v === null) return fallback;
+  return String(v);
+}
+
+function getInt(row: unknown, key: string, fallback = 0) {
+  return toInt(getFieldValue(row, key), fallback);
+}
+
+function getYn(row: unknown, key: string, fallback: 'Y' | 'N' = 'N') {
+  return toYn(getFieldValue(row, key), fallback);
+}
+
 // 과목정보 메인 탭
 export function CourseInfoTab({
   course,
@@ -46,7 +70,7 @@ export function CourseInfoTab({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const passYn = toYn(detail?.pass_yn, 'N') === 'Y';
+  const passYn = getYn(detail, 'pass_yn', 'N') === 'Y';
 
   const fetchCourseInfo = async () => {
     // 왜: 학사 데이터는 외부 시스템(e-poly) 연동이라 상세 정보 API가 없으므로, 목록에서 받은 정보만 표시합니다.
@@ -78,9 +102,9 @@ export function CourseInfoTab({
   };
 
   useEffect(() => {
+    // 왜: 관리자에서 평가/수료 기준을 바꿔도 탭 이동 시 최신 값을 다시 불러오도록 합니다.
     void fetchCourseInfo();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
+  }, [courseId, subTab]);
 
   useEffect(() => {
     // 왜: 합격증 탭은 pass_yn=Y일 때만 의미가 있습니다.
@@ -170,17 +194,17 @@ function BasicInfoTab({
   });
 
   useEffect(() => {
-    setContent1(detail?.content1 ?? '');
-    setContent2(detail?.content2 ?? '');
-  }, [detail?.content1, detail?.content2]);
+    setContent1(getStr(detail, 'content1', ''));
+    setContent2(getStr(detail, 'content2', ''));
+  }, [detail]);
 
   // 편집 모드 진입 시 폼 초기화
   const startEditing = () => {
     setEditForm({
-      courseName: course?.subjectName ?? detail?.course_nm ?? '',
+      courseName: course?.subjectName ?? getStr(detail, 'course_nm', ''),
       courseType: course?.courseType ?? '',
       programId: toInt(course?.programId ?? 0, 0),
-      programName: course?.programName ?? detail?.program_nm ?? '-',
+      programName: course?.programName ?? getStr(detail, 'program_nm', '-'),
     });
     setIsEditing(true);
   };
@@ -667,21 +691,21 @@ function EvaluationTab({
     // 왜: DB 값을 그대로 가져와서, 사용자가 “현재 설정”을 보고 수정할 수 있어야 합니다.
     if (!detail) return;
     setForm({
-      assignProgress: toInt(detail.assign_progress, 100),
-      assignExam: toInt(detail.assign_exam, 0),
-      assignHomework: toInt(detail.assign_homework, 0),
-      assignForum: toInt(detail.assign_forum, 0),
-      assignEtc: toInt(detail.assign_etc, 0),
+      assignProgress: getInt(detail, 'assign_progress', 100),
+      assignExam: getInt(detail, 'assign_exam', 0),
+      assignHomework: getInt(detail, 'assign_homework', 0),
+      assignForum: getInt(detail, 'assign_forum', 0),
+      assignEtc: getInt(detail, 'assign_etc', 0),
 
-      limitTotalScore: toInt(detail.limit_total_score, 60),
-      limitProgress: toInt(detail.limit_progress, 60),
+      limitTotalScore: getInt(detail, 'limit_total_score', 60),
+      limitProgress: getInt(detail, 'limit_progress', 60),
 
-      completeLimitProgress: toInt(detail.complete_limit_progress, 60),
-      completeLimitTotalScore: toInt(detail.complete_limit_total_score, 60),
+      completeLimitProgress: getInt(detail, 'complete_limit_progress', 60),
+      completeLimitTotalScore: getInt(detail, 'complete_limit_total_score', 60),
 
-      assignSurveyYn: toYn(detail.assign_survey_yn, 'N'),
-      pushSurveyYn: toYn(detail.push_survey_yn, 'N'),
-      passYn: toYn(detail.pass_yn, 'N'),
+      assignSurveyYn: getYn(detail, 'assign_survey_yn', 'N'),
+      pushSurveyYn: getYn(detail, 'push_survey_yn', 'N'),
+      passYn: getYn(detail, 'pass_yn', 'N'),
     });
   }, [detail]);
 
@@ -983,13 +1007,13 @@ function CompletionCertificateTab({
   useEffect(() => {
     // 왜: DB에서 내려온 현재 설정을 그대로 보여줘야 “어디가 문제인지/무엇이 바뀌는지” 사용자가 알 수 있습니다.
     if (!detail) return;
-    setCertCompleteYn(toYn(detail.cert_complete_yn, 'Y'));
-    setCertTemplateId(toInt(detail.cert_template_id, 0));
-    setCompleteNoYn(toYn(detail.complete_no_yn, 'N'));
-    setCompletePrefix(detail.complete_prefix ?? '');
-    setPostfixCnt(toInt(detail.postfix_cnt, 0));
-    setPostfixType(detail.postfix_type === 'C' ? 'C' : 'R');
-    setPostfixOrd(detail.postfix_ord === 'D' ? 'D' : 'A');
+    setCertCompleteYn(getYn(detail, 'cert_complete_yn', 'Y'));
+    setCertTemplateId(getInt(detail, 'cert_template_id', 0));
+    setCompleteNoYn(getYn(detail, 'complete_no_yn', 'N'));
+    setCompletePrefix(getStr(detail, 'complete_prefix', ''));
+    setPostfixCnt(getInt(detail, 'postfix_cnt', 0));
+    setPostfixType(getStr(detail, 'postfix_type', 'R') === 'C' ? 'C' : 'R');
+    setPostfixOrd(getStr(detail, 'postfix_ord', 'A') === 'D' ? 'D' : 'A');
   }, [detail]);
 
   const handleSave = async () => {
@@ -1011,7 +1035,7 @@ function CompletionCertificateTab({
         certCompleteYn,
         certTemplateId,
         // 왜: 수료증 탭에서 저장할 때 합격증 템플릿이 초기화되면 안 되므로, 현재 값을 함께 보냅니다.
-        passCertTemplateId: toInt(detail.pass_cert_template_id, 0),
+        passCertTemplateId: getInt(detail, 'pass_cert_template_id', 0),
         completeNoYn,
         completePrefix,
         postfixCnt: Math.max(0, toInt(postfixCnt, 0)),
@@ -1192,7 +1216,7 @@ function PassCertificateTab({
 
   useEffect(() => {
     if (!detail) return;
-    setPassCertTemplateId(toInt(detail.pass_cert_template_id, 0));
+    setPassCertTemplateId(getInt(detail, 'pass_cert_template_id', 0));
   }, [detail]);
 
   const handleSave = async () => {
@@ -1210,14 +1234,14 @@ function PassCertificateTab({
     try {
       const res = await tutorLmsApi.updateCourseCertificateSettings({
         courseId,
-        certCompleteYn: toYn(detail.cert_complete_yn, 'Y'),
-        certTemplateId: toInt(detail.cert_template_id, 0),
+        certCompleteYn: getYn(detail, 'cert_complete_yn', 'Y'),
+        certTemplateId: getInt(detail, 'cert_template_id', 0),
         passCertTemplateId,
-        completeNoYn: toYn(detail.complete_no_yn, 'N'),
-        completePrefix: detail.complete_prefix ?? '',
-        postfixCnt: toInt(detail.postfix_cnt, 0),
-        postfixType: detail.postfix_type === 'C' ? 'C' : 'R',
-        postfixOrd: detail.postfix_ord === 'D' ? 'D' : 'A',
+        completeNoYn: getYn(detail, 'complete_no_yn', 'N'),
+        completePrefix: getStr(detail, 'complete_prefix', ''),
+        postfixCnt: getInt(detail, 'postfix_cnt', 0),
+        postfixType: getStr(detail, 'postfix_type', 'R') === 'C' ? 'C' : 'R',
+        postfixOrd: getStr(detail, 'postfix_ord', 'A') === 'D' ? 'D' : 'A',
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 

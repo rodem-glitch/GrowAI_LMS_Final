@@ -271,18 +271,61 @@ public class CourseUserDao extends DataObject {
 				+ " SET " + field + "_score = " + Math.min(info.d("assign_progress"), info.d("assign_progress") * (info.d("progress_ratio") / 100)) + " " 
 				+ " WHERE id = " + id);
 		} else {
-			double evaluationScore = Malgn.parseDouble(getOne(
+			// 왜: 과목 평가 기준(assign_exam/homework/forum 등)과 실제 배점(모듈별 assign_score 합계)이 다를 수 있습니다.
+			//     예) 시험 1개 배점 50점에 70점을 주면, 단순 합계는 35점(=50*70%)이지만,
+			//         과목 기준이 "시험 100%"(assign_exam=100)이라면 최종은 70점으로 환산되어야 합니다.
+			//     기존 로직은 합계 점수를 그대로 넣어서 "절반(35점)"처럼 보이는 문제가 발생했습니다.
+			double userScoreSum = Malgn.parseDouble(getOne(
 				"SELECT SUM(a.score) t_score"
 				+ " FROM LM_" + field.toUpperCase() + "_USER a"
 				+ " INNER JOIN " + cm.table + " b ON a." + field + "_id = b.module_id AND b.module = '" + field + "' AND b.course_id = '" + info.s("course_id") + "' AND b.status = 1"
 				+ " WHERE a.course_user_id = " + id + " AND a.status = 1 AND a.confirm_yn = 'Y'"
 			));
-			int scoreValue = info.i("assign_" + field);
+
+			int scoreValue = info.i("assign_" + field); // 과목 기준 배점(0~100)
+			int sumAssignScore = 0;
+			if("exam".equals(field)) {
+				sumAssignScore = cm.getOneInt(
+					"SELECT SUM(a.assign_score)"
+					+ " FROM " + cm.table + " a "
+					+ " INNER JOIN " + new ExamDao().table + " e ON e.id = a.module_id AND e.site_id = " + info.i("site_id") + " AND e.status != -1 "
+					+ " WHERE a.course_id = " + info.i("course_id") + " AND a.module = 'exam' AND a.status = 1"
+				);
+			} else if("homework".equals(field)) {
+				sumAssignScore = cm.getOneInt(
+					"SELECT SUM(a.assign_score)"
+					+ " FROM " + cm.table + " a "
+					+ " INNER JOIN " + new HomeworkDao().table + " h ON h.id = a.module_id AND h.site_id = " + info.i("site_id") + " AND h.status != -1 "
+					+ " WHERE a.course_id = " + info.i("course_id") + " AND a.module = 'homework' AND a.status = 1"
+				);
+			} else if("forum".equals(field)) {
+				sumAssignScore = cm.getOneInt(
+					"SELECT SUM(a.assign_score)"
+					+ " FROM " + cm.table + " a "
+					+ " INNER JOIN " + new ForumDao().table + " fo ON fo.id = a.module_id AND fo.site_id = " + info.i("site_id") + " AND fo.status != -1 "
+					+ " WHERE a.course_id = " + info.i("course_id") + " AND a.module = 'forum' AND a.status = 1"
+				);
+			} else {
+				sumAssignScore = cm.getOneInt(
+					"SELECT SUM(assign_score)"
+					+ " FROM " + cm.table
+					+ " WHERE course_id = " + info.i("course_id") + " AND module = '" + field + "' AND status = 1"
+				);
+			}
+
+			double fieldScore = 0.0;
+			double fieldValue = 0.0;
+			if(0 < scoreValue && 0 < sumAssignScore) {
+				fieldScore = Malgn.round(userScoreSum * scoreValue / sumAssignScore, 2);
+				fieldScore = Math.min(scoreValue, fieldScore);
+				fieldValue = Math.min(100.0, fieldScore * 100 / scoreValue);
+			}
+
 			execute(
-				"UPDATE " + this.table + " SET " 
-				+ field + "_score = " + Math.min(info.d("assign_" + field), evaluationScore) + ","
-				+ field + "_value = " + (scoreValue > 0 ? Math.min(100.0, evaluationScore * 100 / scoreValue) : 0.0) + " "
-				+ " WHERE id = " + id + ""
+				"UPDATE " + this.table + " SET "
+				+ field + "_score = " + fieldScore + ", "
+				+ field + "_value = " + fieldValue + " "
+				+ " WHERE id = " + id
 			);
 		}
 
@@ -320,6 +363,7 @@ public class CourseUserDao extends DataObject {
 				DataSet minfo = this.query(
 					"SELECT a.assign_score, u.marking_score "
 					+ " FROM " + new CourseModuleDao().table + " a "
+					+ " INNER JOIN " + new ExamDao().table + " e ON e.id = a.module_id AND e.site_id = " + cinfo.i("site_id") + " AND e.status != -1 "
 					+ " LEFT JOIN " + new ExamUserDao().table + " u ON "
 						+ " u.exam_id = a.module_id AND u.exam_step = 1 "
 						+ " AND u.course_user_id = " + cuid + " AND u.confirm_yn = 'Y' "
@@ -343,15 +387,19 @@ public class CourseUserDao extends DataObject {
 					sumConvertScore += convertScore;
 				}
 
-				//환산점수(100점)
-				//	sumConvertScore : sumAssignScore = 환산점수 : 100
-				//	환산점수 = sumConvertScore * 100 / sumAssignScore
-				this.item("exam_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-
-				//환산점수(시험과정배점)
-				//	sumConvertScore : sumAssignScore = 환산점수 : 시험과정배점
-				//	환산점수 = sumConvertScore * 시험과정배점 / sumAssignScore
-				this.item("exam_score", Malgn.round(sumConvertScore * cinfo.i("assign_exam") / sumAssignScore, 2));
+				// 왜: 사용자가 이해하기 쉬운 공식으로 정리합니다.
+				// 1) 시험별 점수 = (획득점수 * 시험배점) / 100  -> sumConvertScore(시험배점 합계 기준의 점수)
+				// 2) 100점 환산값 = sumConvertScore * 100 / 시험배점합계  -> exam_value
+				// 3) 성적 반영 점수 = 100점 환산값 * 시험 평가비율(assign_exam) / 100  -> exam_score
+				double examValue = 0.0;
+				double examScore = 0.0;
+				if(0 < sumAssignScore) {
+					examValue = Malgn.round(sumConvertScore * 100 / sumAssignScore, 2);
+					examScore = Malgn.round(examValue * cinfo.i("assign_exam") / 100.0, 2);
+					examScore = Math.min(cinfo.d("assign_exam"), examScore);
+				}
+				this.item("exam_value", examValue);
+				this.item("exam_score", examScore);
 
 			} else if("homework".equals(scoreFields[i])) {
 				int sumAssignScore = 0;
@@ -359,6 +407,7 @@ public class CourseUserDao extends DataObject {
 				DataSet minfo = this.query(
 					"SELECT a.assign_score, u.marking_score "
 					+ " FROM " + new CourseModuleDao().table + " a "
+					+ " INNER JOIN " + new HomeworkDao().table + " h ON h.id = a.module_id AND h.site_id = " + cinfo.i("site_id") + " AND h.status != -1 "
 					+ " LEFT JOIN " + new HomeworkUserDao().table + " u ON "
 						+ " u.homework_id = a.module_id "
 						+ " AND u.course_user_id = " + cuid + " AND u.confirm_yn = 'Y' "
@@ -373,8 +422,16 @@ public class CourseUserDao extends DataObject {
 					sumAssignScore += assignScore;
 					sumConvertScore += convertScore;
 				}
-				this.item("homework_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-				this.item("homework_score", Malgn.round(sumConvertScore * cinfo.i("assign_homework") / sumAssignScore, 2));
+
+				double homeworkValue = 0.0;
+				double homeworkScore = 0.0;
+				if(0 < sumAssignScore) {
+					homeworkValue = Malgn.round(sumConvertScore * 100 / sumAssignScore, 2);
+					homeworkScore = Malgn.round(homeworkValue * cinfo.i("assign_homework") / 100.0, 2);
+					homeworkScore = Math.min(cinfo.d("assign_homework"), homeworkScore);
+				}
+				this.item("homework_value", homeworkValue);
+				this.item("homework_score", homeworkScore);
 
 			} else if("forum".equals(scoreFields[i])) {
 				int sumAssignScore = 0;
@@ -382,6 +439,7 @@ public class CourseUserDao extends DataObject {
 				DataSet minfo = this.query(
 					"SELECT a.assign_score, u.marking_score "
 					+ " FROM " + new CourseModuleDao().table + " a "
+					+ " INNER JOIN " + new ForumDao().table + " fo ON fo.id = a.module_id AND fo.site_id = " + cinfo.i("site_id") + " AND fo.status != -1 "
 					+ " LEFT JOIN " + new ForumUserDao().table + " u ON "
 						+ " u.forum_id = a.module_id "
 						+ " AND u.course_user_id = " + cuid + " AND u.confirm_yn = 'Y' "
@@ -396,11 +454,19 @@ public class CourseUserDao extends DataObject {
 					sumAssignScore += assignScore;
 					sumConvertScore += convertScore;
 				}
-				this.item("forum_value", Malgn.round(sumConvertScore * 100 / sumAssignScore, 2));
-				this.item("forum_score", Malgn.round(sumConvertScore * cinfo.i("assign_forum") / sumAssignScore, 2));
+
+				double forumValue = 0.0;
+				double forumScore = 0.0;
+				if(0 < sumAssignScore) {
+					forumValue = Malgn.round(sumConvertScore * 100 / sumAssignScore, 2);
+					forumScore = Malgn.round(forumValue * cinfo.i("assign_forum") / 100.0, 2);
+					forumScore = Math.min(cinfo.d("assign_forum"), forumScore);
+				}
+				this.item("forum_value", forumValue);
+				this.item("forum_score", forumScore);
 
 			} else if("etc".equals(scoreFields[i])) {
-				this.item("etc_value", Malgn.round(cuinfo.d("etc_score") * 100 / cinfo.i("assign_etc"), 2));
+				this.item("etc_value", 0 < cinfo.i("assign_etc") ? Malgn.round(cuinfo.d("etc_score") * 100 / cinfo.i("assign_etc"), 2) : 0.0);
 			}
 		}
 		
@@ -471,8 +537,14 @@ public class CourseUserDao extends DataObject {
 				+ " AND a.module = 'exam' AND a.status = 1 "
 			);
 			sinfo.next();
-			double score = Math.min(info.d("assign_exam"), sinfo.d("score"));
-			double scoreValue = info.i("assign_exam") > 0 ? score * 100 / info.d("assign_exam") : 0.0;
+
+			// 왜: setCourseUserScore와 동일하게, 모듈 배점 합계(예: 50점)를 과목 배점(예: 100점)으로 환산해야 합니다.
+			double score = 0.0;
+			if(0 < sinfo.i("assign_score") && 0 < info.i("assign_exam")) {
+				score = Malgn.round(sinfo.d("score") * info.d("assign_exam") / sinfo.d("assign_score"), 2);
+				score = Math.min(info.d("assign_exam"), score);
+			}
+			double scoreValue = info.i("assign_exam") > 0 ? Math.min(100.0, score * 100 / info.d("assign_exam")) : 0.0;
 			if(-1 == execute(
 				"UPDATE " + this.table + " SET "
 				+ " exam_score = " + score + " "

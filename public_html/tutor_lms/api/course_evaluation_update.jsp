@@ -64,6 +64,7 @@ f.addElement("complete_limit_total_score", 60, "hname:'수료 총점 기준', op
 //기타 옵션
 f.addElement("assign_survey_yn", "N", "hname:'설문참여 포함'");
 f.addElement("push_survey_yn", "N", "hname:'설문독려'");
+f.addElement("pass_yn", "N", "hname:'합격 상태 사용'");
 
 course.item("assign_progress", f.getInt("assign_progress"));
 course.item("assign_exam", f.getInt("assign_exam"));
@@ -76,6 +77,7 @@ course.item("limit_total_score", f.getInt("limit_total_score"));
 
 course.item("assign_survey_yn", f.get("assign_survey_yn", "N"));
 course.item("push_survey_yn", f.get("push_survey_yn", "N"));
+course.item("pass_yn", f.get("pass_yn", "N"));
 // course.item("mod_date", m.time("yyyyMMddHHmmss")); // LM_COURSE 테이블에 mod_date 컬럼 없음
 
 // 1단계: 기본 필드 업데이트 시도

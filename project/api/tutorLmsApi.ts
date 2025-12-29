@@ -780,7 +780,8 @@ export const tutorLmsApi = {
   // 과목정보(소개/목표/평가/증명서 설정)
   // =========================
   async getCourseInfo(params: { courseId: number }) {
-    const url = `/tutor_lms/api/course_info_get.jsp${buildQuery({ course_id: params.courseId })}`;
+    // 왜: 캐시 무효화를 위해 타임스탬프 추가 - 저장 후 최신 데이터를 보장합니다.
+    const url = `/tutor_lms/api/course_info_get.jsp${buildQuery({ course_id: params.courseId, _t: Date.now() })}`;
     return requestJson<TutorCourseInfoDetail>(url);
   },
 

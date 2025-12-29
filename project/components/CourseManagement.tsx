@@ -2552,6 +2552,16 @@ function GradesTab({ courseId }: { courseId: number }) {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const getCourseValue = (key: string) => {
+    // 왜: 서버에서 내려오는 DataSet 컬럼명이 환경에 따라 대문자(ASSIGN_EXAM)로 내려올 수 있어,
+    //     프론트에서는 소문자/대문자 키를 모두 지원해 화면 표시를 안정화합니다.
+    //     또한 DataSet이 JSON으로 변환될 때 배열 형태로 내려올 수 있어 첫 번째 요소로 접근합니다.
+    if (!courseInfo) return undefined;
+    const obj = Array.isArray(courseInfo) ? courseInfo[0] : courseInfo;
+    if (!obj || typeof obj !== 'object') return undefined;
+    return (obj as any)[key] ?? (obj as any)[key.toUpperCase()];
+  };
+
   // 왜: 성적 화면은 "현재 DB 점수"가 기준이므로, 탭 진입/재계산 후에는 서버에서 다시 불러옵니다.
   const fetchGrades = async () => {
     if (!courseId) return;
@@ -2593,14 +2603,24 @@ function GradesTab({ courseId }: { courseId: number }) {
   };
 
   const completionCriteria = {
-    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
-    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+    progressRate: toNum(getCourseValue('complete_limit_progress'), 0),
+    totalScore: toNum(getCourseValue('complete_limit_total_score'), 0),
   };
-  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passEnabled = String(getCourseValue('pass_yn') || '') === 'Y';
   const passCriteria = {
-    progressRate: toNum(courseInfo?.limit_progress, 0),
-    totalScore: toNum(courseInfo?.limit_total_score, 0),
+    progressRate: toNum(getCourseValue('limit_progress'), 0),
+    totalScore: toNum(getCourseValue('limit_total_score'), 0),
   };
+
+  const scoreWeights = {
+    progress: toNum(getCourseValue('assign_progress'), 0),
+    exam: toNum(getCourseValue('assign_exam'), 0),
+    homework: toNum(getCourseValue('assign_homework'), 0),
+    forum: toNum(getCourseValue('assign_forum'), 0),
+    etc: toNum(getCourseValue('assign_etc'), 0),
+  };
+  const scoreWeightSum =
+    scoreWeights.progress + scoreWeights.exam + scoreWeights.homework + scoreWeights.forum + scoreWeights.etc;
 
   const handleRecalc = () => {
     void (async () => {
@@ -2670,6 +2690,14 @@ function GradesTab({ courseId }: { courseId: number }) {
 
       {/* 기준 안내 */}
       <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="mb-3 text-sm">
+          <div className="text-gray-700 mb-1">배점 비율</div>
+          <div className="text-gray-600">
+            진도 {scoreWeights.progress} / 시험 {scoreWeights.exam} / 과제 {scoreWeights.homework}
+            {scoreWeights.forum > 0 ? ` / 토론 ${scoreWeights.forum}` : ''} / 기타 {scoreWeights.etc}
+            {scoreWeightSum > 0 ? ` (합계 ${scoreWeightSum})` : ''}
+          </div>
+        </div>
         <div className={`grid gap-4 text-sm ${passEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div>
             <div className="text-gray-700 mb-1">수료 기준</div>
@@ -2769,6 +2797,14 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const getCourseValue = (key: string) => {
+    // 왜: DataSet이 JSON으로 변환될 때 배열 형태로 내려올 수 있어 첫 번째 요소로 접근합니다.
+    if (!courseInfo) return undefined;
+    const obj = Array.isArray(courseInfo) ? courseInfo[0] : courseInfo;
+    if (!obj || typeof obj !== 'object') return undefined;
+    return (obj as any)[key] ?? (obj as any)[key.toUpperCase()];
+  };
+
   // 왜: 수료/종료/증명서 출력은 "운영 DB 상태"가 기준이므로, 화면 진입/처리 후에는 반드시 다시 조회합니다.
   const fetchCompletions = async () => {
     if (!courseId) return;
@@ -2811,13 +2847,13 @@ function CompletionTab({ courseId, course }: { courseId: number; course?: any })
   }, [courseId]);
 
   const completionCriteria = {
-    progressRate: toNum(courseInfo?.complete_limit_progress, 0),
-    totalScore: toNum(courseInfo?.complete_limit_total_score, 0),
+    progressRate: toNum(getCourseValue('complete_limit_progress'), 0),
+    totalScore: toNum(getCourseValue('complete_limit_total_score'), 0),
   };
-  const passEnabled = String(courseInfo?.pass_yn || '') === 'Y';
+  const passEnabled = String(getCourseValue('pass_yn') || '') === 'Y';
   const passCriteria = {
-    progressRate: toNum(courseInfo?.limit_progress, 0),
-    totalScore: toNum(courseInfo?.limit_total_score, 0),
+    progressRate: toNum(getCourseValue('limit_progress'), 0),
+    totalScore: toNum(getCourseValue('limit_total_score'), 0),
   };
 
   const canPrintCompletion = (row: any) => row.completeStatus === 'C' || row.completeStatus === 'P';
