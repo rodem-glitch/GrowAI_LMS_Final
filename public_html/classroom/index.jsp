@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %><%@ page import="org.json.*" %><%@ include file="init.jsp" %><%
 
 //객체
 LessonDao lesson = new LessonDao();
@@ -333,6 +333,89 @@ while(qnas.next()) {
 //사이트설정
 DataSet siteconfig = SiteConfig.getArr("classroom_");
 
+//학사 커리큘럼(정규 탭) 데이터
+String haksaCurriculumJson = "";
+String haksaVideoEkMapJson = "{}";
+int haksaWeekCount = 15;
+if(cuinfo.b("is_haksa")) {
+	PolyCourseSettingDao haksaSetting = new PolyCourseSettingDao();
+	String hkCourseCode = cuinfo.s("haksa_course_code");
+	String hkOpenYear = cuinfo.s("haksa_open_year");
+	String hkOpenTerm = cuinfo.s("haksa_open_term");
+	String hkBunbanCode = cuinfo.s("haksa_bunban_code");
+	String hkGroupCode = cuinfo.s("haksa_group_code");
+
+	// 왜: 혹시 init.jsp에서 키가 비어있을 때를 대비해, 요청 파라미터에서 한번 더 보정합니다.
+	if("".equals(hkCourseCode) || "".equals(hkOpenYear) || "".equals(hkOpenTerm) || "".equals(hkBunbanCode) || "".equals(hkGroupCode)) {
+		String haksaCuidParam = m.rs("haksa_cuid");
+		if(!"".equals(haksaCuidParam)) {
+			String[] parts = haksaCuidParam.split("_");
+			if(parts.length >= 4) {
+				if("".equals(hkCourseCode)) hkCourseCode = parts[0];
+				if("".equals(hkOpenYear)) hkOpenYear = parts[1];
+				if("".equals(hkOpenTerm)) hkOpenTerm = parts[2];
+				if("".equals(hkBunbanCode)) hkBunbanCode = parts[3];
+				if("".equals(hkGroupCode) && parts.length >= 5) hkGroupCode = parts[4];
+			}
+		}
+	}
+
+	if(!"".equals(hkCourseCode) && !"".equals(hkOpenYear) && !"".equals(hkOpenTerm) && !"".equals(hkBunbanCode) && !"".equals(hkGroupCode)) {
+		DataSet haksaSettingInfo = haksaSetting.find(
+			"site_id = " + siteId
+			+ " AND course_code = ? AND open_year = ? AND open_term = ? AND bunban_code = ? AND group_code = ?"
+			+ " AND status != -1"
+			, new Object[] { hkCourseCode, hkOpenYear, hkOpenTerm, hkBunbanCode, hkGroupCode }
+		);
+		if(haksaSettingInfo.next()) {
+			haksaCurriculumJson = haksaSettingInfo.s("curriculum_json");
+		}
+	}
+
+	// 왜: 학사 과목의 주차 수는 DB에 있을 수 있어 우선 사용합니다.
+	try {
+		int wk = Integer.parseInt(cuinfo.s("haksa_week"));
+		if(wk > 0) haksaWeekCount = wk;
+	} catch(Exception ignore) {}
+
+	// 왜: 동영상 재생을 위해 lessonId별 ek를 서버에서 미리 만들어 둡니다.
+	try {
+		if(!"".equals(haksaCurriculumJson)) {
+			JSONObject ekMap = new JSONObject();
+			int maxWeek = 0;
+			JSONArray weeks = new JSONArray(haksaCurriculumJson);
+			for(int i = 0; i < weeks.length(); i++) {
+				JSONObject w = weeks.optJSONObject(i);
+				if(w == null) continue;
+				int wnum = w.optInt("weekNumber", 0);
+				if(wnum > maxWeek) maxWeek = wnum;
+				JSONArray sessions = w.optJSONArray("sessions");
+				if(sessions == null) continue;
+				for(int s = 0; s < sessions.length(); s++) {
+					JSONObject sessionObj = sessions.optJSONObject(s);
+					if(sessionObj == null) continue;
+					JSONArray contents = sessionObj.optJSONArray("contents");
+					if(contents == null) continue;
+					for(int c = 0; c < contents.length(); c++) {
+						JSONObject content = contents.optJSONObject(c);
+						if(content == null) continue;
+						if(!"video".equalsIgnoreCase(content.optString("type"))) continue;
+						int lid = content.optInt("lessonId", 0);
+						if(lid <= 0) continue;
+						String lidKey = "" + lid;
+						if(!ekMap.has(lidKey)) {
+							ekMap.put(lidKey, m.encrypt(lid + "|0|" + m.time("yyyyMMdd")));
+						}
+					}
+				}
+			}
+			if(haksaWeekCount <= 0) haksaWeekCount = maxWeek;
+			if(haksaWeekCount <= 0) haksaWeekCount = 15;
+			haksaVideoEkMapJson = ekMap.toString();
+		}
+	} catch(Exception ignore) {}
+}
+
 //출력
 p.setLayout(ch);
 p.setBody("classroom.index");
@@ -362,6 +445,9 @@ p.setVar("push_survey_block"
 );
 
 p.setVar("SITE_CONFIG", siteconfig);
+p.setVar("haksa_curriculum_json", haksaCurriculumJson);
+p.setVar("haksa_video_ek_map_json", haksaVideoEkMapJson);
+p.setVar("haksa_week_count", haksaWeekCount);
 p.display();
 
 %>
