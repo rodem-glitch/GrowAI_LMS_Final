@@ -191,7 +191,10 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'qna':
         return <QnaTab courseId={courseIdNum} />;
       case 'grades':
-        return isHaksaCourse ? <HaksaGradingContent course={course} /> : <GradesTab courseId={courseIdNum} />;
+        // 왜: 학사 성적은 A/B/C/D/F 판정 UI가 요구되므로, 매핑 여부와 무관하게 학사 전용 화면을 사용합니다.
+        return course?.sourceType === 'haksa'
+          ? <HaksaGradingContent course={course} />
+          : <GradesTab courseId={courseIdNum} />;
       case 'completion':
         return <CompletionTab courseId={courseIdNum} course={course} />;
       default:

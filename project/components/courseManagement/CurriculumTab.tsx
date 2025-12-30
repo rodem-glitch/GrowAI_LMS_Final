@@ -101,9 +101,8 @@ const normalizeWeeks = (source: WeekData[], weekCount: number) =>
   });
 
 export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
-  const resolvedCourseId = Number(course?.mappedCourseId ?? courseId);
-  const isHaksaCourse =
-    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(resolvedCourseId) || resolvedCourseId <= 0);
+  // 왜: 학사 과목은 "주차 → 차시" UI를 그대로 유지해야 하므로, UI 분기 기준은 sourceType만 봅니다.
+  const isHaksaCourse = course?.sourceType === 'haksa';
   const haksaKey = useMemo(
     () =>
       buildHaksaCourseKey({
