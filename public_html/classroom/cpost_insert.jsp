@@ -97,6 +97,8 @@ if(m.isPost() && f.validate()) {
 	post.item("point", f.getInt("point"));
 	post.item("hit_cnt", 0);
 	post.item("comm_cnt", 0);
+	// 왜: 일부 DB는 FILE_CNT가 NOT NULL + 기본값 없음이라, 값이 없으면 INSERT가 실패합니다.
+	post.item("file_cnt", 0);
 	post.item("display_yn", "Y");
 	post.item("proc_status", 0);
 	post.item("reg_date", m.time("yyyyMMddHHmmss"));
