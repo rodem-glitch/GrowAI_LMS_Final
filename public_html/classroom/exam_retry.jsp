@@ -29,16 +29,25 @@ if(!info.next()) { m.jsErrClose(_message.get("alert.common.nodata")); return; };
 //포맷팅
 boolean isReady = false; //대기
 boolean isEnd = false; //완료
+boolean isPeriodApply = "1".equals(info.s("apply_type"));
 if("1".equals(info.s("apply_type"))) { //기간
-	isReady = 0 > m.diffDate("I", info.s("start_date"), now);
-	isEnd = 0 < m.diffDate("I", info.s("end_date"), now);
+	// 왜: end_date를 99991231235959 같은 "아주 먼 미래"로 두는 환경에서는,
+	//     diffDate("I") 내부에서 int 오버플로우가 나 종료로 잘못 판정되는 경우가 있습니다.
+	//     그래서 yyyyMMddHHmmss 값을 숫자로 비교해 안전하게 판단합니다.
+	long nowDateTime = m.parseLong(now);
+	long startDateTime = m.parseLong(info.s("start_date"));
+	long endDateTime = m.parseLong(info.s("end_date"));
+	isReady = startDateTime > 0 && startDateTime > nowDateTime;
+	isEnd = endDateTime > 0 && endDateTime < nowDateTime;
 } else if("2".equals(info.s("apply_type"))) { //차시
 	//if(info.i("chapter") > 0 && 0 == courseProgress.findCount("course_id = " + courseId + " AND chapter = " + info.i("chapter") + " AND course_user_id = " + cuid + " AND complete_yn = 'Y'")) isReady = true;
 	if(info.i("chapter") > 0 && courseProgress.getExamReadyFlag(cuid, courseId, info.i("chapter"))) isReady = true;
 }
 
+// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일 전까지 재응시를 허용합니다.
+boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
 if(!isReady && !isEnd
-	&& "I".equals(progress)
+	&& canOpenByProgress
 	&& info.b("confirm_yn") 
 	&& info.b("submit_yn") 
 	&& "N".equals(info.s("onoff_type")) 

@@ -31,12 +31,19 @@ if(!info.next()) { m.jsError(_message.get("alert.common.nodata")); return; };
 //포맷팅
 boolean isReady = false; //대기
 boolean isEnd = false; //완료
+boolean isPeriodApply = "1".equals(info.s("apply_type"));
 if("1".equals(info.s("apply_type"))) { //시작일
 	info.put("start_date_conv", m.time(_message.get("format.datetime.dot"), info.s("start_date")));
 	info.put("end_date_conv", m.time(_message.get("format.datetime.dot"), info.s("end_date")));
 
-	isReady = 0 > m.diffDate("S", info.s("start_date"), now);
-	isEnd = 0 < m.diffDate("S", info.s("end_date"), now);
+	// 왜: end_date를 99991231235959 같은 "아주 먼 미래"로 두는 환경에서는,
+	//     diffDate("S") 내부에서 int 오버플로우가 나 종료로 잘못 판정되는 경우가 있습니다.
+	//     그래서 yyyyMMddHHmmss 값을 숫자로 비교해 안전하게 판단합니다.
+	long nowDateTime = m.parseLong(now);
+	long startDateTime = m.parseLong(info.s("start_date"));
+	long endDateTime = m.parseLong(info.s("end_date"));
+	isReady = startDateTime > 0 && startDateTime > nowDateTime;
+	isEnd = endDateTime > 0 && endDateTime < nowDateTime;
 
 } else if("2".equals(info.s("apply_type"))) { //차시
 	info.put("apply_conv", info.i("chapter") == 0 ? _message.get("classroom.module.before_study") : _message.get("classroom.module.after_study", new String[] { "chapter=>" + info.i("chapter") }));
@@ -46,7 +53,9 @@ if("1".equals(info.s("apply_type"))) { //시작일
 }
 
 //제한-응시기간
-if(isReady || isEnd || !"I".equals(progress)) { m.jsErrClose(_message.get("alert.classroom.noperiod_exam")); return; }
+// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일 전까지 응시를 허용합니다.
+boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
+if(isReady || isEnd || !canOpenByProgress) { m.jsErrClose(_message.get("alert.classroom.noperiod_exam")); return; }
 
 //응시자 생성
 if(0 == examUser.findCount(whrPK)) {
@@ -105,9 +114,14 @@ if(old == 0) old = unixNow;
 int duration = Math.max(0, (unixNow - old - 2)) + euinfo.i("duration");
 int remain = (info.i("exam_time") * 60) - duration;
 if("1".equals(info.s("apply_type"))) { //시작일
-	int unixEndDate = m.getUnixTime(m.addDate("I", -1, info.s("end_date"), "yyyyMMddHHmmss")); //1분전
-	int eremain = unixEndDate > unixNow ? unixEndDate - unixNow : 0;
-	if(remain > eremain) remain = eremain;
+	// 왜: m.getUnixTime()이 int 기반일 경우(레거시), 2038년 이후(예: 9999...) 날짜에서 오버플로우가 발생할 수 있습니다.
+	//     이런 경우 기간 제한(eremain)이 0으로 떨어져 시험이 즉시 '종료'되는 부작용이 생기므로, 안전한 범위에서만 제한을 적용합니다.
+	long endDateTime = m.parseLong(info.s("end_date"));
+	if(endDateTime > 0 && endDateTime < 20380000000000L) {
+		int unixEndDate = m.getUnixTime(m.addDate("I", -1, info.s("end_date"), "yyyyMMddHHmmss")); //1분전
+		int eremain = unixEndDate > unixNow ? unixEndDate - unixNow : 0;
+		if(remain > eremain) remain = eremain;
+	}
 } else if("2".equals(info.s("apply_type"))) { //차시
 	
 }
