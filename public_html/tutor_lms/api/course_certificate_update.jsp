@@ -52,7 +52,8 @@ course.item("complete_prefix", f.get("complete_prefix"));
 course.item("postfix_cnt", f.getInt("postfix_cnt"));
 course.item("postfix_type", f.get("postfix_type", "R"));
 course.item("postfix_ord", f.get("postfix_ord", "A"));
-course.item("mod_date", m.time("yyyyMMddHHmmss"));
+// 왜: 일부 환경(DB 스키마)에는 LM_COURSE에 mod_date 컬럼이 없어 UPDATE가 통째로 실패합니다.
+//     DB를 변경하지 않고 우선 저장이 되도록 mod_date 업데이트는 생략합니다.
 
 boolean ok = false;
 try {

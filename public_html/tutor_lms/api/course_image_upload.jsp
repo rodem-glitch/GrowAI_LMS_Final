@@ -47,7 +47,8 @@ if(courseId > 0) {
 	}
 
 	course.item("course_file", fileName);
-	course.item("mod_date", m.time("yyyyMMddHHmmss"));
+	// 왜: 일부 환경(DB 스키마)에는 LM_COURSE에 mod_date 컬럼이 없어 UPDATE가 통째로 실패합니다.
+	//     DB를 변경하지 않고 우선 저장이 되도록 mod_date 업데이트는 생략합니다.
 	course.update("id = " + courseId + " AND site_id = " + siteId + " AND status != -1");
 }
 
