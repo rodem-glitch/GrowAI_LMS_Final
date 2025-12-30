@@ -37,6 +37,7 @@ import { downloadCsv } from '../utils/csv';
 interface CourseManagementProps {
   course: {
     id: string;
+    mappedCourseId?: number;
     // 왜: 학사/프리즘 탭에 따라 API 호출 및 편집 가능 여부를 결정합니다.
     sourceType?: 'haksa' | 'prism';
     courseId: string;
@@ -158,12 +159,9 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
     }
   };
 
-  const courseIdNum = Number(course.id);
+  const courseIdNum = Number(course?.mappedCourseId ?? course.id);
   const isHaksaCourse =
-    !courseIdNum ||
-    Number.isNaN(courseIdNum) ||
-    courseIdNum <= 0 ||
-    course?.sourceType === 'haksa';
+    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseIdNum) || courseIdNum <= 0);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -605,7 +603,8 @@ function HaksaMaterialsTab({ course }: { course?: any }) {
 
 function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const isHaksaCourse =
+    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseId) || courseId <= 0);
   const haksaKey = useMemo(
     () =>
       buildHaksaCourseKey({
@@ -1560,7 +1559,8 @@ function AssignmentTab({ courseId, course }: { courseId: number; course?: any })
 // 과제 관리 하위 탭
 function AssignmentManagementTab({ courseId, course }: { courseId: number; course?: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const isHaksaCourse =
+    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseId) || courseId <= 0);
   const haksaKey = useMemo(
     () =>
       buildHaksaCourseKey({
@@ -3054,7 +3054,8 @@ function GradesTab({ courseId }: { courseId: number }) {
 // 수료관리 탭(API 연동)
 function CompletionTab({ courseId, course }: { courseId: number; course?: any }) {
   // 학사 과목 여부 체크
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const isHaksaCourse =
+    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseId) || courseId <= 0);
   const [selectedCourseUserIds, setSelectedCourseUserIds] = useState<number[]>([]);
 
   const [rows, setRows] = useState<any[]>([]);

@@ -61,6 +61,7 @@ export type TutorProgramRow = {
 export type TutorCourseRow = {
   id: number;
   course_nm: string;
+  mapped_course_id?: number;
   // 왜: course_list_combined.jsp에서는 화면에서 쓰기 편하게 변환값을 같이 내려줍니다.
   course_nm_conv?: string;
   course_cd?: string;
@@ -400,6 +401,13 @@ export type HaksaGradeRow = {
   student_id: string;
   grade?: string;
   score?: number;
+};
+
+export type HaksaResolveResult = {
+  mapped_course_id: number;
+  mapped_students?: number;
+  skipped_students?: number;
+  missing_students?: number;
 };
 
 export type TutorProgressSummaryRow = {
@@ -1216,6 +1224,16 @@ export const tutorLmsApi = {
       group_code: params.groupCode,
     })}`;
     return requestJson<HaksaGradeRow[]>(url);
+  },
+  async resolveHaksaCourse(params: HaksaCourseKey) {
+    const url = `/tutor_lms/api/haksa_resolve.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+    })}`;
+    return requestJson<HaksaResolveResult>(url);
   },
 
   async updateHaksaGrades(params: HaksaCourseKey & { gradesJson: string }) {

@@ -9,6 +9,7 @@ import { buildHaksaCourseKey } from '../../utils/haksa';
 interface CourseProps {
   id: string;
   sourceType?: 'haksa' | 'prism';
+  mappedCourseId?: number;
   courseId: string;
   subjectName: string;
   haksaWeek?: string;
@@ -100,7 +101,9 @@ const normalizeWeeks = (source: WeekData[], weekCount: number) =>
   });
 
 export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  const resolvedCourseId = Number(course?.mappedCourseId ?? courseId);
+  const isHaksaCourse =
+    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(resolvedCourseId) || resolvedCourseId <= 0);
   const haksaKey = useMemo(
     () =>
       buildHaksaCourseKey({
