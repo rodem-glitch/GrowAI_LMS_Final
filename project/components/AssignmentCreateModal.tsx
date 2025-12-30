@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface AssignmentCreateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (assignmentData: any) => void;
+  mode?: 'create' | 'edit';
+  initialData?: {
+    title?: string;
+    description?: string;
+    dueDate?: string;
+    dueTime?: string;
+    totalScore?: number;
+    submissionType?: string;
+    fileTypes?: string;
+    maxFileSize?: number;
+    allowLateSubmission?: boolean;
+    latePenalty?: number;
+  };
 }
 
-export function AssignmentCreateModal({ isOpen, onClose, onSave }: AssignmentCreateModalProps) {
+export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create', initialData }: AssignmentCreateModalProps) {
   const [assignmentData, setAssignmentData] = useState({
     title: '',
     description: '',
@@ -21,6 +34,38 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave }: AssignmentCre
     latePenalty: 0,
   });
 
+  // 왜: edit 모드일 때 initialData로 폼을 초기화합니다.
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && initialData) {
+      setAssignmentData({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        dueDate: initialData.dueDate || '',
+        dueTime: initialData.dueTime || '',
+        totalScore: initialData.totalScore ?? 100,
+        submissionType: initialData.submissionType || 'file',
+        fileTypes: initialData.fileTypes || '',
+        maxFileSize: initialData.maxFileSize ?? 10,
+        allowLateSubmission: initialData.allowLateSubmission ?? false,
+        latePenalty: initialData.latePenalty ?? 0,
+      });
+    } else if (isOpen && mode === 'create') {
+      // 왜: create 모드일 때는 빈 폼으로 초기화합니다.
+      setAssignmentData({
+        title: '',
+        description: '',
+        dueDate: '',
+        dueTime: '',
+        totalScore: 100,
+        submissionType: 'file',
+        fileTypes: '',
+        maxFileSize: 10,
+        allowLateSubmission: false,
+        latePenalty: 0,
+      });
+    }
+  }, [isOpen, mode, initialData]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -29,11 +74,13 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave }: AssignmentCre
     onClose();
   };
 
+  const isEditMode = mode === 'edit';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-gray-900">과제 등록</h3>
+          <h3 className="text-gray-900">{isEditMode ? '과제 수정' : '과제 등록'}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -200,7 +247,7 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave }: AssignmentCre
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              등록
+              {isEditMode ? '수정' : '등록'}
             </button>
           </div>
         </form>

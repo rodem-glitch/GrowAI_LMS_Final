@@ -60,7 +60,7 @@ if(!hinfo.next()) {
 
 //필수값
 f.addElement("title", null, "hname:'과제 제목', required:'Y'");
-f.addElement("description", null, "hname:'과제 설명', required:'Y', allowhtml:'Y'");
+f.addElement("description", hinfo.s("content"), "hname:'과제 설명', allowhtml:'Y'");
 f.addElement("dueDate", null, "hname:'마감 날짜', required:'Y'");
 f.addElement("dueTime", null, "hname:'마감 시간', required:'Y'");
 f.addElement("totalScore", minfo.i("assign_score"), "hname:'배점', required:'Y', option:'number'");

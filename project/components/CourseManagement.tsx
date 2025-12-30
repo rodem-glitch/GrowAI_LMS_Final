@@ -1293,6 +1293,8 @@ function AssignmentTab({ courseId }: { courseId: number }) {
 // 과제 관리 하위 탭
 function AssignmentManagementTab({ courseId, course }: { courseId: number; course?: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingHomework, setEditingHomework] = useState<any>(null);
   const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
   const haksaKey = useMemo(
     () =>
@@ -1370,7 +1372,9 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
       const mapped = rows.map((row: any) => ({
         id: Number(row.homework_id),
         title: row.homework_nm || row.module_nm || '과제',
+        description: row.content || '',
         dueDate: row.end_date_conv || row.end_date || '-',
+        totalScore: Number(row.assign_score ?? 100),
         submitted: Number(row.submitted_cnt ?? 0),
         total: Number(row.total_cnt ?? 0),
       }));
@@ -1444,6 +1448,59 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
     );
   }
 
+  // 왜: 과제 수정을 시작하면 모달을 열고 기존 데이터를 채웁니다.
+  const handleEditHomework = (homework: any) => {
+    // 마감일 파싱 (YYYYMMDD 형식에서 YYYY-MM-DD 형식으로 변환)
+    let dueDate = '';
+    let dueTime = '';
+    if (homework.dueDate) {
+      // "YYYY-MM-DD" 또는 "YYYYMMDD" 형식 처리
+      const raw = homework.dueDate.replace(/-/g, '');
+      if (raw.length >= 8) {
+        dueDate = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+      }
+      // 시간이 포함되어 있는 경우
+      if (raw.length >= 12) {
+        dueTime = `${raw.slice(8, 10)}:${raw.slice(10, 12)}`;
+      }
+    }
+    
+    setEditingHomework({
+      id: homework.id,
+      title: homework.title || '',
+      description: homework.description || '',
+      dueDate: dueDate,
+      dueTime: dueTime || '23:59',
+      totalScore: homework.totalScore || 100,
+    });
+    setShowEditModal(true);
+  };
+
+  // 왜: 과제 수정을 저장하면 서버에 업데이트하고 목록을 새로고침합니다.
+  const handleSaveHomeworkEdit = async (data: any) => {
+    if (!editingHomework) return;
+    
+    try {
+      const res = await tutorLmsApi.updateHomework({
+        courseId,
+        homeworkId: editingHomework.id,
+        title: data.title,
+        description: data.description,
+        dueDate: data.dueDate,
+        dueTime: data.dueTime,
+        totalScore: Number(data.totalScore || 0),
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      
+      await fetchHomeworks();
+      alert('과제가 수정되었습니다.');
+      setShowEditModal(false);
+      setEditingHomework(null);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '과제 수정 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleDeleteHomework = (homeworkId: number, title: string) => {
     void (async () => {
       // 왜: 제출/채점 데이터가 이미 쌓인 과제를 지우면 운영 데이터가 깨질 수 있어서, 사용자에게 한 번 더 확인받습니다.
@@ -1493,35 +1550,61 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
           </div>
         )}
 
-        {!loading &&
-          homeworks.map((assignment) => (
-            <div
-              key={assignment.id}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="text-gray-900 mb-1">{assignment.title}</div>
-                  <div className="text-sm text-gray-600">마감일: {assignment.dueDate}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-600">제출 현황</div>
-                    <div className="text-gray-900">
-                      {assignment.submitted} / {assignment.total}명
+        {!loading && homeworks.length > 0 && (
+          <div className="space-y-3">
+            {homeworks.map((assignment) => (
+              <div
+                key={assignment.id}
+                className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Briefcase className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-gray-900">{assignment.title}</span>
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">
+                        {assignment.submitted}/{assignment.total}명 제출
+                      </span>
+                    </div>
+                    
+                    {/* 설정 항목들 테이블 형태로 표시 (시험과 동일한 스타일) */}
+                    <div className="ml-7 text-sm space-y-2 bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center">
+                        <span className="w-24 text-gray-500">마감일</span>
+                        <span className="text-gray-900">{assignment.dueDate || '-'}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-24 text-gray-500">배점</span>
+                        <span className="text-gray-900">{assignment.totalScore || 0}점</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-24 text-gray-500">제출 현황</span>
+                        <span className="text-gray-900">{assignment.submitted} / {assignment.total}명</span>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteHomework(assignment.id, assignment.title)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  
+                  <div className="flex gap-1 ml-4">
+                    <button
+                      onClick={() => handleEditHomework(assignment)}
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="수정"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteHomework(assignment.id, assignment.title)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
       </div>
       
       <AssignmentCreateModal
@@ -1548,6 +1631,18 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
             }
           })();
         }}
+      />
+      
+      {/* 과제 수정 모달 */}
+      <AssignmentCreateModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingHomework(null);
+        }}
+        onSave={handleSaveHomeworkEdit}
+        mode="edit"
+        initialData={editingHomework || undefined}
       />
     </>
   );
