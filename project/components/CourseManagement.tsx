@@ -181,15 +181,15 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'attendance':
         return <AttendanceTab courseId={courseIdNum} />;
       case 'exam':
-        return <ExamTab courseId={courseIdNum} course={course} />;
+        return isHaksaCourse ? <HaksaExamTab course={course} /> : <ExamTab courseId={courseIdNum} course={course} />;
       case 'assignment':
-        return <AssignmentTab courseId={courseIdNum} />;
+        return <AssignmentTab courseId={courseIdNum} course={course} />;
       case 'assignment-management':
         return <AssignmentManagementTab courseId={courseIdNum} course={course} />;
       case 'assignment-feedback':
         return <AssignmentFeedbackTab courseId={courseIdNum} />;
       case 'materials':
-        return <MaterialsTab courseId={courseIdNum} />;
+        return isHaksaCourse ? <HaksaMaterialsTab course={course} /> : <MaterialsTab courseId={courseIdNum} />;
       case 'qna':
         return <QnaTab courseId={courseIdNum} />;
       case 'grades':
@@ -335,6 +335,273 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
 }
 
 // 과목정보 탭 (이제 CourseInfoTabs.tsx에서 import됨)
+
+// 학사 과목: 시험 탭(강의목차 기반으로 표시)
+function HaksaExamTab({ course }: { course?: any }) {
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
+
+  const [haksaExams, setHaksaExams] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 시험을 불러올 수 없습니다.');
+      setHaksaExams([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchHaksaExams = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        // 왜: Malgn DataSet 응답이 배열로 올 수 있어 첫 번째 행을 기준으로 해석합니다.
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.curriculum_json || '';
+        if (!raw) {
+          if (!cancelled) setHaksaExams([]);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        const contents = Array.isArray(parsed)
+          ? parsed.flatMap((w: any) => (w.sessions || []).flatMap((s: any) => s.contents || []))
+          : [];
+        const exams = contents.filter((c: any) => String(c.type || '').toLowerCase() === 'exam');
+        if (!cancelled) setHaksaExams(exams);
+      } catch (e) {
+        if (!cancelled) {
+          setHaksaExams([]);
+          setErrorMessage(e instanceof Error ? e.message : '시험 목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void fetchHaksaExams();
+    return () => {
+      cancelled = true;
+    };
+  }, [haksaKey]);
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
+        학사 과목의 시험은 <b>강의목차</b>에서 주차/차시에 등록한 항목을 기준으로 표시됩니다.
+      </div>
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">{errorMessage}</div>
+      )}
+
+      {loading && <div className="p-6 text-center text-gray-500">시험 목록을 불러오는 중...</div>}
+
+      {!loading && haksaExams.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">등록된 시험</h3>
+            <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full">총 {haksaExams.length}개</span>
+          </div>
+
+          {haksaExams.map((exam: any) => (
+            <div
+              key={exam.id}
+              className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-red-600" />
+                    <span className="font-medium text-gray-900">{exam.title || '시험'}</span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                      {exam.weekNumber || 1}주차
+                    </span>
+                  </div>
+                  {exam.description && <p className="text-sm text-gray-500 mt-1 ml-7">{exam.description}</p>}
+
+                  {exam.examSettings && (
+                    <div className="mt-2 ml-7 text-sm text-gray-600 space-y-1">
+                      <div>배점: {exam.examSettings.points ?? 0}점</div>
+                      <div>
+                        재응시:{' '}
+                        {exam.examSettings.allowRetake
+                          ? `가능 (${exam.examSettings.retakeScore ?? 0}점 미만, ${exam.examSettings.retakeCount ?? 0}회)`
+                          : '불가'}
+                      </div>
+                      <div>결과노출: {exam.examSettings.showResults === false ? '비노출' : '노출'}</div>
+                    </div>
+                  )}
+                </div>
+
+                {exam.createdAt && (
+                  <div className="text-sm text-gray-400 flex-shrink-0">
+                    {new Date(exam.createdAt).toLocaleDateString('ko-KR')}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !loading && (
+          <div className="text-center text-gray-500 py-12 border border-dashed border-gray-300 rounded-lg">
+            <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <p className="mb-2">등록된 시험이 없습니다.</p>
+            <p className="text-sm text-gray-400">강의목차에서 주차별로 시험을 추가할 수 있습니다.</p>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+// 학사 과목: 자료 탭(강의목차 기반으로 표시)
+function HaksaMaterialsTab({ course }: { course?: any }) {
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
+
+  const [haksaDocs, setHaksaDocs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 자료를 불러올 수 없습니다.');
+      setHaksaDocs([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchHaksaDocs = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.curriculum_json || '';
+        if (!raw) {
+          if (!cancelled) setHaksaDocs([]);
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        const contents = Array.isArray(parsed)
+          ? parsed.flatMap((w: any) => (w.sessions || []).flatMap((s: any) => s.contents || []))
+          : [];
+        const docs = contents.filter((c: any) => {
+          const t = String(c.type || '').toLowerCase();
+          return t === 'document' || t === 'file' || t === 'library';
+        });
+        if (!cancelled) setHaksaDocs(docs);
+      } catch (e) {
+        if (!cancelled) {
+          setHaksaDocs([]);
+          setErrorMessage(e instanceof Error ? e.message : '자료 목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void fetchHaksaDocs();
+    return () => {
+      cancelled = true;
+    };
+  }, [haksaKey]);
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm">
+        학사 과목의 자료는 <b>강의목차</b>에서 주차/차시에 등록한 항목을 기준으로 표시됩니다.
+      </div>
+
+      {errorMessage && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">{errorMessage}</div>
+      )}
+
+      {loading && <div className="p-6 text-center text-gray-500">자료 목록을 불러오는 중...</div>}
+
+      {!loading && haksaDocs.length > 0 ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900">등록된 자료</h3>
+            <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">총 {haksaDocs.length}개</span>
+          </div>
+
+          {haksaDocs.map((doc: any) => (
+            <div
+              key={doc.id}
+              className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="w-5 h-5 text-green-600" />
+                    <span className="font-medium text-gray-900">{doc.title || '학습자료'}</span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                      {doc.weekNumber || 1}주차
+                    </span>
+                  </div>
+                  {doc.description && <p className="text-sm text-gray-500 mt-1 ml-7">{doc.description}</p>}
+                </div>
+
+                {doc.createdAt && (
+                  <div className="text-sm text-gray-400 flex-shrink-0">
+                    {new Date(doc.createdAt).toLocaleDateString('ko-KR')}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !loading && (
+          <div className="p-10 text-center text-gray-500 border border-dashed border-gray-200 rounded-lg">
+            등록된 자료가 없습니다. 강의목차에서 주차별로 자료를 추가할 수 있습니다.
+          </div>
+        )
+      )}
+    </div>
+  );
+}
 
 function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
   // 왜: 학사 과목은 courseId가 NaN 또는 0이므로, 빈 상태로 시작하여 교수자가 직접 추가할 수 있도록 합니다.
@@ -1254,7 +1521,7 @@ function ExamDetailView({
 }
 
 // 과제 탭
-function AssignmentTab({ courseId }: { courseId: number }) {
+function AssignmentTab({ courseId, course }: { courseId: number; course?: any }) {
   const [subTab, setSubTab] = useState<'management' | 'feedback'>('management');
 
   return (
@@ -1284,7 +1551,7 @@ function AssignmentTab({ courseId }: { courseId: number }) {
       </div>
 
       {/* 하위 탭 콘텐츠 */}
-      {subTab === 'management' && <AssignmentManagementTab courseId={courseId} />}
+      {subTab === 'management' && <AssignmentManagementTab courseId={courseId} course={course} />}
       {subTab === 'feedback' && <AssignmentFeedbackTab courseId={courseId} />}
     </div>
   );
@@ -1330,7 +1597,9 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
       try {
         const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
-        const raw = res.rst_data?.curriculum_json || '';
+        // 왜: Malgn DataSet 응답이 배열로 올 수 있어 첫 번째 행을 기준으로 해석합니다.
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const raw = payload?.curriculum_json || '';
         if (!raw) {
           if (!cancelled) setHaksaAssignments([]);
           return;
@@ -1339,7 +1608,10 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
         const contents = Array.isArray(parsed)
           ? parsed.flatMap((w: any) => (w.sessions || []).flatMap((s: any) => s.contents || []))
           : [];
-        const assignmentContents = contents.filter((c: any) => c.type === 'assignment');
+        const assignmentContents = contents.filter((c: any) => {
+          const t = String(c.type || '').toLowerCase();
+          return t === 'assignment' || t === 'homework';
+        });
         if (!cancelled) setHaksaAssignments(assignmentContents);
       } catch (e) {
         if (!cancelled) {
