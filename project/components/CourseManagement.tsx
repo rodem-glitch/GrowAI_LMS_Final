@@ -2619,8 +2619,9 @@ function QnaTab({ courseId }: { courseId: number }) {
       const res = await tutorLmsApi.getQnaDetail({ courseId, postId });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-      setDetail(res.rst_data ?? null);
-      setAnswerText(String(res.rst_data?.answer_content ?? ''));
+      const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+      setDetail(payload ?? null);
+      setAnswerText(String(payload?.answer_content ?? ''));
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : 'Q&A 상세를 불러오는 중 오류가 발생했습니다.');
     } finally {
