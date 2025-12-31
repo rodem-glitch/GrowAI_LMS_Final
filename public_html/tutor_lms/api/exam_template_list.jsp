@@ -17,9 +17,9 @@ lm.setFields("*");
 lm.addWhere("site_id = " + siteId);
 lm.addWhere("status != -1");
 
-// 교수자는 본인 시험 + 공용 시험(-99)만 조회
+// 교수자는 본인 시험만 조회
 if(!isAdmin) {
-	lm.addWhere("(manager_id = " + userId + " OR manager_id = -99)");
+	lm.addWhere("manager_id = " + userId);
 }
 
 lm.setOrderBy("id DESC");

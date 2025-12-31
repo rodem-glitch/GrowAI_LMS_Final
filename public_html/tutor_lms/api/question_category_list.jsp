@@ -6,11 +6,11 @@
 
 QuestionCategoryDao category = new QuestionCategoryDao();
 
-// 해당 교수자의 카테고리만 또는 공용 카테고리(-99) 포함 조회
-// 왜: 교수자 간 문제 분류를 독립적으로 관리하면서도 공용 카테고리는 공유합니다.
+// 해당 교수자의 카테고리만 조회
+// 왜: 교수자는 본인이 만든 카테고리만 보이게 해야 합니다.
 String whereClause = "status = 1 AND site_id = " + siteId;
 if(!isAdmin) {
-	whereClause += " AND (manager_id = " + userId + " OR manager_id = -99)";
+	whereClause += " AND manager_id = " + userId;
 }
 
 DataSet list = category.find(whereClause, "*", "depth ASC, sort ASC");
