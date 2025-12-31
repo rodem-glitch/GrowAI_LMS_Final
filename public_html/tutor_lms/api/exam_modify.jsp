@@ -124,7 +124,8 @@ exam.item("content", f.get("description"));
 exam.item("question_cnt", questionCnt);
 exam.item("retake_yn", retakeYn);
 exam.item("permission_number", "Y".equals(retakeYn) ? 1 : 0);
-exam.item("mod_date", m.time("yyyyMMddHHmmss"));
+// 왜: 일부 환경(DB 스키마)에는 LM_EXAM에 mod_date 컬럼이 없어 UPDATE가 통째로 실패합니다.
+//     DB를 변경하지 않고 우선 저장이 되도록 mod_date 업데이트는 생략합니다.
 if(!exam.update("id = " + examId + " AND site_id = " + siteId + " AND status != -1")) {
 	result.put("rst_code", "2000");
 	result.put("rst_message", "시험 수정 중 오류가 발생했습니다.");

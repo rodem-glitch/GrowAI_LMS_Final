@@ -40,7 +40,8 @@ course.item("content1_title", "과목소개");
 course.item("content1", content1);
 course.item("content2_title", "학습목표");
 course.item("content2", content2);
-course.item("mod_date", m.time("yyyyMMddHHmmss"));
+// 왜: 일부 환경(DB 스키마)에는 LM_COURSE에 mod_date 컬럼이 없어 UPDATE가 통째로 실패합니다.
+//     DB를 변경하지 않고 우선 저장이 되도록 mod_date 업데이트는 생략합니다.
 
 if(!course.update("id = " + courseId + " AND site_id = " + siteId + " AND status != -1")) {
 	result.put("rst_code", "2000");

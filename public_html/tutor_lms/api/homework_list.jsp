@@ -38,7 +38,7 @@ if(!cinfo.next()) {
 
 DataSet list = courseModule.query(
 	" SELECT a.module_id homework_id, a.module_nm, a.apply_type, a.start_date, a.end_date, a.chapter, a.assign_score "
-	+ " , h.homework_nm, h.onoff_type "
+	+ " , h.homework_nm, h.onoff_type, h.content "
 	+ " , (SELECT COUNT(*) FROM " + courseUser.table + " cu "
 		+ " WHERE cu.site_id = " + siteId + " AND cu.course_id = a.course_id AND cu.status IN (1,3)) total_cnt "
 	+ " , (SELECT COUNT(*) FROM " + homeworkUser.table + " hu "
