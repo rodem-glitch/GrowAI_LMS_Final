@@ -232,7 +232,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
     } else {
       setActiveTab(tabId);
       // 다른 탭을 클릭하면 해당 탭의 하위 탭만 유지
-      if (!['info-basic', 'info-evaluation', 'info-completion'].includes(tabId)) {
+      if (!visibleInfoSubTabs.map((subTab) => subTab.id).includes(tabId)) {
         setIsInfoExpanded(false);
       }
       if (!['assignment-management', 'assignment-feedback'].includes(tabId)) {
@@ -244,6 +244,27 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   const courseIdNum = Number(course?.mappedCourseId ?? course.id);
   const isHaksaCourse =
     course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseIdNum) || courseIdNum <= 0);
+  const isHaksaMenu =
+    course?.sourceType === 'haksa' ||
+    Boolean(
+      course?.haksaCourseCode ||
+      course?.haksaOpenYear ||
+      course?.haksaOpenTerm ||
+      course?.haksaBunbanCode ||
+      course?.haksaGroupCode
+    ) ||
+    String(course?.courseType || '').includes('학사');
+  const visibleTabs = isHaksaMenu ? tabs.filter(tab => tab.id !== 'completion') : tabs;
+  const visibleInfoSubTabs = isHaksaMenu
+    ? infoSubTabs.filter(subTab => subTab.id !== 'info-completion')
+    : infoSubTabs;
+
+  useEffect(() => {
+    if (!isHaksaMenu) return;
+    if (activeTab === 'completion' || activeTab === 'info-completion') {
+      setActiveTab('info-basic');
+    }
+  }, [activeTab, isHaksaMenu]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -253,7 +274,9 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'info-evaluation':
         return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="evaluation" />;
       case 'info-completion':
-        return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
+        return isHaksaMenu
+          ? <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="basic" />
+          : <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
       case 'curriculum':
         return <CurriculumTab courseId={courseIdNum} course={course} />;
       case 'students':
@@ -285,7 +308,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
           ? <HaksaGradingContent course={course} />
           : <GradesTab courseId={courseIdNum} />;
       case 'completion':
-        return <CompletionTab courseId={courseIdNum} course={course} />;
+        return isHaksaMenu ? null : <CompletionTab courseId={courseIdNum} course={course} />;
       default:
         return null;
     }
@@ -310,12 +333,12 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
             {/* 메뉴 네비게이션 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <nav className="flex flex-col">
-                {tabs.map((tab) => {
+                {visibleTabs.map((tab) => {
                   const Icon = tab.icon;
                   const isInfoTab = tab.id === 'info';
                   const isAssignmentTab = tab.id === 'assignment';
                   const isActive = activeTab === tab.id || 
-                    (isInfoTab && ['info-basic', 'info-evaluation', 'info-completion'].includes(activeTab)) ||
+                    (isInfoTab && visibleInfoSubTabs.map((subTab) => subTab.id).includes(activeTab)) ||
                     (isAssignmentTab && (activeTab === 'assignment-management' || activeTab === 'assignment-feedback'));
                   
                   return (
@@ -344,7 +367,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
                       {/* 과목정보 하위 탭 */}
                       {isInfoTab && isInfoExpanded && (
                         <div className="bg-gray-50">
-                          {infoSubTabs.map((subTab) => {
+                          {visibleInfoSubTabs.map((subTab) => {
                             const SubIcon = subTab.icon;
                             return (
                               <button
