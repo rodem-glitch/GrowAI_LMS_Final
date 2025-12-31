@@ -257,6 +257,7 @@ $(function() {
 
 				<div class="main_menu_wrap">
 					<ul class="main_menu mm01">
+                        <!--@if(login_block)--><li class="my-classroom-menu"><a href="/mypage/index.jsp" target="_self">나의 강의실</a></li><!--/if(login_block)-->
                         {{course_main_menu_before_html}}
                         <li><a href="https://xrclass.co.kr/" target="_blank">VIRTUAL CLASS</a></li>
                         {{course_main_menu_after_html}}
@@ -373,10 +374,6 @@ $(function() {
                             <a href="" class="search-btn">
                                 <img src="/html/images/demo/search-icon.png" alt="검색">
                             </a>
-                        </li>
-                        <li>
-                            <a href="/mypage/index.jsp" target="_self">
-                                <img src="/html/images/demo/myclass-icon.png" alt="마이페이지"></a>
                         </li>
                     </ul>
 				</div>
