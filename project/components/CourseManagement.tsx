@@ -1310,11 +1310,27 @@ function ExamDetailView({
     }
   };
 
-  // 점수 수정 취소
-  const handleCancelEdit = () => {
-    setEditingScore(null);
-    setTempScore('');
-  };
+    // 점수 수정 취소
+    const handleCancelEdit = () => {
+      setEditingScore(null);
+      setTempScore('');
+    };
+
+    // 왜: 제출된 시험을 취소하면 응시 기록이 삭제되고 성적이 재계산됩니다.
+    const handleCancelSubmit = async (courseUserId: number) => {
+      if (!confirm('해당 학생의 시험 응시를 취소하시겠습니까?')) return;
+
+      try {
+        const res = await tutorLmsApi.cancelExamSubmit({ courseId, examId, courseUserId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchExamUsers();
+        onRefresh();
+        alert('응시가 취소되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '응시 취소 중 오류가 발생했습니다.');
+      }
+    };
 
   return (
     <div className="space-y-6">
@@ -1501,21 +1517,30 @@ function ExamDetailView({
                   <td className="px-4 py-4 text-center text-sm text-gray-600">
                     {student.submittedAt}
                   </td>
-                  <td className="px-4 py-4 text-center">
-                    {student.submitted && editingScore !== student.courseUserId && (
-                      <button
-                        onClick={() => handleStartEdit(student.courseUserId, student.score)}
-                        className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        title="점수 수정"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <td className="px-4 py-4 text-center">
+                      {student.submitted && editingScore !== student.courseUserId && (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleStartEdit(student.courseUserId, student.score)}
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            title="점수 수정"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCancelSubmit(student.courseUserId)}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                            title="응시 취소"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
         </div>
       </div>
     </div>
@@ -2033,8 +2058,8 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
     setFeedbackText(String(student?.feedback ?? ''));
   };
 
-  const handleSubmitFeedback = () => {
-    if (!selectedHomeworkId || !selectedCourseUserId) return;
+    const handleSubmitFeedback = () => {
+      if (!selectedHomeworkId || !selectedCourseUserId) return;
 
     const score = parseInt(tempScore, 10);
     if (isNaN(score) || score < 0 || score > 100) {
@@ -2059,8 +2084,33 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
       } catch (e) {
         alert(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
       }
-    })();
-  };
+      })();
+    };
+
+    // 왜: 제출 취소는 점수/피드백과 별개로 제출 기록 자체를 정리해야 합니다.
+    const handleCancelHomeworkSubmit = () => {
+      if (!selectedHomeworkId || !selectedCourseUserId) return;
+      if (!confirm('해당 학생의 과제 제출을 취소하시겠습니까?')) return;
+
+      void (async () => {
+        try {
+          const res = await tutorLmsApi.cancelHomeworkSubmit({
+            courseId,
+            homeworkId: selectedHomeworkId,
+            courseUserId: selectedCourseUserId,
+          });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+          await fetchHomeworkUsers(selectedHomeworkId);
+          setSelectedCourseUserId(null);
+          setTempScore('0');
+          setFeedbackText('');
+          alert('제출이 취소되었습니다.');
+        } catch (e) {
+          alert(e instanceof Error ? e.message : '제출 취소 중 오류가 발생했습니다.');
+        }
+      })();
+    };
 
   const handleAppendTask = () => {
     if (!selectedHomeworkId || !selectedCourseUserId) return;
@@ -2258,21 +2308,29 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                       />
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setTempScore(String(selectedStudent.markingScore ?? 0));
-                          setFeedbackText(String(selectedStudent.feedback ?? ''));
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setTempScore(String(selectedStudent.markingScore ?? 0));
+                            setFeedbackText(String(selectedStudent.feedback ?? ''));
                         }}
                         className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        취소
-                      </button>
-                      <button
-                        onClick={handleSubmitFeedback}
-                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        저장
+                        >
+                          취소
+                        </button>
+                        {selectedStudent.submitted && (
+                          <button
+                            onClick={handleCancelHomeworkSubmit}
+                            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            제출 취소
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSubmitFeedback}
+                          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          저장
                       </button>
                     </div>
 

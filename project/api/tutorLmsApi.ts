@@ -1437,6 +1437,20 @@ export const tutorLmsApi = {
     });
   },
 
+  // 왜: 응시 취소는 점수 수정과 성격이 달라 별도 엔드포인트로 분리합니다.
+  async cancelExamSubmit(payload: { courseId: number; examId: number; courseUserId: number }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('exam_id', String(payload.examId));
+    body.set('course_user_id', String(payload.courseUserId));
+
+    return requestJson<number>(`/tutor_lms/api/exam_submit_cancel.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   // =========================
   // 마감 운영: 과제
   // =========================
@@ -1529,6 +1543,20 @@ export const tutorLmsApi = {
     body.set('feedback', payload.feedback);
 
     return requestJson<number>(`/tutor_lms/api/homework_feedback_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 제출 취소는 피드백 저장과 다르게 제출/첨부 정리를 포함합니다.
+  async cancelHomeworkSubmit(payload: { courseId: number; homeworkId: number; courseUserId: number }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('homework_id', String(payload.homeworkId));
+    body.set('course_user_id', String(payload.courseUserId));
+
+    return requestJson<number>(`/tutor_lms/api/homework_submit_cancel.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
