@@ -1562,6 +1562,9 @@ function AssignmentTab({ courseId, course }: { courseId: number; course?: any })
 // 과제 관리 하위 탭
 function AssignmentManagementTab({ courseId, course }: { courseId: number; course?: any }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  // 왜: 과제 수정 모달 노출 여부와 수정 대상 데이터를 분리해서 관리합니다.
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingHomework, setEditingHomework] = useState<any | null>(null);
 const courseIdNum = Number(course?.mappedCourseId ?? courseId);
 const isHaksaCourse =
   course?.sourceType === 'haksa' &&
