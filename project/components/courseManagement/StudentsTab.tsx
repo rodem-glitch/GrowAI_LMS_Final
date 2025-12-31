@@ -23,10 +23,9 @@ type StudentTabCourse = {
 };
 
 export function StudentsTab({ courseId, course }: { courseId: number; course?: StudentTabCourse }) {
-  // 왜: 학사 과목은 LMS DB를 쓰지 않으므로, 학사 전용 조회로 전환합니다.
+  // 왜: 학사 탭은 매핑 여부와 관계없이 학사 수강생을 보여야 하므로, sourceType만 기준으로 분기합니다.
   const resolvedCourseId = Number(course?.mappedCourseId ?? courseId);
-  const isHaksaCourse =
-    course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(resolvedCourseId) || resolvedCourseId <= 0);
+  const isHaksaCourse = course?.sourceType === 'haksa';
 
   const [rows, setRows] = useState<TutorCourseStudentRow[]>([]);
   const [haksaRows, setHaksaRows] = useState<HaksaCourseStudentRow[]>([]);
