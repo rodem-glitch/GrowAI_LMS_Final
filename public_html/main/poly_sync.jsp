@@ -83,7 +83,7 @@ public int maxOpenYearFromRaw(String raw) {
 	return max;
 }
 
-public String fetchPolyRaw(String endpoint, String tb, int cnt, int retry, int sleepMs) {
+public String fetchPolyRaw(String endpoint, String tb, int cnt, int retry, int sleepMs, String wh) {
 	String lastRaw = "";
 	int maxTry = Math.max(1, retry);
 	for(int i = 0; i < maxTry; i++) {
@@ -91,6 +91,9 @@ public String fetchPolyRaw(String endpoint, String tb, int cnt, int retry, int s
 			malgnsoft.util.Http http = new malgnsoft.util.Http(endpoint);
 			http.setParam("tb", tb);
 			http.setParam("cnt", "" + cnt);
+			if(wh != null && !"".equals(wh)) {
+				http.setParam("wh", wh);
+			}
 			lastRaw = http.send("POST");
 
 			if(parsePolyResponse(lastRaw).size() > 0) return lastRaw;
@@ -123,6 +126,9 @@ int studentCnt = m.ri("student_cnt", 100000);
 int courseCnt = m.ri("course_cnt", 100000);
 //왜: 기본은 최대치(100만)까지 받아서 로컬 DB에 저장하는 방식으로 운영합니다.
 int requireYear = m.ri("require_year", toInt(m.time("yyyy")));
+//왜: 년도별로 쪼개서 받기 위해 시작/끝 년도를 분리합니다.
+int startYear = m.ri("start_year", requireYear);
+int endYear = m.ri("end_year", requireYear);
 String syncMode = m.rs("mode");
 boolean studentOnly = "student_only".equals(syncMode);
 
@@ -164,7 +170,7 @@ try {
 	int targetCourseMaxYear = 0;
 
 	if(!studentOnly) {
-		String rawCourse = fetchPolyRaw(endpoint, "COM.LMS_COURSE_VIEW", courseCnt, 3, 2000);
+		String rawCourse = fetchPolyRaw(endpoint, "COM.LMS_COURSE_VIEW", courseCnt, 3, 2000, "");
 		courseList = parsePolyResponse(rawCourse);
 
 		if(courseList.size() == 0) {
@@ -181,15 +187,9 @@ try {
 		}
 		courseList.first();
 
-		String rawMember = fetchPolyRaw(endpoint, "COM.LMS_MEMBER_VIEW", memberCnt, 3, 2000);
+		String rawMember = fetchPolyRaw(endpoint, "COM.LMS_MEMBER_VIEW", memberCnt, 3, 2000, "");
 		memberList = parsePolyResponse(rawMember);
 	}
-
-	// 학생 데이터는 100만 기준으로 한 번에 받아서 그대로 저장합니다.
-	String rawStudent = fetchPolyRaw(endpoint, "COM.LMS_STUDENT_VIEW", studentCnt, 2, 1500);
-	malgnsoft.db.DataSet studentList = parsePolyResponse(rawStudent);
-	int studentMaxYear = maxOpenYearFromRaw(rawStudent);
-	int studentCntUsed = studentCnt;
 
 	//2) DB 저장(동기화 기준시각(sync_date)으로 “이번에 받은 것만” 남깁니다)
 	PolyCourseDao polyCourse = new PolyCourseDao();
@@ -201,6 +201,7 @@ try {
 	int studentSaved = 0;
 	int memberSaved = 0;
 	int aliasSaved = 0;
+	int studentMaxYear = 0;
 
 	//2-1) 과목
 	if(!studentOnly) {
@@ -314,34 +315,45 @@ try {
 		}
 	}
 
-	//2-3) 수강(수강생-과목)
-	studentList.first();
-	while(studentList.next()) {
-		String courseCode = pick(studentList, "course_code");
-		String openYear = pick(studentList, "open_year");
-		String openTerm = pick(studentList, "open_term");
-		String bunbanCode = pick(studentList, "bunban_code");
-		String groupCode = pick(studentList, "group_code");
-		String memberKey = pick(studentList, "member_key");
-		String visible = pick(studentList, "visible");
+	//2-3) 수강(수강생-과목) - 년도별로 쪼개서 받습니다.
+	int yearFrom = Math.min(startYear, endYear);
+	int yearTo = Math.max(startYear, endYear);
+	for(int y = yearFrom; y <= yearTo; y++) {
+		String wh = "open_year=" + y;
+		String rawStudent = fetchPolyRaw(endpoint, "COM.LMS_STUDENT_VIEW", studentCnt, 2, 1500, wh);
+		malgnsoft.db.DataSet studentList = parsePolyResponse(rawStudent);
+		if(studentList.size() == 0) continue;
 
-		if("".equals(courseCode) || "".equals(openYear) || "".equals(openTerm) || "".equals(bunbanCode) || "".equals(memberKey)) continue;
-		if("".equals(groupCode)) groupCode = "U";
+		if(y > studentMaxYear) studentMaxYear = y;
 
-		int ret = polyStudent.execute(
-			" REPLACE INTO " + polyStudent.table
-			+ " (course_code, open_year, open_term, bunban_code, group_code, member_key, visible, sync_date, raw_json, reg_date, mod_date) "
-			+ " VALUES(?,?,?,?,?,?,?, ?, ?, ?, ?) "
-			, new Object[] {
-				courseCode, openYear, openTerm, bunbanCode, groupCode, memberKey, visible
-				, syncDate, null, syncDate, syncDate
-			}
-		);
-		if(-1 < ret) studentSaved++;
+		studentList.first();
+		while(studentList.next()) {
+			String courseCode = pick(studentList, "course_code");
+			String openYear = pick(studentList, "open_year");
+			String openTerm = pick(studentList, "open_term");
+			String bunbanCode = pick(studentList, "bunban_code");
+			String groupCode = pick(studentList, "group_code");
+			String memberKey = pick(studentList, "member_key");
+			String visible = pick(studentList, "visible");
+
+			if("".equals(courseCode) || "".equals(openYear) || "".equals(openTerm) || "".equals(bunbanCode) || "".equals(memberKey)) continue;
+			if("".equals(groupCode)) groupCode = "U";
+
+			int ret = polyStudent.execute(
+				" REPLACE INTO " + polyStudent.table
+				+ " (course_code, open_year, open_term, bunban_code, group_code, member_key, visible, sync_date, raw_json, reg_date, mod_date) "
+				+ " VALUES(?,?,?,?,?,?,?, ?, ?, ?, ?) "
+				, new Object[] {
+					courseCode, openYear, openTerm, bunbanCode, groupCode, memberKey, visible
+					, syncDate, null, syncDate, syncDate
+				}
+			);
+			if(-1 < ret) studentSaved++;
+		}
 	}
 
 	//3) 로그 기록
-	syncLog.upsert(syncKey, "OK", "성공(req=" + requireYear + ", smax=" + studentMaxYear + ", cnt=" + studentCntUsed + ")");
+	syncLog.upsert(syncKey, "OK", "성공(req=" + requireYear + ", smax=" + studentMaxYear + ", cnt=" + studentCnt + ")");
 
 	result.put("rst_code", "0000");
 	result.put("rst_message", "성공");
@@ -349,7 +361,7 @@ try {
 	result.put("rst_course_max_year", targetCourseMaxYear);
 	result.put("rst_require_year", requireYear);
 	result.put("rst_student_max_year", studentMaxYear);
-	result.put("rst_student_cnt_used", studentCntUsed);
+	result.put("rst_student_cnt_used", studentCnt);
 	result.put("rst_course_saved", courseSaved);
 	result.put("rst_member_saved", memberSaved);
 	result.put("rst_alias_saved", aliasSaved);
