@@ -1619,7 +1619,10 @@ export const tutorLmsApi = {
     body.set('library_link', payload.link ?? '');
     if (payload.file) body.set('library_file', payload.file);
 
-    return requestJson<number>(`/tutor_lms/api/materials_upload.jsp`, {
+    // 왜: 파일 업로드는 multipart/form-data로 전송되는데, 일부 JSP는 request.getParameter로는 값을 못 읽을 수 있습니다.
+    //     그래서 course_id를 "쿼리스트링 + multipart 바디" 두 군데에 같이 실어 보내 서버 호환성을 높입니다.
+    const url = `/tutor_lms/api/materials_upload.jsp${buildQuery({ course_id: payload.courseId })}`;
+    return requestJson<number>(url, {
       method: 'POST',
       body,
     });

@@ -2613,8 +2613,12 @@ function MaterialsTab({
   const [resolvedCourseId, setResolvedCourseId] = useState<number | null>(null);
 
   const isHaksaCourse = course?.sourceType === 'haksa';
-  // 왜: 자료 업로드 API는 course_id가 필수라서, 학사 과목은 매핑된 과정 ID를 먼저 확보해야 합니다.
-  const baseCourseId = Number.isFinite(courseId) ? courseId : 0;
+  // 왜: 학사 과목은 목록의 id가 아닌 매핑된 과정 ID만 유효하므로, 매핑값이 없으면 0으로 취급합니다.
+  const baseCourseId = isHaksaCourse
+    ? Number(course?.mappedCourseId ?? 0)
+    : Number.isFinite(courseId)
+      ? courseId
+      : 0;
   const effectiveCourseId = resolvedCourseId && resolvedCourseId > 0 ? resolvedCourseId : baseCourseId;
 
   const [uploadForm, setUploadForm] = useState<{
