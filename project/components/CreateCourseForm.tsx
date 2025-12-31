@@ -142,8 +142,24 @@ function parseTrainingPeriod(input: string) {
   return { start, end };
 }
 
-export function CreateCourseForm({ onCreated }: { onCreated?: () => void } = {}) {
-  const [currentStep, setCurrentStep] = useState<Step>('basic');
+interface CreateCourseFormProps {
+  onCreated?: () => void;
+  initialStep?: Step;
+  onStepChange?: (step: Step) => void;
+}
+
+export function CreateCourseForm({ onCreated, initialStep, onStepChange }: CreateCourseFormProps = {}) {
+  const [currentStep, setCurrentStep] = useState<Step>(initialStep ?? 'basic');
+  useEffect(() => {
+    if (!initialStep) return;
+    // 왜: 주소에서 들어온 단계가 있으면 화면 단계를 맞춥니다.
+    if (initialStep !== currentStep) setCurrentStep(initialStep);
+  }, [currentStep, initialStep]);
+
+  useEffect(() => {
+    // 왜: 단계 변경을 주소와 동기화하기 위해 바깥에 알려줍니다.
+    onStepChange?.(currentStep);
+  }, [currentStep, onStepChange]);
   const [courseCategory, setCourseCategory] = useState('');
   const [classification, setClassification] = useState('');
   const [courseName, setCourseName] = useState('');

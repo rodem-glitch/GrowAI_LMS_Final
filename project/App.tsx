@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
@@ -9,12 +9,87 @@ import { QuestionCategoryPage } from './components/QuestionCategoryPage';
 import { QuestionBankPage } from './components/QuestionBankPage';
 import { ExamManagementPage } from './components/ExamManagementPage';
 import { CreateSubjectWizard } from './components/CreateSubjectWizard';
+import type { CourseManagementTabId } from './components/CourseManagement';
+
+const MENU_IDS = [
+  'dashboard',
+  'explore',
+  'courses',
+  'create-course',
+  'content-all',
+  'content-favorites',
+  'exam-categories',
+  'exam-questions',
+  'exam-management',
+  'subject-create',
+] as const;
+
+type MenuId = (typeof MENU_IDS)[number];
+
+const MENU_ID_SET = new Set<string>(MENU_IDS);
+const CREATE_COURSE_STEP_IDS = ['basic', 'subjects'] as const;
+const CREATE_COURSE_STEP_SET = new Set<string>(CREATE_COURSE_STEP_IDS);
+const SUBJECT_STEP_IDS = ['basic', 'learners', 'curriculum', 'confirm'] as const;
+const SUBJECT_STEP_SET = new Set<string>(SUBJECT_STEP_IDS);
+
+type RouteState = {
+  menu: MenuId;
+  subPath?: string;
+  params: Record<string, string>;
+};
+
+type ParsedRoute = RouteState & {
+  isFallback: boolean;
+};
+
+const parseRouteFromHash = (hash: string): ParsedRoute => {
+  // 왜: 해시 주소를 메뉴/서브경로/쿼리로 분해해 화면 상태에 맞춥니다.
+  const normalized = hash.replace(/^#\/?/, '').trim();
+  if (!normalized) {
+    return { menu: 'dashboard', params: {}, isFallback: false };
+  }
+
+  const [pathPart, queryPart] = normalized.split('?');
+  const segments = pathPart.split('/').filter(Boolean);
+  const menuId = segments[0] ?? '';
+  const isValidMenu = MENU_ID_SET.has(menuId);
+  const params: Record<string, string> = {};
+
+  if (queryPart) {
+    const searchParams = new URLSearchParams(queryPart);
+    searchParams.forEach((value, key) => {
+      if (value) params[key] = value;
+    });
+  }
+
+  return {
+    menu: isValidMenu ? (menuId as MenuId) : 'dashboard',
+    subPath: segments.length > 1 ? segments.slice(1).join('/') : undefined,
+    params,
+    isFallback: !isValidMenu,
+  };
+};
+
+const buildHashFromRoute = (route: RouteState) => {
+  // 왜: 현재 화면 상태를 항상 같은 규칙의 주소로 만들기 위함입니다.
+  const path = [route.menu, route.subPath].filter(Boolean).join('/');
+  const searchParams = new URLSearchParams();
+  Object.entries(route.params).forEach(([key, value]) => {
+    if (value) searchParams.set(key, value);
+  });
+  const query = searchParams.toString();
+  return `#/${path}${query ? `?${query}` : ''}`;
+};
 
 export default function App() {
-  const [activeMenu, setActiveMenu] = useState<string>('dashboard');
+  const [routeState, setRouteState] = useState<RouteState>(() => {
+    const parsed = parseRouteFromHash(window.location.hash);
+    return { menu: parsed.menu, subPath: parsed.subPath, params: parsed.params };
+  });
   const [contentLibraryExpanded, setContentLibraryExpanded] = useState(false);
   const [examMenuExpanded, setExamMenuExpanded] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // 컴포넌트 재렌더링용 키
+  const activeMenu = routeState.menu;
 
   // 콘텐츠 라이브러리 하위 메뉴 여부 확인
   const isContentLibrarySubMenu = activeMenu === 'content-all' || activeMenu === 'content-favorites';
@@ -22,10 +97,73 @@ export default function App() {
   // 시험관리 하위 메뉴 여부 확인
   const isExamSubMenu = activeMenu === 'exam-categories' || activeMenu === 'exam-questions' || activeMenu === 'exam-management';
 
+  const syncHash = useCallback((route: RouteState, replace = false) => {
+    // 왜: 서버 라우팅 없이도 뒤로가기/직접 주소 접근이 되도록 해시를 동기화합니다.
+    const nextHash = buildHashFromRoute(route);
+    if (window.location.hash === nextHash) return;
+    const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+    if (replace) {
+      window.history.replaceState(null, '', nextUrl);
+    } else {
+      window.location.hash = nextHash;
+    }
+  }, []);
+
+  const applyRoute = useCallback((route: RouteState, options?: { syncHash?: boolean; replaceHash?: boolean }) => {
+    setRouteState(route);
+    if (route.menu === 'content-all' || route.menu === 'content-favorites') {
+      setContentLibraryExpanded(true);
+    }
+    if (route.menu === 'exam-categories' || route.menu === 'exam-questions' || route.menu === 'exam-management') {
+      setExamMenuExpanded(true);
+    }
+    if (options?.syncHash !== false) {
+      syncHash(route, options?.replaceHash);
+    }
+  }, [syncHash]);
+
+  const applyMenu = useCallback((menu: MenuId) => {
+    applyRoute({ menu, params: {} });
+  }, [applyRoute]);
+
+  const handleOpenCourseFromDashboard = useCallback((payload: { courseId: number; courseName?: string; targetTab?: CourseManagementTabId }) => {
+    // 왜: 대시보드에서 선택한 과목과 탭을 주소에 담아 바로 이동합니다.
+    const params: Record<string, string> = {
+      courseId: String(payload.courseId),
+      tab: payload.targetTab ?? 'attendance',
+      source: 'prism',
+    };
+    if (payload.courseName) params.courseName = payload.courseName;
+    applyRoute({
+      menu: 'courses',
+      subPath: 'manage',
+      params,
+    });
+  }, [applyRoute]);
+
+  const handleCoursesRouteChange = useCallback((next: { subPath?: string; params: Record<string, string> }) => {
+    applyRoute({ menu: 'courses', subPath: next.subPath, params: next.params });
+  }, [applyRoute]);
+
+  useEffect(() => {
+    const syncFromHash = () => {
+      const parsed = parseRouteFromHash(window.location.hash);
+      if (parsed.isFallback) {
+        // 왜: 잘못된 주소가 들어오면 기본 화면으로 정리합니다.
+        applyRoute({ menu: 'dashboard', params: {} }, { syncHash: true, replaceHash: true });
+        return;
+      }
+      applyRoute({ menu: parsed.menu, subPath: parsed.subPath, params: parsed.params }, { syncHash: false });
+    };
+
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [applyRoute]);
+
   const handleContentLibraryClick = () => {
     if (!contentLibraryExpanded) {
-      setContentLibraryExpanded(true);
-      setActiveMenu('content-all');
+      applyMenu('content-all');
     } else {
       setContentLibraryExpanded(!contentLibraryExpanded);
     }
@@ -33,8 +171,7 @@ export default function App() {
 
   const handleExamMenuClick = () => {
     if (!examMenuExpanded) {
-      setExamMenuExpanded(true);
-      setActiveMenu('exam-categories');
+      applyMenu('exam-categories');
     } else {
       setExamMenuExpanded(!examMenuExpanded);
     }
@@ -44,6 +181,14 @@ export default function App() {
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
+
+  const createCourseStep = routeState.menu === 'create-course' && CREATE_COURSE_STEP_SET.has(routeState.params.step ?? '')
+    ? (routeState.params.step as typeof CREATE_COURSE_STEP_IDS[number])
+    : undefined;
+
+  const subjectStep = routeState.menu === 'subject-create' && SUBJECT_STEP_SET.has(routeState.params.step ?? '')
+    ? (routeState.params.step as typeof SUBJECT_STEP_IDS[number])
+    : undefined;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,7 +224,7 @@ export default function App() {
         <aside className="w-64 bg-white border-r border-gray-200 fixed top-[73px] left-0 h-[calc(100vh-73px)] overflow-y-auto z-40">
           <nav className="p-4 flex flex-col gap-2">
             <button
-              onClick={() => setActiveMenu('dashboard')}
+              onClick={() => applyMenu('dashboard')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'dashboard'
                   ? 'bg-blue-600 text-white'
@@ -92,7 +237,7 @@ export default function App() {
             
             {/* 과정탐색 */}
             <button
-              onClick={() => setActiveMenu('explore')}
+              onClick={() => applyMenu('explore')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'explore'
                   ? 'bg-blue-600 text-white'
@@ -104,7 +249,7 @@ export default function App() {
             </button>
             
             <button
-              onClick={() => setActiveMenu('courses')}
+              onClick={() => applyMenu('courses')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'courses'
                   ? 'bg-blue-600 text-white'
@@ -115,7 +260,7 @@ export default function App() {
               <span>담당과목</span>
             </button>
             <button
-              onClick={() => setActiveMenu('create-course')}
+              onClick={() => applyMenu('create-course')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'create-course'
                   ? 'bg-blue-600 text-white'
@@ -151,7 +296,7 @@ export default function App() {
               {contentLibraryExpanded && (
                 <div className="ml-4 mt-1 flex flex-col gap-1">
                   <button
-                    onClick={() => setActiveMenu('content-all')}
+                    onClick={() => applyMenu('content-all')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
                       activeMenu === 'content-all'
                         ? 'bg-blue-100 text-blue-700 font-medium'
@@ -162,7 +307,7 @@ export default function App() {
                     <span>전체 콘텐츠</span>
                   </button>
                   <button
-                    onClick={() => setActiveMenu('content-favorites')}
+                    onClick={() => applyMenu('content-favorites')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
                       activeMenu === 'content-favorites'
                         ? 'bg-blue-100 text-blue-700 font-medium'
@@ -201,7 +346,7 @@ export default function App() {
               {examMenuExpanded && (
                 <div className="ml-4 mt-1 flex flex-col gap-1">
                   <button
-                    onClick={() => setActiveMenu('exam-categories')}
+                    onClick={() => applyMenu('exam-categories')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
                       activeMenu === 'exam-categories'
                         ? 'bg-blue-100 text-blue-700 font-medium'
@@ -212,7 +357,7 @@ export default function App() {
                     <span>문제카테고리</span>
                   </button>
                   <button
-                    onClick={() => setActiveMenu('exam-questions')}
+                    onClick={() => applyMenu('exam-questions')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
                       activeMenu === 'exam-questions'
                         ? 'bg-blue-100 text-blue-700 font-medium'
@@ -223,7 +368,7 @@ export default function App() {
                     <span>문제은행</span>
                   </button>
                   <button
-                    onClick={() => setActiveMenu('exam-management')}
+                    onClick={() => applyMenu('exam-management')}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors text-left text-sm ${
                       activeMenu === 'exam-management'
                         ? 'bg-blue-100 text-blue-700 font-medium'
@@ -239,7 +384,7 @@ export default function App() {
 
             {/* 왜: 과목 개설은 시험관리 하위가 아니라 독립 메뉴로 배치합니다. */}
             <button
-              onClick={() => setActiveMenu('subject-create')}
+              onClick={() => applyMenu('subject-create')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'subject-create'
                   ? 'bg-blue-600 text-white'
@@ -260,13 +405,30 @@ export default function App() {
           <div className="max-w-7xl mx-auto">
             {/* Empty content area - 추후 추가될 컨텐츠 영역 */}
             {activeMenu === 'dashboard' ? (
-              <Dashboard key={refreshKey} onNavigate={(menu) => setActiveMenu(menu)} />
+              <Dashboard
+                key={refreshKey}
+                onNavigate={(menu) => applyMenu(menu)}
+                onOpenCourse={handleOpenCourseFromDashboard}
+              />
             ) : activeMenu === 'explore' ? (
               <CourseExplorer key={refreshKey} />
             ) : activeMenu === 'courses' ? (
-              <MyCoursesList key={refreshKey} />
+              <MyCoursesList
+                key={refreshKey}
+                routeSubPath={routeState.subPath}
+                routeParams={routeState.params}
+                onRouteChange={handleCoursesRouteChange}
+              />
             ) : activeMenu === 'create-course' ? (
-              <CreateCourseForm key={refreshKey} onCreated={() => setActiveMenu('explore')} />
+              <CreateCourseForm
+                key={refreshKey}
+                initialStep={createCourseStep}
+                onStepChange={(step) => applyRoute({
+                  menu: 'create-course',
+                  params: step === 'basic' ? {} : { step },
+                })}
+                onCreated={() => applyMenu('explore')}
+              />
             ) : activeMenu === 'content-all' ? (
               <ContentLibraryPage key={refreshKey} activeTab="all" />
             ) : activeMenu === 'content-favorites' ? (
@@ -278,7 +440,14 @@ export default function App() {
             ) : activeMenu === 'exam-management' ? (
               <ExamManagementPage key={refreshKey} />
             ) : activeMenu === 'subject-create' ? (
-              <CreateSubjectWizard key={refreshKey} />
+              <CreateSubjectWizard
+                key={refreshKey}
+                initialStep={subjectStep}
+                onStepChange={(step) => applyRoute({
+                  menu: 'subject-create',
+                  params: step === 'basic' ? {} : { step },
+                })}
+              />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
                 <div className="text-gray-400">

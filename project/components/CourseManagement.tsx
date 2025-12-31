@@ -76,6 +76,8 @@ interface CourseManagementProps {
     haksaIsSyllabus?: string;
   };
   onBack: () => void;
+  initialTab?: CourseManagementTabId;
+  onTabChange?: (tabId: CourseManagementTabId) => void;
 }
 
 const getHaksaWeekCount = (course?: any) => {
@@ -161,7 +163,7 @@ const appendHaksaCurriculumContent = async ({
 };
 
 
-type TabType =
+export type CourseManagementTabId =
   | 'info'
   | 'info-basic'
   | 'info-evaluation'
@@ -178,11 +180,39 @@ type TabType =
   | 'grades'
   | 'completion';
 
-export function CourseManagement({ course: initialCourse, onBack }: CourseManagementProps) {
+type TabType = CourseManagementTabId;
+
+const INFO_SUB_TAB_IDS: CourseManagementTabId[] = ['info-basic', 'info-evaluation', 'info-completion'];
+const ASSIGNMENT_SUB_TAB_IDS: CourseManagementTabId[] = ['assignment-management', 'assignment-feedback'];
+
+export function CourseManagement({ course: initialCourse, onBack, initialTab, onTabChange }: CourseManagementProps) {
   const [course, setCourse] = useState(initialCourse);
-  const [activeTab, setActiveTab] = useState<TabType>('info-basic');
-  const [isInfoExpanded, setIsInfoExpanded] = useState(true);
-  const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(false);
+
+  const resolveInitialTab = (tab?: CourseManagementTabId): TabType => {
+    // 왜: 상위 탭(info/assignment)이 들어오면 기본 하위 탭으로 정리합니다.
+    if (!tab || tab === 'info') return 'info-basic';
+    if (tab === 'assignment') return 'assignment-management';
+    return tab;
+  };
+
+  const resolvedInitialTab = resolveInitialTab(initialTab);
+  const [activeTab, setActiveTab] = useState<TabType>(resolvedInitialTab);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(() => INFO_SUB_TAB_IDS.includes(resolvedInitialTab));
+  const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(() => ASSIGNMENT_SUB_TAB_IDS.includes(resolvedInitialTab));
+
+  useEffect(() => {
+    if (!initialTab) return;
+    // 왜: 뒤로가기/직접 주소 이동 시 탭 상태를 주소 기준으로 다시 맞춥니다.
+    const nextTab = resolveInitialTab(initialTab);
+    setActiveTab(nextTab);
+    setIsInfoExpanded(INFO_SUB_TAB_IDS.includes(nextTab));
+    setIsAssignmentExpanded(ASSIGNMENT_SUB_TAB_IDS.includes(nextTab));
+  }, [initialTab]);
+
+  useEffect(() => {
+    // 왜: 상위에서 주소 동기화를 할 수 있도록 현재 탭을 알려줍니다.
+    onTabChange?.(activeTab);
+  }, [activeTab, onTabChange]);
 
   // 페이지 진입 시 스크롤을 맨 위로 이동
   useEffect(() => {
@@ -192,6 +222,14 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   useEffect(() => {
     setCourse(initialCourse);
   }, [initialCourse]);
+
+  useEffect(() => {
+    if (!initialTab) return;
+    // 왜: 대시보드에서 넘어온 탭 요구를 바로 반영하고, 사이드바 접힘 상태도 맞춰줍니다.
+    setActiveTab(initialTab);
+    setIsInfoExpanded(INFO_SUB_TAB_IDS.includes(initialTab));
+    setIsAssignmentExpanded(ASSIGNMENT_SUB_TAB_IDS.includes(initialTab));
+  }, [initialTab]);
 
   const tabs = [
     { id: 'info' as TabType, label: '과목정보', icon: Info, isSubTab: false, hasSubTabs: true },

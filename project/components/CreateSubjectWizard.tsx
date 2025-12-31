@@ -71,8 +71,23 @@ interface FormData {
   sessions: SessionItem[];
 }
 
-export function CreateSubjectWizard() {
-  const [currentStep, setCurrentStep] = useState<Step>('basic');
+interface CreateSubjectWizardProps {
+  initialStep?: Step;
+  onStepChange?: (step: Step) => void;
+}
+
+export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubjectWizardProps = {}) {
+  const [currentStep, setCurrentStep] = useState<Step>(initialStep ?? 'basic');
+  useEffect(() => {
+    if (!initialStep) return;
+    // 왜: 주소에서 들어온 단계가 있으면 현재 단계와 맞춥니다.
+    if (initialStep !== currentStep) setCurrentStep(initialStep);
+  }, [currentStep, initialStep]);
+
+  useEffect(() => {
+    // 왜: 단계 이동을 주소에 반영하기 위해 바깥에 알려줍니다.
+    onStepChange?.(currentStep);
+  }, [currentStep, onStepChange]);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [categoryLoading, setCategoryLoading] = useState(false);

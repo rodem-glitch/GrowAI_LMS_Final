@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Users, Settings } from 'lucide-react';
-import { CourseManagement } from './CourseManagement';
+import { CourseManagement, type CourseManagementTabId } from './CourseManagement';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
@@ -47,6 +47,31 @@ interface Course {
 
 type TabType = 'haksa' | 'prism';
 
+interface MyCoursesListProps {
+  routeSubPath?: string;
+  routeParams?: Record<string, string>;
+  onRouteChange?: (next: { subPath?: string; params: Record<string, string> }) => void;
+}
+
+const COURSE_MANAGEMENT_TAB_IDS: CourseManagementTabId[] = [
+  'info',
+  'info-basic',
+  'info-evaluation',
+  'info-completion',
+  'curriculum',
+  'students',
+  'attendance',
+  'exam',
+  'assignment',
+  'assignment-management',
+  'assignment-feedback',
+  'materials',
+  'qna',
+  'grades',
+  'completion',
+];
+const COURSE_MANAGEMENT_TAB_SET = new Set<string>(COURSE_MANAGEMENT_TAB_IDS);
+
 // 단과대학 옵션 (캠퍼스 이름만)
 const GRAD_OPTIONS = [
   '전체',
@@ -74,29 +99,133 @@ const CURRICULUM_OPTIONS = ['전체', '전공필수', '전공교과', '전공선
 // 유형 옵션
 const CATEGORY_OPTIONS = ['전체', 'off', 'elearning'];
 
-export function MyCoursesList() {
+export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCoursesListProps) {
   const currentYear = String(new Date().getFullYear());
-  const [activeTab, setActiveTab] = useState<TabType>('haksa'); // 기본 탭: 학사
+  const parseNumberParam = useCallback((value: string | undefined, fallback: number) => {
+    // 왜: 잘못된 주소 값이 들어와도 화면이 깨지지 않게 기본값으로 되돌립니다.
+    const parsed = Number(value);
+    if (Number.isNaN(parsed) || parsed <= 0) return fallback;
+    return Math.floor(parsed);
+  }, []);
+
+  const initialTab = routeParams?.tab === 'prism' || routeParams?.tab === 'haksa' ? routeParams.tab : 'haksa';
+  const initialYear = routeParams?.year ?? currentYear;
+  const initialKeyword = routeParams?.keyword ?? '';
+  const initialPage = parseNumberParam(routeParams?.page, 1);
+  const initialPageSize = parseNumberParam(routeParams?.pageSize, 20);
+  const initialSortOrder = routeParams?.sortOrder === 'asc' ? 'asc' : 'desc';
+
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab); // 기본 탭: 학사
   const [yearOptions, setYearOptions] = useState<string[]>(['전체', currentYear]);
-  const [year, setYear] = useState(currentYear);
-  const [courseType, setCourseType] = useState('전체');
-  const [status, setStatus] = useState('전체');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [year, setYear] = useState(initialYear);
+  const [courseType, setCourseType] = useState(routeParams?.courseType ?? '전체');
+  const [status, setStatus] = useState(routeParams?.status ?? '전체');
+  const [searchTerm, setSearchTerm] = useState(initialKeyword);
+  const [searchKeyword, setSearchKeyword] = useState(initialKeyword);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourseTab, setSelectedCourseTab] = useState<CourseManagementTabId | null>(null);
   const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadedTab, setLoadedTab] = useState<TabType | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [page, setPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [totalCount, setTotalCount] = useState(0);
 
   // 학사 탭 전용 필터
-  const [haksaCategory, setHaksaCategory] = useState('전체'); // 유형: off/elearning
-  const [haksaGrad, setHaksaGrad] = useState('전체'); // 단과대학
-  const [haksaCurriculum, setHaksaCurriculum] = useState('전체'); // 과목구분
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // 정렬 순서
+  const [haksaCategory, setHaksaCategory] = useState(routeParams?.haksaCategory ?? '전체'); // 유형: off/elearning
+  const [haksaGrad, setHaksaGrad] = useState(routeParams?.haksaGrad ?? '전체'); // 단과대학
+  const [haksaCurriculum, setHaksaCurriculum] = useState(routeParams?.haksaCurriculum ?? '전체'); // 과목구분
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(initialSortOrder); // 정렬 순서
+  const autoSelectStateRef = useRef<{ key: string; stage: 'init' | 'switched' | 'widened' | 'searched' | 'done' } | null>(null);
+
+  const normalizeText = (value?: string) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+  const getRouteParam = useCallback((keys: string[]) => {
+    for (const key of keys) {
+      const value = routeParams?.[key];
+      if (value) return value;
+    }
+    return '';
+  }, [routeParams]);
+
+  const buildListRouteParams = useCallback(() => {
+    // 왜: 목록 화면의 상태를 주소에 담아 뒤로가기/직접 이동이 되게 합니다.
+    const params: Record<string, string> = {};
+    if (activeTab !== 'haksa') params.tab = activeTab;
+    if (year) params.year = year;
+    if (searchKeyword) params.keyword = searchKeyword;
+    if (page > 1) params.page = String(page);
+    if (pageSize !== 20) params.pageSize = String(pageSize);
+
+    if (activeTab === 'prism') {
+      if (courseType !== '전체') params.courseType = courseType;
+      if (status !== '전체') params.status = status;
+    }
+
+    if (activeTab === 'haksa') {
+      if (haksaCategory !== '전체') params.haksaCategory = haksaCategory;
+      if (haksaGrad !== '전체') params.haksaGrad = haksaGrad;
+      if (haksaCurriculum !== '전체') params.haksaCurriculum = haksaCurriculum;
+      if (sortOrder !== 'desc') params.sortOrder = sortOrder;
+    }
+
+    return params;
+  }, [
+    activeTab,
+    courseType,
+    haksaCategory,
+    haksaCurriculum,
+    haksaGrad,
+    page,
+    pageSize,
+    searchKeyword,
+    sortOrder,
+    status,
+    year,
+  ]);
+
+  useEffect(() => {
+    if (!onRouteChange) return;
+    if (routeSubPath === 'manage') return;
+    onRouteChange({ subPath: undefined, params: buildListRouteParams() });
+  }, [buildListRouteParams, onRouteChange, routeSubPath]);
+
+  useEffect(() => {
+    if (routeSubPath === 'manage') return;
+    const nextTab = routeParams?.tab === 'prism' || routeParams?.tab === 'haksa' ? routeParams.tab : 'haksa';
+    const nextYear = routeParams?.year ?? currentYear;
+    const nextKeyword = routeParams?.keyword ?? '';
+    const nextPage = parseNumberParam(routeParams?.page, 1);
+    const nextPageSize = parseNumberParam(routeParams?.pageSize, 20);
+    const nextCourseType = routeParams?.courseType ?? '전체';
+    const nextStatus = routeParams?.status ?? '전체';
+    const nextHaksaCategory = routeParams?.haksaCategory ?? '전체';
+    const nextHaksaGrad = routeParams?.haksaGrad ?? '전체';
+    const nextHaksaCurriculum = routeParams?.haksaCurriculum ?? '전체';
+    const nextSortOrder = routeParams?.sortOrder === 'asc' ? 'asc' : 'desc';
+
+    if (nextTab !== activeTab) setActiveTab(nextTab);
+    if (nextYear !== year) setYear(nextYear);
+    if (nextKeyword !== searchTerm) {
+      setSearchTerm(nextKeyword);
+      setSearchKeyword(nextKeyword);
+    }
+    if (nextPage !== page) setPage(nextPage);
+    if (nextPageSize !== pageSize) setPageSize(nextPageSize);
+    if (nextCourseType !== courseType) setCourseType(nextCourseType);
+    if (nextStatus !== status) setStatus(nextStatus);
+    if (nextHaksaCategory !== haksaCategory) setHaksaCategory(nextHaksaCategory);
+    if (nextHaksaGrad !== haksaGrad) setHaksaGrad(nextHaksaGrad);
+    if (nextHaksaCurriculum !== haksaCurriculum) setHaksaCurriculum(nextHaksaCurriculum);
+    if (nextSortOrder !== sortOrder) setSortOrder(nextSortOrder);
+  }, [
+    currentYear,
+    parseNumberParam,
+    routeParams,
+    routeSubPath,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,7 +367,11 @@ export function MyCoursesList() {
       } catch (e) {
         if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          // 왜: 자동 선택 로직에서 현재 탭의 데이터가 준비됐는지 판단하기 위해 기록합니다.
+          setLoading(false);
+          setLoadedTab(activeTab);
+        }
       }
     };
 
@@ -282,7 +415,41 @@ export function MyCoursesList() {
     return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
   }, [page, totalPages]);
 
-  const handleSelectCourse = async (course: Course) => {
+  const findCourseBySelection = (targetIdRaw: string, targetName?: string) => {
+    const normalizedTargetId = normalizeText(targetIdRaw);
+    const targetId = Number(targetIdRaw);
+    const normalizedTargetName = normalizeText(targetName);
+    return courses.find((course) => {
+      const courseIdNum = Number(course.id);
+      const mappedIdNum = Number(course.mappedCourseId ?? NaN);
+      const convIdNum = Number(course.courseId);
+      const rawIdMatched =
+        normalizedTargetId &&
+        (normalizeText(course.id) === normalizedTargetId ||
+          normalizeText(course.courseId) === normalizedTargetId ||
+          normalizeText(String(course.mappedCourseId ?? '')) === normalizedTargetId);
+      const idMatched =
+        (!Number.isNaN(targetId) && courseIdNum === targetId) ||
+        (!Number.isNaN(targetId) && mappedIdNum === targetId) ||
+        (!Number.isNaN(targetId) && convIdNum === targetId) ||
+        rawIdMatched;
+      if (idMatched) return true;
+
+      if (!normalizedTargetName) return false;
+      const subjectName = normalizeText(course.subjectName);
+      const programName = normalizeText(course.programName);
+      return (
+        subjectName === normalizedTargetName ||
+        subjectName.includes(normalizedTargetName) ||
+        normalizedTargetName.includes(subjectName) ||
+        programName === normalizedTargetName ||
+        programName.includes(normalizedTargetName)
+      );
+    });
+  };
+
+  const handleSelectCourse = useCallback(async (course: Course, targetTab?: CourseManagementTabId) => {
+    setSelectedCourseTab(targetTab ?? null);
     if (course.sourceType !== 'haksa') {
       setSelectedCourse(course);
       return;
@@ -319,14 +486,146 @@ export function MyCoursesList() {
     } finally {
       setResolvingCourseId(null);
     }
-  };
+  }, []);
+
+  // 왜: 주소에서 넘어온 과목 정보를 자동 선택 로직에 맞춰 정리합니다.
+  const routeCourseId = getRouteParam(['courseId', 'course_id', 'id']);
+  const routeCourseName = getRouteParam(['courseName', 'course_nm', 'courseNameConv', 'name']);
+  const rawTabParam = getRouteParam(['tab', 'targetTab', 'tab_id']);
+  const routeTargetTab =
+    COURSE_MANAGEMENT_TAB_SET.has(rawTabParam) ? (rawTabParam as CourseManagementTabId) : undefined;
+  const rawSourceParam = getRouteParam(['source', 'source_type', 'sourceType']);
+  const routeSourceType =
+    rawSourceParam === 'haksa' || rawSourceParam === 'prism'
+      ? rawSourceParam
+      : (!routeTargetTab && (rawTabParam === 'haksa' || rawTabParam === 'prism') ? rawTabParam : undefined);
+  const routeSelection =
+    routeSubPath === 'manage' && (routeCourseId || routeCourseName)
+      ? {
+          courseId: routeCourseId,
+          courseName: routeCourseName,
+          targetTab: routeTargetTab,
+          sourceType: routeSourceType,
+        }
+      : null;
+
+  useEffect(() => {
+    if (!routeSelection) return;
+    if (selectedCourse && String(selectedCourse.id) === String(routeSelection.courseId)) return;
+    if (loadedTab !== activeTab) return;
+
+    const targetIdRaw = routeSelection.courseId;
+    const normalizedTargetId = normalizeText(targetIdRaw);
+    const hasId = Boolean(normalizedTargetId);
+    const hasName = Boolean(normalizeText(routeSelection.courseName));
+    if (!hasId && !hasName) return;
+
+    const targetId = Number(targetIdRaw);
+
+    const selectionKey = `${normalizedTargetId}-${normalizeText(routeSelection.courseName)}-${routeSelection.targetTab ?? ''}`;
+    if (!autoSelectStateRef.current || autoSelectStateRef.current.key !== selectionKey) {
+      autoSelectStateRef.current = { key: selectionKey, stage: 'init' };
+    }
+
+    const state = autoSelectStateRef.current;
+    const matched = findCourseBySelection(targetIdRaw, routeSelection.courseName);
+
+    if (matched) {
+      // 왜: 주소로 넘어온 과목은 바로 상세 탭으로 열어줍니다.
+      state.stage = 'done';
+      void handleSelectCourse(matched, routeSelection.targetTab);
+      return;
+    }
+
+    if (state.stage === 'init') {
+      const targetSource = routeSelection.sourceType;
+      if (targetSource && activeTab !== targetSource) {
+        // 왜: 주소에 있는 소스 탭과 실제 목록 탭을 맞춰서 검색합니다.
+        state.stage = 'switched';
+        setActiveTab(targetSource);
+        return;
+      }
+      if (!targetSource && activeTab !== 'prism') {
+        // 왜: 기본은 프리즘 탭에서 먼저 찾도록 맞춥니다.
+        state.stage = 'switched';
+        setActiveTab('prism');
+        return;
+      }
+    }
+
+    if (state.stage === 'switched' || state.stage === 'init') {
+      // 왜: 필터/페이지 때문에 못 찾는 경우가 있어 조건을 넓힙니다.
+      state.stage = 'widened';
+      setYear('전체');
+      setCourseType('전체');
+      setStatus('전체');
+      setHaksaCategory('전체');
+      setHaksaGrad('전체');
+      setHaksaCurriculum('전체');
+      setSortOrder('desc');
+      setPage(1);
+      return;
+    }
+
+    if (state.stage === 'widened' && !searchTerm) {
+      // 왜: 검색어로 다시 좁혀 빠르게 찾습니다.
+      state.stage = 'searched';
+      const keyword = (routeSelection.courseName || '').trim() || targetIdRaw || String(targetId);
+      setSearchTerm(keyword);
+      return;
+    }
+
+    if (state.stage === 'searched' && !loading) {
+      // 왜: 여러 번 시도해도 못 찾으면 사용자가 직접 고르도록 마무리합니다.
+      state.stage = 'done';
+    }
+  }, [activeTab, handleSelectCourse, loadedTab, loading, routeSelection, searchTerm, selectedCourse]);
+
+  useEffect(() => {
+    if (routeSubPath !== 'manage') return;
+    if (routeTargetTab && routeTargetTab !== selectedCourseTab) {
+      // 왜: 주소의 탭 값이 바뀌면 상세 탭도 함께 맞춥니다.
+      setSelectedCourseTab(routeTargetTab);
+    }
+  }, [routeSubPath, routeTargetTab, selectedCourseTab]);
+
+  useEffect(() => {
+    if (!onRouteChange || !selectedCourse) return;
+    const nextTab = selectedCourseTab ?? routeTargetTab ?? 'info-basic';
+    const courseNameParam = selectedCourse.subjectName || selectedCourse.courseId;
+    onRouteChange({
+      subPath: 'manage',
+      params: {
+        courseId: selectedCourse.id,
+        source: selectedCourse.sourceType,
+        tab: nextTab,
+        courseName: courseNameParam,
+      },
+    });
+  }, [onRouteChange, routeTargetTab, selectedCourse, selectedCourseTab]);
+
+  useEffect(() => {
+    if (routeSubPath === 'manage') return;
+    if (!selectedCourse) return;
+    // 왜: 주소가 목록으로 돌아오면 상세 선택도 초기화합니다.
+    setSelectedCourse(null);
+    setSelectedCourseTab(null);
+  }, [routeSubPath, selectedCourse]);
 
   // 선택된 과목이 있으면 관리 페이지 표시
   if (selectedCourse) {
     return (
       <CourseManagement
         course={selectedCourse}
-        onBack={() => setSelectedCourse(null)}
+        initialTab={selectedCourseTab ?? routeTargetTab ?? undefined}
+        onTabChange={(tabId) => setSelectedCourseTab(tabId)}
+        onBack={() => {
+          setSelectedCourse(null);
+          setSelectedCourseTab(null);
+          if (onRouteChange) {
+            onRouteChange({ subPath: undefined, params: buildListRouteParams() });
+          }
+        }}
       />
     );
   }
