@@ -8,6 +8,9 @@ CourseDao course = new CourseDao();
 CourseTutorDao courseTutor = new CourseTutorDao();
 CourseUserDao courseUser = new CourseUserDao();
 SubjectDao subject = new SubjectDao();
+UserDao user = new UserDao();
+PolyMemberKeyDao polyMemberKey = new PolyMemberKeyDao();
+PolyCourseProfDao polyCourseProf = new PolyCourseProfDao();
 
 // 왜: 교수자는 본인 담당(주/보조강사) 과목만 보이게 제한해야 합니다.
 String prismWhere = "";
@@ -19,30 +22,46 @@ if(!isAdmin) {
 		+ " WHERE ct.course_id = c.id AND ct.user_id = " + userId + " AND ct.site_id = " + siteId
 		+ " AND ct.type IN ('major','minor'))) ";
 
-	// 왜: 학사 탭은 미러 테이블에 교수 정보가 없어서, LMS 매핑된 과목 키로 필터링합니다.
+	// 왜: 교수자의 학사 과목은 LM_POLY_COURSE_PROF 기준으로 필터링해야 일관되게 보입니다.
+	//     또한 login_id ↔ member_key 매핑이 섞여 있으므로 둘 다 시도해 안전하게 키를 해석합니다.
+	String dbLoginId = loginId;
 	try {
-		DataSet haksaKeys = course.query(
-			"SELECT c.etc1 haksa_key "
-			+ " FROM " + course.table + " c "
-			+ " LEFT JOIN " + courseTutor.table + " ct ON ct.course_id = c.id AND ct.site_id = " + siteId
-				+ " AND ct.user_id = " + userId + " AND ct.type IN ('major','minor') "
-			+ " WHERE c.site_id = " + siteId + " AND c.status != -1 "
-			+ " AND c.etc2 = 'HAKSA_MAPPED' AND c.etc1 != '' "
-			+ " AND (c.manager_id = " + userId + " OR ct.user_id = " + userId + ") "
+		DataSet loginInfo = user.find("id = " + userId);
+		if(loginInfo.next() && !"".equals(loginInfo.s("login_id"))) dbLoginId = loginInfo.s("login_id");
+	} catch(Exception ignore) {}
+
+	String safeLoginId = m.replace(loginId, "'", "''");
+	String safeDbLoginId = m.replace(dbLoginId, "'", "''");
+	String resolvedMemberKey = "";
+	try {
+		DataSet mk = polyMemberKey.query(
+			"SELECT member_key FROM " + polyMemberKey.table
+			+ " WHERE alias_key = '" + safeDbLoginId + "' OR member_key = '" + safeDbLoginId + "'"
+			+ " OR alias_key = '" + safeLoginId + "' OR member_key = '" + safeLoginId + "'"
+			+ " LIMIT 1"
+		);
+		if(mk.next()) resolvedMemberKey = mk.s("member_key");
+	} catch(Exception ignore) {}
+	if("".equals(resolvedMemberKey)) resolvedMemberKey = dbLoginId;
+	String safeResolvedMemberKey = m.replace(resolvedMemberKey, "'", "''");
+
+	// 왜: 미러가 없어도(실시간 조회) 교수자 본인 과목만 보이게 하기 위해
+	//     LM_POLY_COURSE_PROF에서 교수자의 학사 키 목록을 미리 뽑아둡니다.
+	try {
+		DataSet haksaKeys = polyCourseProf.query(
+			"SELECT CONCAT(course_code, '_', open_year, '_', open_term, '_', bunban_code, '_', group_code) haksa_key "
+			+ " FROM " + polyCourseProf.table
+			+ " WHERE member_key = '" + safeResolvedMemberKey + "' "
 		);
 		while(haksaKeys.next()) {
 			haksaKeySet.add(haksaKeys.s("haksa_key"));
 		}
 	} catch(Exception ignore) {}
 
-	haksaWhere = " AND EXISTS (SELECT 1 FROM " + course.table + " mc "
-		+ " WHERE mc.site_id = " + siteId + " AND mc.status != -1 AND mc.etc2 = 'HAKSA_MAPPED' "
-		+ " AND (mc.etc1 = CONCAT(c.course_code, '_', c.open_year, '_', c.open_term, '_', c.bunban_code, '_', c.group_code) "
-			+ " OR mc.course_cd = c.course_code) "
-		+ " AND (mc.manager_id = " + userId
-			+ " OR EXISTS (SELECT 1 FROM " + courseTutor.table + " ct "
-				+ " WHERE ct.course_id = mc.id AND ct.user_id = " + userId + " AND ct.site_id = " + siteId
-				+ " AND ct.type IN ('major','minor')))) ";
+	haksaWhere = " AND EXISTS (SELECT 1 FROM " + polyCourseProf.table + " cp "
+		+ " WHERE cp.course_code = c.course_code AND cp.open_year = c.open_year "
+		+ " AND cp.open_term = c.open_term AND cp.bunban_code = c.bunban_code "
+		+ " AND cp.group_code = c.group_code AND cp.member_key = '" + safeResolvedMemberKey + "') ";
 }
 
 String tab = m.rs("tab"); // "prism" 또는 "haksa"
