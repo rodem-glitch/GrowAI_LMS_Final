@@ -6,6 +6,8 @@ interface AssignmentCreateModalProps {
   onClose: () => void;
   onSave: (assignmentData: any) => void;
   mode?: 'create' | 'edit';
+  showWeekSession?: boolean;
+  weekCount?: number;
   initialData?: {
     title?: string;
     description?: string;
@@ -17,10 +19,21 @@ interface AssignmentCreateModalProps {
     maxFileSize?: number;
     allowLateSubmission?: boolean;
     latePenalty?: number;
+    weekNumber?: number;
+    sessionNumber?: number;
   };
 }
 
-export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create', initialData }: AssignmentCreateModalProps) {
+export function AssignmentCreateModal({
+  isOpen,
+  onClose,
+  onSave,
+  mode = 'create',
+  showWeekSession = false,
+  weekCount = 15,
+  initialData,
+}: AssignmentCreateModalProps) {
+  const sessionCount = 10;
   const [assignmentData, setAssignmentData] = useState({
     title: '',
     description: '',
@@ -32,6 +45,8 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
     maxFileSize: 10,
     allowLateSubmission: false,
     latePenalty: 0,
+    weekNumber: 1,
+    sessionNumber: 1,
     file: null as File | null,
   });
 
@@ -49,6 +64,8 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
         maxFileSize: initialData.maxFileSize ?? 10,
         allowLateSubmission: initialData.allowLateSubmission ?? false,
         latePenalty: initialData.latePenalty ?? 0,
+        weekNumber: initialData.weekNumber ?? 1,
+        sessionNumber: initialData.sessionNumber ?? 1,
         file: null,
       });
     } else if (isOpen && mode === 'create') {
@@ -64,6 +81,8 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
         maxFileSize: 10,
         allowLateSubmission: false,
         latePenalty: 0,
+        weekNumber: 1,
+        sessionNumber: 1,
         file: null,
       });
     }
@@ -107,6 +126,50 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
               required
             />
           </div>
+
+          {/* 왜: 학사 과목 등록 시 주차/차시를 지정해야 하므로 선택 UI를 보여줍니다. */}
+          {showWeekSession && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  주차 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={assignmentData.weekNumber}
+                  onChange={(e) =>
+                    setAssignmentData({ ...assignmentData, weekNumber: parseInt(e.target.value, 10) || 1 })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+                    <option key={week} value={week}>
+                      {week}주차
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">
+                  차시 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={assignmentData.sessionNumber}
+                  onChange={(e) =>
+                    setAssignmentData({ ...assignmentData, sessionNumber: parseInt(e.target.value, 10) || 1 })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  {Array.from({ length: sessionCount }, (_, i) => i + 1).map((session) => (
+                    <option key={session} value={session}>
+                      {session}차시
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {/* 과제 설명 */}
           <div>
