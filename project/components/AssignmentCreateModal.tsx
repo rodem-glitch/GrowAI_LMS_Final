@@ -32,6 +32,7 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
     maxFileSize: 10,
     allowLateSubmission: false,
     latePenalty: 0,
+    file: null as File | null,
   });
 
   // 왜: edit 모드일 때 initialData로 폼을 초기화합니다.
@@ -48,6 +49,7 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
         maxFileSize: initialData.maxFileSize ?? 10,
         allowLateSubmission: initialData.allowLateSubmission ?? false,
         latePenalty: initialData.latePenalty ?? 0,
+        file: null,
       });
     } else if (isOpen && mode === 'create') {
       // 왜: create 모드일 때는 빈 폼으로 초기화합니다.
@@ -62,6 +64,7 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
         maxFileSize: 10,
         allowLateSubmission: false,
         latePenalty: 0,
+        file: null,
       });
     }
   }, [isOpen, mode, initialData]);
@@ -182,6 +185,31 @@ export function AssignmentCreateModal({ isOpen, onClose, onSave, mode = 'create'
           {/* 파일 업로드 설정 */}
           {(assignmentData.submissionType === 'file' || assignmentData.submissionType === 'both') && (
             <>
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">과제 첨부파일 (선택)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const selected = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                      setAssignmentData({ ...assignmentData, file: selected });
+                    }}
+                    className="flex-1 text-sm text-gray-700 file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {assignmentData.file && (
+                    <button
+                      type="button"
+                      onClick={() => setAssignmentData({ ...assignmentData, file: null })}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                    >
+                      첨부 해제
+                    </button>
+                  )}
+                </div>
+                {assignmentData.file && (
+                  <p className="text-xs text-gray-500 mt-1">선택됨: {assignmentData.file.name}</p>
+                )}
+              </div>
               <div>
                 <label className="block text-sm text-gray-700 mb-2">허용 파일 형식</label>
                 <input

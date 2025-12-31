@@ -1467,8 +1467,9 @@ export const tutorLmsApi = {
     dueTime: string;
     totalScore: number;
     onoffType?: 'N' | 'F';
+    file?: File | null;
   }) {
-    const body = new URLSearchParams();
+    const body = new FormData();
     body.set('course_id', String(payload.courseId));
     body.set('title', payload.title);
     body.set('description', payload.description);
@@ -1476,10 +1477,10 @@ export const tutorLmsApi = {
     body.set('dueTime', payload.dueTime);
     body.set('totalScore', String(payload.totalScore));
     body.set('onoff_type', payload.onoffType ?? 'N');
+    if(payload.file) body.set('homework_file', payload.file);
 
     return requestJson<number>(`/tutor_lms/api/homework_insert.jsp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
   },
@@ -1493,8 +1494,9 @@ export const tutorLmsApi = {
     dueTime: string;
     totalScore: number;
     onoffType?: 'N' | 'F';
+    file?: File | null;
   }) {
-    const body = new URLSearchParams();
+    const body = new FormData();
     body.set('course_id', String(payload.courseId));
     body.set('homework_id', String(payload.homeworkId));
     body.set('title', payload.title);
@@ -1503,10 +1505,10 @@ export const tutorLmsApi = {
     body.set('dueTime', payload.dueTime);
     body.set('totalScore', String(payload.totalScore));
     body.set('onoff_type', payload.onoffType ?? 'N');
+    if(payload.file) body.set('homework_file', payload.file);
 
     return requestJson<number>(`/tutor_lms/api/homework_modify.jsp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
   },

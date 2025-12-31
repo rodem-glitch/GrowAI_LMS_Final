@@ -1785,15 +1785,16 @@ const isHaksaCourse =
     if (!editingHomework) return;
     
     try {
-      const res = await tutorLmsApi.updateHomework({
-        courseId,
-        homeworkId: editingHomework.id,
-        title: data.title,
-        description: data.description,
-        dueDate: data.dueDate,
-        dueTime: data.dueTime,
-        totalScore: Number(data.totalScore || 0),
-      });
+        const res = await tutorLmsApi.updateHomework({
+          courseId,
+          homeworkId: editingHomework.id,
+          title: data.title,
+          description: data.description,
+          dueDate: data.dueDate,
+          dueTime: data.dueTime,
+          totalScore: Number(data.totalScore || 0),
+          file: data.file,
+        });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
       
       await fetchHomeworks();
@@ -1917,15 +1918,16 @@ const isHaksaCourse =
         onSave={(assignmentData) => {
           void (async () => {
             try {
-              const res = await tutorLmsApi.createHomework({
-                courseId,
-                title: assignmentData.title,
-                description: assignmentData.description,
-                dueDate: assignmentData.dueDate,
-                dueTime: assignmentData.dueTime,
-                totalScore: Number(assignmentData.totalScore || 0),
-                onoffType: 'N',
-              });
+                const res = await tutorLmsApi.createHomework({
+                  courseId,
+                  title: assignmentData.title,
+                  description: assignmentData.description,
+                  dueDate: assignmentData.dueDate,
+                  dueTime: assignmentData.dueTime,
+                  totalScore: Number(assignmentData.totalScore || 0),
+                  onoffType: 'N',
+                  file: assignmentData.file,
+                });
               if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
               await fetchHomeworks();

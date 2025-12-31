@@ -10,19 +10,37 @@ if(!m.isPost()) {
 	return;
 }
 
-int courseId = m.ri("course_id");
-int homeworkId = m.ri("homework_id");
+CourseDao course = new CourseDao();
+CourseTutorDao courseTutor = new CourseTutorDao();
+CourseModuleDao courseModule = new CourseModuleDao();
+HomeworkDao homework = new HomeworkDao();
+
+//필수값
+f.addElement("course_id", null, "hname:'course_id', required:'Y'");
+f.addElement("homework_id", null, "hname:'homework_id', required:'Y'");
+f.addElement("title", null, "hname:'과제 제목', required:'Y'");
+f.addElement("description", null, "hname:'과제 설명', allowhtml:'Y'");
+f.addElement("dueDate", null, "hname:'마감 날짜', required:'Y'");
+f.addElement("dueTime", null, "hname:'마감 시간', required:'Y'");
+f.addElement("totalScore", 100, "hname:'배점', required:'Y', option:'number'");
+f.addElement("onoff_type", "N", "hname:'온오프라인구분'");
+f.addElement("homework_file", null, "hname:'첨부파일'");
+
+if(!f.validate()) {
+	result.put("rst_code", "1000");
+	result.put("rst_message", "필수값이 누락되었습니다.");
+	result.print();
+	return;
+}
+
+int courseId = f.getInt("course_id");
+int homeworkId = f.getInt("homework_id");
 if(0 == courseId || 0 == homeworkId) {
 	result.put("rst_code", "1001");
 	result.put("rst_message", "course_id, homework_id가 필요합니다.");
 	result.print();
 	return;
 }
-
-CourseDao course = new CourseDao();
-CourseTutorDao courseTutor = new CourseTutorDao();
-CourseModuleDao courseModule = new CourseModuleDao();
-HomeworkDao homework = new HomeworkDao();
 
 //권한
 if(!isAdmin) {
@@ -58,21 +76,6 @@ if(!hinfo.next()) {
 	return;
 }
 
-//필수값
-f.addElement("title", null, "hname:'과제 제목', required:'Y'");
-f.addElement("description", hinfo.s("content"), "hname:'과제 설명', allowhtml:'Y'");
-f.addElement("dueDate", null, "hname:'마감 날짜', required:'Y'");
-f.addElement("dueTime", null, "hname:'마감 시간', required:'Y'");
-f.addElement("totalScore", minfo.i("assign_score"), "hname:'배점', required:'Y', option:'number'");
-f.addElement("onoff_type", hinfo.s("onoff_type"), "hname:'온오프라인구분'");
-
-if(!f.validate()) {
-	result.put("rst_code", "1000");
-	result.put("rst_message", "필수값이 누락되었습니다.");
-	result.print();
-	return;
-}
-
 String title = f.get("title").trim();
 String content = f.get("description");
 int assignScore = Math.max(0, f.getInt("totalScore"));
@@ -102,6 +105,14 @@ String endDateTime = endYmd + endH + endM + "59";
 homework.item("homework_nm", title);
 homework.item("onoff_type", onoffType);
 homework.item("content", content);
+if(null != f.getFileName("homework_file")) {
+	File f1 = f.saveFile("homework_file");
+	if(f1 != null) {
+		homework.item("homework_file", f.getFileName("homework_file"));
+		// 왜: 새 파일로 교체되면 기존 파일은 정리해 저장소를 지킵니다.
+		if(!"".equals(hinfo.s("homework_file"))) m.delFileRoot(m.getUploadPath(hinfo.s("homework_file")));
+	}
+}
 // 왜: 일부 환경(DB 스키마)에는 LM_HOMEWORK에 mod_date 컬럼이 없어 UPDATE가 통째로 실패합니다.
 //     DB를 변경하지 않고 우선 저장이 되도록 mod_date 업데이트는 생략합니다.
 if(!homework.update("id = " + homeworkId + " AND site_id = " + siteId + " AND status != -1")) {
