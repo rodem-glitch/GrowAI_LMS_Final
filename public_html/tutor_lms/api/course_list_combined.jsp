@@ -9,6 +9,42 @@ CourseTutorDao courseTutor = new CourseTutorDao();
 CourseUserDao courseUser = new CourseUserDao();
 SubjectDao subject = new SubjectDao();
 
+// 왜: 교수자는 본인 담당(주/보조강사) 과목만 보이게 제한해야 합니다.
+String prismWhere = "";
+String haksaWhere = "";
+java.util.HashSet<String> haksaKeySet = new java.util.HashSet<String>();
+if(!isAdmin) {
+	prismWhere = " AND (c.manager_id = " + userId
+		+ " OR EXISTS (SELECT 1 FROM " + courseTutor.table + " ct "
+		+ " WHERE ct.course_id = c.id AND ct.user_id = " + userId + " AND ct.site_id = " + siteId
+		+ " AND ct.type IN ('major','minor'))) ";
+
+	// 왜: 학사 탭은 미러 테이블에 교수 정보가 없어서, LMS 매핑된 과목 키로 필터링합니다.
+	try {
+		DataSet haksaKeys = course.query(
+			"SELECT c.etc1 haksa_key "
+			+ " FROM " + course.table + " c "
+			+ " LEFT JOIN " + courseTutor.table + " ct ON ct.course_id = c.id AND ct.site_id = " + siteId
+				+ " AND ct.user_id = " + userId + " AND ct.type IN ('major','minor') "
+			+ " WHERE c.site_id = " + siteId + " AND c.status != -1 "
+			+ " AND c.etc2 = 'HAKSA_MAPPED' AND c.etc1 != '' "
+			+ " AND (c.manager_id = " + userId + " OR ct.user_id = " + userId + ") "
+		);
+		while(haksaKeys.next()) {
+			haksaKeySet.add(haksaKeys.s("haksa_key"));
+		}
+	} catch(Exception ignore) {}
+
+	haksaWhere = " AND EXISTS (SELECT 1 FROM " + course.table + " mc "
+		+ " WHERE mc.site_id = " + siteId + " AND mc.status != -1 AND mc.etc2 = 'HAKSA_MAPPED' "
+		+ " AND (mc.etc1 = CONCAT(c.course_code, '_', c.open_year, '_', c.open_term, '_', c.bunban_code, '_', c.group_code) "
+			+ " OR mc.course_cd = c.course_code) "
+		+ " AND (mc.manager_id = " + userId
+			+ " OR EXISTS (SELECT 1 FROM " + courseTutor.table + " ct "
+				+ " WHERE ct.course_id = mc.id AND ct.user_id = " + userId + " AND ct.site_id = " + siteId
+				+ " AND ct.type IN ('major','minor')))) ";
+}
+
 String tab = m.rs("tab"); // "prism" 또는 "haksa"
 if("".equals(tab)) tab = "prism"; // 기본값: 프리즘
 
@@ -47,14 +83,14 @@ if("prism".equals(tab)) {
         params.add("%" + keyword + "%");
     }
 
-    // 왜: 관리자 과정운영과 동일한 기준으로 43건을 맞춤
-    // - LM_COURSE_TUTOR 조인 제거 (모든 과목 노출)
+    // 왜: 관리자 과정운영과 동일한 기준으로 맞추되, 교수자는 본인 과목만 필터링합니다.
     // - display_yn = 'Y' 조건 추가 (노출 허용된 것만)
     try {
         String baseSql =
             " FROM " + course.table + " c "
             + " LEFT JOIN " + subject.table + " s ON s.id = c.subject_id AND s.status != -1 "
             + " WHERE c.site_id = " + siteId + " AND c.status != -1 AND c.display_yn = 'Y' "
+            + prismWhere
             + where;
 
         totalCount = course.getOneInt("SELECT COUNT(*) " + baseSql, params.toArray());
@@ -101,7 +137,7 @@ if("prism".equals(tab)) {
 }
 
 //==============================================================================
-// 학사 탭: 폴리텍 COM.LMS_COURSE_VIEW 테이블
+    // 학사 탭: 폴리텍 COM.LMS_COURSE_VIEW 테이블
 //==============================================================================
 else if("haksa".equals(tab)) {
     // 왜: 학사(View) 데이터는 cnt 제한 때문에 실시간 조회 시 누락이 생길 수 있어,
@@ -156,6 +192,7 @@ else if("haksa".equals(tab)) {
 
         // 왜: 미러가 없어도 학사 키(코드/연도/학기/분반/그룹)를 채워 내려야 화면 저장/조회가 동작합니다.
         resultList.first();
+        DataSet filtered = new DataSet();
         while(resultList.next()) {
             // ===== LMS_COURSE_VIEW 25개 필드 정규화 (대소문자 모두 처리) =====
             String category = resultList.s("CATEGORY");
@@ -270,6 +307,17 @@ else if("haksa".equals(tab)) {
             resultList.put("onoff_type_conv", "학사");
             resultList.put("period_conv", !"".equals(openYear) ? (openYear + "-" + openTerm + "학기") : "-");
             resultList.put("status_label", "Y".equals(visible) ? "학습기간" : "종료");
+
+            // 왜: 교수자는 본인 매핑된 학사 과목만 보이도록 필터링합니다.
+            if(!isAdmin) {
+                String haksaKey = courseCode + "_" + openYear + "_" + openTerm + "_" + bunbanCode + "_" + groupCode;
+                if(!haksaKeySet.contains(haksaKey)) continue;
+            }
+            filtered.addRow(resultList.getRow());
+        }
+        if(!isAdmin) {
+            resultList = filtered;
+            totalCount = resultList.size();
         }
     } else {
         String where = " WHERE 1 = 1 ";
@@ -300,7 +348,7 @@ else if("haksa".equals(tab)) {
         }
 
         try {
-            String baseSql = " FROM " + polyCourse.table + " c " + where;
+            String baseSql = " FROM " + polyCourse.table + " c " + where + haksaWhere;
             totalCount = polyCourse.getOneInt("SELECT COUNT(*) " + baseSql, params.toArray());
 
             ArrayList<Object> pageParams = new ArrayList<Object>(params);

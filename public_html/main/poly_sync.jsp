@@ -124,6 +124,7 @@ if(!localOnly) {
 int memberCnt = m.ri("member_cnt", 100000);
 int studentCnt = m.ri("student_cnt", 100000);
 int courseCnt = m.ri("course_cnt", 100000);
+int professorCnt = m.ri("professor_cnt", 100000);
 //왜: 기본은 최대치(100만)까지 받아서 로컬 DB에 저장하는 방식으로 운영합니다.
 int requireYear = m.ri("require_year", toInt(m.time("yyyy")));
 //왜: 년도별로 쪼개서 받기 위해 시작/끝 년도를 분리합니다.
@@ -140,7 +141,7 @@ PolySyncLogDao syncLog = new PolySyncLogDao();
 //테이블 존재 확인(없으면 DDL을 먼저 적용해야 합니다)
 String[] baseTables = {
 	"LM_POLY_COURSE", "LM_POLY_MEMBER", "LM_POLY_MEMBER_KEY", "LM_POLY_STUDENT",
-	"LM_POLY_SYNC_LOG"
+	"LM_POLY_PROFESSOR", "LM_POLY_COURSE_PROF", "LM_POLY_SYNC_LOG"
 };
 int missing = 0;
 for(int i = 0; i < baseTables.length; i++) {
@@ -196,11 +197,15 @@ try {
 	PolyStudentDao polyStudent = new PolyStudentDao();
 	PolyMemberDao polyMember = new PolyMemberDao();
 	PolyMemberKeyDao polyMemberKey = new PolyMemberKeyDao();
+	PolyProfessorDao polyProfessor = new PolyProfessorDao();
+	PolyCourseProfDao polyCourseProf = new PolyCourseProfDao();
 
 	int courseSaved = 0;
 	int studentSaved = 0;
 	int memberSaved = 0;
 	int aliasSaved = 0;
+	int professorSaved = 0;
+	int courseProfSaved = 0;
 	int studentMaxYear = 0;
 
 	//2-1) 과목
@@ -315,6 +320,75 @@ try {
 		}
 	}
 
+	//2-2.5) 교수자 뷰 미러 + 과목-교수 매핑
+	if(!studentOnly) {
+		String rawProfessor = fetchPolyRaw(endpoint, "COM.LMS_PROFESSOR_VIEW", professorCnt, 3, 2000, "");
+		malgnsoft.db.DataSet professorList = parsePolyResponse(rawProfessor);
+
+		professorList.first();
+		while(professorList.next()) {
+			String courseCode = pick(professorList, "course_code");
+			String openYear = pick(professorList, "open_year");
+			String openTerm = pick(professorList, "open_term");
+			String bunbanCode = pick(professorList, "bunban_code");
+			String groupCode = pick(professorList, "group_code");
+			if("".equals(groupCode)) groupCode = "U";
+
+			String profKey = pick(professorList, "member_key");
+			if("".equals(profKey)) profKey = pick(professorList, "professor_key");
+			if("".equals(profKey)) profKey = pick(professorList, "prof_key");
+			if("".equals(profKey)) profKey = pick(professorList, "user_id");
+			if("".equals(profKey)) continue;
+
+			String profName = pick(professorList, "prof_name");
+			if("".equals(profName)) profName = pick(professorList, "professor_name");
+			if("".equals(profName)) profName = pick(professorList, "kor_name");
+			if("".equals(profName)) profName = pick(professorList, "user_nm");
+			if("".equals(profName)) profName = pick(professorList, "name");
+
+			String email = pick(professorList, "email");
+			String mobile = pick(professorList, "mobile");
+			String phone = pick(professorList, "phone");
+			String deptCode = pick(professorList, "dept_code");
+			String deptName = pick(professorList, "dept_name");
+			String campusCode = pick(professorList, "campus_code");
+			String campusName = pick(professorList, "campus_name");
+			String institutionCode = pick(professorList, "institution_code");
+			String institutionName = pick(professorList, "institution_name");
+			String role = pick(professorList, "role");
+			if("".equals(role)) role = pick(professorList, "prof_role");
+			if("".equals(role)) role = pick(professorList, "type");
+
+			int retProf = polyProfessor.execute(
+				" REPLACE INTO " + polyProfessor.table
+				+ " (member_key, prof_name, email, mobile, phone, dept_code, dept_name"
+				+ " , campus_code, campus_name, institution_code, institution_name"
+				+ " , raw_json, sync_date, reg_date, mod_date) "
+				+ " VALUES(?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?) "
+				, new Object[] {
+					profKey, profName, email, mobile, phone, deptCode, deptName
+					, campusCode, campusName, institutionCode, institutionName
+					, null, syncDate, syncDate, syncDate
+				}
+			);
+			if(-1 < retProf) professorSaved++;
+
+			if(!"".equals(courseCode) && !"".equals(openYear) && !"".equals(openTerm) && !"".equals(bunbanCode)) {
+				int retMap = polyCourseProf.execute(
+					" REPLACE INTO " + polyCourseProf.table
+					+ " (course_code, open_year, open_term, bunban_code, group_code, member_key, role"
+					+ " , raw_json, sync_date, reg_date, mod_date) "
+					+ " VALUES(?,?,?,?,?,?,?, ?,?,?,?) "
+					, new Object[] {
+						courseCode, openYear, openTerm, bunbanCode, groupCode, profKey, role
+						, null, syncDate, syncDate, syncDate
+					}
+				);
+				if(-1 < retMap) courseProfSaved++;
+			}
+		}
+	}
+
 	//2-3) 수강(수강생-과목) - 년도별로 쪼개서 받습니다.
 	int yearFrom = Math.min(startYear, endYear);
 	int yearTo = Math.max(startYear, endYear);
@@ -365,6 +439,8 @@ try {
 	result.put("rst_course_saved", courseSaved);
 	result.put("rst_member_saved", memberSaved);
 	result.put("rst_alias_saved", aliasSaved);
+	result.put("rst_professor_saved", professorSaved);
+	result.put("rst_course_prof_saved", courseProfSaved);
 	result.put("rst_student_saved", studentSaved);
 	result.print();
 
