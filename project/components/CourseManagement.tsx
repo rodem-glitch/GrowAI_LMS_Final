@@ -282,7 +282,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'students':
         return <StudentsTab courseId={courseIdNum} course={course} />;
       case 'attendance':
-        return <AttendanceTab courseId={courseIdNum} />;
+        return <AttendanceTab courseId={courseIdNum} course={course} />;
       case 'exam':
         return isHaksaCourse ? <HaksaExamTab course={course} /> : <ExamTab courseId={courseIdNum} course={course} />;
       case 'assignment':

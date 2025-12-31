@@ -1344,17 +1344,9 @@ function SubjectsStep({
 
       {/* 과목 검색 및 추가 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        {/* 헤더: 제목 + 신규 개설 버튼 */}
-        <div className="flex items-center justify-between mb-4">
+        {/* 헤더: 제목 */}
+        <div className="flex items-center mb-4">
           <h3 className="text-gray-900">과목 검색</h3>
-          <button
-            type="button"
-            onClick={() => setShowNewSubjectForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>신규 개설</span>
-          </button>
         </div>
 
         {/* 학사 / PLISM 탭 - 학사 탭은 현재 숨김 처리 (나중에 필요시 주석 해제) */}

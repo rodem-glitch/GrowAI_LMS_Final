@@ -39,13 +39,31 @@ function buildQuery(params: Record<string, string | number | undefined | null>) 
 
 async function requestJson<T>(url: string, options?: RequestInit): Promise<TutorLmsApiResponse<T>> {
   const response = await fetch(url, options);
-  const json = (await response.json()) as TutorLmsApiResponse<T>;
+  const contentType = response.headers.get('content-type') || '';
+  const rawText = await response.text();
 
-  // 왜: 서버에서 오류를 내려도 화면에서는 항상 같은 방식으로 처리해야 합니다.
-  if (!json || typeof json.rst_code !== 'string') {
-    throw new Error('서버 응답 형식이 올바르지 않습니다.');
+  // 왜: 세션 만료/권한 문제일 때 HTML 페이지가 내려오면 JSON 파싱 오류가 발생합니다.
+  //     JSON 여부를 먼저 확인해서 사용자에게 더 친절한 메시지를 보여줍니다.
+  let parsed: TutorLmsApiResponse<T> | null = null;
+  const trimmed = rawText.trim();
+  const looksJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+
+  if (looksJson) {
+    try {
+      parsed = JSON.parse(rawText) as TutorLmsApiResponse<T>;
+    } catch {
+      parsed = null;
+    }
   }
-  return json;
+
+  if (!parsed || typeof parsed.rst_code !== 'string') {
+    const hint = response.ok
+      ? '서버 응답이 JSON이 아닙니다. 로그인 상태/권한 또는 API 경로를 확인해 주세요.'
+      : `서버 응답 오류(${response.status}). 로그인 상태/권한 또는 API 경로를 확인해 주세요.`;
+    throw new Error(hint);
+  }
+
+  return parsed;
 }
 
 export type TutorProgramRow = {

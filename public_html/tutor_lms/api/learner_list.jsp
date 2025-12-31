@@ -11,12 +11,12 @@ String keyword = m.rs("s_keyword").trim();
 String deptKeyword = m.rs("s_dept").trim(); //부서명(선택) - 화면 필터용
 int deptId = m.ri("dept_id");              //부서 ID(선택)
 
-int page = m.ri("page");
+int pageNo = m.ri("page");
 int limit = m.ri("limit");
-if(page <= 0) page = 1;
+if(pageNo <= 0) pageNo = 1;
 if(limit <= 0) limit = 50;
 if(limit > 200) limit = 200; //왜: 너무 큰 limit은 DB/서버에 부담이 됩니다.
-int offset = (page - 1) * limit;
+int offset = (pageNo - 1) * limit;
 
 ArrayList<Object> params = new ArrayList<Object>();
 String where = " u.site_id = " + siteId + " AND u.status = 1 AND u.user_kind = 'U' ";
@@ -47,28 +47,59 @@ try {
 	userDept.setData(deptData);
 } catch(Exception ignore) {}
 
-DataSet list = user.query(
-	" SELECT u.id, u.login_id, u.user_nm, u.email, u.dept_id "
-	+ " , d.dept_nm "
-	+ " FROM " + user.table + " u "
-	+ " LEFT JOIN " + userDept.table + " d ON d.id = u.dept_id AND d.site_id = " + siteId + " AND d.status = 1 "
-	+ " WHERE " + where
-	+ " ORDER BY u.id DESC "
-	+ " LIMIT " + offset + ", " + limit
-	, params.toArray()
-);
+DataSet list = null;
+boolean deptFallback = false;
+try {
+	list = user.query(
+		" SELECT u.id, u.login_id, u.user_nm, u.email, u.dept_id "
+		+ " , d.dept_nm "
+		+ " FROM " + user.table + " u "
+		+ " LEFT JOIN " + userDept.table + " d ON d.id = u.dept_id AND d.site_id = " + siteId + " AND d.status = 1 "
+		+ " WHERE " + where
+		+ " ORDER BY u.id DESC "
+		+ " LIMIT " + offset + ", " + limit
+		, params.toArray()
+	);
+} catch(Exception e) {
+	// 왜: 부서 테이블 조인이 실패해도 최소한 학습자 목록은 내려주기 위함입니다.
+	deptFallback = true;
+	try {
+		list = user.query(
+			" SELECT u.id, u.login_id, u.user_nm, u.email, u.dept_id "
+			+ " FROM " + user.table + " u "
+			+ " WHERE " + where
+			+ " ORDER BY u.id DESC "
+			+ " LIMIT " + offset + ", " + limit
+			, params.toArray()
+		);
+	} catch(Exception e2) {
+		m.errorLog("학습자 목록 조회 오류 - " + e2.getMessage(), e2);
+		result.put("rst_code", "5000");
+		result.put("rst_message", "학습자 목록을 불러오는 중 오류가 발생했습니다.");
+		result.print();
+		return;
+	}
+}
 
-while(list.next()) {
-	list.put("id", list.i("id"));
-	list.put("name", list.s("user_nm"));
-	list.put("student_id", list.s("login_id"));
-	list.put("email", list.s("email"));
+try {
+	while(list.next()) {
+		list.put("id", list.i("id"));
+		list.put("name", list.s("user_nm"));
+		list.put("student_id", list.s("login_id"));
+		list.put("email", list.s("email"));
 
-	int did = list.i("dept_id");
-	String deptPath = "";
-	try { if(did > 0) deptPath = userDept.getTreeNames(did); } catch(Exception ignore) {}
-	list.put("dept_path", deptPath);
-	list.put("dept_nm", !"".equals(list.s("dept_nm")) ? list.s("dept_nm") : "-");
+		int did = list.i("dept_id");
+		String deptPath = "";
+		try { if(!deptFallback && did > 0) deptPath = userDept.getTreeNames(did); } catch(Exception ignore) {}
+		list.put("dept_path", deptPath);
+		list.put("dept_nm", !"".equals(list.s("dept_nm")) ? list.s("dept_nm") : "-");
+	}
+} catch(Exception e) {
+	m.errorLog("학습자 목록 가공 오류 - " + e.getMessage(), e);
+	result.put("rst_code", "5000");
+	result.put("rst_message", "학습자 목록을 처리하는 중 오류가 발생했습니다.");
+	result.print();
+	return;
 }
 
 result.put("rst_code", "0000");
@@ -78,4 +109,3 @@ result.put("rst_data", list);
 result.print();
 
 %>
-

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList } from 'lucide-react';
+import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
 import { CourseExplorer } from './components/CourseExplorer';
@@ -8,6 +8,7 @@ import { ContentLibraryPage } from './components/ContentLibraryPage';
 import { QuestionCategoryPage } from './components/QuestionCategoryPage';
 import { QuestionBankPage } from './components/QuestionBankPage';
 import { ExamManagementPage } from './components/ExamManagementPage';
+import { CreateSubjectWizard } from './components/CreateSubjectWizard';
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState<string>('dashboard');
@@ -235,6 +236,19 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* 왜: 과목 개설은 시험관리 하위가 아니라 독립 메뉴로 배치합니다. */}
+            <button
+              onClick={() => setActiveMenu('subject-create')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                activeMenu === 'subject-create'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BookPlus className="w-5 h-5" />
+              <span>과목개설</span>
+            </button>
           </nav>
         </aside>
 
@@ -263,6 +277,8 @@ export default function App() {
               <QuestionBankPage key={refreshKey} />
             ) : activeMenu === 'exam-management' ? (
               <ExamManagementPage key={refreshKey} />
+            ) : activeMenu === 'subject-create' ? (
+              <CreateSubjectWizard key={refreshKey} />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
                 <div className="text-gray-400">
