@@ -269,9 +269,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'assignment-feedback':
         return <AssignmentFeedbackTab courseId={courseIdNum} />;
       case 'materials':
-        return isHaksaCourse ? (
-          <HaksaMaterialsTab course={course} />
-        ) : (
+        return (
           <MaterialsTab
             courseId={courseIdNum}
             showWeekSession={course?.sourceType === 'haksa'}
@@ -2611,6 +2609,13 @@ function MaterialsTab({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resolvingCourseId, setResolvingCourseId] = useState(false);
+  const [resolvedCourseId, setResolvedCourseId] = useState<number | null>(null);
+
+  const isHaksaCourse = course?.sourceType === 'haksa';
+  // 왜: 자료 업로드 API는 course_id가 필수라서, 학사 과목은 매핑된 과정 ID를 먼저 확보해야 합니다.
+  const baseCourseId = Number.isFinite(courseId) ? courseId : 0;
+  const effectiveCourseId = resolvedCourseId && resolvedCourseId > 0 ? resolvedCourseId : baseCourseId;
 
   const [uploadForm, setUploadForm] = useState<{
     title: string;
@@ -2650,13 +2655,58 @@ function MaterialsTab({
     setUploadForm({ title: '', content: '', link: '', file: null, weekNumber: 1, sessionNumber: 1 });
   };
 
+  useEffect(() => {
+    if (!isHaksaCourse) {
+      setResolvedCourseId(null);
+      return;
+    }
+
+    if (baseCourseId > 0) {
+      setResolvedCourseId(null);
+      return;
+    }
+
+    if (!haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 과정 매핑을 진행할 수 없습니다.');
+      return;
+    }
+
+    let cancelled = false;
+    const resolveCourseId = async () => {
+      setResolvingCourseId(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.resolveHaksaCourse(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const mapped = Number(payload?.mapped_course_id ?? 0);
+        if (!mapped || Number.isNaN(mapped)) throw new Error('매핑된 과정ID를 찾지 못했습니다.');
+
+        if (!cancelled) setResolvedCourseId(mapped);
+      } catch (e) {
+        if (!cancelled) {
+          setResolvedCourseId(null);
+          setErrorMessage(e instanceof Error ? e.message : '과정 매핑 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setResolvingCourseId(false);
+      }
+    };
+
+    void resolveCourseId();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, baseCourseId, haksaKey]);
+
   // 왜: 자료 목록은 DB가 기준이므로, 탭 진입/업로드/삭제 후에는 서버에서 다시 읽어와야 합니다.
   const fetchMaterials = async () => {
-    if (!courseId) return;
+    if (!effectiveCourseId) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      const res = await tutorLmsApi.getMaterials({ courseId });
+      const res = await tutorLmsApi.getMaterials({ courseId: effectiveCourseId });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
       const rows = res.rst_data ?? [];
@@ -2679,7 +2729,7 @@ function MaterialsTab({
 
   useEffect(() => {
     void fetchMaterials();
-  }, [courseId]);
+  }, [effectiveCourseId]);
 
   const handleDownload = (material: any) => {
     const url = material.downloadUrl;
@@ -2692,12 +2742,16 @@ function MaterialsTab({
 
   const handleDelete = (libraryId: number, title: string) => {
     void (async () => {
+      if (!effectiveCourseId) {
+        alert('과정 ID가 없어 삭제할 수 없습니다. 과정 매핑 후 다시 시도해 주세요.');
+        return;
+      }
       // 왜: 삭제는 되돌리기 어렵기 때문에, 운영 환경에서는 반드시 확인을 한 번 더 받습니다.
       const ok = confirm(`자료 "${title}"을(를) 삭제하시겠습니까?`);
       if (!ok) return;
 
       try {
-        const res = await tutorLmsApi.deleteMaterial({ courseId, libraryId });
+        const res = await tutorLmsApi.deleteMaterial({ courseId: effectiveCourseId, libraryId });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         await fetchMaterials();
@@ -2718,6 +2772,10 @@ function MaterialsTab({
         alert('자료명을 입력해 주세요.');
         return;
       }
+      if (!effectiveCourseId) {
+        alert('과정 ID가 없어 업로드할 수 없습니다. 과정 매핑 후 다시 시도해 주세요.');
+        return;
+      }
       if (!hasFile && !hasLink) {
         alert('자료 파일 또는 링크 중 하나는 필요합니다.');
         return;
@@ -2726,7 +2784,7 @@ function MaterialsTab({
       setUploading(true);
       try {
         const res = await tutorLmsApi.uploadMaterial({
-          courseId,
+          courseId: effectiveCourseId,
           title,
           content: uploadForm.content,
           link: uploadForm.link,
@@ -2781,6 +2839,11 @@ function MaterialsTab({
         {errorMessage && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
             {errorMessage}
+          </div>
+        )}
+        {resolvingCourseId && (
+          <div className="p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+            과정 매핑 중입니다. 잠시만 기다려 주세요.
           </div>
         )}
 

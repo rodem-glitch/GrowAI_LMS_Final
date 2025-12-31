@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Video, FileText, ClipboardList, BookOpen, FolderOpen, Clock, RotateCcw, Eye } from 'lucide-react';
+import { X, Video, FileText, ClipboardList, BookOpen, FolderOpen } from 'lucide-react';
 import { ContentLibraryModal } from '../ContentLibraryModal';
 import { Exam, getExamList } from '../ExamManagementPage';
 
@@ -20,12 +20,30 @@ export interface WeekContentItem {
   // 시험 관련 정보
   examId?: string;
   examSettings?: {
-    testPeriod: number; // 강의 이후 N일
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
     points: number;
     allowRetake: boolean;
-    retakeScore: number; // 재응시 기준 점수
-    retakeCount: number; // 재응시 가능 횟수
+    retakeScore: number;
+    retakeCount: number;
     showResults: boolean;
+  };
+  assignmentSettings?: {
+    dueDate: string;
+    dueTime: string;
+    totalScore: number;
+    submissionType: string;
+    fileTypes?: string;
+    maxFileSize: number;
+    allowLateSubmission: boolean;
+    latePenalty: number;
+    fileName?: string;
+  };
+  documentSettings?: {
+    link?: string;
+    fileName?: string;
   };
 }
 
@@ -36,10 +54,50 @@ interface WeeklyContentModalProps {
   onAdd: (content: Omit<WeekContentItem, 'id' | 'createdAt'>) => void;
 }
 
+const buildDefaultExamSettings = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  return {
+    startDate: today,
+    startTime: '09:00',
+    endDate: nextWeek,
+    endTime: '18:00',
+    points: 0,
+    allowRetake: false,
+    retakeScore: 0,
+    retakeCount: 0,
+    showResults: true,
+  };
+};
+
+const buildDefaultAssignmentData = () => ({
+  title: '',
+  description: '',
+  dueDate: '',
+  dueTime: '',
+  totalScore: 100,
+  submissionType: 'file',
+  fileTypes: '',
+  maxFileSize: 10,
+  allowLateSubmission: false,
+  latePenalty: 0,
+  file: null as File | null,
+});
+
+const buildDefaultDocumentData = () => ({
+  title: '',
+  description: '',
+  link: '',
+  file: null as File | null,
+});
+
 export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: WeeklyContentModalProps) {
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [videoTitle, setVideoTitle] = useState('');
+  const [videoDescription, setVideoDescription] = useState('');
+  const [assignmentData, setAssignmentData] = useState(buildDefaultAssignmentData());
+  const [documentData, setDocumentData] = useState(buildDefaultDocumentData());
   
   // 콘텐츠 라이브러리 모달 상태
   const [showLibrary, setShowLibrary] = useState(false);
@@ -53,14 +111,7 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
   // 시험 선택 상태
   const [examList, setExamList] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState<string>('');
-  const [examSettings, setExamSettings] = useState({
-    testPeriod: 1,
-    points: 0,
-    allowRetake: false,
-    retakeScore: 0,
-    retakeCount: 0,
-    showResults: true,
-  });
+  const [examSettings, setExamSettings] = useState(buildDefaultExamSettings());
 
   // 시험 목록 로드
   useEffect(() => {
@@ -107,8 +158,8 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
       onAdd({
         weekNumber,
         type: selectedType,
-        title: title.trim() || selectedVideo.title,
-        description: description.trim() || undefined,
+        title: videoTitle.trim() || selectedVideo.title,
+        description: videoDescription.trim() || undefined,
         duration: selectedVideo.duration,
         mediaKey: selectedVideo.mediaKey,
         lessonId: selectedVideo.lessonId,
@@ -122,10 +173,13 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
         weekNumber,
         type: selectedType,
         title: selectedExam?.title || '시험',
-        description: description.trim() || undefined,
+        description: selectedExam?.description?.trim() || undefined,
         examId: selectedExamId,
         examSettings: {
-          testPeriod: examSettings.testPeriod,
+          startDate: examSettings.startDate,
+          startTime: examSettings.startTime,
+          endDate: examSettings.endDate,
+          endTime: examSettings.endTime,
           points: examSettings.points,
           allowRetake: examSettings.allowRetake,
           retakeScore: examSettings.retakeScore,
@@ -134,14 +188,48 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
         },
       });
     }
-    // 과제/자료
-    else {
-      if (!title.trim()) return;
+    // 과제
+    else if (selectedType === 'assignment') {
+      if (!assignmentData.title.trim()) return;
+      if (!assignmentData.description.trim()) return;
+      if (!assignmentData.dueDate || !assignmentData.dueTime) return;
+
       onAdd({
         weekNumber,
         type: selectedType,
-        title: title.trim(),
-        description: description.trim() || undefined,
+        title: assignmentData.title.trim(),
+        description: assignmentData.description.trim(),
+        // 왜: 강의목차 JSON에 파일 객체를 직접 저장하면 직렬화 오류가 나므로 파일명만 보관합니다.
+        assignmentSettings: {
+          dueDate: assignmentData.dueDate,
+          dueTime: assignmentData.dueTime,
+          totalScore: Number(assignmentData.totalScore || 0),
+          submissionType: assignmentData.submissionType,
+          fileTypes: assignmentData.fileTypes.trim() || undefined,
+          maxFileSize: Number(assignmentData.maxFileSize || 0),
+          allowLateSubmission: assignmentData.allowLateSubmission,
+          latePenalty: Number(assignmentData.latePenalty || 0),
+          fileName: assignmentData.file ? assignmentData.file.name : undefined,
+        },
+      });
+    }
+    // 자료
+    else if (selectedType === 'document') {
+      if (!documentData.title.trim()) return;
+      const link = documentData.link.trim();
+      const fileName = documentData.file ? documentData.file.name : '';
+      if (!link && !fileName) return;
+
+      onAdd({
+        weekNumber,
+        type: selectedType,
+        title: documentData.title.trim(),
+        description: documentData.description.trim() || undefined,
+        // 왜: 자료는 목록 표시용으로만 저장되므로 파일 자체 대신 링크/파일명만 기록합니다.
+        documentSettings: {
+          link: link || undefined,
+          fileName: fileName || undefined,
+        },
       });
     }
 
@@ -152,18 +240,13 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
 
   const resetForm = () => {
     setSelectedType(null);
-    setTitle('');
-    setDescription('');
+    setVideoTitle('');
+    setVideoDescription('');
     setSelectedVideo(null);
     setSelectedExamId('');
-    setExamSettings({
-      testPeriod: 1,
-      points: 0,
-      allowRetake: false,
-      retakeScore: 0,
-      retakeCount: 0,
-      showResults: true,
-    });
+    setExamSettings(buildDefaultExamSettings());
+    setAssignmentData(buildDefaultAssignmentData());
+    setDocumentData(buildDefaultDocumentData());
   };
 
   const handleVideoSelect = (content: any) => {
@@ -206,6 +289,31 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
     }
   };
 
+  const isAssignmentInvalid = selectedType === 'assignment' && (
+    !assignmentData.title.trim() ||
+    !assignmentData.description.trim() ||
+    !assignmentData.dueDate ||
+    !assignmentData.dueTime
+  );
+  const isDocumentInvalid = selectedType === 'document' && (
+    !documentData.title.trim() ||
+    (!documentData.link.trim() && !documentData.file)
+  );
+  const isSubmitDisabled = (
+    !selectedType ||
+    (selectedType === 'video' && !selectedVideo) ||
+    (selectedType === 'exam' && !selectedExamId) ||
+    isAssignmentInvalid ||
+    isDocumentInvalid
+  );
+  const submitLabel = selectedType === 'exam'
+    ? '시험추가'
+    : selectedType === 'assignment'
+      ? '등록'
+      : selectedType === 'document'
+        ? '업로드'
+        : '추가하기';
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -242,6 +350,11 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                       setSelectedType(type);
                       setSelectedVideo(null);
                       setSelectedExamId('');
+                      setVideoTitle('');
+                      setVideoDescription('');
+                      setAssignmentData(buildDefaultAssignmentData());
+                      setDocumentData(buildDefaultDocumentData());
+                      setExamSettings(buildDefaultExamSettings());
                     }}
                     className={`flex flex-col items-start p-4 border-2 rounded-lg transition-all ${getColorClasses(color, selectedType === type)}`}
                   >
@@ -303,8 +416,8 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                         </label>
                         <input
                           type="text"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
+                          value={videoTitle}
+                          onChange={(e) => setVideoTitle(e.target.value)}
                           placeholder={selectedVideo.title}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -313,6 +426,17 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                         </p>
                       </div>
                     )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">설명 (선택)</label>
+                      <textarea
+                        value={videoDescription}
+                        onChange={(e) => setVideoDescription(e.target.value)}
+                        placeholder="콘텐츠에 대한 간단한 설명을 입력하세요"
+                        rows={3}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      />
+                    </div>
                   </>
                 )}
 
@@ -328,7 +452,7 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                         <select
                           value={selectedExamId}
                           onChange={(e) => setSelectedExamId(e.target.value)}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">시험을 선택하세요</option>
                           {examList.map(exam => (
@@ -349,97 +473,107 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                     {/* 시험 상세 설정 (시험 선택 후) */}
                     {selectedExamId && (
                       <div className="space-y-4 pt-4 border-t border-gray-100">
-                        {/* 응시기간 */}
-                        <div className="flex items-center gap-3">
-                          <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">응시기간</label>
-                          <div className="flex items-center gap-2">
+                        {/* 응시 가능 기간 */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">응시 가능 기간</label>
+                          <div className="flex items-center gap-2 flex-wrap">
                             <input
-                              type="number"
-                              value={examSettings.testPeriod}
-                              onChange={(e) => setExamSettings(prev => ({ ...prev, testPeriod: parseInt(e.target.value) || 0 }))}
-                              min={0}
-                              className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-red-500"
+                              type="date"
+                              value={examSettings.startDate}
+                              onChange={(e) => setExamSettings(prev => ({ ...prev, startDate: e.target.value }))}
+                              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <span className="text-sm text-gray-600">강의 이후</span>
-                            <span className="text-xs text-gray-400">▶ 강의 전은 0 입력</span>
+                            <input
+                              type="time"
+                              value={examSettings.startTime}
+                              onChange={(e) => setExamSettings(prev => ({ ...prev, startTime: e.target.value }))}
+                              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-500">부터</span>
+                            <input
+                              type="date"
+                              value={examSettings.endDate}
+                              onChange={(e) => setExamSettings(prev => ({ ...prev, endDate: e.target.value }))}
+                              min={examSettings.startDate}
+                              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <input
+                              type="time"
+                              value={examSettings.endTime}
+                              onChange={(e) => setExamSettings(prev => ({ ...prev, endTime: e.target.value }))}
+                              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-500">까지</span>
                           </div>
                         </div>
 
                         {/* 배점 */}
                         <div className="flex items-center gap-3">
-                          <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">배점</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={examSettings.points}
-                              onChange={(e) => setExamSettings(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
-                              min={0}
-                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-red-500"
-                            />
-                            <span className="text-sm text-gray-600">점</span>
-                          </div>
+                          <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">배점</label>
+                          <input
+                            type="number"
+                            value={examSettings.points}
+                            onChange={(e) => setExamSettings(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))}
+                            min={0}
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-600">점</span>
                         </div>
 
                         {/* 재응시 가능여부 */}
                         <div className="flex items-center gap-3">
-                          <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능여부</label>
+                          <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능여부</label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={examSettings.allowRetake}
                               onChange={(e) => setExamSettings(prev => ({ ...prev, allowRetake: e.target.checked }))}
-                              className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-600">재응시 가능</span>
                           </label>
-                          <span className="text-xs text-gray-400 flex-1">▶ 재응시를 지정하면 기준점수 미만일 경우 횟수제한 범위안에서 재응시할 수 있습니다.</span>
                         </div>
 
                         {/* 재응시 기준 점수 */}
                         {examSettings.allowRetake && (
                           <>
                             <div className="flex items-center gap-3">
-                              <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">재응시 기준 점수</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  value={examSettings.retakeScore}
-                                  onChange={(e) => setExamSettings(prev => ({ ...prev, retakeScore: parseInt(e.target.value) || 0 }))}
-                                  min={0}
-                                  max={100}
-                                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-red-500"
-                                />
-                                <span className="text-sm text-gray-600">점 미만일때 재응시가 가능합니다.</span>
-                                <span className="text-xs text-gray-400">▶ 100점 만점 기준입니다.</span>
-                              </div>
+                              <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 기준 점수</label>
+                              <input
+                                type="number"
+                                value={examSettings.retakeScore}
+                                onChange={(e) => setExamSettings(prev => ({ ...prev, retakeScore: parseInt(e.target.value) || 0 }))}
+                                min={0}
+                                max={100}
+                                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-600">점 미만일때 재응시 가능</span>
                             </div>
 
                             {/* 재응시 가능 횟수 */}
                             <div className="flex items-center gap-3">
-                              <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능 횟수</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  value={examSettings.retakeCount}
-                                  onChange={(e) => setExamSettings(prev => ({ ...prev, retakeCount: parseInt(e.target.value) || 0 }))}
-                                  min={0}
-                                  className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-red-500"
-                                />
-                                <span className="text-sm text-gray-600">회까지 재응시가 가능합니다.</span>
-                              </div>
+                              <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">재응시 가능 횟수</label>
+                              <input
+                                type="number"
+                                value={examSettings.retakeCount}
+                                onChange={(e) => setExamSettings(prev => ({ ...prev, retakeCount: parseInt(e.target.value) || 0 }))}
+                                min={0}
+                                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-600">회</span>
                             </div>
                           </>
                         )}
 
                         {/* 시험결과노출 */}
                         <div className="flex items-center gap-3">
-                          <label className="w-24 text-sm font-medium text-gray-700 flex-shrink-0">시험결과노출</label>
+                          <label className="w-28 text-sm font-medium text-gray-700 flex-shrink-0">시험결과노출</label>
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={examSettings.showResults}
                               onChange={(e) => setExamSettings(prev => ({ ...prev, showResults: e.target.checked }))}
-                              className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-600">노출</span>
                           </label>
@@ -450,58 +584,247 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
                   </>
                 )}
 
-                {/* 과제/학습자료: 제목 입력 */}
-                {(selectedType === 'assignment' || selectedType === 'document') && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {selectedType === 'assignment' ? '과제 제목' : '자료 제목'}
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder={`${weekNumber}주차 ${selectedType === 'assignment' ? '과제' : '자료'} 제목을 입력하세요`}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                  </div>
+                {/* 과제 등록 폼 */}
+                {selectedType === 'assignment' && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        과제 제목 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={assignmentData.title}
+                        onChange={(e) => setAssignmentData({ ...assignmentData, title: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="예: HTML 포트폴리오 페이지 제작"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        과제 설명 <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={assignmentData.description}
+                        onChange={(e) => setAssignmentData({ ...assignmentData, description: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={4}
+                        placeholder="과제 내용 및 요구사항을 입력하세요"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-2">
+                          마감 날짜 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={assignmentData.dueDate}
+                          onChange={(e) => setAssignmentData({ ...assignmentData, dueDate: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-2">
+                          마감 시간 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="time"
+                          value={assignmentData.dueTime}
+                          onChange={(e) => setAssignmentData({ ...assignmentData, dueTime: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        배점 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={assignmentData.totalScore}
+                        onChange={(e) => setAssignmentData({ ...assignmentData, totalScore: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="예: 100"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        제출 방식 <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={assignmentData.submissionType}
+                        onChange={(e) => setAssignmentData({ ...assignmentData, submissionType: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="file">파일 업로드</option>
+                        <option value="text">텍스트 입력</option>
+                        <option value="both">파일 + 텍스트</option>
+                      </select>
+                    </div>
+
+                    {(assignmentData.submissionType === 'file' || assignmentData.submissionType === 'both') && (
+                      <>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-2">과제 첨부파일 (선택)</label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="file"
+                              onChange={(e) => {
+                                const selected = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                                setAssignmentData({ ...assignmentData, file: selected });
+                              }}
+                              className="flex-1 text-sm text-gray-700 file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                            {assignmentData.file && (
+                              <button
+                                type="button"
+                                onClick={() => setAssignmentData({ ...assignmentData, file: null })}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                              >
+                                첨부 해제
+                              </button>
+                            )}
+                          </div>
+                          {assignmentData.file && (
+                            <p className="text-xs text-gray-500 mt-1">선택됨: {assignmentData.file.name}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-2">허용 파일 형식</label>
+                          <input
+                            type="text"
+                            value={assignmentData.fileTypes}
+                            onChange={(e) => setAssignmentData({ ...assignmentData, fileTypes: e.target.value })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="예: .pdf, .docx, .zip"
+                          />
+                          <p className="text-sm text-gray-500 mt-1">쉼표로 구분하여 입력하세요</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-2">최대 파일 크기 (MB)</label>
+                          <input
+                            type="number"
+                            value={assignmentData.maxFileSize}
+                            onChange={(e) => setAssignmentData({ ...assignmentData, maxFileSize: parseInt(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={assignmentData.allowLateSubmission}
+                          onChange={(e) => setAssignmentData({ ...assignmentData, allowLateSubmission: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">지각 제출 허용</span>
+                      </label>
+
+                      {assignmentData.allowLateSubmission && (
+                        <div>
+                          <label className="block text-sm text-gray-700 mb-2">지각 제출 감점 (%)</label>
+                          <input
+                            type="number"
+                            value={assignmentData.latePenalty}
+                            onChange={(e) => setAssignmentData({ ...assignmentData, latePenalty: parseInt(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="예: 10"
+                            min="0"
+                            max="100"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
 
-                {/* 설명 (공통) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">설명 (선택)</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="콘텐츠에 대한 간단한 설명을 입력하세요"
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                </div>
+                {/* 자료 등록 폼 */}
+                {selectedType === 'document' && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        자료명 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={documentData.title}
+                        onChange={(e) => setDocumentData({ ...documentData, title: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="예: 강의자료.pdf"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">설명</label>
+                      <textarea
+                        value={documentData.description}
+                        onChange={(e) => setDocumentData({ ...documentData, description: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        rows={3}
+                        placeholder="자료에 대한 간단한 설명을 입력하세요"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">링크(선택)</label>
+                      <input
+                        type="url"
+                        value={documentData.link}
+                        onChange={(e) => setDocumentData({ ...documentData, link: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="https://..."
+                      />
+                      <p className="text-sm text-gray-500 mt-1">파일 업로드 대신 링크만 등록할 수도 있습니다.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-700 mb-2">파일(선택)</label>
+                      <input
+                        type="file"
+                        onChange={(e) =>
+                          setDocumentData({ ...documentData, file: e.target.files?.[0] ?? null })
+                        }
+                        className="w-full"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">파일 또는 링크 중 하나는 필수입니다.</p>
+                      {documentData.file && (
+                        <p className="text-xs text-gray-500 mt-1">선택됨: {documentData.file.name}</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 취소
               </button>
               <button
                 type="submit"
-                disabled={
-                  !selectedType || 
-                  (selectedType === 'video' && !selectedVideo) ||
-                  (selectedType === 'exam' && !selectedExamId) ||
-                  ((selectedType === 'assignment' || selectedType === 'document') && !title.trim())
-                }
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitDisabled}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                추가하기
+                {submitLabel}
               </button>
             </div>
           </form>
