@@ -63,8 +63,8 @@ export function CourseInfoTab({
   onCourseUpdated?: (nextCourse: any) => void;
   initialSubTab?: SubTab;
 }) {
-  const isHaksa = course?.sourceType === 'haksa';
-  const courseId = toInt(course?.id, 0);
+  const isHaksa = course?.sourceType === 'haksa' && !course?.mappedCourseId;
+  const courseId = toInt(course?.mappedCourseId ?? course?.id, 0);
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab);
   const [detail, setDetail] = useState<TutorCourseInfoDetail | null>(null);
   const [loading, setLoading] = useState(false);

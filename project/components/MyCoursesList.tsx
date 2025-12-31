@@ -5,6 +5,7 @@ import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Course {
   id: string;
+  mappedCourseId?: number;
   // 왜: 학사/프리즘 탭에 따라 화면 동작(배지, 관리 버튼)을 바꾸기 위해 소스 타입을 들고 있습니다.
   sourceType: 'haksa' | 'prism';
   courseId: string;
@@ -83,6 +84,7 @@ export function MyCoursesList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [resolvingCourseId, setResolvingCourseId] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -190,6 +192,7 @@ export function MyCoursesList() {
 
           return {
             id: String(row.id),
+            mappedCourseId: row.mapped_course_id ? Number(row.mapped_course_id) : undefined,
             sourceType: activeTab,
             courseId: row.course_id_conv || row.course_cd || String(row.id),
             courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
@@ -278,6 +281,45 @@ export function MyCoursesList() {
     const end = Math.min(totalPages, page + 2);
     return Array.from({ length: end - start + 1 }, (_, idx) => start + idx);
   }, [page, totalPages]);
+
+  const handleSelectCourse = async (course: Course) => {
+    if (course.sourceType !== 'haksa') {
+      setSelectedCourse(course);
+      return;
+    }
+
+    if (course.mappedCourseId && course.mappedCourseId > 0) {
+      setSelectedCourse(course);
+      return;
+    }
+
+    if (!course.haksaCourseCode || !course.haksaOpenYear || !course.haksaOpenTerm || !course.haksaBunbanCode || !course.haksaGroupCode) {
+      alert('학사 과목 키가 비어 있어 과정 매핑을 진행할 수 없습니다.');
+      return;
+    }
+
+    setResolvingCourseId(course.id);
+    try {
+      const res = await tutorLmsApi.resolveHaksaCourse({
+        courseCode: course.haksaCourseCode,
+        openYear: course.haksaOpenYear,
+        openTerm: course.haksaOpenTerm,
+        bunbanCode: course.haksaBunbanCode,
+        groupCode: course.haksaGroupCode,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+      const mapped = Number(payload?.mapped_course_id ?? 0);
+      if (!mapped || Number.isNaN(mapped)) throw new Error('매핑된 과정ID를 찾지 못했습니다.');
+
+      setSelectedCourse({ ...course, mappedCourseId: mapped });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '학사 과목 매핑 중 오류가 발생했습니다.');
+    } finally {
+      setResolvingCourseId(null);
+    }
+  };
 
   // 선택된 과목이 있으면 관리 페이지 표시
   if (selectedCourse) {
@@ -543,12 +585,13 @@ export function MyCoursesList() {
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-center">
                         <button
-                          className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                          className="flex items-center gap-1 px-4 py-1.5 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors disabled:opacity-60"
                           title="과목 관리"
-                          onClick={() => setSelectedCourse(course)}
+                          onClick={() => void handleSelectCourse(course)}
+                          disabled={resolvingCourseId === course.id}
                         >
                           <Settings className="w-4 h-4" />
-                          <span>관리</span>
+                          <span>{resolvingCourseId === course.id ? '연동 중...' : '관리'}</span>
                         </button>
                       </div>
                     </td>

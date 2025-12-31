@@ -27,8 +27,14 @@ while(list.next()) {
 		list.put("start_date_conv", m.time(_message.get("format.datetime.dot"), list.s("start_date")));
 		list.put("end_date_conv", m.time(_message.get("format.datetime.dot"), list.s("end_date")));
 
-		isReady = 0 > m.diffDate("I", list.s("start_date"), now);
-		isEnd = 0 < m.diffDate("I", list.s("end_date"), now);
+		// 왜: end_date를 99991231235959 같은 "아주 먼 미래"로 두는 환경에서는,
+		//     diffDate("I") 내부에서 int 오버플로우가 나 종료로 잘못 판정되는 경우가 있습니다.
+		//     그래서 yyyyMMddHHmmss 값을 숫자로 비교해 안전하게 판단합니다.
+		long nowDateTime = m.parseLong(now);
+		long startDateTime = m.parseLong(list.s("start_date"));
+		long endDateTime = m.parseLong(list.s("end_date"));
+		isReady = startDateTime > 0 && startDateTime > nowDateTime;
+		isEnd = endDateTime > 0 && endDateTime < nowDateTime;
 
 		list.put("apply_type_1", true);
 		list.put("apply_type_2", false);
@@ -44,7 +50,9 @@ while(list.next()) {
 	String status = "-";
 	if(list.b("submit_yn")) status = _message.get("classroom.exam.status.complete");
 	else if("W".equals(progress) || isReady) status = _message.get("classroom.module.status.waiting");
-	else if("E".equals(progress) || isEnd) status = _message.get("classroom.module.status.end");
+	// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일이 지나기 전까지는 응시를 허용해야 합니다.
+	//     (단, 차시(apply_type=2)형은 학기 종료와 함께 종료로 처리합니다.)
+	else if(isEnd || ("E".equals(progress) && !"1".equals(list.s("apply_type")))) status = _message.get("classroom.module.status.end");
 	else if("I".equals(progress) && list.i("user_id") != 0) status = _message.get("classroom.exam.status.during");
 	else status = "-";
 	list.put("status_conv", status);

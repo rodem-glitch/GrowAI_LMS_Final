@@ -36,8 +36,14 @@ if("1".equals(info.s("apply_type"))) { //시작일
 	info.put("start_date_conv", m.time(_message.get("format.datetime.dot"), info.s("start_date")));
 	info.put("end_date_conv", m.time(_message.get("format.datetime.dot"), info.s("end_date")));
 
-	isReady = 0 > m.diffDate("I", info.s("start_date"), now);
-	isEnd = 0 < m.diffDate("I", info.s("end_date"), now);
+	// 왜: end_date를 99991231235959 같은 "아주 먼 미래"로 두는 환경에서는,
+	//     diffDate("I") 내부에서 int 오버플로우가 나 종료로 잘못 판정되는 경우가 있습니다.
+	//     그래서 yyyyMMddHHmmss 값을 숫자로 비교해 안전하게 판단합니다.
+	long nowDateTime = m.parseLong(now);
+	long startDateTime = m.parseLong(info.s("start_date"));
+	long endDateTime = m.parseLong(info.s("end_date"));
+	isReady = startDateTime > 0 && startDateTime > nowDateTime;
+	isEnd = endDateTime > 0 && endDateTime < nowDateTime;
 } else if("2".equals(info.s("apply_type"))) { //차시
 	info.put("apply_conv", info.i("chapter") == 0 ? _message.get("classroom.module.before_study") : _message.get("classroom.module.after_study", new String[] { "chapter=>" + info.i("chapter") }));
 	//if(info.i("chapter") > 0 && 0 == courseProgress.findCount("course_id = " + courseId + " AND chapter = " + info.i("chapter") + " AND complete_yn = 'Y'")) isReady = true;

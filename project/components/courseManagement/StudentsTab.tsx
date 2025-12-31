@@ -14,6 +14,7 @@ function parseUserIds(raw: string) {
 
 type StudentTabCourse = {
   sourceType?: 'haksa' | 'prism';
+  mappedCourseId?: number;
   haksaCourseCode?: string;
   haksaOpenYear?: string;
   haksaOpenTerm?: string;
@@ -22,8 +23,9 @@ type StudentTabCourse = {
 };
 
 export function StudentsTab({ courseId, course }: { courseId: number; course?: StudentTabCourse }) {
-  // 왜: 학사 과목은 LMS DB를 쓰지 않으므로, 학사 전용 조회로 전환합니다.
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  // 왜: 학사 탭은 매핑 여부와 관계없이 학사 수강생을 보여야 하므로, sourceType만 기준으로 분기합니다.
+  const resolvedCourseId = Number(course?.mappedCourseId ?? courseId);
+  const isHaksaCourse = course?.sourceType === 'haksa';
 
   const [rows, setRows] = useState<TutorCourseStudentRow[]>([]);
   const [haksaRows, setHaksaRows] = useState<HaksaCourseStudentRow[]>([]);
@@ -36,7 +38,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     setLoading(true);
     setErrorMessage(null);
     try {
-      const res = await tutorLmsApi.getCourseStudents({ courseId, keyword: nextKeyword ?? keyword });
+      const res = await tutorLmsApi.getCourseStudents({ courseId: resolvedCourseId, keyword: nextKeyword ?? keyword });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
       setRows(res.rst_data ?? []);
     } catch (e) {
@@ -57,7 +59,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
       setLoading(true);
       setErrorMessage(null);
       try {
-        const res = await tutorLmsApi.getCourseStudents({ courseId });
+        const res = await tutorLmsApi.getCourseStudents({ courseId: resolvedCourseId });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
         if (!cancelled) setRows(res.rst_data ?? []);
       } catch (e) {
@@ -71,7 +73,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     return () => {
       cancelled = true;
     };
-  }, [courseId, isHaksaCourse]);
+  }, [resolvedCourseId, isHaksaCourse]);
 
   const refreshHaksa = async (nextKeyword: string) => {
     if (!course?.haksaCourseCode) {
@@ -116,7 +118,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     }
 
     try {
-      const res = await tutorLmsApi.addCourseStudents({ courseId, userIds });
+      const res = await tutorLmsApi.addCourseStudents({ courseId: resolvedCourseId, userIds });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
       const inserted = Number(res.rst_data ?? 0);
@@ -134,7 +136,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     if (!ok) return;
 
     try {
-      const res = await tutorLmsApi.removeCourseStudent({ courseId, userId });
+      const res = await tutorLmsApi.removeCourseStudent({ courseId: resolvedCourseId, userId });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
       await refresh();
     } catch (e) {
@@ -150,7 +152,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
   const handleDownloadCsv = () => {
     // 왜: 운영자가 바로 확인할 수 있도록, 화면에 표시 중인 목록을 그대로 CSV로 내려받습니다.
     const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const filename = `course_${courseId}_students_${ymd}.csv`;
+    const filename = `course_${resolvedCourseId}_students_${ymd}.csv`;
 
     const headers = ['No', 'course_user_id', 'user_id', '학번', '이름', '이메일', '진도율(%)'];
     const body = sortedRows.map((student, index) => {

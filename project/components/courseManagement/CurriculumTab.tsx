@@ -9,6 +9,7 @@ import { buildHaksaCourseKey } from '../../utils/haksa';
 interface CourseProps {
   id: string;
   sourceType?: 'haksa' | 'prism';
+  mappedCourseId?: number;
   courseId: string;
   subjectName: string;
   haksaWeek?: string;
@@ -100,7 +101,8 @@ const normalizeWeeks = (source: WeekData[], weekCount: number) =>
   });
 
 export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
-  const isHaksaCourse = !courseId || Number.isNaN(courseId) || courseId <= 0 || course?.sourceType === 'haksa';
+  // 왜: 학사 과목은 "주차 → 차시" UI를 그대로 유지해야 하므로, UI 분기 기준은 sourceType만 봅니다.
+  const isHaksaCourse = course?.sourceType === 'haksa';
   const haksaKey = useMemo(
     () =>
       buildHaksaCourseKey({

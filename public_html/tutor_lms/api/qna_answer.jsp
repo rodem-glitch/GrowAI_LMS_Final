@@ -92,6 +92,9 @@ if(ainfo.next()) {
 	answerId = ainfo.i("id");
 	post.item("writer", userName);
 	post.item("content", answerContent);
+	// 왜: 답변이 존재하면 상태를 '답변완료'로 고정해 학생 화면에서 바로 노출합니다.
+	post.item("proc_status", 1);
+	post.item("display_yn", "Y");
 	post.item("mod_date", now);
 	post.item("status", 1);
 	if(!post.update("id = " + answerId + "")) {
@@ -114,10 +117,17 @@ if(ainfo.next()) {
 	post.item("writer", userName);
 	post.item("subject", qinfo.s("subject"));
 	post.item("content", answerContent);
+	// 왜: 일부 DB는 FILE_CNT가 NOT NULL + 기본값 없음이라, 값이 없으면 INSERT가 실패합니다.
+	post.item("file_cnt", 0);
+	post.item("hit_cnt", 0);
+	post.item("comm_cnt", 0);
+	post.item("display_yn", "Y");
+	post.item("secret_yn", qinfo.s("secret_yn"));
 	post.item("notice_yn", "N");
 	post.item("mod_date", now);
 	post.item("reg_date", now);
-	post.item("proc_status", 0);
+	// 왜: 답변 글은 등록 즉시 '답변완료'로 처리되어 학생 화면에 표시됩니다.
+	post.item("proc_status", 1);
 	post.item("status", 1);
 	if(!post.insert()) {
 		result.put("rst_code", "2000");
@@ -140,4 +150,3 @@ result.put("rst_data", answerId);
 result.print();
 
 %>
-

@@ -29,6 +29,7 @@ if(!info.next()) { m.jsError(_message.get("alert.common.nodata")); return; }
 //포맷팅(기본 과제의 기간/차시 규칙을 그대로 따라갑니다)
 boolean isReady = false; //대기
 boolean isEnd = false; //완료
+boolean isPeriodApply = "1".equals(hinfo.s("apply_type"));
 if("1".equals(hinfo.s("apply_type"))) { //기간
 	hinfo.put("start_date_conv", m.time(_message.get("format.datetime.dot"), hinfo.s("start_date")));
 	hinfo.put("end_date_conv",
@@ -37,8 +38,14 @@ if("1".equals(hinfo.s("apply_type"))) { //기간
 		: m.time(_message.get("format.datetime.dot"), hinfo.s("end_date"))
 	);
 
-	isReady = 0 > m.diffDate("I", hinfo.s("start_date"), now);
-	isEnd = 0 < m.diffDate("I", hinfo.s("end_date"), now);
+	// 왜: end_date를 99991231235959 같은 "아주 먼 미래"로 두는 환경에서는,
+	//     diffDate("I") 내부에서 int 오버플로우가 나 종료로 잘못 판정되는 경우가 있습니다.
+	//     그래서 yyyyMMddHHmmss 값을 숫자로 비교해 안전하게 판단합니다.
+	long nowDateTime = m.parseLong(now);
+	long startDateTime = m.parseLong(hinfo.s("start_date"));
+	long endDateTime = m.parseLong(hinfo.s("end_date"));
+	isReady = startDateTime > 0 && startDateTime > nowDateTime;
+	isEnd = endDateTime > 0 && endDateTime < nowDateTime;
 
 	hinfo.put("apply_type_1", true);
 	hinfo.put("apply_type_2", false);
@@ -50,11 +57,14 @@ if("1".equals(hinfo.s("apply_type"))) { //기간
 	hinfo.put("apply_type_2", true);
 }
 
+// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 과제는 종료일 전까지 제출/재제출을 허용합니다.
+boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
+
 //왜: 기본 과제는 '평가완료(confirm_yn)' 이후 수정이 막히는데, 추가 과제도 같은 기준으로 제출/수정을 막아야 혼선이 없습니다.
-boolean isOpen = !isReady && !isEnd && "I".equals(progress) && !info.b("confirm_yn") && "N".equals(hinfo.s("onoff_type"));
+boolean isOpen = !isReady && !isEnd && canOpenByProgress && !info.b("confirm_yn") && "N".equals(hinfo.s("onoff_type"));
 
 //왜: 피드백을 받은 후에는 기간이 종료되었더라도 재제출을 허용합니다.
-boolean isResubmit = info.b("confirm_yn") && "I".equals(progress) && "N".equals(hinfo.s("onoff_type"));
+boolean isResubmit = info.b("confirm_yn") && canOpenByProgress && "N".equals(hinfo.s("onoff_type"));
 
 info.put("open_block", isOpen);
 info.put("resubmit_block", isResubmit);
