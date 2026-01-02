@@ -42,6 +42,20 @@ type ParsedRoute = RouteState & {
   isFallback: boolean;
 };
 
+const isSameParams = (a: Record<string, string>, b: Record<string, string>) => {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+};
+
+const isSameRoute = (a: RouteState, b: RouteState) => {
+  return a.menu === b.menu && a.subPath === b.subPath && isSameParams(a.params, b.params);
+};
+
 const parseRouteFromHash = (hash: string): ParsedRoute => {
   // 왜: 해시 주소를 메뉴/서브경로/쿼리로 분해해 화면 상태에 맞춥니다.
   const normalized = hash.replace(/^#\/?/, '').trim();
@@ -110,7 +124,7 @@ export default function App() {
   }, []);
 
   const applyRoute = useCallback((route: RouteState, options?: { syncHash?: boolean; replaceHash?: boolean }) => {
-    setRouteState(route);
+    setRouteState((prev) => (isSameRoute(prev, route) ? prev : route));
     if (route.menu === 'content-all' || route.menu === 'content-favorites') {
       setContentLibraryExpanded(true);
     }
@@ -130,7 +144,8 @@ export default function App() {
     // 왜: 대시보드에서 선택한 과목과 탭을 주소에 담아 바로 이동합니다.
     const params: Record<string, string> = {
       courseId: String(payload.courseId),
-      tab: payload.targetTab ?? 'attendance',
+      // 왜: 목록 탭(tab=prism/haksa)과 충돌을 피하기 위해, 관리 탭은 cmTab으로 분리합니다.
+      cmTab: payload.targetTab ?? 'attendance',
       source: 'prism',
     };
     if (payload.courseName) params.courseName = payload.courseName;

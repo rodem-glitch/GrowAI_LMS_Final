@@ -72,6 +72,16 @@ const COURSE_MANAGEMENT_TAB_IDS: CourseManagementTabId[] = [
 ];
 const COURSE_MANAGEMENT_TAB_SET = new Set<string>(COURSE_MANAGEMENT_TAB_IDS);
 
+const isSameParams = (a: Record<string, string> = {}, b: Record<string, string> = {}) => {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const key of aKeys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+};
+
 // 단과대학 옵션 (캠퍼스 이름만)
 const GRAD_OPTIONS = [
   '전체',
@@ -101,6 +111,21 @@ const CATEGORY_OPTIONS = ['전체', 'off', 'elearning'];
 
 export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCoursesListProps) {
   const currentYear = String(new Date().getFullYear());
+
+  // 왜: URL 변경(뒤로가기 포함)과 화면 상태 변경이 서로 꼬이지 않도록, 현재 라우트 값을 ref로 관리합니다.
+  const routeRef = useRef<{ subPath?: string; params: Record<string, string> }>({
+    subPath: routeSubPath ?? undefined,
+    params: routeParams ?? {},
+  });
+  routeRef.current = { subPath: routeSubPath ?? undefined, params: routeParams ?? {} };
+
+  const pushRoute = useCallback((next: { subPath?: string; params: Record<string, string> }) => {
+    if (!onRouteChange) return;
+    const current = routeRef.current;
+    if (current.subPath === next.subPath && isSameParams(current.params, next.params)) return;
+    onRouteChange(next);
+  }, [onRouteChange]);
+
   const parseNumberParam = useCallback((value: string | undefined, fallback: number) => {
     // 왜: 잘못된 주소 값이 들어와도 화면이 깨지지 않게 기본값으로 되돌립니다.
     const parsed = Number(value);
@@ -108,7 +133,16 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
     return Math.floor(parsed);
   }, []);
 
-  const initialTab = routeParams?.tab === 'prism' || routeParams?.tab === 'haksa' ? routeParams.tab : 'haksa';
+  const initialTab =
+    // 왜: 목록 탭(haksa/prism)과 관리 탭(info/attendance/...)이 같은 키(tab)를 쓰면 서로 덮어써서 화면이 흔들릴 수 있습니다.
+    // 그래서 목록은 source(listTab)로 먼저 읽고, 예전 주소(tab=prism/haksa)도 호환으로만 처리합니다.
+    routeParams?.source === 'prism' || routeParams?.source === 'haksa'
+      ? (routeParams.source as TabType)
+      : routeParams?.listTab === 'prism' || routeParams?.listTab === 'haksa'
+        ? (routeParams.listTab as TabType)
+        : routeParams?.tab === 'prism' || routeParams?.tab === 'haksa'
+          ? (routeParams.tab as TabType)
+          : 'haksa';
   const initialYear = routeParams?.year ?? currentYear;
   const initialKeyword = routeParams?.keyword ?? '';
   const initialPage = parseNumberParam(routeParams?.page, 1);
@@ -138,7 +172,11 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   const [haksaGrad, setHaksaGrad] = useState(routeParams?.haksaGrad ?? '전체'); // 단과대학
   const [haksaCurriculum, setHaksaCurriculum] = useState(routeParams?.haksaCurriculum ?? '전체'); // 과목구분
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>(initialSortOrder); // 정렬 순서
-  const autoSelectStateRef = useRef<{ key: string; stage: 'init' | 'switched' | 'widened' | 'searched' | 'done' } | null>(null);
+  const autoSelectStateRef = useRef<{
+    key: string;
+    stage: 'init' | 'switched' | 'widened' | 'searched' | 'done';
+    triedSources: { prism: boolean; haksa: boolean };
+  } | null>(null);
 
   const normalizeText = (value?: string) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -153,7 +191,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   const buildListRouteParams = useCallback(() => {
     // 왜: 목록 화면의 상태를 주소에 담아 뒤로가기/직접 이동이 되게 합니다.
     const params: Record<string, string> = {};
-    if (activeTab !== 'haksa') params.tab = activeTab;
+    if (activeTab !== 'haksa') params.source = activeTab;
     if (year) params.year = year;
     if (searchKeyword) params.keyword = searchKeyword;
     if (page > 1) params.page = String(page);
@@ -189,12 +227,20 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   useEffect(() => {
     if (!onRouteChange) return;
     if (routeSubPath === 'manage') return;
-    onRouteChange({ subPath: undefined, params: buildListRouteParams() });
-  }, [buildListRouteParams, onRouteChange, routeSubPath]);
+    if (selectedCourse) return;
+    pushRoute({ subPath: undefined, params: buildListRouteParams() });
+  }, [buildListRouteParams, onRouteChange, pushRoute, routeSubPath, selectedCourse]);
 
   useEffect(() => {
     if (routeSubPath === 'manage') return;
-    const nextTab = routeParams?.tab === 'prism' || routeParams?.tab === 'haksa' ? routeParams.tab : 'haksa';
+    const nextTab =
+      routeParams?.source === 'prism' || routeParams?.source === 'haksa'
+        ? (routeParams.source as TabType)
+        : routeParams?.listTab === 'prism' || routeParams?.listTab === 'haksa'
+          ? (routeParams.listTab as TabType)
+          : routeParams?.tab === 'prism' || routeParams?.tab === 'haksa'
+            ? (routeParams.tab as TabType)
+            : 'haksa';
     const nextYear = routeParams?.year ?? currentYear;
     const nextKeyword = routeParams?.keyword ?? '';
     const nextPage = parseNumberParam(routeParams?.page, 1);
@@ -491,10 +537,10 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   // 왜: 주소에서 넘어온 과목 정보를 자동 선택 로직에 맞춰 정리합니다.
   const routeCourseId = getRouteParam(['courseId', 'course_id', 'id']);
   const routeCourseName = getRouteParam(['courseName', 'course_nm', 'courseNameConv', 'name']);
-  const rawTabParam = getRouteParam(['tab', 'targetTab', 'tab_id']);
+  const rawTabParam = getRouteParam(['cmTab', 'cm_tab', 'tab', 'targetTab', 'tab_id']);
   const routeTargetTab =
     COURSE_MANAGEMENT_TAB_SET.has(rawTabParam) ? (rawTabParam as CourseManagementTabId) : undefined;
-  const rawSourceParam = getRouteParam(['source', 'source_type', 'sourceType']);
+  const rawSourceParam = getRouteParam(['source', 'source_type', 'sourceType', 'listTab']);
   const routeSourceType =
     rawSourceParam === 'haksa' || rawSourceParam === 'prism'
       ? rawSourceParam
@@ -511,7 +557,20 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
 
   useEffect(() => {
     if (!routeSelection) return;
-    if (selectedCourse && String(selectedCourse.id) === String(routeSelection.courseId)) return;
+    if (selectedCourse) {
+      const selectionId = normalizeText(routeSelection.courseId);
+      const selectionName = normalizeText(routeSelection.courseName);
+      const selectedId = normalizeText(selectedCourse.id);
+      const selectedCourseId = normalizeText(selectedCourse.courseId);
+      const selectedName = normalizeText(selectedCourse.subjectName);
+      const selectedMappedId = normalizeText(String(selectedCourse.mappedCourseId ?? ''));
+
+      const idMatched =
+        selectionId &&
+        (selectedId === selectionId || selectedCourseId === selectionId || (selectedMappedId && selectedMappedId === selectionId));
+      const nameMatched = selectionName && selectedName === selectionName;
+      if (idMatched || nameMatched) return;
+    }
     if (loadedTab !== activeTab) return;
 
     const targetIdRaw = routeSelection.courseId;
@@ -524,7 +583,11 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
 
     const selectionKey = `${normalizedTargetId}-${normalizeText(routeSelection.courseName)}-${routeSelection.targetTab ?? ''}`;
     if (!autoSelectStateRef.current || autoSelectStateRef.current.key !== selectionKey) {
-      autoSelectStateRef.current = { key: selectionKey, stage: 'init' };
+      autoSelectStateRef.current = {
+        key: selectionKey,
+        stage: 'init',
+        triedSources: { prism: false, haksa: false },
+      };
     }
 
     const state = autoSelectStateRef.current;
@@ -539,17 +602,22 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
 
     if (state.stage === 'init') {
       const targetSource = routeSelection.sourceType;
-      if (targetSource && activeTab !== targetSource) {
-        // 왜: 주소에 있는 소스 탭과 실제 목록 탭을 맞춰서 검색합니다.
-        state.stage = 'switched';
-        setActiveTab(targetSource);
-        return;
-      }
-      if (!targetSource && activeTab !== 'prism') {
-        // 왜: 기본은 프리즘 탭에서 먼저 찾도록 맞춥니다.
-        state.stage = 'switched';
-        setActiveTab('prism');
-        return;
+      if (targetSource === 'haksa' || targetSource === 'prism') {
+        state.triedSources[targetSource] = true;
+        if (activeTab !== targetSource) {
+          // 왜: 주소에 있는 소스 탭과 실제 목록 탭을 맞춰서 검색합니다.
+          state.stage = 'switched';
+          setActiveTab(targetSource);
+          return;
+        }
+      } else {
+        // 왜: 소스 타입이 없으면(대시보드 등), 프리즘→학사 순으로 한 번씩만 찾아봅니다.
+        state.triedSources.prism = true;
+        if (activeTab !== 'prism') {
+          state.stage = 'switched';
+          setActiveTab('prism');
+          return;
+        }
       }
     }
 
@@ -563,46 +631,68 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
       setHaksaGrad('전체');
       setHaksaCurriculum('전체');
       setSortOrder('desc');
+      // 왜: 목록이 페이지네이션되어 있어, 바로가기는 최대한 많이 불러와 찾습니다.
+      setPageSize(100);
       setPage(1);
+      setSearchTerm('');
+      setSearchKeyword('');
       return;
     }
 
-    if (state.stage === 'widened' && !searchTerm) {
-      // 왜: 검색어로 다시 좁혀 빠르게 찾습니다.
-      state.stage = 'searched';
-      const keyword = (routeSelection.courseName || '').trim() || targetIdRaw || String(targetId);
-      setSearchTerm(keyword);
-      return;
-    }
+    if (state.stage === 'widened') state.stage = 'searched';
 
     if (state.stage === 'searched' && !loading) {
-      // 왜: 여러 번 시도해도 못 찾으면 사용자가 직접 고르도록 마무리합니다.
+      const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+      // 왜: 1페이지에 없을 수 있으니, 다음 페이지를 자동으로 넘기며 찾습니다(과도한 요청 방지용 상한 포함).
+      if (page < totalPages && page < 10) {
+        setPage((prev) => prev + 1);
+        return;
+      }
+
+      const otherSource: TabType = activeTab === 'prism' ? 'haksa' : 'prism';
+      if (!state.triedSources[otherSource]) {
+        // 왜: 한쪽 탭에 없을 수 있으니, 다른 탭도 한 번만 더 확인합니다.
+        state.triedSources[otherSource] = true;
+        state.stage = 'switched';
+        setActiveTab(otherSource);
+        return;
+      }
+
       state.stage = 'done';
     }
-  }, [activeTab, handleSelectCourse, loadedTab, loading, routeSelection, searchTerm, selectedCourse]);
+  }, [activeTab, handleSelectCourse, loadedTab, loading, page, pageSize, routeSelection, selectedCourse, totalCount]);
 
+  const lastRouteTargetTabRef = useRef<CourseManagementTabId | undefined>(routeTargetTab);
   useEffect(() => {
-    if (routeSubPath !== 'manage') return;
-    if (routeTargetTab && routeTargetTab !== selectedCourseTab) {
-      // 왜: 주소의 탭 값이 바뀌면 상세 탭도 함께 맞춥니다.
-      setSelectedCourseTab(routeTargetTab);
+    // 왜: "탭 클릭 → selectedCourseTab 변경 → URL(cmTab) 변경" 순서로 흘러가는데,
+    // 중간에 URL의 "예전 탭" 값을 selectedCourseTab에 덮어쓰면 화면이 깜빡이며 클릭이 무시됩니다.
+    // 그래서 실제로 URL 탭 값이 바뀐 경우(뒤로가기/직접 주소 변경)만 selectedCourseTab을 동기화합니다.
+    if (routeSubPath !== 'manage') {
+      lastRouteTargetTabRef.current = routeTargetTab;
+      return;
     }
-  }, [routeSubPath, routeTargetTab, selectedCourseTab]);
+
+    if (routeTargetTab === lastRouteTargetTabRef.current) return;
+    lastRouteTargetTabRef.current = routeTargetTab;
+    if (!routeTargetTab) return;
+    setSelectedCourseTab(routeTargetTab);
+  }, [routeSubPath, routeTargetTab]);
 
   useEffect(() => {
     if (!onRouteChange || !selectedCourse) return;
     const nextTab = selectedCourseTab ?? routeTargetTab ?? 'info-basic';
     const courseNameParam = selectedCourse.subjectName || selectedCourse.courseId;
-    onRouteChange({
+    pushRoute({
       subPath: 'manage',
       params: {
         courseId: selectedCourse.id,
         source: selectedCourse.sourceType,
-        tab: nextTab,
+        cmTab: nextTab,
         courseName: courseNameParam,
       },
     });
-  }, [onRouteChange, routeTargetTab, selectedCourse, selectedCourseTab]);
+  }, [onRouteChange, pushRoute, routeTargetTab, selectedCourse, selectedCourseTab]);
 
   useEffect(() => {
     if (routeSubPath === 'manage') return;
@@ -622,9 +712,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
         onBack={() => {
           setSelectedCourse(null);
           setSelectedCourseTab(null);
-          if (onRouteChange) {
-            onRouteChange({ subPath: undefined, params: buildListRouteParams() });
-          }
+          pushRoute({ subPath: undefined, params: buildListRouteParams() });
         }}
       />
     );

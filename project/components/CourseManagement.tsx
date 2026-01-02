@@ -223,14 +223,6 @@ export function CourseManagement({ course: initialCourse, onBack, initialTab, on
     setCourse(initialCourse);
   }, [initialCourse]);
 
-  useEffect(() => {
-    if (!initialTab) return;
-    // 왜: 대시보드에서 넘어온 탭 요구를 바로 반영하고, 사이드바 접힘 상태도 맞춰줍니다.
-    setActiveTab(initialTab);
-    setIsInfoExpanded(INFO_SUB_TAB_IDS.includes(initialTab));
-    setIsAssignmentExpanded(ASSIGNMENT_SUB_TAB_IDS.includes(initialTab));
-  }, [initialTab]);
-
   const tabs = [
     { id: 'info' as TabType, label: '과목정보', icon: Info, isSubTab: false, hasSubTabs: true },
     { id: 'curriculum' as TabType, label: '강의목차', icon: List, isSubTab: false },
