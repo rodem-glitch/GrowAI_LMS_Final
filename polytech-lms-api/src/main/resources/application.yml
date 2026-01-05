@@ -5,23 +5,38 @@ spring:
   application:
     name: polytech-lms-api
   datasource:
-    # 왜: 레거시 Resin 설정(resin-web.xml)의 실제 접속 정보를 기본값으로 맞춰 동일 DB를 사용합니다.
-    url: ${DB_URL:jdbc:mysql://192.168.0.55:3306/lms?useSSL=false&allowPublicKeyRetrieval=true}
+    # 왜: DB 비밀번호는 코드에 두지 않고(프라이빗 Git이어도) 환경변수로 주입하는 게 안전합니다.
+    # - 로컬 개발은 .env(IDE Run Configuration) 또는 OS 환경변수로 설정해 주세요.
+    url: ${DB_URL:jdbc:mysql://localhost:3306/lms?useSSL=false&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:lms}
-    password: ${DB_PASSWORD:lms%67}
+    password: ${DB_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: none
     properties:
       hibernate:
         format_sql: true
+
   ai:
-    vertex:
-      ai:
-        gemini:
-          project-id: ${VERTEX_AI_PROJECT_ID:YOUR_PROJECT_ID}
-          location: ${VERTEX_AI_LOCATION:us-central1}
-          chat:
+    # 왜: 추천(유사도 검색)은 "임베딩 모델 + 벡터 DB" 조합이 표준입니다.
+    # - 임베딩: Google GenAI (API Key 방식)
+    # - 벡터 DB: Qdrant
+    model:
+      embedding:
+        text: google-genai
+    google:
+      genai:
+        embedding:
+          api-key: ${GOOGLE_API_KEY:}
+          text:
             options:
-              model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
-              temperature: ${VERTEX_AI_TEMPERATURE:0.5}
+              model: ${GOOGLE_EMBEDDING_MODEL:text-embedding-004}
+              task-type: ${GOOGLE_EMBEDDING_TASK:RETRIEVAL_DOCUMENT}
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST:localhost}
+        port: ${QDRANT_GRPC_PORT:6334}
+        api-key: ${QDRANT_API_KEY:}
+        collection-name: ${QDRANT_COLLECTION:video_summary_vectors}
+        use-tls: ${QDRANT_USE_TLS:false}
+        initialize-schema: ${QDRANT_INIT_SCHEMA:true}
