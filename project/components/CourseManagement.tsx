@@ -76,10 +76,94 @@ interface CourseManagementProps {
     haksaIsSyllabus?: string;
   };
   onBack: () => void;
+  initialTab?: CourseManagementTabId;
+  onTabChange?: (tabId: CourseManagementTabId) => void;
 }
 
+const getHaksaWeekCount = (course?: any) => {
+  if (course?.haksaWeek) {
+    const parsed = parseInt(course.haksaWeek, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 15;
+};
 
-type TabType =
+const buildHaksaSessionName = (sessionNumber: number) => `${sessionNumber}차시`;
+
+const appendHaksaCurriculumContent = async ({
+  haksaKey,
+  weekNumber,
+  sessionNumber,
+  content,
+}: {
+  haksaKey: HaksaCourseKey | null;
+  weekNumber: number;
+  sessionNumber: number;
+  content: any;
+}) => {
+  if (!haksaKey) throw new Error('학사 과목 키가 비어 있어 강의목차에 저장할 수 없습니다.');
+
+  const res = await tutorLmsApi.getHaksaCurriculum(haksaKey);
+  if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+  // 왜: DataSet 응답이 배열로 올 수 있어 첫 번째 행을 기준으로 해석합니다.
+  const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+  const raw = payload?.curriculum_json || '';
+
+  let weeks: any[] = [];
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      weeks = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      weeks = [];
+    }
+  }
+
+  const normalizedWeek = Number(weekNumber || 1);
+  const normalizedSession = Number(sessionNumber || 1);
+  const sessionName = buildHaksaSessionName(normalizedSession);
+
+  let targetWeek = weeks.find((w) => w.weekNumber === normalizedWeek);
+  if (!targetWeek) {
+    targetWeek = {
+      weekNumber: normalizedWeek,
+      title: `${normalizedWeek}주차`,
+      isExpanded: true,
+      sessions: [],
+    };
+    weeks.push(targetWeek);
+  }
+
+  if (!Array.isArray(targetWeek.sessions)) targetWeek.sessions = [];
+  let targetSession = targetWeek.sessions.find((s: any) => s.sessionName === sessionName);
+  if (!targetSession) {
+    targetSession = {
+      sessionId: `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      sessionName,
+      isExpanded: true,
+      contents: [],
+    };
+    targetWeek.sessions.push(targetSession);
+  }
+
+  if (!Array.isArray(targetSession.contents)) targetSession.contents = [];
+  targetSession.contents.push({
+    ...content,
+    id: `content_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    createdAt: new Date().toISOString(),
+    weekNumber: normalizedWeek,
+  });
+
+  const saveRes = await tutorLmsApi.updateHaksaCurriculum({
+    ...haksaKey,
+    curriculumJson: JSON.stringify(weeks),
+  });
+  if (saveRes.rst_code !== '0000') throw new Error(saveRes.rst_message);
+};
+
+
+export type CourseManagementTabId =
   | 'info'
   | 'info-basic'
   | 'info-evaluation'
@@ -96,11 +180,39 @@ type TabType =
   | 'grades'
   | 'completion';
 
-export function CourseManagement({ course: initialCourse, onBack }: CourseManagementProps) {
+type TabType = CourseManagementTabId;
+
+const INFO_SUB_TAB_IDS: CourseManagementTabId[] = ['info-basic', 'info-evaluation', 'info-completion'];
+const ASSIGNMENT_SUB_TAB_IDS: CourseManagementTabId[] = ['assignment-management', 'assignment-feedback'];
+
+export function CourseManagement({ course: initialCourse, onBack, initialTab, onTabChange }: CourseManagementProps) {
   const [course, setCourse] = useState(initialCourse);
-  const [activeTab, setActiveTab] = useState<TabType>('info-basic');
-  const [isInfoExpanded, setIsInfoExpanded] = useState(true);
-  const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(false);
+
+  const resolveInitialTab = (tab?: CourseManagementTabId): TabType => {
+    // 왜: 상위 탭(info/assignment)이 들어오면 기본 하위 탭으로 정리합니다.
+    if (!tab || tab === 'info') return 'info-basic';
+    if (tab === 'assignment') return 'assignment-management';
+    return tab;
+  };
+
+  const resolvedInitialTab = resolveInitialTab(initialTab);
+  const [activeTab, setActiveTab] = useState<TabType>(resolvedInitialTab);
+  const [isInfoExpanded, setIsInfoExpanded] = useState(() => INFO_SUB_TAB_IDS.includes(resolvedInitialTab));
+  const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(() => ASSIGNMENT_SUB_TAB_IDS.includes(resolvedInitialTab));
+
+  useEffect(() => {
+    if (!initialTab) return;
+    // 왜: 뒤로가기/직접 주소 이동 시 탭 상태를 주소 기준으로 다시 맞춥니다.
+    const nextTab = resolveInitialTab(initialTab);
+    setActiveTab(nextTab);
+    setIsInfoExpanded(INFO_SUB_TAB_IDS.includes(nextTab));
+    setIsAssignmentExpanded(ASSIGNMENT_SUB_TAB_IDS.includes(nextTab));
+  }, [initialTab]);
+
+  useEffect(() => {
+    // 왜: 상위에서 주소 동기화를 할 수 있도록 현재 탭을 알려줍니다.
+    onTabChange?.(activeTab);
+  }, [activeTab, onTabChange]);
 
   // 페이지 진입 시 스크롤을 맨 위로 이동
   useEffect(() => {
@@ -150,7 +262,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
     } else {
       setActiveTab(tabId);
       // 다른 탭을 클릭하면 해당 탭의 하위 탭만 유지
-      if (!['info-basic', 'info-evaluation', 'info-completion'].includes(tabId)) {
+      if (!visibleInfoSubTabs.map((subTab) => subTab.id).includes(tabId)) {
         setIsInfoExpanded(false);
       }
       if (!['assignment-management', 'assignment-feedback'].includes(tabId)) {
@@ -162,6 +274,27 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
   const courseIdNum = Number(course?.mappedCourseId ?? course.id);
   const isHaksaCourse =
     course?.sourceType === 'haksa' && (!course?.mappedCourseId || Number.isNaN(courseIdNum) || courseIdNum <= 0);
+  const isHaksaMenu =
+    course?.sourceType === 'haksa' ||
+    Boolean(
+      course?.haksaCourseCode ||
+      course?.haksaOpenYear ||
+      course?.haksaOpenTerm ||
+      course?.haksaBunbanCode ||
+      course?.haksaGroupCode
+    ) ||
+    String(course?.courseType || '').includes('학사');
+  const visibleTabs = isHaksaMenu ? tabs.filter(tab => tab.id !== 'completion') : tabs;
+  const visibleInfoSubTabs = isHaksaMenu
+    ? infoSubTabs.filter(subTab => subTab.id !== 'info-completion')
+    : infoSubTabs;
+
+  useEffect(() => {
+    if (!isHaksaMenu) return;
+    if (activeTab === 'completion' || activeTab === 'info-completion') {
+      setActiveTab('info-basic');
+    }
+  }, [activeTab, isHaksaMenu]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -171,13 +304,15 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'info-evaluation':
         return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="evaluation" />;
       case 'info-completion':
-        return <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
+        return isHaksaMenu
+          ? <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="basic" />
+          : <CourseInfoTab course={course} onCourseUpdated={setCourse} initialSubTab="completion" />;
       case 'curriculum':
         return <CurriculumTab courseId={courseIdNum} course={course} />;
       case 'students':
         return <StudentsTab courseId={courseIdNum} course={course} />;
       case 'attendance':
-        return <AttendanceTab courseId={courseIdNum} />;
+        return <AttendanceTab courseId={courseIdNum} course={course} />;
       case 'exam':
         return isHaksaCourse ? <HaksaExamTab course={course} /> : <ExamTab courseId={courseIdNum} course={course} />;
       case 'assignment':
@@ -187,7 +322,14 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
       case 'assignment-feedback':
         return <AssignmentFeedbackTab courseId={courseIdNum} />;
       case 'materials':
-        return isHaksaCourse ? <HaksaMaterialsTab course={course} /> : <MaterialsTab courseId={courseIdNum} />;
+        return (
+          <MaterialsTab
+            courseId={courseIdNum}
+            showWeekSession={course?.sourceType === 'haksa'}
+            weekCount={getHaksaWeekCount(course)}
+            course={course}
+          />
+        );
       case 'qna':
         return <QnaTab courseId={courseIdNum} />;
       case 'grades':
@@ -196,7 +338,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
           ? <HaksaGradingContent course={course} />
           : <GradesTab courseId={courseIdNum} />;
       case 'completion':
-        return <CompletionTab courseId={courseIdNum} course={course} />;
+        return isHaksaMenu ? null : <CompletionTab courseId={courseIdNum} course={course} />;
       default:
         return null;
     }
@@ -221,12 +363,12 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
             {/* 메뉴 네비게이션 */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <nav className="flex flex-col">
-                {tabs.map((tab) => {
+                {visibleTabs.map((tab) => {
                   const Icon = tab.icon;
                   const isInfoTab = tab.id === 'info';
                   const isAssignmentTab = tab.id === 'assignment';
                   const isActive = activeTab === tab.id || 
-                    (isInfoTab && ['info-basic', 'info-evaluation', 'info-completion'].includes(activeTab)) ||
+                    (isInfoTab && visibleInfoSubTabs.map((subTab) => subTab.id).includes(activeTab)) ||
                     (isAssignmentTab && (activeTab === 'assignment-management' || activeTab === 'assignment-feedback'));
                   
                   return (
@@ -255,7 +397,7 @@ export function CourseManagement({ course: initialCourse, onBack }: CourseManage
                       {/* 과목정보 하위 탭 */}
                       {isInfoTab && isInfoExpanded && (
                         <div className="bg-gray-50">
-                          {infoSubTabs.map((subTab) => {
+                          {visibleInfoSubTabs.map((subTab) => {
                             const SubIcon = subTab.icon;
                             return (
                               <button
@@ -842,6 +984,7 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
         haksaKey={haksaKey}
         haksaExams={haksaExams}
         setHaksaExams={setHaksaExams}
+        weekCount={getHaksaWeekCount(course)}
       />
     );
   }
@@ -971,6 +1114,8 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
       <ExamSelectModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        weekCount={getHaksaWeekCount(course)}
+        showWeekSession={course?.sourceType === 'haksa'}
         onSave={async (examData) => {
           try {
             // 왜: 기존 시험을 과목에 연결만 합니다 (시험 복사 없음)
@@ -988,6 +1133,33 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
             });
             if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
+            if (course?.sourceType === 'haksa') {
+              try {
+                await appendHaksaCurriculumContent({
+                  haksaKey,
+                  weekNumber: examData.weekNumber,
+                  sessionNumber: examData.sessionNumber,
+                  content: {
+                    type: 'exam',
+                    title: examData.title,
+                    description: examData.description || '',
+                    examId: String(examData.examId),
+                    examSettings: {
+                      points: examData.points,
+                      allowRetake: examData.allowRetake,
+                      retakeScore: examData.retakeScore,
+                      retakeCount: examData.retakeCount,
+                      showResults: examData.showResults,
+                      startDate: examData.startDate,
+                      endDate: examData.endDate,
+                    },
+                  },
+                });
+              } catch (e) {
+                alert(e instanceof Error ? e.message : '강의목차에 시험을 등록하는 중 오류가 발생했습니다.');
+              }
+            }
+
             // 시험 설정 저장
             const newSettings = {
               ...prismExamSettings,
@@ -998,9 +1170,11 @@ function ExamTab({ courseId, course }: { courseId: number; course?: any }) {
                 endTime: '18:00',
                 points: examData.points,
                 allowRetake: examData.allowRetake,
-                retakeScore: 0,
-                retakeCount: 0,
+                retakeScore: examData.retakeScore,
+                retakeCount: examData.retakeCount,
                 showResults: examData.showResults,
+                weekNumber: examData.weekNumber,
+                sessionNumber: examData.sessionNumber,
               },
             };
             setPrismExamSettings(newSettings);
@@ -1310,11 +1484,27 @@ function ExamDetailView({
     }
   };
 
-  // 점수 수정 취소
-  const handleCancelEdit = () => {
-    setEditingScore(null);
-    setTempScore('');
-  };
+    // 점수 수정 취소
+    const handleCancelEdit = () => {
+      setEditingScore(null);
+      setTempScore('');
+    };
+
+    // 왜: 제출된 시험을 취소하면 응시 기록이 삭제되고 성적이 재계산됩니다.
+    const handleCancelSubmit = async (courseUserId: number) => {
+      if (!confirm('해당 학생의 시험 응시를 취소하시겠습니까?')) return;
+
+      try {
+        const res = await tutorLmsApi.cancelExamSubmit({ courseId, examId, courseUserId });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        await fetchExamUsers();
+        onRefresh();
+        alert('응시가 취소되었습니다.');
+      } catch (e) {
+        alert(e instanceof Error ? e.message : '응시 취소 중 오류가 발생했습니다.');
+      }
+    };
 
   return (
     <div className="space-y-6">
@@ -1501,21 +1691,30 @@ function ExamDetailView({
                   <td className="px-4 py-4 text-center text-sm text-gray-600">
                     {student.submittedAt}
                   </td>
-                  <td className="px-4 py-4 text-center">
-                    {student.submitted && editingScore !== student.courseUserId && (
-                      <button
-                        onClick={() => handleStartEdit(student.courseUserId, student.score)}
-                        className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        title="점수 수정"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <td className="px-4 py-4 text-center">
+                      {student.submitted && editingScore !== student.courseUserId && (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleStartEdit(student.courseUserId, student.score)}
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            title="점수 수정"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleCancelSubmit(student.courseUserId)}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                            title="응시 취소"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
         </div>
       </div>
     </div>
@@ -1569,6 +1768,8 @@ const courseIdNum = Number(course?.mappedCourseId ?? courseId);
 const isHaksaCourse =
   course?.sourceType === 'haksa' &&
   (!course?.mappedCourseId || Number.isNaN(courseIdNum) || courseIdNum <= 0);
+  const weekCount = getHaksaWeekCount(course);
+  const showWeekSession = course?.sourceType === 'haksa';
 
   const haksaKey = useMemo(
     () =>
@@ -1760,15 +1961,16 @@ const isHaksaCourse =
     if (!editingHomework) return;
     
     try {
-      const res = await tutorLmsApi.updateHomework({
-        courseId,
-        homeworkId: editingHomework.id,
-        title: data.title,
-        description: data.description,
-        dueDate: data.dueDate,
-        dueTime: data.dueTime,
-        totalScore: Number(data.totalScore || 0),
-      });
+        const res = await tutorLmsApi.updateHomework({
+          courseId,
+          homeworkId: editingHomework.id,
+          title: data.title,
+          description: data.description,
+          dueDate: data.dueDate,
+          dueTime: data.dueTime,
+          totalScore: Number(data.totalScore || 0),
+          file: data.file,
+        });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
       
       await fetchHomeworks();
@@ -1889,19 +2091,42 @@ const isHaksaCourse =
       <AssignmentCreateModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        showWeekSession={showWeekSession}
+        weekCount={weekCount}
         onSave={(assignmentData) => {
           void (async () => {
             try {
-              const res = await tutorLmsApi.createHomework({
-                courseId,
-                title: assignmentData.title,
-                description: assignmentData.description,
-                dueDate: assignmentData.dueDate,
-                dueTime: assignmentData.dueTime,
-                totalScore: Number(assignmentData.totalScore || 0),
-                onoffType: 'N',
-              });
+                const res = await tutorLmsApi.createHomework({
+                  courseId,
+                  title: assignmentData.title,
+                  description: assignmentData.description,
+                  dueDate: assignmentData.dueDate,
+                  dueTime: assignmentData.dueTime,
+                  totalScore: Number(assignmentData.totalScore || 0),
+                  onoffType: 'N',
+                  file: assignmentData.file,
+                });
               if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+              if (course?.sourceType === 'haksa') {
+                try {
+                  await appendHaksaCurriculumContent({
+                    haksaKey,
+                    weekNumber: Number(assignmentData.weekNumber || 1),
+                    sessionNumber: Number(assignmentData.sessionNumber || 1),
+                    content: {
+                      type: 'assignment',
+                      title: assignmentData.title,
+                      description: assignmentData.description,
+                      dueDate: assignmentData.dueDate,
+                      dueTime: assignmentData.dueTime,
+                      totalScore: Number(assignmentData.totalScore || 0),
+                    },
+                  });
+                } catch (e) {
+                  alert(e instanceof Error ? e.message : '강의목차에 과제를 등록하는 중 오류가 발생했습니다.');
+                }
+              }
 
               await fetchHomeworks();
               alert('과제가 등록되었습니다.');
@@ -1921,6 +2146,8 @@ const isHaksaCourse =
         }}
         onSave={handleSaveHomeworkEdit}
         mode="edit"
+        showWeekSession={showWeekSession}
+        weekCount={weekCount}
         initialData={editingHomework || undefined}
       />
     </>
@@ -2033,8 +2260,8 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
     setFeedbackText(String(student?.feedback ?? ''));
   };
 
-  const handleSubmitFeedback = () => {
-    if (!selectedHomeworkId || !selectedCourseUserId) return;
+    const handleSubmitFeedback = () => {
+      if (!selectedHomeworkId || !selectedCourseUserId) return;
 
     const score = parseInt(tempScore, 10);
     if (isNaN(score) || score < 0 || score > 100) {
@@ -2059,8 +2286,33 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
       } catch (e) {
         alert(e instanceof Error ? e.message : '저장 중 오류가 발생했습니다.');
       }
-    })();
-  };
+      })();
+    };
+
+    // 왜: 제출 취소는 점수/피드백과 별개로 제출 기록 자체를 정리해야 합니다.
+    const handleCancelHomeworkSubmit = () => {
+      if (!selectedHomeworkId || !selectedCourseUserId) return;
+      if (!confirm('해당 학생의 과제 제출을 취소하시겠습니까?')) return;
+
+      void (async () => {
+        try {
+          const res = await tutorLmsApi.cancelHomeworkSubmit({
+            courseId,
+            homeworkId: selectedHomeworkId,
+            courseUserId: selectedCourseUserId,
+          });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+          await fetchHomeworkUsers(selectedHomeworkId);
+          setSelectedCourseUserId(null);
+          setTempScore('0');
+          setFeedbackText('');
+          alert('제출이 취소되었습니다.');
+        } catch (e) {
+          alert(e instanceof Error ? e.message : '제출 취소 중 오류가 발생했습니다.');
+        }
+      })();
+    };
 
   const handleAppendTask = () => {
     if (!selectedHomeworkId || !selectedCourseUserId) return;
@@ -2258,21 +2510,29 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
                       />
                     </div>
 
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setTempScore(String(selectedStudent.markingScore ?? 0));
-                          setFeedbackText(String(selectedStudent.feedback ?? ''));
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            setTempScore(String(selectedStudent.markingScore ?? 0));
+                            setFeedbackText(String(selectedStudent.feedback ?? ''));
                         }}
                         className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        취소
-                      </button>
-                      <button
-                        onClick={handleSubmitFeedback}
-                        className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        저장
+                        >
+                          취소
+                        </button>
+                        {selectedStudent.submitted && (
+                          <button
+                            onClick={handleCancelHomeworkSubmit}
+                            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            제출 취소
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSubmitFeedback}
+                          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          저장
                       </button>
                     </div>
 
@@ -2385,37 +2645,125 @@ function AssignmentFeedbackTab({ courseId }: { courseId: number }) {
 }
 
 // 자료 탭
-function MaterialsTab({ courseId }: { courseId: number }) {
+function MaterialsTab({
+  courseId,
+  showWeekSession = false,
+  weekCount = 15,
+  course,
+}: {
+  courseId: number;
+  showWeekSession?: boolean;
+  weekCount?: number;
+  course?: any;
+}) {
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   const [materials, setMaterials] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resolvingCourseId, setResolvingCourseId] = useState(false);
+  const [resolvedCourseId, setResolvedCourseId] = useState<number | null>(null);
+
+  const isHaksaCourse = course?.sourceType === 'haksa';
+  // 왜: 학사 과목은 목록의 id가 아닌 매핑된 과정 ID만 유효하므로, 매핑값이 없으면 0으로 취급합니다.
+  const baseCourseId = isHaksaCourse
+    ? Number(course?.mappedCourseId ?? 0)
+    : Number.isFinite(courseId)
+      ? courseId
+      : 0;
+  const effectiveCourseId = resolvedCourseId && resolvedCourseId > 0 ? resolvedCourseId : baseCourseId;
 
   const [uploadForm, setUploadForm] = useState<{
     title: string;
     content: string;
     link: string;
     file: File | null;
+    weekNumber: number;
+    sessionNumber: number;
   }>({
     title: '',
     content: '',
     link: '',
     file: null,
+    weekNumber: 1,
+    sessionNumber: 1,
   });
 
+  const haksaKey = useMemo(
+    () =>
+      buildHaksaCourseKey({
+        haksaCourseCode: course?.haksaCourseCode,
+        haksaOpenYear: course?.haksaOpenYear,
+        haksaOpenTerm: course?.haksaOpenTerm,
+        haksaBunbanCode: course?.haksaBunbanCode,
+        haksaGroupCode: course?.haksaGroupCode,
+      }),
+    [
+      course?.haksaCourseCode,
+      course?.haksaOpenYear,
+      course?.haksaOpenTerm,
+      course?.haksaBunbanCode,
+      course?.haksaGroupCode,
+    ]
+  );
+
   const resetUploadForm = () => {
-    setUploadForm({ title: '', content: '', link: '', file: null });
+    setUploadForm({ title: '', content: '', link: '', file: null, weekNumber: 1, sessionNumber: 1 });
   };
+
+  useEffect(() => {
+    if (!isHaksaCourse) {
+      setResolvedCourseId(null);
+      return;
+    }
+
+    if (baseCourseId > 0) {
+      setResolvedCourseId(null);
+      return;
+    }
+
+    if (!haksaKey) {
+      setErrorMessage('학사 과목 키가 비어 있어 과정 매핑을 진행할 수 없습니다.');
+      return;
+    }
+
+    let cancelled = false;
+    const resolveCourseId = async () => {
+      setResolvingCourseId(true);
+      setErrorMessage(null);
+      try {
+        const res = await tutorLmsApi.resolveHaksaCourse(haksaKey);
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        const mapped = Number(payload?.mapped_course_id ?? 0);
+        if (!mapped || Number.isNaN(mapped)) throw new Error('매핑된 과정ID를 찾지 못했습니다.');
+
+        if (!cancelled) setResolvedCourseId(mapped);
+      } catch (e) {
+        if (!cancelled) {
+          setResolvedCourseId(null);
+          setErrorMessage(e instanceof Error ? e.message : '과정 매핑 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setResolvingCourseId(false);
+      }
+    };
+
+    void resolveCourseId();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, baseCourseId, haksaKey]);
 
   // 왜: 자료 목록은 DB가 기준이므로, 탭 진입/업로드/삭제 후에는 서버에서 다시 읽어와야 합니다.
   const fetchMaterials = async () => {
-    if (!courseId) return;
+    if (!effectiveCourseId) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      const res = await tutorLmsApi.getMaterials({ courseId });
+      const res = await tutorLmsApi.getMaterials({ courseId: effectiveCourseId });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
       const rows = res.rst_data ?? [];
@@ -2438,7 +2786,7 @@ function MaterialsTab({ courseId }: { courseId: number }) {
 
   useEffect(() => {
     void fetchMaterials();
-  }, [courseId]);
+  }, [effectiveCourseId]);
 
   const handleDownload = (material: any) => {
     const url = material.downloadUrl;
@@ -2451,12 +2799,16 @@ function MaterialsTab({ courseId }: { courseId: number }) {
 
   const handleDelete = (libraryId: number, title: string) => {
     void (async () => {
+      if (!effectiveCourseId) {
+        alert('과정 ID가 없어 삭제할 수 없습니다. 과정 매핑 후 다시 시도해 주세요.');
+        return;
+      }
       // 왜: 삭제는 되돌리기 어렵기 때문에, 운영 환경에서는 반드시 확인을 한 번 더 받습니다.
       const ok = confirm(`자료 "${title}"을(를) 삭제하시겠습니까?`);
       if (!ok) return;
 
       try {
-        const res = await tutorLmsApi.deleteMaterial({ courseId, libraryId });
+        const res = await tutorLmsApi.deleteMaterial({ courseId: effectiveCourseId, libraryId });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
         await fetchMaterials();
@@ -2477,6 +2829,10 @@ function MaterialsTab({ courseId }: { courseId: number }) {
         alert('자료명을 입력해 주세요.');
         return;
       }
+      if (!effectiveCourseId) {
+        alert('과정 ID가 없어 업로드할 수 없습니다. 과정 매핑 후 다시 시도해 주세요.');
+        return;
+      }
       if (!hasFile && !hasLink) {
         alert('자료 파일 또는 링크 중 하나는 필요합니다.');
         return;
@@ -2485,13 +2841,32 @@ function MaterialsTab({ courseId }: { courseId: number }) {
       setUploading(true);
       try {
         const res = await tutorLmsApi.uploadMaterial({
-          courseId,
+          courseId: effectiveCourseId,
           title,
           content: uploadForm.content,
           link: uploadForm.link,
           file: uploadForm.file,
         });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        if (course?.sourceType === 'haksa') {
+          try {
+            await appendHaksaCurriculumContent({
+              haksaKey,
+              weekNumber: Number(uploadForm.weekNumber || 1),
+              sessionNumber: Number(uploadForm.sessionNumber || 1),
+              content: {
+                type: 'document',
+                title: uploadForm.title,
+                description: uploadForm.content,
+                link: uploadForm.link,
+                fileName: uploadForm.file?.name || '',
+              },
+            });
+          } catch (e) {
+            alert(e instanceof Error ? e.message : '강의목차에 자료를 등록하는 중 오류가 발생했습니다.');
+          }
+        }
 
         await fetchMaterials();
         setShowUploadModal(false);
@@ -2521,6 +2896,11 @@ function MaterialsTab({ courseId }: { courseId: number }) {
         {errorMessage && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
             {errorMessage}
+          </div>
+        )}
+        {resolvingCourseId && (
+          <div className="p-4 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg">
+            과정 매핑 중입니다. 잠시만 기다려 주세요.
           </div>
         )}
 
@@ -2606,6 +2986,50 @@ function MaterialsTab({ courseId }: { courseId: number }) {
                   required
                 />
               </div>
+
+              {/* 왜: 학사 과목은 자료 등록 시 주차/차시 기준이 필요합니다. */}
+              {showWeekSession && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-2">
+                      주차 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={uploadForm.weekNumber}
+                      onChange={(e) =>
+                        setUploadForm({ ...uploadForm, weekNumber: parseInt(e.target.value, 10) || 1 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+                        <option key={week} value={week}>
+                          {week}주차
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-2">
+                      차시 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={uploadForm.sessionNumber}
+                      onChange={(e) =>
+                        setUploadForm({ ...uploadForm, sessionNumber: parseInt(e.target.value, 10) || 1 })
+                      }
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map((session) => (
+                        <option key={session} value={session}>
+                          {session}차시
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm text-gray-700 mb-2">설명</label>
@@ -3551,16 +3975,20 @@ function HaksaExamContent({
   haksaKey,
   haksaExams,
   setHaksaExams,
+  weekCount,
 }: {
   haksaKey: HaksaCourseKey | null;
   haksaExams: any[];
   setHaksaExams: React.Dispatch<React.SetStateAction<any[]>>;
+  weekCount: number;
 }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExam, setEditingExam] = useState<any | null>(null); // 수정 중인 시험
   const [examList, setExamList] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedSession, setSelectedSession] = useState(1);
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -3622,6 +4050,8 @@ function HaksaExamContent({
 
   const resetSettings = () => {
     setSelectedExamId('');
+    setSelectedWeek(1);
+    setSelectedSession(1);
     setExamSettings({
       startDate: today,
       startTime: '09:00',
@@ -3660,7 +4090,9 @@ function HaksaExamContent({
       questionCount: selectedExam.questionCount || 0,
       totalPoints: selectedExam.totalPoints,
       type: 'exam',
-      weekNumber: 0,
+      weekNumber: selectedWeek,
+      sessionNumber: selectedSession,
+      sessionName: `${selectedSession}차시`,
       createdAt: new Date().toISOString(),
       settings: { ...examSettings },
     };
@@ -3676,6 +4108,8 @@ function HaksaExamContent({
   const handleEditExam = (exam: any) => {
     setEditingExam(exam);
     setSelectedExamId(exam.examId);
+    setSelectedWeek(exam.weekNumber || 1);
+    setSelectedSession(exam.sessionNumber || 1);
     setExamSettings({
       startDate: exam.settings?.startDate || today,
       startTime: exam.settings?.startTime || '09:00',
@@ -3697,6 +4131,9 @@ function HaksaExamContent({
       if (e.id === editingExam.id) {
         return {
           ...e,
+          weekNumber: selectedWeek,
+          sessionNumber: selectedSession,
+          sessionName: `${selectedSession}차시`,
           settings: { ...examSettings },
         };
       }
@@ -3748,6 +4185,12 @@ function HaksaExamContent({
                     <span className="font-medium text-gray-900">{exam.title}</span>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
                       {exam.questionCount || 0}문제
+                    </span>
+                    <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded">
+                      {exam.weekNumber || 1}주차
+                    </span>
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded">
+                      {exam.sessionName || `${exam.sessionNumber || 1}차시`}
                     </span>
                   </div>
                   
@@ -3822,6 +4265,42 @@ function HaksaExamContent({
             </div>
 
             <div className="p-6 space-y-6">
+              {/* 왜: 학사 시험 등록은 주차/차시 정보를 함께 저장해야 해서 선택 UI를 추가합니다. */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    주차 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedWeek}
+                    onChange={(e) => setSelectedWeek(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+                      <option key={week} value={week}>
+                        {week}주차
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    차시 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedSession}
+                    onChange={(e) => setSelectedSession(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((session) => (
+                      <option key={session} value={session}>
+                        {session}차시
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* 시험 선택 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -3995,6 +4474,42 @@ function HaksaExamContent({
             </div>
 
             <div className="p-6 space-y-6">
+              {/* 왜: 시험 수정에서도 주차/차시 변경이 가능해야 일관성이 유지됩니다. */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    주차 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedWeek}
+                    onChange={(e) => setSelectedWeek(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+                      <option key={week} value={week}>
+                        {week}주차
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    차시 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={selectedSession}
+                    onChange={(e) => setSelectedSession(parseInt(e.target.value, 10) || 1)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((session) => (
+                      <option key={session} value={session}>
+                        {session}차시
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* 시험 선택 (수정 불가) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">시험 선택</label>
@@ -4141,6 +4656,8 @@ function ExamSelectModal({
   isOpen,
   onClose,
   onSave,
+  showWeekSession = false,
+  weekCount = 15,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -4152,15 +4669,23 @@ function ExamSelectModal({
     questionCount: number;
     points: number;
     allowRetake: boolean;
+    retakeScore: number;
+    retakeCount: number;
     showResults: boolean;
     startDate?: string;
     endDate?: string;
+    weekNumber: number;
+    sessionNumber: number;
   }) => void;
+  showWeekSession?: boolean;
+  weekCount?: number;
 }) {
   const [examList, setExamList] = useState<any[]>([]);
   const [selectedExamId, setSelectedExamId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedSession, setSelectedSession] = useState(1);
   
   // 오늘 날짜 기본값
   const today = new Date().toISOString().split('T')[0];
@@ -4230,9 +4755,13 @@ function ExamSelectModal({
       questionCount: selectedExam.questionCount || 0,
       points: examSettings.points,
       allowRetake: examSettings.allowRetake,
+      retakeScore: examSettings.retakeScore,
+      retakeCount: examSettings.retakeCount,
       showResults: examSettings.showResults,
       startDate: examSettings.startDate,
       endDate: examSettings.endDate,
+      weekNumber: selectedWeek,
+      sessionNumber: selectedSession,
     });
     
     // 초기화
@@ -4266,6 +4795,44 @@ function ExamSelectModal({
         </div>
 
         <div className="p-6 space-y-6">
+          {/* 왜: 학사 과목은 등록 시 주차/차시를 지정해야 하므로 선택 UI를 보여줍니다. */}
+          {showWeekSession && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  주차 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedWeek}
+                  onChange={(e) => setSelectedWeek(parseInt(e.target.value, 10) || 1)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+                    <option key={week} value={week}>
+                      {week}주차
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  차시 <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={selectedSession}
+                  onChange={(e) => setSelectedSession(parseInt(e.target.value, 10) || 1)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((session) => (
+                    <option key={session} value={session}>
+                      {session}차시
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* 시험 선택 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -7,10 +7,22 @@ import {
   Clock,
 } from 'lucide-react';
 import { tutorLmsApi, type TutorDashboardCourseRow, type TutorDashboardQnaRow, type TutorDashboardStats, type TutorDashboardSubmissionRow } from '../api/tutorLmsApi';
+import type { CourseManagementTabId } from './CourseManagement';
 
-type DashboardMenuId = 'dashboard' | 'explore' | 'courses' | 'create-course' | 'create-subject';
+type DashboardMenuId = 'dashboard' | 'explore' | 'courses' | 'create-course' | 'subject-create';
+type DashboardCourseLink = {
+  courseId: number;
+  courseName?: string;
+  targetTab?: CourseManagementTabId;
+};
 
-export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId) => void } = {}) {
+export function Dashboard({
+  onNavigate,
+  onOpenCourse,
+}: {
+  onNavigate?: (menu: DashboardMenuId) => void;
+  onOpenCourse?: (payload: DashboardCourseLink) => void;
+} = {}) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [stats, setStats] = useState<TutorDashboardStats | null>(null);
@@ -71,8 +83,22 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
     },
   ]), [stats?.active_course_cnt, stats?.pending_homework_cnt, stats?.unanswered_qna_cnt]);
 
+  // 왜: 대시보드는 "요약" 화면이라서 최신 항목을 3개까지만 보여줍니다.
+  const visibleOngoingCourses = useMemo(() => ongoingCourses.slice(0, 3), [ongoingCourses]);
+  const visibleRecentSubmissions = useMemo(() => recentSubmissions.slice(0, 3), [recentSubmissions]);
+  const visibleRecentQnas = useMemo(() => recentQnas.slice(0, 3), [recentQnas]);
+
   const goToMyCourses = () => {
     // 왜: 대시보드의 상세 작업(과제/질문 확인)은 결국 “담당과목”에서 진행됩니다.
+    onNavigate?.('courses');
+  };
+
+  const openCourseFromDashboard = (payload: DashboardCourseLink) => {
+    // 왜: 대시보드 항목을 눌렀을 때 담당과목의 해당 탭으로 바로 이동하게 합니다.
+    if (onOpenCourse) {
+      onOpenCourse(payload);
+      return;
+    }
     onNavigate?.('courses');
   };
 
@@ -130,7 +156,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
             <div className="p-10 text-center text-gray-500">진행 중인 과목이 없습니다.</div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {ongoingCourses.map((course) => {
+              {visibleOngoingCourses.map((course) => {
                 const progress = Math.round(Number(course.avg_progress_ratio ?? 0));
                 const students = Number(course.student_cnt ?? 0);
                 const pendingHomework = Number(course.pending_homework_cnt ?? 0);
@@ -138,7 +164,12 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
                 const courseIdLabel = course.course_id_conv || course.course_cd || String(course.id);
 
                 return (
-                  <div key={course.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <button
+                    key={course.id}
+                    type="button"
+                    onClick={() => openCourseFromDashboard({ courseId: course.id, courseName: course.course_nm, targetTab: 'attendance' })}
+                    className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <h4 className="text-gray-900 mb-1">{course.course_nm}</h4>
@@ -179,7 +210,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
                         />
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -205,13 +236,18 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
             <div className="p-10 text-center text-gray-500">최근 제출된 과제가 없습니다.</div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {recentSubmissions.map((row) => {
+              {visibleRecentSubmissions.map((row) => {
                 const confirmed = Boolean(row.confirmed);
                 const studentLabel = `${row.user_nm || '-'} · ${row.course_nm}`;
                 const submittedAt = row.submitted_at || '-';
 
                 return (
-                  <div key={`${row.homework_id}-${row.course_user_id}`} className="p-6 hover:bg-gray-50 transition-colors">
+                  <button
+                    key={`${row.homework_id}-${row.course_user_id}`}
+                    type="button"
+                    onClick={() => openCourseFromDashboard({ courseId: row.course_id, courseName: row.course_nm, targetTab: 'assignment-feedback' })}
+                    className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="text-gray-900 mb-1">{row.homework_nm}</h4>
@@ -231,7 +267,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
                       <Clock className="w-4 h-4" />
                       <span>{submittedAt}</span>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -258,8 +294,13 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
           <div className="p-10 text-center text-gray-500">최근 Q&A가 없습니다.</div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {recentQnas.map((qna) => (
-              <div key={qna.post_id} className="p-6 hover:bg-gray-50 transition-colors">
+            {visibleRecentQnas.map((qna) => (
+              <button
+                key={qna.post_id}
+                type="button"
+                onClick={() => openCourseFromDashboard({ courseId: qna.course_id, courseName: qna.course_nm, targetTab: 'qna' })}
+                className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
+              >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <h4 className="text-gray-900 mb-1 line-clamp-1">{qna.subject}</h4>
@@ -281,7 +322,7 @@ export function Dashboard({ onNavigate }: { onNavigate?: (menu: DashboardMenuId)
                   <Clock className="w-4 h-4" />
                   <span>{qna.reg_date_conv || '-'}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

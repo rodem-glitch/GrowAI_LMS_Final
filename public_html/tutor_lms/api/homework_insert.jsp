@@ -10,18 +10,37 @@ if(!m.isPost()) {
 	return;
 }
 
-int courseId = m.ri("course_id");
+CourseDao course = new CourseDao();
+CourseTutorDao courseTutor = new CourseTutorDao();
+CourseModuleDao courseModule = new CourseModuleDao();
+HomeworkDao homework = new HomeworkDao();
+
+//필수값
+f.addElement("course_id", null, "hname:'course_id', required:'Y'");
+f.addElement("title", null, "hname:'과제 제목', required:'Y'");
+f.addElement("description", null, "hname:'과제 설명', required:'Y', allowhtml:'Y'");
+f.addElement("dueDate", null, "hname:'마감 날짜', required:'Y'");
+f.addElement("dueTime", null, "hname:'마감 시간', required:'Y'");
+f.addElement("totalScore", 100, "hname:'배점', required:'Y', option:'number'");
+f.addElement("homework_file", null, "hname:'첨부파일'");
+
+//선택값
+f.addElement("onoff_type", "N", "hname:'온오프라인구분'"); //왜: 과제는 기본적으로 온라인 제출을 가정합니다.
+
+if(!f.validate()) {
+	result.put("rst_code", "1000");
+	result.put("rst_message", "필수값이 누락되었습니다.");
+	result.print();
+	return;
+}
+
+int courseId = f.getInt("course_id");
 if(0 == courseId) {
 	result.put("rst_code", "1001");
 	result.put("rst_message", "course_id가 필요합니다.");
 	result.print();
 	return;
 }
-
-CourseDao course = new CourseDao();
-CourseTutorDao courseTutor = new CourseTutorDao();
-CourseModuleDao courseModule = new CourseModuleDao();
-HomeworkDao homework = new HomeworkDao();
 
 //권한
 if(!isAdmin) {
@@ -37,23 +56,6 @@ DataSet cinfo = course.find("id = " + courseId + " AND site_id = " + siteId + " 
 if(!cinfo.next()) {
 	result.put("rst_code", "4040");
 	result.put("rst_message", "해당 과목이 없습니다.");
-	result.print();
-	return;
-}
-
-//필수값
-f.addElement("title", null, "hname:'과제 제목', required:'Y'");
-f.addElement("description", null, "hname:'과제 설명', required:'Y', allowhtml:'Y'");
-f.addElement("dueDate", null, "hname:'마감 날짜', required:'Y'");
-f.addElement("dueTime", null, "hname:'마감 시간', required:'Y'");
-f.addElement("totalScore", 100, "hname:'배점', required:'Y', option:'number'");
-
-//선택값
-f.addElement("onoff_type", "N", "hname:'온오프라인구분'"); //왜: 과제는 기본적으로 온라인 제출을 가정합니다.
-
-if(!f.validate()) {
-	result.put("rst_code", "1000");
-	result.put("rst_message", "필수값이 누락되었습니다.");
 	result.print();
 	return;
 }
@@ -98,6 +100,10 @@ homework.item("content", content);
 homework.item("manager_id", userId);
 homework.item("reg_date", m.time("yyyyMMddHHmmss"));
 homework.item("status", 1);
+if(null != f.getFileName("homework_file")) {
+	File f1 = f.saveFile("homework_file");
+	if(f1 != null) homework.item("homework_file", f.getFileName("homework_file"));
+}
 if(!homework.insert()) {
 	result.put("rst_code", "2000");
 	result.put("rst_message", "과제 저장 중 오류가 발생했습니다.");
@@ -142,4 +148,3 @@ result.put("rst_data", newId);
 result.print();
 
 %>
-

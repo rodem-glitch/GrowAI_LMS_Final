@@ -39,13 +39,31 @@ function buildQuery(params: Record<string, string | number | undefined | null>) 
 
 async function requestJson<T>(url: string, options?: RequestInit): Promise<TutorLmsApiResponse<T>> {
   const response = await fetch(url, options);
-  const json = (await response.json()) as TutorLmsApiResponse<T>;
+  const contentType = response.headers.get('content-type') || '';
+  const rawText = await response.text();
 
-  // 왜: 서버에서 오류를 내려도 화면에서는 항상 같은 방식으로 처리해야 합니다.
-  if (!json || typeof json.rst_code !== 'string') {
-    throw new Error('서버 응답 형식이 올바르지 않습니다.');
+  // 왜: 세션 만료/권한 문제일 때 HTML 페이지가 내려오면 JSON 파싱 오류가 발생합니다.
+  //     JSON 여부를 먼저 확인해서 사용자에게 더 친절한 메시지를 보여줍니다.
+  let parsed: TutorLmsApiResponse<T> | null = null;
+  const trimmed = rawText.trim();
+  const looksJson = contentType.includes('application/json') || trimmed.startsWith('{') || trimmed.startsWith('[');
+
+  if (looksJson) {
+    try {
+      parsed = JSON.parse(rawText) as TutorLmsApiResponse<T>;
+    } catch {
+      parsed = null;
+    }
   }
-  return json;
+
+  if (!parsed || typeof parsed.rst_code !== 'string') {
+    const hint = response.ok
+      ? '서버 응답이 JSON이 아닙니다. 로그인 상태/권한 또는 API 경로를 확인해 주세요.'
+      : `서버 응답 오류(${response.status}). 로그인 상태/권한 또는 API 경로를 확인해 주세요.`;
+    throw new Error(hint);
+  }
+
+  return parsed;
 }
 
 export type TutorProgramRow = {
@@ -1437,6 +1455,20 @@ export const tutorLmsApi = {
     });
   },
 
+  // 왜: 응시 취소는 점수 수정과 성격이 달라 별도 엔드포인트로 분리합니다.
+  async cancelExamSubmit(payload: { courseId: number; examId: number; courseUserId: number }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('exam_id', String(payload.examId));
+    body.set('course_user_id', String(payload.courseUserId));
+
+    return requestJson<number>(`/tutor_lms/api/exam_submit_cancel.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   // =========================
   // 마감 운영: 과제
   // =========================
@@ -1453,8 +1485,9 @@ export const tutorLmsApi = {
     dueTime: string;
     totalScore: number;
     onoffType?: 'N' | 'F';
+    file?: File | null;
   }) {
-    const body = new URLSearchParams();
+    const body = new FormData();
     body.set('course_id', String(payload.courseId));
     body.set('title', payload.title);
     body.set('description', payload.description);
@@ -1462,10 +1495,10 @@ export const tutorLmsApi = {
     body.set('dueTime', payload.dueTime);
     body.set('totalScore', String(payload.totalScore));
     body.set('onoff_type', payload.onoffType ?? 'N');
+    if(payload.file) body.set('homework_file', payload.file);
 
     return requestJson<number>(`/tutor_lms/api/homework_insert.jsp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
   },
@@ -1479,8 +1512,9 @@ export const tutorLmsApi = {
     dueTime: string;
     totalScore: number;
     onoffType?: 'N' | 'F';
+    file?: File | null;
   }) {
-    const body = new URLSearchParams();
+    const body = new FormData();
     body.set('course_id', String(payload.courseId));
     body.set('homework_id', String(payload.homeworkId));
     body.set('title', payload.title);
@@ -1489,10 +1523,10 @@ export const tutorLmsApi = {
     body.set('dueTime', payload.dueTime);
     body.set('totalScore', String(payload.totalScore));
     body.set('onoff_type', payload.onoffType ?? 'N');
+    if(payload.file) body.set('homework_file', payload.file);
 
     return requestJson<number>(`/tutor_lms/api/homework_modify.jsp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
   },
@@ -1529,6 +1563,20 @@ export const tutorLmsApi = {
     body.set('feedback', payload.feedback);
 
     return requestJson<number>(`/tutor_lms/api/homework_feedback_update.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 제출 취소는 피드백 저장과 다르게 제출/첨부 정리를 포함합니다.
+  async cancelHomeworkSubmit(payload: { courseId: number; homeworkId: number; courseUserId: number }) {
+    const body = new URLSearchParams();
+    body.set('course_id', String(payload.courseId));
+    body.set('homework_id', String(payload.homeworkId));
+    body.set('course_user_id', String(payload.courseUserId));
+
+    return requestJson<number>(`/tutor_lms/api/homework_submit_cancel.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -1589,7 +1637,10 @@ export const tutorLmsApi = {
     body.set('library_link', payload.link ?? '');
     if (payload.file) body.set('library_file', payload.file);
 
-    return requestJson<number>(`/tutor_lms/api/materials_upload.jsp`, {
+    // 왜: 파일 업로드는 multipart/form-data로 전송되는데, 일부 JSP는 request.getParameter로는 값을 못 읽을 수 있습니다.
+    //     그래서 course_id를 "쿼리스트링 + multipart 바디" 두 군데에 같이 실어 보내 서버 호환성을 높입니다.
+    const url = `/tutor_lms/api/materials_upload.jsp${buildQuery({ course_id: payload.courseId })}`;
+    return requestJson<number>(url, {
       method: 'POST',
       body,
     });

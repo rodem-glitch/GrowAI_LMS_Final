@@ -63,7 +63,16 @@ export function CourseInfoTab({
   onCourseUpdated?: (nextCourse: any) => void;
   initialSubTab?: SubTab;
 }) {
-  const isHaksa = course?.sourceType === 'haksa' && !course?.mappedCourseId;
+  const isHaksa =
+    course?.sourceType === 'haksa' ||
+    Boolean(
+      course?.haksaCourseCode ||
+      course?.haksaOpenYear ||
+      course?.haksaOpenTerm ||
+      course?.haksaBunbanCode ||
+      course?.haksaGroupCode
+    ) ||
+    String(course?.courseType || '').includes('학사');
   const courseId = toInt(course?.mappedCourseId ?? course?.id, 0);
   const [subTab, setSubTab] = useState<SubTab>(initialSubTab);
   const [detail, setDetail] = useState<TutorCourseInfoDetail | null>(null);
@@ -1359,7 +1368,11 @@ function HaksaEvaluationTab({ course }: { course: any }) {
             const parsed = JSON.parse(raw) as HaksaEvalSettings;
             if (!cancelled) {
               setWeights(parsed.weights);
-              setCutoffs(parsed.cutoffs);
+              // 왜: 학사 화면은 A~D만 입력받고, F는 D 미만으로 자동 처리합니다.
+              setCutoffs({
+                ...parsed.cutoffs,
+                F: Math.max(0, toInt(parsed.cutoffs?.D ?? 60, 60) - 1),
+              });
             }
             return;
           } catch {}
@@ -1377,7 +1390,11 @@ function HaksaEvaluationTab({ course }: { course: any }) {
               } as HaksaEvalSettings;
               if (!cancelled) {
                 setWeights(next.weights);
-                setCutoffs(next.cutoffs);
+                // 왜: 기존 저장값에 F가 있어도 화면에서는 A~D만 보여주므로 D 기준으로 보정합니다.
+                setCutoffs({
+                  ...next.cutoffs,
+                  F: Math.max(0, toInt(next.cutoffs?.D ?? 60, 60) - 1),
+                });
               }
               await tutorLmsApi.updateHaksaCourseEval({
                 ...haksaKey,
@@ -1412,7 +1429,14 @@ function HaksaEvaluationTab({ course }: { course: any }) {
     setErrorMessage(null);
     void (async () => {
       try {
-        const payload: HaksaEvalSettings = { weights, cutoffs };
+        // 왜: F는 화면 입력 대신 D 미만을 기준으로 자동 계산합니다.
+        const payload: HaksaEvalSettings = {
+          weights,
+          cutoffs: {
+            ...cutoffs,
+            F: Math.max(0, toInt(cutoffs.D, 60) - 1),
+          },
+        };
         const res = await tutorLmsApi.updateHaksaCourseEval({
           ...haksaKey,
           evalJson: JSON.stringify(payload),
@@ -1512,11 +1536,11 @@ function HaksaEvaluationTab({ course }: { course: any }) {
       {/* 성적 컷오프 */}
       <div className="border border-gray-200 rounded-lg p-6 space-y-4">
         <div>
-          <h4 className="text-gray-900 mb-1">성적 등급 기준</h4>
+          <h4 className="text-gray-900 mb-1">성적 등급 기준 (A~D)</h4>
           <p className="text-sm text-gray-600">각 등급의 최소 점수를 입력해 주세요. (해당 점수 이상이면 해당 등급)</p>
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-blue-700 mb-2 text-center">A 등급</label>
             <div className="relative">
@@ -1577,13 +1601,6 @@ function HaksaEvaluationTab({ course }: { course: any }) {
             </div>
             <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.C - 1}점</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-red-700 mb-2 text-center">F 등급</label>
-            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-center text-gray-700">
-              {cutoffs.D - 1}점 이하
-            </div>
-            <p className="text-xs text-center text-gray-500 mt-1">0~{cutoffs.D - 1}점</p>
-          </div>
         </div>
 
         {/* 등급 요약 */}
@@ -1594,7 +1611,6 @@ function HaksaEvaluationTab({ course }: { course: any }) {
             <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">B: {cutoffs.B}~{cutoffs.A - 1}점</span>
             <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">C: {cutoffs.C}~{cutoffs.B - 1}점</span>
             <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full">D: {cutoffs.D}~{cutoffs.C - 1}점</span>
-            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full">F: 0~{cutoffs.D - 1}점</span>
           </div>
         </div>
       </div>

@@ -16,6 +16,11 @@ var/log/**/*.log
 *.war
 *.ear
 
+# Gradle
+.gradle/
+**/build/
+**/out/
+
 # Web app build / temp
 WEB-INF/classes/
 WEB-INF/tmp/

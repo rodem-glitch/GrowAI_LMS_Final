@@ -10,7 +10,11 @@ if(!m.isPost()) {
 	return;
 }
 
-int courseId = m.ri("course_id");
+// 왜: 자료 업로드는 파일을 포함할 수 있어 `multipart/form-data`(FormData)로 들어옵니다.
+//     이때는 `m.ri()`(request.getParameter 기반)로는 값을 못 읽는 경우가 있어,
+//     업로드 파라미터 파싱을 담당하는 Form(`f`)에서 먼저 읽고, 필요 시 m.ri로 보완합니다.
+int courseId = f.getInt("course_id");
+if(0 == courseId) courseId = m.ri("course_id");
 if(0 == courseId) {
 	result.put("rst_code", "1001");
 	result.put("rst_message", "course_id가 필요합니다.");
@@ -110,4 +114,3 @@ result.put("rst_data", newId);
 result.print();
 
 %>
-
