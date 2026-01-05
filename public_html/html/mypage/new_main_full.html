@@ -1,168 +1,587 @@
 <div class="new-main-fullscreen" id="new-main-fullscreen">
 	<style>
-		/* 
-			목적: 전역 레이아웃 없이도 화면이 '꽉 찬' 느낌으로 보이도록 최소한의 스타일만 둡니다.
-			왜: 이 파일은 “골격(Skeleton)” 단계라서, 나중에 디자인 시스템/컴포넌트로 교체하기 쉽도록
-			    스타일을 최대한 얕게(전역 영향 최소) 유지합니다.
-		*/
+		/* GrowAI 스타일 기반 레이아웃 */
 		.new-main-fullscreen {
 			min-height: 100vh;
-			background: linear-gradient(180deg, #f5f7ff 0%, #ffffff 50%, #f9fafb 100%);
-			padding: 24px 16px;
+			background: #f9fafb;
+			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		}
+		
+		/* 히어로 섹션 */
+		.nm-hero {
+			background: linear-gradient(135deg, #2b58e6 0%, #8e44ad 100%);
+			padding: 60px 20px;
+			text-align: center;
+			color: #fff;
+		}
+		.nm-hero__title {
+			font-size: 28px;
+			font-weight: 800;
+			margin: 0 0 24px 0;
+			line-height: 1.4;
+		}
+		.nm-hero__search {
+			max-width: 600px;
+			margin: 0 auto 24px;
+			display: flex;
+			background: #fff;
+			border-radius: 50px;
+			overflow: hidden;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+		}
+		.nm-hero__search input {
+			flex: 1;
+			border: none;
+			padding: 16px 24px;
+			font-size: 16px;
+			outline: none;
+		}
+		.nm-hero__search button {
+			background: transparent;
+			border: none;
+			padding: 16px 24px;
+			cursor: pointer;
+			color: #667085;
+		}
+		.nm-hero__buttons {
+			display: flex;
+			gap: 16px;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+		.nm-hero__btn {
+			padding: 14px 28px;
+			border-radius: 10px;
+			font-size: 15px;
+			font-weight: 600;
+			text-decoration: none;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.nm-hero__btn--primary {
+			background: linear-gradient(135deg, #2b58e6, #8e44ad);
+			color: #fff;
+			border: none;
+			box-shadow: 0 4px 15px rgba(43, 88, 230, 0.4);
+		}
+		.nm-hero__btn--secondary {
+			background: #fff;
+			color: #344054;
+			border: 2px solid #d0d5dd;
+		}
+		.nm-hero__btn:hover {
+			transform: translateY(-2px);
+		}
+		
+		/* 컨테이너 */
 		.nm-container {
 			max-width: 1200px;
 			margin: 0 auto;
+			padding: 0 20px;
 		}
-		.nm-header {
-			display: flex;
-			flex-direction: column;
-			gap: 12px;
-			margin-bottom: 18px;
-		}
-		.nm-title {
-			font-size: 22px;
-			font-weight: 800;
-			color: #101828;
-			margin: 0;
-		}
-		.nm-subtitle {
-			font-size: 14px;
-			color: #667085;
-			margin: 0;
-		}
-		.nm-actions {
+		
+		/* 필터 탭 */
+		.nm-tabs {
 			display: flex;
 			gap: 10px;
+			padding: 24px 0;
 			flex-wrap: wrap;
-			margin-top: 8px;
 		}
-		.nm-action {
-			border: 1px solid #d0d5dd;
-			background: #ffffff;
-			color: #344054;
-			border-radius: 10px;
-			padding: 10px 12px;
-			font-size: 13px;
-			cursor: not-allowed; /* 지금은 버튼이 “자리표시자”임을 명확히 합니다. */
+		.nm-tab {
+			padding: 10px 20px;
+			border-radius: 50px;
+			font-size: 14px;
+			font-weight: 500;
+			border: 1px solid #e5e7eb;
+			background: #fff;
+			color: #667085;
+			cursor: pointer;
+			text-decoration: none;
+			transition: all 0.2s;
 		}
+		.nm-tab:hover, .nm-tab.active {
+			background: #2b58e6;
+			color: #fff;
+			border-color: #2b58e6;
+		}
+		.nm-tab i {
+			margin-right: 6px;
+		}
+		
+		/* 섹션 헤더 */
+		.nm-section {
+			margin-bottom: 40px;
+		}
+		.nm-section__header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+		}
+		.nm-section__title {
+			font-size: 20px;
+			font-weight: 700;
+			color: #101828;
+			margin: 0;
+		}
+		.nm-section__more {
+			font-size: 14px;
+			color: #667085;
+			text-decoration: none;
+		}
+		.nm-section__more:hover {
+			color: #2b58e6;
+		}
+		
+		/* 카드 그리드 */
 		.nm-grid {
 			display: grid;
-			grid-template-columns: 1fr;
-			gap: 14px;
+			gap: 20px;
 		}
-		@media (min-width: 992px) {
-			.nm-grid--2 { grid-template-columns: 1fr 1fr; }
-			.nm-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+		.nm-grid--4 {
+			grid-template-columns: repeat(4, 1fr);
 		}
-		.nm-placeholder {
-			border: 2px dashed #d0d5dd;
-			background: rgba(255, 255, 255, 0.85);
+		.nm-grid--3 {
+			grid-template-columns: repeat(3, 1fr);
+		}
+		.nm-grid--6 {
+			grid-template-columns: repeat(6, 1fr);
+		}
+		@media (max-width: 992px) {
+			.nm-grid--4, .nm-grid--3 { grid-template-columns: repeat(2, 1fr); }
+			.nm-grid--6 { grid-template-columns: repeat(3, 1fr); }
+		}
+		@media (max-width: 576px) {
+			.nm-grid--4, .nm-grid--3, .nm-grid--6 { grid-template-columns: 1fr; }
+		}
+		
+		/* 강의 카드 */
+		.nm-card {
+			background: #fff;
 			border-radius: 14px;
+			overflow: hidden;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+			transition: all 0.2s;
+		}
+		.nm-card:hover {
+			transform: translateY(-5px);
+			box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+		}
+		.nm-card__img {
+			width: 100%;
+			height: 160px;
+			object-fit: cover;
+		}
+		.nm-card__body {
 			padding: 16px;
-			min-height: 120px;
-			box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 		}
-		.nm-placeholder__title {
-			font-size: 14px;
-			font-weight: 800;
+		.nm-card__title {
+			font-size: 15px;
+			font-weight: 600;
 			color: #101828;
-			margin: 0 0 8px 0;
+			margin: 0 0 8px;
+			line-height: 1.4;
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
 		}
-		.nm-placeholder__hint {
+		.nm-card__meta {
 			font-size: 13px;
 			color: #667085;
 			margin: 0;
-			line-height: 1.5;
 		}
-		.nm-divider {
-			height: 1px;
-			background: rgba(208, 213, 221, 0.9);
-			margin: 18px 0;
+		.nm-card__footer {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-top: 12px;
+		}
+		.nm-card__rating {
+			font-size: 13px;
+			color: #667085;
+		}
+		.nm-card__rating i {
+			color: #fbbf24;
+		}
+		.nm-card__badge {
+			background: #fee2e2;
+			color: #dc2626;
+			font-size: 11px;
+			font-weight: 600;
+			padding: 4px 8px;
+			border-radius: 6px;
+		}
+		
+		/* 숏폼 카드 */
+		.nm-shorts {
+			position: relative;
+			border-radius: 14px;
+			overflow: hidden;
+			aspect-ratio: 9/16;
+			max-height: 280px;
+		}
+		.nm-shorts__img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+		.nm-shorts__play {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			font-size: 48px;
+			color: #fff;
+			text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+		}
+		.nm-shorts__title {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			padding: 40px 12px 12px;
+			background: linear-gradient(transparent, rgba(0,0,0,0.8));
+			color: #fff;
+			font-size: 13px;
+			font-weight: 500;
+			margin: 0;
+		}
+		
+		/* 계속 학습하기 카드 */
+		.nm-continue {
+			background: #fff;
+			border-radius: 14px;
+			overflow: hidden;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+		}
+		.nm-continue__img {
+			width: 100%;
+			height: 180px;
+			object-fit: cover;
+		}
+		.nm-continue__body {
+			padding: 16px;
+		}
+		.nm-continue__title {
+			font-size: 15px;
+			font-weight: 600;
+			color: #101828;
+			margin: 0 0 6px;
+		}
+		.nm-continue__meta {
+			font-size: 13px;
+			color: #667085;
+			margin: 0 0 12px;
+		}
+		.nm-continue__progress-label {
+			display: flex;
+			justify-content: space-between;
+			font-size: 13px;
+			color: #667085;
+			margin-bottom: 6px;
+		}
+		.nm-continue__progress {
+			height: 8px;
+			background: #e5e7eb;
+			border-radius: 4px;
+			overflow: hidden;
+		}
+		.nm-continue__progress-bar {
+			height: 100%;
+			background: linear-gradient(90deg, #2b58e6, #8e44ad);
+			border-radius: 4px;
+		}
+		.nm-continue__btn {
+			display: block;
+			width: 100%;
+			margin-top: 12px;
+			padding: 12px;
+			background: #fff;
+			border: 1px solid #d0d5dd;
+			border-radius: 8px;
+			font-size: 14px;
+			font-weight: 500;
+			color: #344054;
+			text-align: center;
+			text-decoration: none;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.nm-continue__btn:hover {
+			background: #f9fafb;
+			border-color: #2b58e6;
+			color: #2b58e6;
+		}
+		
+		/* 빈 상태 */
+		.nm-empty {
+			text-align: center;
+			padding: 40px;
+			color: #667085;
+		}
+		.nm-empty i {
+			font-size: 48px;
+			margin-bottom: 16px;
+			display: block;
+		}
+		
+		/* 백버튼 */
+		.nm-back {
+			position: fixed;
+			top: 20px;
+			left: 20px;
+			background: rgba(255,255,255,0.9);
+			padding: 10px 16px;
+			border-radius: 8px;
+			font-size: 14px;
+			color: #344054;
+			text-decoration: none;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			z-index: 100;
+		}
+		.nm-back:hover {
+			background: #fff;
+			color: #2b58e6;
 		}
 	</style>
-
-	<main class="nm-container" role="main" aria-label="마이페이지 신규 메인">
-		<header class="nm-header">
-			<h1 class="nm-title">{{p_title}}</h1>
-			<p class="nm-subtitle">
-				전역 네비게이션 없이 동작하는 풀스크린 페이지 골격입니다. 각 섹션은 나중에 실제 콘텐츠로 교체하시면 됩니다.
-			</p>
-
-			<div class="nm-actions" aria-label="상단 액션(자리표시자)">
-				<!-- TODO: (예) ‘내 정보’, ‘알림’, ‘설정’ 등의 실제 버튼/링크로 교체 -->
-				<button type="button" class="nm-action" disabled>액션 버튼 #1</button>
-				<button type="button" class="nm-action" disabled>액션 버튼 #2</button>
-				<button type="button" class="nm-action" disabled>액션 버튼 #3</button>
+	
+	<!-- 뒤로가기 버튼 -->
+	<a href="/mypage/index.jsp" class="nm-back">← 기존 화면</a>
+	
+	<!-- 히어로 섹션 -->
+	<section class="nm-hero">
+		<h1 class="nm-hero__title">한국폴리텍대학<br>미래형 직업교육 플랫폼</h1>
+		<form class="nm-hero__search" action="/main/search.jsp" method="get">
+			<input type="text" name="s_keyword" placeholder="강의, 진로, 기업 검색...">
+			<button type="submit"><i class="bi bi-search"></i></button>
+		</form>
+		<div class="nm-hero__buttons">
+			<button type="button" class="nm-hero__btn nm-hero__btn--primary" id="btnMyInterest">
+				<i class="bi bi-person-check"></i> 나의 관심사
+			</button>
+			<a href="/course/course_list.jsp" class="nm-hero__btn nm-hero__btn--secondary">
+				<i class="bi bi-search"></i> 둘러보기
+			</a>
+		</div>
+	</section>
+	
+	<!-- 메인 콘텐츠 -->
+	<main class="nm-container">
+		
+		<!-- 필터 탭 -->
+		<nav class="nm-tabs">
+			<a href="#continue" class="nm-tab active"><i class="bi bi-play-circle"></i>계속 학습하기</a>
+			<a href="#trending" class="nm-tab"><i class="bi bi-fire"></i>인기 급상승</a>
+			<a href="#shorts" class="nm-tab"><i class="bi bi-camera-video"></i>숏폼</a>
+			<a href="#haksa" class="nm-tab"><i class="bi bi-mortarboard"></i>정규(학사)</a>
+			<a href="#notice" class="nm-tab"><i class="bi bi-bell"></i>공지사항</a>
+			<a href="#qna" class="nm-tab"><i class="bi bi-chat-dots"></i>Q&A</a>
+		</nav>
+		
+		<!-- 계속 학습하기 섹션 -->
+		<section class="nm-section" id="continue">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">계속 학습하기</h2>
+				<a href="/mypage/course_list.jsp" class="nm-section__more">더보기 →</a>
 			</div>
-		</header>
-
-		<section class="nm-placeholder" aria-label="히어로(상단 요약)">
-			<h2 class="nm-placeholder__title">히어로/요약 영역</h2>
-			<p class="nm-placeholder__hint">
-				<!-- TODO: (예) 사용자 인사말, 오늘의 할 일, 빠른 검색/바로가기 등을 배치 -->
-				여기는 상단에 크게 보여줄 요약/안내 영역입니다. (빈 컨테이너)
-			</p>
-		</section>
-
-		<div class="nm-divider" role="separator" aria-hidden="true"></div>
-
-		<section aria-label="요약 카드">
 			<div class="nm-grid nm-grid--3">
-				<div class="nm-placeholder">
-					<h3 class="nm-placeholder__title">요약 카드 #1</h3>
-					<p class="nm-placeholder__hint">
-						<!-- TODO: (예) 진행 중인 과정 수, 미답변 Q&A 수 등 -->
-						지표/카운트용 카드 자리입니다.
-					</p>
+				<!--@loop(courses_prism)-->
+				<div class="nm-continue">
+					<img src="{{courses_prism.course_file_url}}" alt="{{courses_prism.course_nm_conv}}" class="nm-continue__img">
+					<div class="nm-continue__body">
+						<h3 class="nm-continue__title">{{courses_prism.course_nm_conv}}</h3>
+						<p class="nm-continue__meta">{{courses_prism.study_date_conv}}</p>
+						<div class="nm-continue__progress-label">
+							<span>진행율</span>
+							<span>{{courses_prism.progress_ratio_conv}}%</span>
+						</div>
+						<div class="nm-continue__progress">
+							<div class="nm-continue__progress-bar" style="width: {{courses_prism.progress_ratio_conv}}%"></div>
+						</div>
+						<a href="/classroom/index.jsp?cuid={{courses_prism.id}}" class="nm-continue__btn">강의실 입장</a>
+					</div>
 				</div>
-				<div class="nm-placeholder">
-					<h3 class="nm-placeholder__title">요약 카드 #2</h3>
-					<p class="nm-placeholder__hint">
-						<!-- TODO: (예) 수료/이수 현황, 최근 접속, 결제/환불 요약 등 -->
-						지표/카운트용 카드 자리입니다.
-					</p>
+				<!--/loop(courses_prism)-->
+				<!--@nif(courses_prism)-->
+				<div class="nm-empty" style="grid-column: 1/-1;">
+					<i class="bi bi-book"></i>
+					<p>수강 중인 과정이 없습니다.</p>
 				</div>
-				<div class="nm-placeholder">
-					<h3 class="nm-placeholder__title">요약 카드 #3</h3>
-					<p class="nm-placeholder__hint">
-						<!-- TODO: (예) 추천 콘텐츠, 즐겨찾기, 공지 요약 등 -->
-						지표/카운트용 카드 자리입니다.
-					</p>
+				<!--/nif(courses_prism)-->
+			</div>
+		</section>
+		
+		<!-- 인기 급상승 섹션 (샘플 데이터) -->
+		<section class="nm-section" id="trending">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">인기 급상승</h2>
+				<a href="/course/course_list.jsp" class="nm-section__more">더보기 →</a>
+			</div>
+			<div class="nm-grid nm-grid--4">
+				<div class="nm-card">
+					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
+					<div class="nm-card__body">
+						<h3 class="nm-card__title">메타버스 개발 입문</h3>
+						<p class="nm-card__meta">장교수</p>
+						<div class="nm-card__footer">
+							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.8 (245)</span>
+							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
+						</div>
+					</div>
+				</div>
+				<div class="nm-card">
+					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
+					<div class="nm-card__body">
+						<h3 class="nm-card__title">반도체 공정 기초</h3>
+						<p class="nm-card__meta">이교수</p>
+						<div class="nm-card__footer">
+							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.9 (312)</span>
+							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
+						</div>
+					</div>
+				</div>
+				<div class="nm-card">
+					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
+					<div class="nm-card__body">
+						<h3 class="nm-card__title">AI 프로그래밍 실습</h3>
+						<p class="nm-card__meta">김교수</p>
+						<div class="nm-card__footer">
+							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.7 (189)</span>
+							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
+						</div>
+					</div>
+				</div>
+				<div class="nm-card">
+					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
+					<div class="nm-card__body">
+						<h3 class="nm-card__title">스마트팩토리 개론</h3>
+						<p class="nm-card__meta">박교수</p>
+						<div class="nm-card__footer">
+							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.6 (156)</span>
+							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>
-
-		<div class="nm-divider" role="separator" aria-hidden="true"></div>
-
-		<section aria-label="메인 콘텐츠">
-			<div class="nm-grid nm-grid--2">
-				<div class="nm-placeholder" aria-label="좌측 콘텐츠 영역">
-					<h3 class="nm-placeholder__title">좌측 섹션</h3>
-					<p class="nm-placeholder__hint">
-						<!-- TODO: (예) 내 강의 목록/최근 학습/학습 진도 -->
-						리스트/테이블/카드 컴포넌트를 넣기 좋은 영역입니다.
-					</p>
+		
+		<!-- 숏폼 섹션 (샘플 데이터) -->
+		<section class="nm-section" id="shorts">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">숏폼</h2>
+				<a href="#" class="nm-section__more">더보기 →</a>
+			</div>
+			<div class="nm-grid nm-grid--6">
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">1분만에 알아보는 반도체 기초</p>
 				</div>
-				<div class="nm-placeholder" aria-label="우측 콘텐츠 영역">
-					<h3 class="nm-placeholder__title">우측 섹션</h3>
-					<p class="nm-placeholder__hint">
-						<!-- TODO: (예) 공지사항/문의(Q&A)/메시지/알림 -->
-						알림성 콘텐츠를 넣기 좋은 영역입니다.
-					</p>
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">취업 성공 노하우 공개!</p>
+				</div>
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">AI 트렌드 총정리</p>
+				</div>
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">메타버스 활용 사례</p>
+				</div>
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">IoT 프로젝트 실습</p>
+				</div>
+				<div class="nm-shorts">
+					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
+					<i class="bi bi-youtube nm-shorts__play"></i>
+					<p class="nm-shorts__title">스마트팩토리 현장</p>
 				</div>
 			</div>
 		</section>
-
-		<div class="nm-divider" role="separator" aria-hidden="true"></div>
-
-		<section class="nm-placeholder" aria-label="하단 확장 영역">
-			<h2 class="nm-placeholder__title">하단 확장 섹션</h2>
-			<p class="nm-placeholder__hint">
-				<!-- TODO: (예) 배너, 추천 과정, 고객센터 안내, 약관/정책 링크 등 -->
-				필요에 따라 섹션을 추가로 늘릴 수 있는 “여유 공간”입니다.
-			</p>
+		
+		<!-- 정규(학사) 강의 섹션 -->
+		<!--@if(courses_haksa)-->
+		<section class="nm-section" id="haksa">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">정규(학사) 강의</h2>
+			</div>
+			<div class="nm-grid nm-grid--3">
+				<!--@loop(courses_haksa)-->
+				<div class="nm-continue">
+					<div class="nm-continue__body">
+						<span style="display:inline-block; background:#2b58e6; color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; margin-bottom:10px;">{{courses_haksa.onoff_type_conv}}</span>
+						<h3 class="nm-continue__title">{{courses_haksa.course_nm_conv}}</h3>
+						<p class="nm-continue__meta">{{courses_haksa.study_date_conv}}</p>
+						<p class="nm-continue__meta">{{courses_haksa.dept_name}} / {{courses_haksa.grad_name}}</p>
+						<a href="/classroom/index.jsp?haksa_cuid={{courses_haksa.haksa_cuid}}" class="nm-continue__btn">강의실 입장</a>
+					</div>
+				</div>
+				<!--/loop(courses_haksa)-->
+			</div>
 		</section>
+		<!--/if(courses_haksa)-->
+		
+		<!-- 공지사항 섹션 -->
+		<section class="nm-section" id="notice">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">공지사항</h2>
+				<a href="/board/index.jsp?code=notice" class="nm-section__more">더보기 →</a>
+			</div>
+			<div style="background:#fff; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+				<!--@loop(notice_list)-->
+				<div style="display:flex; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #f3f4f6;">
+					<a href="/classroom/notice_view.jsp?id={{notice_list.id}}" style="color:#101828; text-decoration:none; font-size:14px;">{{notice_list.subject_conv}}</a>
+					<span style="color:#667085; font-size:13px;">{{notice_list.reg_date_conv}}</span>
+				</div>
+				<!--/loop(notice_list)-->
+				<!--@nif(notice_list)-->
+				<div class="nm-empty">
+					<i class="bi bi-megaphone"></i>
+					<p>공지사항이 없습니다.</p>
+				</div>
+				<!--/nif(notice_list)-->
+			</div>
+		</section>
+		
+		<!-- Q&A 섹션 -->
+		<section class="nm-section" id="qna">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">나의 Q&A</h2>
+				<a href="/mypage/qna_list.jsp" class="nm-section__more">더보기 →</a>
+			</div>
+			<div style="background:#fff; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+				<!--@loop(qna_list)-->
+				<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #f3f4f6;">
+					<div>
+						<span style="display:inline-block; background:#f3f4f6; color:#667085; padding:2px 8px; border-radius:4px; font-size:12px; margin-right:8px;">{{qna_list.board_nm}}</span>
+						<!--@if(qna_list.course_user_id:0)-->
+						<a href="/board/read.jsp?id={{qna_list.id}}&code={{qna_list.code}}" style="color:#101828; text-decoration:none; font-size:14px;">{{qna_list.subject_conv}}</a>
+						<!--/if(qna_list.course_user_id:0)-->
+						<!--@nif(qna_list.course_user_id:0)-->
+						<a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&cuid={{qna_list.course_user_id}}&code={{qna_list.code}}" style="color:#101828; text-decoration:none; font-size:14px;">{{qna_list.subject_conv}}</a>
+						<!--/nif(qna_list.course_user_id:0)-->
+					</div>
+					<span style="background:#e0f2fe; color:#0284c7; padding:4px 10px; border-radius:6px; font-size:12px;">{{qna_list.proc_status_conv}}</span>
+				</div>
+				<!--/loop(qna_list)-->
+				<!--@nif(qna_list)-->
+				<div class="nm-empty">
+					<i class="bi bi-chat-dots"></i>
+					<p>문의 내역이 없습니다.</p>
+				</div>
+				<!--/nif(qna_list)-->
+			</div>
+		</section>
+		
 	</main>
+	
+	<!-- 푸터 여백 -->
+	<div style="height: 60px;"></div>
 </div>
-
