@@ -1,0 +1,168 @@
+<div class="new-main-fullscreen" id="new-main-fullscreen">
+	<style>
+		/* 
+			목적: 전역 레이아웃 없이도 화면이 '꽉 찬' 느낌으로 보이도록 최소한의 스타일만 둡니다.
+			왜: 이 파일은 “골격(Skeleton)” 단계라서, 나중에 디자인 시스템/컴포넌트로 교체하기 쉽도록
+			    스타일을 최대한 얕게(전역 영향 최소) 유지합니다.
+		*/
+		.new-main-fullscreen {
+			min-height: 100vh;
+			background: linear-gradient(180deg, #f5f7ff 0%, #ffffff 50%, #f9fafb 100%);
+			padding: 24px 16px;
+		}
+		.nm-container {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		.nm-header {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+			margin-bottom: 18px;
+		}
+		.nm-title {
+			font-size: 22px;
+			font-weight: 800;
+			color: #101828;
+			margin: 0;
+		}
+		.nm-subtitle {
+			font-size: 14px;
+			color: #667085;
+			margin: 0;
+		}
+		.nm-actions {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			margin-top: 8px;
+		}
+		.nm-action {
+			border: 1px solid #d0d5dd;
+			background: #ffffff;
+			color: #344054;
+			border-radius: 10px;
+			padding: 10px 12px;
+			font-size: 13px;
+			cursor: not-allowed; /* 지금은 버튼이 “자리표시자”임을 명확히 합니다. */
+		}
+		.nm-grid {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 14px;
+		}
+		@media (min-width: 992px) {
+			.nm-grid--2 { grid-template-columns: 1fr 1fr; }
+			.nm-grid--3 { grid-template-columns: 1fr 1fr 1fr; }
+		}
+		.nm-placeholder {
+			border: 2px dashed #d0d5dd;
+			background: rgba(255, 255, 255, 0.85);
+			border-radius: 14px;
+			padding: 16px;
+			min-height: 120px;
+			box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+		}
+		.nm-placeholder__title {
+			font-size: 14px;
+			font-weight: 800;
+			color: #101828;
+			margin: 0 0 8px 0;
+		}
+		.nm-placeholder__hint {
+			font-size: 13px;
+			color: #667085;
+			margin: 0;
+			line-height: 1.5;
+		}
+		.nm-divider {
+			height: 1px;
+			background: rgba(208, 213, 221, 0.9);
+			margin: 18px 0;
+		}
+	</style>
+
+	<main class="nm-container" role="main" aria-label="마이페이지 신규 메인">
+		<header class="nm-header">
+			<h1 class="nm-title">{{p_title}}</h1>
+			<p class="nm-subtitle">
+				전역 네비게이션 없이 동작하는 풀스크린 페이지 골격입니다. 각 섹션은 나중에 실제 콘텐츠로 교체하시면 됩니다.
+			</p>
+
+			<div class="nm-actions" aria-label="상단 액션(자리표시자)">
+				<!-- TODO: (예) ‘내 정보’, ‘알림’, ‘설정’ 등의 실제 버튼/링크로 교체 -->
+				<button type="button" class="nm-action" disabled>액션 버튼 #1</button>
+				<button type="button" class="nm-action" disabled>액션 버튼 #2</button>
+				<button type="button" class="nm-action" disabled>액션 버튼 #3</button>
+			</div>
+		</header>
+
+		<section class="nm-placeholder" aria-label="히어로(상단 요약)">
+			<h2 class="nm-placeholder__title">히어로/요약 영역</h2>
+			<p class="nm-placeholder__hint">
+				<!-- TODO: (예) 사용자 인사말, 오늘의 할 일, 빠른 검색/바로가기 등을 배치 -->
+				여기는 상단에 크게 보여줄 요약/안내 영역입니다. (빈 컨테이너)
+			</p>
+		</section>
+
+		<div class="nm-divider" role="separator" aria-hidden="true"></div>
+
+		<section aria-label="요약 카드">
+			<div class="nm-grid nm-grid--3">
+				<div class="nm-placeholder">
+					<h3 class="nm-placeholder__title">요약 카드 #1</h3>
+					<p class="nm-placeholder__hint">
+						<!-- TODO: (예) 진행 중인 과정 수, 미답변 Q&A 수 등 -->
+						지표/카운트용 카드 자리입니다.
+					</p>
+				</div>
+				<div class="nm-placeholder">
+					<h3 class="nm-placeholder__title">요약 카드 #2</h3>
+					<p class="nm-placeholder__hint">
+						<!-- TODO: (예) 수료/이수 현황, 최근 접속, 결제/환불 요약 등 -->
+						지표/카운트용 카드 자리입니다.
+					</p>
+				</div>
+				<div class="nm-placeholder">
+					<h3 class="nm-placeholder__title">요약 카드 #3</h3>
+					<p class="nm-placeholder__hint">
+						<!-- TODO: (예) 추천 콘텐츠, 즐겨찾기, 공지 요약 등 -->
+						지표/카운트용 카드 자리입니다.
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<div class="nm-divider" role="separator" aria-hidden="true"></div>
+
+		<section aria-label="메인 콘텐츠">
+			<div class="nm-grid nm-grid--2">
+				<div class="nm-placeholder" aria-label="좌측 콘텐츠 영역">
+					<h3 class="nm-placeholder__title">좌측 섹션</h3>
+					<p class="nm-placeholder__hint">
+						<!-- TODO: (예) 내 강의 목록/최근 학습/학습 진도 -->
+						리스트/테이블/카드 컴포넌트를 넣기 좋은 영역입니다.
+					</p>
+				</div>
+				<div class="nm-placeholder" aria-label="우측 콘텐츠 영역">
+					<h3 class="nm-placeholder__title">우측 섹션</h3>
+					<p class="nm-placeholder__hint">
+						<!-- TODO: (예) 공지사항/문의(Q&A)/메시지/알림 -->
+						알림성 콘텐츠를 넣기 좋은 영역입니다.
+					</p>
+				</div>
+			</div>
+		</section>
+
+		<div class="nm-divider" role="separator" aria-hidden="true"></div>
+
+		<section class="nm-placeholder" aria-label="하단 확장 영역">
+			<h2 class="nm-placeholder__title">하단 확장 섹션</h2>
+			<p class="nm-placeholder__hint">
+				<!-- TODO: (예) 배너, 추천 과정, 고객센터 안내, 약관/정책 링크 등 -->
+				필요에 따라 섹션을 추가로 늘릴 수 있는 “여유 공간”입니다.
+			</p>
+		</section>
+	</main>
+</div>
+
