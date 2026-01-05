@@ -1,0 +1,27 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: polytech-lms-api
+  datasource:
+    # 왜: 레거시 Resin 설정(resin-web.xml)의 실제 접속 정보를 기본값으로 맞춰 동일 DB를 사용합니다.
+    url: ${DB_URL:jdbc:mysql://192.168.0.55:3306/lms?useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:lms}
+    password: ${DB_PASSWORD:lms%67}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        format_sql: true
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${VERTEX_AI_PROJECT_ID:YOUR_PROJECT_ID}
+          location: ${VERTEX_AI_LOCATION:us-central1}
+          chat:
+            options:
+              model: ${VERTEX_AI_GEMINI_MODEL:gemini-2.0-flash}
+              temperature: ${VERTEX_AI_TEMPERATURE:0.5}
