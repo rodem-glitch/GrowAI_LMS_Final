@@ -20,8 +20,21 @@ public class VectorStoreService {
     }
 
     public void upsertText(String text, Map<String, Object> metadata) {
+        // 왜: 기존 코드 호환을 위해 id 없이 적재하는 메서드를 남깁니다.
         if (text == null || text.isBlank()) return;
         vectorStore.add(List.of(new Document(text, metadata)));
+    }
+
+    public void upsertText(String id, String text, Map<String, Object> metadata) {
+        // 왜: 같은 lesson_id를 여러 번 적재해도 "덮어쓰기(upsert)"가 되도록 문서 id를 고정합니다.
+        if (text == null || text.isBlank()) return;
+
+        if (id == null || id.isBlank()) {
+            vectorStore.add(List.of(new Document(text, metadata)));
+            return;
+        }
+
+        vectorStore.add(List.of(new Document(id, text, metadata)));
     }
 
     public List<VectorSearchResult> similaritySearch(String query, int topK, double similarityThreshold) {
@@ -43,4 +56,3 @@ public class VectorStoreService {
             .toList();
     }
 }
-

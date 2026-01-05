@@ -21,6 +21,10 @@ var/log/**/*.log
 **/build/
 **/out/
 
+# Spring Boot (로컬 개발 설정)
+polytech-lms-api/src/main/resources/application-local.yml
+polytech-lms-api/src/main/resources/application-local.properties
+
 # Web app build / temp
 WEB-INF/classes/
 WEB-INF/tmp/

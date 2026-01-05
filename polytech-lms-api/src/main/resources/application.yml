@@ -2,6 +2,10 @@ server:
   port: 8081
 
 spring:
+  config:
+    # 왜: 개인 PC별(DB/키) 설정을 Git에 올리지 않기 위해 local 파일을 선택적으로 불러옵니다.
+    # - `application-local.yml`은 .gitignore로 제외하고, 각자 환경에 맞게 작성합니다.
+    import: optional:classpath:application-local.yml
   application:
     name: polytech-lms-api
   datasource:
