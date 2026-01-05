@@ -32,8 +32,14 @@ public class VectorIndexService {
                 CONTENT_ID AS content_id,
                 LESSON_TYPE AS lesson_type,
                 LESSON_NM AS lesson_nm,
-                DESCRIPTION AS summary_text
+                DESCRIPTION AS summary_text,
+                c.CATEGORY_ID AS category_id,
+                c.CONTENT_NM AS content_nm
             FROM LM_LESSON
+            LEFT JOIN LM_CONTENT c
+              ON c.ID = LM_LESSON.CONTENT_ID
+             AND c.SITE_ID = LM_LESSON.SITE_ID
+             AND c.STATUS = 1
             WHERE STATUS = 1
               AND USE_YN = 'Y'
               AND DESCRIPTION IS NOT NULL
@@ -72,6 +78,8 @@ public class VectorIndexService {
             metadata.put("content_id", row.get("content_id"));
             metadata.put("lesson_type", row.get("lesson_type"));
             metadata.put("lesson_nm", row.get("lesson_nm"));
+            metadata.put("category_id", row.get("category_id"));
+            metadata.put("content_nm", row.get("content_nm"));
 
             String text = String.valueOf(row.get("summary_text"));
             vectorStoreService.upsertText(docId, text, metadata);
@@ -80,4 +88,3 @@ public class VectorIndexService {
         return new IndexLessonsResponse(rows.size(), rows.size());
     }
 }
-

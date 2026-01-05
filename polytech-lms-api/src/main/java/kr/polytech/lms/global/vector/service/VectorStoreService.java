@@ -38,18 +38,31 @@ public class VectorStoreService {
     }
 
     public List<VectorSearchResult> similaritySearch(String query, int topK, double similarityThreshold) {
+        return similaritySearch(query, topK, similarityThreshold, null);
+    }
+
+    public List<VectorSearchResult> similaritySearch(
+        String query,
+        int topK,
+        double similarityThreshold,
+        String filterExpression
+    ) {
         if (query == null || query.isBlank()) return List.of();
 
         int safeTopK = Math.max(1, Math.min(topK, 50));
         double safeThreshold = Math.max(0.0, Math.min(similarityThreshold, 1.0));
 
-        List<Document> results = vectorStore.similaritySearch(
-            SearchRequest.builder()
-                .query(query)
-                .topK(safeTopK)
-                .similarityThreshold(safeThreshold)
-                .build()
-        );
+        SearchRequest.Builder builder = SearchRequest.builder()
+            .query(query)
+            .topK(safeTopK)
+            .similarityThreshold(safeThreshold);
+
+        if (filterExpression != null && !filterExpression.isBlank()) {
+            // 왜: 교수자/학생 추천처럼 "상황"이 있는 검색은 메타데이터 필터를 걸어야 품질이 안정적으로 올라갑니다.
+            builder.filterExpression(filterExpression);
+        }
+
+        List<Document> results = vectorStore.similaritySearch(builder.build());
 
         return results.stream()
             .map(d -> new VectorSearchResult(d.getText(), d.getMetadata(), d.getScore()))

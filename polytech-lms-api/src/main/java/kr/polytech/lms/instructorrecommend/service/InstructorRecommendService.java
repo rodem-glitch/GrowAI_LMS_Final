@@ -21,16 +21,44 @@ public class InstructorRecommendService {
 
     public List<InstructorVideoRecommendResponse> recommendVideos(InstructorVideoRecommendRequest request) {
         String query = buildQueryText(request);
+        String filterExpression = buildFilterExpression(request);
 
         List<VectorSearchResult> results = vectorStoreService.similaritySearch(
             query,
             request.topK(),
-            request.similarityThreshold()
+            request.similarityThreshold(),
+            filterExpression
         );
 
         return results.stream()
             .map(this::toResponse)
             .toList();
+    }
+
+    private String buildFilterExpression(InstructorVideoRecommendRequest request) {
+        // 왜: 벡터 검색 결과를 "해당 사이트/카테고리/영상타입"으로 제한해야 추천 품질이 안정적으로 올라갑니다.
+        StringBuilder filter = new StringBuilder();
+
+        if (request.siteId() != null) {
+            filter.append("site_id == ").append(request.siteId());
+        }
+
+        if (request.categoryId() != null) {
+            if (filter.length() > 0) filter.append(" && ");
+            filter.append("category_id == ").append(request.categoryId());
+        }
+
+        if (request.lessonTypes() != null && !request.lessonTypes().isEmpty()) {
+            if (filter.length() > 0) filter.append(" && ");
+            String inList = request.lessonTypes().stream()
+                .filter(v -> v != null && !v.isBlank())
+                .map(v -> "'" + v.replace("'", "") + "'")
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("'05'");
+            filter.append("lesson_type in [").append(inList).append("]");
+        }
+
+        return filter.toString();
     }
 
     private String buildQueryText(InstructorVideoRecommendRequest request) {
