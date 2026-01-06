@@ -24,6 +24,9 @@ userLogin.item("log_date", m.time("yyyyMMdd"));
 userLogin.item("reg_date", m.time("yyyyMMddHHmmss"));
 if(!userLogin.insert()) {}
 
+// 리다이렉트 URL 결정
+String returnUrl = m.rs("return_url", "");
+
 if(siteinfo.b("sso_yn") && !"".equals(siteinfo.s("sso_url"))) {
 	//SSO
 	String url = siteinfo.s("sso_url") + ( siteinfo.s("sso_url").indexOf("?") > -1 ?  "&mode=logout" : "?mode=logout");
@@ -32,9 +35,10 @@ if(siteinfo.b("sso_yn") && !"".equals(siteinfo.s("sso_url"))) {
 	//B2B
 	String url = userDept.getB2BDomain(userDeptId);
 	if(!"".equals(url)) m.redirect("http://" + url + "." + SiteConfig.s("join_b2b_domain"));
-	else m.redirect("../main/index.jsp");
+	else m.redirect(!"".equals(returnUrl) ? returnUrl : "../main/index.jsp");
 } else {
-	m.redirect("../main/index.jsp");
+	// 일반 로그아웃: return_url이 있으면 해당 URL로, 없으면 메인으로
+	m.redirect(!"".equals(returnUrl) ? returnUrl : "../main/index.jsp");
 }
 
 %>
