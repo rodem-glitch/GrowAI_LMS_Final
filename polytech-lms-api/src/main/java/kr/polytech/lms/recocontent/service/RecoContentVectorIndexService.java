@@ -63,6 +63,10 @@ public class RecoContentVectorIndexService {
         Map<String, Object> meta = new HashMap<>();
         meta.put("source", "tb_reco_content");
         meta.put("content_id", content.getId());
+        if (content.getLessonId() != null) {
+            // 왜: 프론트(교수자 LMS)의 "강의 영상 추가"는 레슨 ID를 기본 키로 사용합니다.
+            meta.put("lesson_id", content.getLessonId());
+        }
         meta.put("category_nm", content.getCategoryNm());
         meta.put("title", content.getTitle());
         meta.put("keywords", content.getKeywords());
@@ -90,4 +94,3 @@ public class RecoContentVectorIndexService {
         return sb.toString().trim();
     }
 }
-
