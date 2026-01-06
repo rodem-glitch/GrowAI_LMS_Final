@@ -56,6 +56,7 @@ export function ContentLibraryModal({
 
   const [recommendations, setRecommendations] = useState<Content[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendCacheKey, setRecommendCacheKey] = useState<string>('');
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const limit = 20;
@@ -71,6 +72,7 @@ export function ContentLibraryModal({
     setContents([]);
     setTotalCount(0);
     setRecommendations([]);
+    setRecommendCacheKey('');
     setSelectedIds(new Set());
   }, [isOpen]);
 
@@ -81,7 +83,6 @@ export function ContentLibraryModal({
     setPage(1);
     setContents([]);
     setTotalCount(0);
-    setRecommendations([]);
     setSelectedIds(new Set());
     setErrorMessage(null);
   }, [isOpen, activeTab]);
@@ -173,6 +174,20 @@ export function ContentLibraryModal({
     let cancelled = false;
     const timer = setTimeout(() => {
       const fetchRecommendations = async () => {
+        const nextCacheKey = JSON.stringify({
+          courseName: recommendContext?.courseName ?? '',
+          courseIntro: recommendContext?.courseIntro ?? '',
+          courseDetail: recommendContext?.courseDetail ?? '',
+          lessonTitle: recommendContext?.lessonTitle ?? '',
+          lessonDescription: recommendContext?.lessonDescription ?? '',
+          keywords: searchTerm ?? '',
+          topK: 50,
+          similarityThreshold: 0.2,
+        });
+
+        // 왜: 모달이 열려있는 동안 탭을 왔다갔다 해도, 같은 요청이면 네트워크를 다시 타지 않게 캐시를 사용합니다.
+        if (recommendations.length > 0 && recommendCacheKey === nextCacheKey) return;
+
         setRecommendLoading(true);
         setErrorMessage(null);
         try {
@@ -206,7 +221,10 @@ export function ContentLibraryModal({
             score: row.score ? Number(row.score) : undefined,
           }));
 
-          if (!cancelled) setRecommendations(mapped);
+          if (!cancelled) {
+            setRecommendations(mapped);
+            setRecommendCacheKey(nextCacheKey);
+          }
         } catch (e) {
           if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
         } finally {
@@ -224,12 +242,14 @@ export function ContentLibraryModal({
   }, [
     isOpen,
     activeTab,
+    searchTerm,
+    recommendations.length,
+    recommendCacheKey,
     recommendContext?.courseName,
     recommendContext?.courseIntro,
     recommendContext?.courseDetail,
     recommendContext?.lessonTitle,
     recommendContext?.lessonDescription,
-    searchTerm,
   ]);
 
   const displayedContents = activeTab === 'recommend' ? recommendations : contents;
