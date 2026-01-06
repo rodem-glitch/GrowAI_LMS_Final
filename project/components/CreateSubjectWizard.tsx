@@ -1189,6 +1189,10 @@ function CurriculumStep({
           lessonTitle: currentSession?.title ?? '',
           lessonDescription: currentSession?.description ?? '',
         }}
+        excludeLessonIds={formData.sessions
+          .flatMap((s) => s.videos)
+          .map((v) => (v.lessonId ? Number(String(v.lessonId).replace(/[^0-9]/g, '')) : 0))
+          .filter((n) => Number.isFinite(n) && n > 0)}
       />
     </div>
   );

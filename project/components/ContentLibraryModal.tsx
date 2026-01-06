@@ -31,6 +31,7 @@ interface ContentLibraryModalProps {
     lessonTitle?: string;
     lessonDescription?: string;
   };
+  excludeLessonIds?: Array<number | string>;
 }
 
 export function ContentLibraryModal({
@@ -40,6 +41,7 @@ export function ContentLibraryModal({
   multiSelect = true,
   onMultiSelect,
   recommendContext,
+  excludeLessonIds,
 }: ContentLibraryModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -54,6 +56,7 @@ export function ContentLibraryModal({
   const [selecting, setSelecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [recommendationsRaw, setRecommendationsRaw] = useState<Content[]>([]);
   const [recommendations, setRecommendations] = useState<Content[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendCacheKey, setRecommendCacheKey] = useState<string>('');
@@ -72,6 +75,7 @@ export function ContentLibraryModal({
     setContents([]);
     setTotalCount(0);
     setRecommendations([]);
+    setRecommendationsRaw([]);
     setRecommendCacheKey('');
     setSelectedIds(new Set());
   }, [isOpen]);
@@ -181,12 +185,13 @@ export function ContentLibraryModal({
           lessonTitle: recommendContext?.lessonTitle ?? '',
           lessonDescription: recommendContext?.lessonDescription ?? '',
           keywords: searchTerm ?? '',
-          topK: 50,
+          // 왜: 제외(이미 추가된 레슨) 후에도 50개가 남도록, 더 넉넉히 받아옵니다.
+          topK: 120,
           similarityThreshold: 0.2,
         });
 
         // 왜: 모달이 열려있는 동안 탭을 왔다갔다 해도, 같은 요청이면 네트워크를 다시 타지 않게 캐시를 사용합니다.
-        if (recommendations.length > 0 && recommendCacheKey === nextCacheKey) return;
+        if (recommendationsRaw.length > 0 && recommendCacheKey === nextCacheKey) return;
 
         setRecommendLoading(true);
         setErrorMessage(null);
@@ -199,7 +204,7 @@ export function ContentLibraryModal({
             lessonDescription: recommendContext?.lessonDescription,
             // 왜: 추천 탭에서도 사용자가 제목 검색을 하면, 검색어를 "추가 키워드"로 함께 보내서 추천 품질을 올립니다.
             keywords: searchTerm,
-            topK: 50,
+            topK: 120,
             similarityThreshold: 0.2,
           });
           if (res.rst_code !== '0000') throw new Error(res.rst_message);
@@ -222,7 +227,7 @@ export function ContentLibraryModal({
           }));
 
           if (!cancelled) {
-            setRecommendations(mapped);
+            setRecommendationsRaw(mapped);
             setRecommendCacheKey(nextCacheKey);
           }
         } catch (e) {
@@ -243,7 +248,7 @@ export function ContentLibraryModal({
     isOpen,
     activeTab,
     searchTerm,
-    recommendations.length,
+    recommendationsRaw.length,
     recommendCacheKey,
     recommendContext?.courseName,
     recommendContext?.courseIntro,
@@ -251,6 +256,31 @@ export function ContentLibraryModal({
     recommendContext?.lessonTitle,
     recommendContext?.lessonDescription,
   ]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (activeTab !== 'recommend') return;
+
+    // 왜: 과목 전체 차시에 이미 추가된 레슨은 추천에서 제외해야 하며, 제외 후에도 50개를 유지하는 게 UX가 좋습니다.
+    const excludeSet = new Set<number>();
+    (excludeLessonIds ?? []).forEach((v) => {
+      const n = typeof v === 'number' ? v : Number(String(v).replace(/[^0-9]/g, ''));
+      if (Number.isFinite(n) && n > 0) excludeSet.add(n);
+    });
+
+    const dedupe = new Set<number>();
+    const filtered = recommendationsRaw
+      .filter((c) => {
+        if (!c.lessonId) return false;
+        if (excludeSet.has(c.lessonId)) return false;
+        if (dedupe.has(c.lessonId)) return false;
+        dedupe.add(c.lessonId);
+        return true;
+      })
+      .slice(0, 50);
+
+    setRecommendations(filtered);
+  }, [isOpen, activeTab, excludeLessonIds, recommendationsRaw]);
 
   const displayedContents = activeTab === 'recommend' ? recommendations : contents;
   const displayedTotal = activeTab === 'recommend' ? recommendations.length : totalCount;
