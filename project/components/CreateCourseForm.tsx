@@ -151,10 +151,13 @@ interface CreateCourseFormProps {
 export function CreateCourseForm({ onCreated, initialStep, onStepChange }: CreateCourseFormProps = {}) {
   const [currentStep, setCurrentStep] = useState<Step>(initialStep ?? 'basic');
   useEffect(() => {
-    if (!initialStep) return;
-    // 왜: 주소에서 들어온 단계가 있으면 화면 단계를 맞춥니다.
-    if (initialStep !== currentStep) setCurrentStep(initialStep);
-  }, [currentStep, initialStep]);
+    // 왜: URL(부모)에서 내려온 step을 로컬 state에 "한 번만" 동기화해야 합니다.
+    //     currentStep을 의존성에 넣으면, 사용자가 다음/이전으로 step을 바꾸는 순간
+    //     아직 URL이 갱신되기 전(같은 커밋)에는 initialStep 값이 이전 단계로 남아 있어서
+    //     화면이 잠깐 바뀌었다가 원래 단계로 되돌아오는 "깜빡임/되돌림"이 생길 수 있습니다.
+    const nextStep: Step = initialStep ?? 'basic';
+    setCurrentStep((prev) => (prev === nextStep ? prev : nextStep));
+  }, [initialStep]);
 
   useEffect(() => {
     // 왜: 단계 변경을 주소와 동기화하기 위해 바깥에 알려줍니다.

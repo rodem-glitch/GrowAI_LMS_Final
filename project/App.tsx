@@ -205,6 +205,22 @@ export default function App() {
     ? (routeState.params.step as typeof SUBJECT_STEP_IDS[number])
     : undefined;
 
+  // 왜: onStepChange 콜백을 JSX에서 매번 새로 만들면(익명 함수) 자식의 useEffect 의존성이 불필요하게 변합니다.
+  //     화면 깜빡임의 직접 원인은 아니지만, 단계 전환/주소 동기화가 많은 화면이라 성능과 안정성을 위해 고정합니다.
+  const handleCreateCourseStepChange = useCallback((step: typeof CREATE_COURSE_STEP_IDS[number]) => {
+    applyRoute({
+      menu: 'create-course',
+      params: step === 'basic' ? {} : { step },
+    });
+  }, [applyRoute]);
+
+  const handleSubjectStepChange = useCallback((step: typeof SUBJECT_STEP_IDS[number]) => {
+    applyRoute({
+      menu: 'subject-create',
+      params: step === 'basic' ? {} : { step },
+    });
+  }, [applyRoute]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -438,10 +454,7 @@ export default function App() {
               <CreateCourseForm
                 key={refreshKey}
                 initialStep={createCourseStep}
-                onStepChange={(step) => applyRoute({
-                  menu: 'create-course',
-                  params: step === 'basic' ? {} : { step },
-                })}
+                onStepChange={handleCreateCourseStepChange}
                 onCreated={() => applyMenu('explore')}
               />
             ) : activeMenu === 'content-all' ? (
@@ -458,10 +471,7 @@ export default function App() {
               <CreateSubjectWizard
                 key={refreshKey}
                 initialStep={subjectStep}
-                onStepChange={(step) => applyRoute({
-                  menu: 'subject-create',
-                  params: step === 'basic' ? {} : { step },
-                })}
+                onStepChange={handleSubjectStepChange}
               />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
