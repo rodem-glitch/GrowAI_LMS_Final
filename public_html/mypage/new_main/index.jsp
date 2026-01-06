@@ -20,8 +20,65 @@ PostDao post = new PostDao();
 ClBoardDao clBoard = new ClBoardDao();
 ClPostDao clPost = new ClPostDao();
 
+TutorDao tutor = new TutorDao();
+CourseTutorDao courseTutor = new CourseTutorDao();
+
 //변수
 String today = m.time("yyyyMMdd");
+
+//===== 강의 섹션 - 운영중인 과목 리스트 (4개) - 폴리텍 콘텐츠(cid=133) 기준 =====
+String subIdx = lmCategory.getSubIdx(siteId, 133);
+String courseOrd = "a.request_edate DESC, a.reg_date DESC, a.id DESC"; // 기본 정렬
+
+// 카테고리 정보에서 정렬 타입 가져오기
+DataSet cateInfo = lmCategory.find("id = 133");
+if(cateInfo.next() && !"".equals(cateInfo.s("sort_type"))) {
+	courseOrd = cateInfo.s("sort_type");
+}
+
+DataSet courseList = course.query(
+	" SELECT a.id, a.course_nm, a.course_file, a.content1, a.course_type, a.study_sdate, a.study_edate "
+	+ " FROM " + course.table + " a "
+	+ " WHERE a.site_id = " + siteId + " "
+	+ " AND a.status = 1 AND a.display_yn = 'Y' AND a.close_yn = 'N' "
+	+ " AND a.category_id IN (" + (!"".equals(subIdx) ? subIdx : "133") + ") "
+	+ " ORDER BY " + courseOrd
+	, 4
+);
+while(courseList.next()) {
+	// 썸네일
+	if(!"".equals(courseList.s("course_file"))) {
+		courseList.put("course_file_url", m.getUploadUrl(courseList.s("course_file")));
+	} else {
+		courseList.put("course_file_url", "/html/images/common/noimage_course.gif");
+	}
+	
+	// 과목명
+	courseList.put("course_nm_conv", m.cutString(courseList.s("course_nm"), 30));
+	
+	// 과목설명
+	courseList.put("content_conv", m.cutString(m.stripTags(courseList.s("content1")), 60));
+	
+	// 교육기간
+	if("R".equals(courseList.s("course_type"))) {
+		courseList.put("study_date", m.time(_message.get("format.date.dot"), courseList.s("study_sdate")) + " - " + m.time(_message.get("format.date.dot"), courseList.s("study_edate")));
+	} else {
+		courseList.put("study_date", "상시수강");
+	}
+	
+	// 담당강사
+	DataSet tutorInfo = courseTutor.query(
+		" SELECT t.tutor_nm FROM " + courseTutor.table + " ct "
+		+ " LEFT JOIN " + tutor.table + " t ON ct.user_id = t.user_id "
+		+ " WHERE ct.course_id = " + courseList.i("id") + " "
+		+ " ORDER BY t.sort ASC, t.tutor_nm ASC LIMIT 1 "
+	);
+	if(tutorInfo.next()) {
+		courseList.put("tutor_nm", tutorInfo.s("tutor_nm"));
+	} else {
+		courseList.put("tutor_nm", "-");
+	}
+}
 
 //목록-수강중인과정(비정규/LMS)
 DataSet coursesPrism = courseUser.query(
@@ -142,6 +199,7 @@ p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHea
 
 p.setLoop("courses_prism", coursesPrism);
 p.setLoop("courses_haksa", coursesHaksa);
+p.setLoop("course_list", courseList);
 p.setLoop("qna_list", qnaList);
 p.setLoop("notice_list", noticeList);
 
