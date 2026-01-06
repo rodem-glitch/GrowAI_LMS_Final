@@ -1,4 +1,10 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ include file="../../init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %>
+<%@ page import="java.io.*" %>
+<%@ page import="java.net.*" %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
+<%@ page import="java.util.*" %>
+<%@ page import="malgnsoft.json.*" %>
+<%@ include file="../../init.jsp" %><%
 
 // -------------------------------------------------------------------
 // 목적: /mypage/new_main 전용 신규 메인 페이지(Full-screen)
@@ -24,6 +30,8 @@ ClPostDao clPost = new ClPostDao();
 
 TutorDao tutor = new TutorDao();
 CourseTutorDao courseTutor = new CourseTutorDao();
+LessonDao lesson = new LessonDao();
+KollusDao kollus = new KollusDao(siteId);
 
 //변수
 String today = m.time("yyyyMMdd");
@@ -89,6 +97,110 @@ while(courseList.next()) {
 	} else {
 		courseList.put("tutor_nm", "-");
 	}
+}
+
+//===== 추천 동영상 섹션 - 학생 홈 추천(4개) =====
+// 왜: 화면에서는 "추천 동영상" 4개만 보여주면 되므로, JSP에서 추천 API를 호출해 4개만 loop로 내려줍니다.
+// - 장점: 같은 도메인/세션을 그대로 쓰기 때문에 CORS/인증 이슈가 없고, 화면단은 렌더링만 하면 됩니다.
+DataSet recoVideoList = new DataSet();
+try {
+	// 추천 API 주소(환경별로 다를 수 있어 env로 제어)
+	String apiBase = System.getenv("POLYTECH_LMS_API_BASE");
+	if(apiBase == null || "".equals(apiBase.trim())) apiBase = "http://localhost:8081";
+	apiBase = apiBase.replaceAll("/+$", "");
+
+	String url = apiBase + "/student/content-recommend/home";
+
+	JSONObject payload = new JSONObject();
+	// 왜: userId가 있어야 "수강/시청/완료 제외"가 동작합니다. 비로그인일 때는 null로 보내서 일반 추천만 받습니다.
+	if(userId > 0) payload.put("userId", userId);
+	payload.put("siteId", siteId);
+	payload.put("topK", 4);
+
+	String responseBody = "";
+	int httpCode = 0;
+
+	HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+	conn.setRequestMethod("POST");
+	conn.setConnectTimeout(5000);
+	conn.setReadTimeout(20000);
+	conn.setDoOutput(true);
+	conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+	conn.setRequestProperty("Accept", "application/json");
+
+	byte[] bodyBytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+	conn.setFixedLengthStreamingMode(bodyBytes.length);
+	try(OutputStream os = conn.getOutputStream()) {
+		os.write(bodyBytes);
+	}
+
+	httpCode = conn.getResponseCode();
+	InputStream is = (httpCode >= 200 && httpCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+	if(is != null) {
+		try(BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+			StringBuilder sb = new StringBuilder();
+			String line;
+			while((line = br.readLine()) != null) sb.append(line);
+			responseBody = sb.toString();
+		}
+	}
+
+	if(httpCode >= 200 && httpCode < 300) {
+		DataSet recoRows = new DataSet();
+		try {
+			String trimmed = responseBody == null ? "" : responseBody.trim();
+			if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
+		} catch(Exception ignore) {}
+
+		while(recoRows.next()) {
+			int lid = m.parseInt(recoRows.s("lessonId"));
+			if(lid <= 0) continue;
+
+			// 레슨 기본정보(타이틀/타입/콜러스키 등)
+			DataSet linfo = lesson.find(
+				"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
+				"id, lesson_nm, start_url, total_time, lesson_type"
+			);
+			if(!linfo.next()) continue;
+
+			recoVideoList.addRow();
+			recoVideoList.put("lesson_id", lid);
+			recoVideoList.put("title", linfo.s("lesson_nm"));
+			recoVideoList.put("category_nm", recoRows.s("categoryNm"));
+			recoVideoList.put("score", recoRows.s("score"));
+
+			// 재생 URL(미리보기 용도)
+			// 왜: 레슨 타입에 따라 재생 경로가 다릅니다.
+			// - 05(콜러스)은 토큰 발급이 필요하므로 kollus.getPlayUrl()을 써야 재생됩니다.
+			// - 그 외(자체/외부/문서 등)는 기존 jwplayer.jsp 흐름으로 새 탭 미리보기를 엽니다.
+			String playUrl = "";
+			if("05".equals(linfo.s("lesson_type"))) {
+				playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
+				if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
+			} else {
+				playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
+			}
+			recoVideoList.put("play_url", playUrl);
+
+			// 시간 표시(분 단위)
+			int totalMin = linfo.i("total_time");
+			recoVideoList.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
+
+			// 썸네일(콜러스는 snapshot_url 사용, 그 외는 기본 이미지)
+			String thumbnail = "/html/images/common/noimage_course.gif";
+			try {
+				if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
+					DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
+					if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) {
+						thumbnail = kinfo.s("snapshot_url");
+					}
+				}
+			} catch(Exception ignore) {}
+			recoVideoList.put("thumbnail", thumbnail);
+		}
+	}
+} catch(Exception ignore) {
+	// 왜: 추천 서버/네트워크가 잠깐 실패해도 메인 화면 전체가 깨지면 안 되므로, 추천 섹션만 비워 둡니다.
 }
 
 //===== 로그인 상태에서만 계속 학습하기 관련 데이터 조회 =====
@@ -224,6 +336,7 @@ if(userId > 0 && uinfo != null) {
 p.setLoop("courses_prism", coursesPrism);
 p.setLoop("courses_haksa", coursesHaksa);
 p.setLoop("course_list", courseList);
+p.setLoop("reco_video_list", recoVideoList);
 p.setLoop("qna_list", qnaList);
 p.setLoop("notice_list", noticeList);
 

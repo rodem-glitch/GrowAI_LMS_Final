@@ -1,0 +1,47 @@
+<main class="nm-container" style="padding-top: 24px;">
+	<div class="nm-section__header" style="align-items: center;">
+		<div style="display:flex; align-items:center; gap:12px;">
+			<a href="/mypage/new_main/index.jsp" class="nm-section__more" style="text-decoration:none;">← 홈</a>
+			<h2 class="nm-section__title" style="margin:0;">추천 동영상 더보기</h2>
+		</div>
+	</div>
+
+	<section class="nm-section" style="margin-top: 12px;">
+		<div class="nm-grid nm-grid--4">
+			<!--@loop(reco_video_more_list)-->
+			<div class="nm-card">
+				<a href="{{reco_video_more_list.play_url}}" target="_blank" rel="noopener" class="nm-card__img-link" style="display:block; position:relative;">
+					<img src="{{reco_video_more_list.thumbnail}}" alt="{{reco_video_more_list.title}}" class="nm-card__img">
+					<span style="position:absolute; right:10px; bottom:10px; width:34px; height:34px; border-radius:999px; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;">
+						<i class="bi bi-play-fill" style="color:#fff; font-size:18px; margin-left:2px;"></i>
+					</span>
+					<!--@if(reco_video_more_list.status_badge)-->
+					<span style="position:absolute; left:10px; top:10px; background:#111827; color:#fff; font-size:11px; padding:4px 8px; border-radius:999px; opacity:0.9;">
+						{{reco_video_more_list.status_badge}}
+					</span>
+					<!--/if(reco_video_more_list.status_badge)-->
+				</a>
+				<div class="nm-card__body">
+					<h3 class="nm-card__title">{{reco_video_more_list.title}}</h3>
+					<p class="nm-card__meta" style="font-size:12px; margin-bottom:4px; color:#667085;">{{reco_video_more_list.category_nm}}</p>
+					<div style="display:flex; gap:10px; align-items:center;">
+						<!--@if(reco_video_more_list.duration_conv)-->
+						<p class="nm-card__meta" style="font-size:11px; color:#9ca3af; margin:0;"><i class="bi bi-clock" style="margin-right:4px;"></i>{{reco_video_more_list.duration_conv}}</p>
+						<!--/if(reco_video_more_list.duration_conv)-->
+						<!--@if(reco_video_more_list.last_date_conv)-->
+						<p class="nm-card__meta" style="font-size:11px; color:#9ca3af; margin:0;"><i class="bi bi-eye" style="margin-right:4px;"></i>{{reco_video_more_list.last_date_conv}}</p>
+						<!--/if(reco_video_more_list.last_date_conv)-->
+					</div>
+					<a href="{{reco_video_more_list.play_url}}" target="_blank" rel="noopener" class="nm-continue__btn">미리보기</a>
+				</div>
+			</div>
+			<!--/loop(reco_video_more_list)-->
+			<!--@nif(reco_video_more_list)-->
+			<div class="nm-empty" style="grid-column: 1/-1;">
+				<i class="bi bi-film"></i>
+				<p>추천 동영상이 준비 중입니다.</p>
+			</div>
+			<!--/nif(reco_video_more_list)-->
+		</div>
+	</section>
+</main>
