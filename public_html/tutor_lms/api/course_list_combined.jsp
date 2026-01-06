@@ -102,13 +102,15 @@ if("prism".equals(tab)) {
         params.add("%" + keyword + "%");
     }
 
-    // 왜: 관리자 과정운영과 동일한 기준으로 맞추되, 교수자는 본인 과목만 필터링합니다.
-    // - display_yn = 'Y' 조건 추가 (노출 허용된 것만)
+    // 왜: 담당과목(교수자) 화면은 "관리/운영" 목적이라, 과정 노출여부(display_yn)와 무관하게
+    //     본인이 담당한 과목은 항상 보여야 합니다.
+    //     특히 과정 복사 로직에서 display_yn이 'N'으로 저장되는 케이스가 있어,
+    //     display_yn = 'Y'로 제한하면 교수자 과목이 누락될 수 있습니다.
     try {
         String baseSql =
             " FROM " + course.table + " c "
             + " LEFT JOIN " + subject.table + " s ON s.id = c.subject_id AND s.status != -1 "
-            + " WHERE c.site_id = " + siteId + " AND c.status != -1 AND c.display_yn = 'Y' "
+            + " WHERE c.site_id = " + siteId + " AND c.status != -1 AND c.onoff_type != 'P' "
             + prismWhere
             + where;
 
