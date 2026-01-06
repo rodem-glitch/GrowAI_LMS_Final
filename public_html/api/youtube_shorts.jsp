@@ -60,10 +60,14 @@ try {
                 }
             }
             
+            // Shorts 후보 목록 생성 (정렬을 위해 모두 수집)
+            List<JSONObject> shortsList = new ArrayList<>();
+            
             for (JSONObject video : videos) {
                 int durationSeconds = video.optInt("durationSeconds", 0);
                 String title = video.optString("title", "");
                 String videoId = video.optString("id", "");
+                String publishedAt = video.optString("publishedAt", "");
                 
                 // Shorts 판별 (src_gov YoutubeShortsInspector 로직)
                 if (durationSeconds <= 60 && durationSeconds > 0) {
@@ -87,11 +91,25 @@ try {
                         shortVideo.put("durationSeconds", durationSeconds);
                         shortVideo.put("viewCount", video.optString("viewCount", "0"));
                         shortVideo.put("shortsUrl", "https://youtube.com/shorts/" + videoId);
-                        shortsArray.put(shortVideo);
-                        
-                        if (shortsArray.length() >= maxResults) break;
+                        shortVideo.put("publishedAt", publishedAt);
+                        shortsList.add(shortVideo);
                     }
                 }
+            }
+            
+            // 최신순 정렬 (publishedAt 기준 내림차순)
+            Collections.sort(shortsList, new Comparator<JSONObject>() {
+                @Override
+                public int compare(JSONObject a, JSONObject b) {
+                    String dateA = a.optString("publishedAt", "");
+                    String dateB = b.optString("publishedAt", "");
+                    return dateB.compareTo(dateA); // 내림차순 (최신순)
+                }
+            });
+            
+            // maxResults 만큼만 결과에 추가
+            for (int idx = 0; idx < Math.min(shortsList.size(), maxResults); idx++) {
+                shortsArray.put(shortsList.get(idx));
             }
         }
     }
@@ -206,6 +224,7 @@ private List<JSONObject> getVideosMetadata(List<String> videoIds, String apiKey)
                 JSONObject snippet = item.optJSONObject("snippet");
                 if (snippet != null) {
                     video.put("title", snippet.optString("title", ""));
+                    video.put("publishedAt", snippet.optString("publishedAt", "")); // 업로드 날짜
                     
                     // 썸네일
                     JSONObject thumbnails = snippet.optJSONObject("thumbnails");

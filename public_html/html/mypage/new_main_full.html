@@ -558,11 +558,7 @@
 		<!-- 필터 탭 -->
 		<nav class="nm-tabs">
 			<a href="#continue" class="nm-tab active"><i class="bi bi-play-circle"></i>계속 학습하기</a>
-			<a href="#trending" class="nm-tab"><i class="bi bi-fire"></i>인기 급상승</a>
 			<a href="#shorts" class="nm-tab"><i class="bi bi-camera-video"></i>숏폼</a>
-			<a href="#haksa" class="nm-tab"><i class="bi bi-mortarboard"></i>정규(학사)</a>
-			<a href="#notice" class="nm-tab"><i class="bi bi-bell"></i>공지사항</a>
-			<a href="#qna" class="nm-tab"><i class="bi bi-chat-dots"></i>Q&A</a>
 		</nav>
 		
 		<!-- 계속 학습하기 섹션 -->
@@ -597,61 +593,7 @@
 				<!--/nif(courses_prism)-->
 			</div>
 		</section>
-		
-		<!-- 인기 급상승 섹션 (샘플 데이터) -->
-		<section class="nm-section" id="trending">
-			<div class="nm-section__header">
-				<h2 class="nm-section__title">인기 급상승</h2>
-				<a href="/course/course_list.jsp" class="nm-section__more">더보기 →</a>
-			</div>
-			<div class="nm-grid nm-grid--4">
-				<div class="nm-card">
-					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
-					<div class="nm-card__body">
-						<h3 class="nm-card__title">메타버스 개발 입문</h3>
-						<p class="nm-card__meta">장교수</p>
-						<div class="nm-card__footer">
-							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.8 (245)</span>
-							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
-						</div>
-					</div>
-				</div>
-				<div class="nm-card">
-					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
-					<div class="nm-card__body">
-						<h3 class="nm-card__title">반도체 공정 기초</h3>
-						<p class="nm-card__meta">이교수</p>
-						<div class="nm-card__footer">
-							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.9 (312)</span>
-							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
-						</div>
-					</div>
-				</div>
-				<div class="nm-card">
-					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
-					<div class="nm-card__body">
-						<h3 class="nm-card__title">AI 프로그래밍 실습</h3>
-						<p class="nm-card__meta">김교수</p>
-						<div class="nm-card__footer">
-							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.7 (189)</span>
-							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
-						</div>
-					</div>
-				</div>
-				<div class="nm-card">
-					<img src="/html/images/common/noimage_course.gif" alt="샘플" class="nm-card__img">
-					<div class="nm-card__body">
-						<h3 class="nm-card__title">스마트팩토리 개론</h3>
-						<p class="nm-card__meta">박교수</p>
-						<div class="nm-card__footer">
-							<span class="nm-card__rating"><i class="bi bi-star-fill"></i> 4.6 (156)</span>
-							<span class="nm-card__badge"><i class="bi bi-fire"></i> HOT</span>
-						</div>
-					</div>
-				</div>
-			</div>
-		</section>
-		
+
 		<!-- 숏폼 섹션 (YouTube API 동적 로딩) -->
 		<section class="nm-section" id="shorts">
 			<div class="nm-section__header">
@@ -732,80 +674,7 @@
 		})();
 		</script>
 		
-		<!-- 정규(학사) 강의 섹션 -->
-		<!--@if(courses_haksa)-->
-		<section class="nm-section" id="haksa">
-			<div class="nm-section__header">
-				<h2 class="nm-section__title">정규(학사) 강의</h2>
-			</div>
-			<div class="nm-grid nm-grid--3">
-				<!--@loop(courses_haksa)-->
-				<div class="nm-continue">
-					<div class="nm-continue__body">
-						<span style="display:inline-block; background:#2b58e6; color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; margin-bottom:10px;">{{courses_haksa.onoff_type_conv}}</span>
-						<h3 class="nm-continue__title">{{courses_haksa.course_nm_conv}}</h3>
-						<p class="nm-continue__meta">{{courses_haksa.study_date_conv}}</p>
-						<p class="nm-continue__meta">{{courses_haksa.dept_name}} / {{courses_haksa.grad_name}}</p>
-						<a href="/classroom/index.jsp?haksa_cuid={{courses_haksa.haksa_cuid}}" class="nm-continue__btn">강의실 입장</a>
-					</div>
-				</div>
-				<!--/loop(courses_haksa)-->
-			</div>
-		</section>
-		<!--/if(courses_haksa)-->
-		
-		<!-- 공지사항 섹션 -->
-		<section class="nm-section" id="notice">
-			<div class="nm-section__header">
-				<h2 class="nm-section__title">공지사항</h2>
-				<a href="/board/index.jsp?code=notice" class="nm-section__more">더보기 →</a>
-			</div>
-			<div style="background:#fff; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-				<!--@loop(notice_list)-->
-				<div style="display:flex; justify-content:space-between; padding:16px 20px; border-bottom:1px solid #f3f4f6;">
-					<a href="/classroom/notice_view.jsp?id={{notice_list.id}}" style="color:#101828; text-decoration:none; font-size:14px;">{{notice_list.subject_conv}}</a>
-					<span style="color:#667085; font-size:13px;">{{notice_list.reg_date_conv}}</span>
-				</div>
-				<!--/loop(notice_list)-->
-				<!--@nif(notice_list)-->
-				<div class="nm-empty">
-					<i class="bi bi-megaphone"></i>
-					<p>공지사항이 없습니다.</p>
-				</div>
-				<!--/nif(notice_list)-->
-			</div>
-		</section>
-		
-		<!-- Q&A 섹션 -->
-		<section class="nm-section" id="qna">
-			<div class="nm-section__header">
-				<h2 class="nm-section__title">나의 Q&A</h2>
-				<a href="/mypage/qna_list.jsp" class="nm-section__more">더보기 →</a>
-			</div>
-			<div style="background:#fff; border-radius:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-				<!--@loop(qna_list)-->
-				<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #f3f4f6;">
-					<div>
-						<span style="display:inline-block; background:#f3f4f6; color:#667085; padding:2px 8px; border-radius:4px; font-size:12px; margin-right:8px;">{{qna_list.board_nm}}</span>
-						<!--@if(qna_list.course_user_id:0)-->
-						<a href="/board/read.jsp?id={{qna_list.id}}&code={{qna_list.code}}" style="color:#101828; text-decoration:none; font-size:14px;">{{qna_list.subject_conv}}</a>
-						<!--/if(qna_list.course_user_id:0)-->
-						<!--@nif(qna_list.course_user_id:0)-->
-						<a href="/classroom/cpost_view.jsp?id={{qna_list.id}}&cuid={{qna_list.course_user_id}}&code={{qna_list.code}}" style="color:#101828; text-decoration:none; font-size:14px;">{{qna_list.subject_conv}}</a>
-						<!--/nif(qna_list.course_user_id:0)-->
-					</div>
-					<span style="background:#e0f2fe; color:#0284c7; padding:4px 10px; border-radius:6px; font-size:12px;">{{qna_list.proc_status_conv}}</span>
-				</div>
-				<!--/loop(qna_list)-->
-				<!--@nif(qna_list)-->
-				<div class="nm-empty">
-					<i class="bi bi-chat-dots"></i>
-					<p>문의 내역이 없습니다.</p>
-				</div>
-				<!--/nif(qna_list)-->
-			</div>
-		</section>
-		
+
 	</main>
 	
 	<!-- 푸터 여백 -->
