@@ -161,7 +161,6 @@ export function Dashboard({
                 const students = Number(course.student_cnt ?? 0);
                 const pendingHomework = Number(course.pending_homework_cnt ?? 0);
                 const unansweredQna = Number(course.unanswered_qna_cnt ?? 0);
-                const courseIdLabel = course.course_id_conv || course.course_cd || String(course.id);
 
                 return (
                   <button
@@ -174,7 +173,7 @@ export function Dashboard({
                       <div>
                         <h4 className="text-gray-900 mb-1">{course.course_nm}</h4>
                         <p className="text-sm text-gray-600">
-                          {courseIdLabel} · {course.period_conv || '-'}
+                          {course.period_conv || '-'}
                         </p>
                       </div>
                       {(pendingHomework > 0 || unansweredQna > 0) && (
