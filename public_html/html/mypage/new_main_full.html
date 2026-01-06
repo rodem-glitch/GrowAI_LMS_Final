@@ -162,6 +162,7 @@
 			border-radius: 10px;
 		}
 		.nm-header__user {
+			position: relative;
 			display: flex;
 			align-items: center;
 			gap: 8px;
@@ -171,6 +172,51 @@
 			font-size: 14px;
 			color: #344054;
 			cursor: pointer;
+		}
+		.nm-header__user-menu {
+			position: absolute;
+			top: 100%;
+			right: 0;
+			margin-top: 8px;
+			min-width: 160px;
+			background: #fff;
+			border-radius: 12px;
+			box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+			padding: 8px 0;
+			opacity: 0;
+			visibility: hidden;
+			transform: translateY(10px);
+			transition: all 0.2s;
+			z-index: 1000;
+		}
+		.nm-header__user:hover .nm-header__user-menu {
+			opacity: 1;
+			visibility: visible;
+			transform: translateY(0);
+		}
+		.nm-header__user-menu-item {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 10px 16px;
+			font-size: 14px;
+			color: #344054;
+			text-decoration: none;
+			transition: all 0.15s;
+		}
+		.nm-header__user-menu-item:hover {
+			background: #f3f4f6;
+			color: #2b58e6;
+		}
+		.nm-header__user-menu-item i {
+			font-size: 16px;
+		}
+		.nm-header__user-menu-item--danger {
+			color: #dc2626;
+		}
+		.nm-header__user-menu-item--danger:hover {
+			background: #fef2f2;
+			color: #dc2626;
 		}
 		.nm-header__user-avatar {
 			width: 28px;
@@ -238,7 +284,7 @@
 			line-height: 1.4;
 		}
 		.nm-hero__search {
-			max-width: 600px;
+			max-width: 800px;
 			margin: 0 auto 24px;
 			display: flex;
 			background: #fff;
@@ -248,17 +294,23 @@
 		}
 		.nm-hero__search input {
 			flex: 1;
-			border: none;
-			padding: 16px 24px;
-			font-size: 16px;
+			border: none !important;
+			background: transparent !important;
+			padding: 20px 32px;
+			font-size: 18px;
 			outline: none;
+			height: auto !important;
+			margin: 0 !important;
+			box-shadow: none !important;
 		}
 		.nm-hero__search button {
-			background: transparent;
-			border: none;
-			padding: 16px 24px;
+			background: transparent !important;
+			border: none !important;
+			padding: 20px 32px;
 			cursor: pointer;
 			color: #667085;
+			font-size: 20px;
+			margin: 0 !important;
 		}
 		.nm-hero__buttons {
 			display: flex;
@@ -562,6 +614,149 @@
 			background: #fff;
 			color: #2b58e6;
 		}
+
+		/* ========== 로그인 모달 ========== */
+		.nm-modal-overlay {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			backdrop-filter: blur(4px);
+			z-index: 9999;
+			align-items: center;
+			justify-content: center;
+		}
+		.nm-modal-overlay.active {
+			display: flex;
+		}
+		.nm-login-modal {
+			width: 100%;
+			max-width: 420px;
+			background: #fff;
+			border-radius: 24px;
+			box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+			overflow: hidden;
+			animation: modalSlideIn 0.3s ease;
+		}
+		@keyframes modalSlideIn {
+			from {
+				opacity: 0;
+				transform: translateY(-20px) scale(0.95);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0) scale(1);
+			}
+		}
+		.nm-login-modal__header {
+			background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+			padding: 32px 32px 28px;
+			text-align: center;
+			color: #fff;
+		}
+		.nm-login-modal__logo {
+			font-size: 28px;
+			font-weight: 800;
+			margin-bottom: 8px;
+		}
+		.nm-login-modal__subtitle {
+			font-size: 14px;
+			opacity: 0.9;
+		}
+		.nm-login-modal__body {
+			padding: 32px;
+		}
+		.nm-login-modal__field {
+			margin-bottom: 20px;
+		}
+		.nm-login-modal__label {
+			display: block;
+			font-size: 14px;
+			font-weight: 600;
+			color: #344054;
+			margin-bottom: 8px;
+		}
+		.nm-login-modal__input {
+			width: 100%;
+			padding: 14px 16px;
+			border: 2px solid #e5e7eb !important;
+			border-radius: 12px;
+			font-size: 16px;
+			background: #f9fafb !important;
+			transition: all 0.2s;
+			outline: none;
+			height: auto !important;
+			margin: 0 !important;
+		}
+		.nm-login-modal__input:focus {
+			border-color: #4f46e5 !important;
+			background: #fff !important;
+			box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+		}
+		.nm-login-modal__submit {
+			width: 100%;
+			padding: 16px;
+			background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+			color: #fff;
+			border: none;
+			border-radius: 12px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+			margin-top: 8px;
+		}
+		.nm-login-modal__submit:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+		}
+		.nm-login-modal__close {
+			position: absolute;
+			top: 16px;
+			right: 16px;
+			width: 36px;
+			height: 36px;
+			background: rgba(255, 255, 255, 0.2);
+			border: none;
+			border-radius: 50%;
+			color: #fff;
+			font-size: 20px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s;
+		}
+		.nm-login-modal__close:hover {
+			background: rgba(255, 255, 255, 0.3);
+		}
+		.nm-login-modal__footer {
+			text-align: center;
+			padding: 20px 32px 28px;
+			border-top: 1px solid #e5e7eb;
+			background: #f9fafb;
+		}
+		.nm-login-modal__footer a {
+			color: #6b7280;
+			font-size: 14px;
+			text-decoration: none;
+			margin: 0 12px;
+		}
+		.nm-login-modal__footer a:hover {
+			color: #4f46e5;
+		}
+		.nm-login-modal__error {
+			background: #fef2f2;
+			color: #dc2626;
+			padding: 12px 16px;
+			border-radius: 8px;
+			font-size: 14px;
+			margin-bottom: 16px;
+			display: none;
+		}
 	</style>
 	
 	<!-- 상단바 (Header) -->
@@ -606,13 +801,27 @@
 				<i class="bi bi-bell"></i>
 			</button>
 			<!--@if(login_block)-->
-			<div class="nm-header__user" onclick="alert('마이페이지 연결 예정')">
+			<div class="nm-header__user">
 				<div class="nm-header__user-avatar">{{SYS_USERNAME_INITIAL}}</div>
 				<span>{{SYS_USERNAME}}</span>
+				<i class="bi bi-chevron-down" style="font-size:10px; margin-left:2px;"></i>
+				<!-- 드롭다운 메뉴 -->
+				<div class="nm-header__user-menu">
+					<a href="/mypage/index.jsp" class="nm-header__user-menu-item">
+						<i class="bi bi-person"></i> 마이페이지
+					</a>
+					<a href="/mypage/modify.jsp" class="nm-header__user-menu-item">
+						<i class="bi bi-gear"></i> 정보수정
+					</a>
+					<hr style="margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;">
+					<a href="/member/logout.jsp?return_url=/mypage/new_main/" class="nm-header__user-menu-item nm-header__user-menu-item--danger">
+						<i class="bi bi-box-arrow-right"></i> 로그아웃
+					</a>
+				</div>
 			</div>
 			<!--/if(login_block)-->
 			<!--@nif(login_block)-->
-			<button type="button" class="nm-header__login-btn" onclick="alert('로그인 연결 예정')">로그인</button>
+			<button type="button" class="nm-header__login-btn" onclick="openLoginModal()">로그인</button>
 			<!--/nif(login_block)-->
 			<button type="button" class="nm-header__mobile-btn" onclick="alert('모바일 메뉴 연결 예정')">
 				<i class="bi bi-list"></i>
@@ -809,4 +1018,93 @@
 	
 	<!-- 푸터 여백 -->
 	<div style="height: 60px;"></div>
+	
+	<!-- 로그인 모달 -->
+	<div class="nm-modal-overlay" id="loginModal" onclick="closeLoginModal(event)">
+		<div class="nm-login-modal" onclick="event.stopPropagation()" style="position: relative;">
+			<div class="nm-login-modal__header">
+				<button type="button" class="nm-login-modal__close" onclick="closeLoginModal()">&times;</button>
+				<div class="nm-login-modal__logo">PLISM</div>
+				<div class="nm-login-modal__subtitle">미래형 직업교육 플랫폼에 오신 것을 환영합니다</div>
+			</div>
+			<form id="loginForm" method="post" action="/member/login.jsp" target="loginFrame" onsubmit="return submitLogin()">
+				<input type="hidden" name="returl" value="/mypage/new_main/">
+				<div class="nm-login-modal__body">
+					<div id="loginError" class="nm-login-modal__error"></div>
+					<div class="nm-login-modal__field">
+						<label class="nm-login-modal__label" for="login_id">아이디</label>
+						<input type="text" id="login_id" name="id" class="nm-login-modal__input" placeholder="아이디를 입력하세요" required>
+					</div>
+					<div class="nm-login-modal__field">
+						<label class="nm-login-modal__label" for="login_passwd">비밀번호</label>
+						<input type="password" id="login_passwd" name="passwd" class="nm-login-modal__input" placeholder="비밀번호를 입력하세요" required>
+					</div>
+					<button type="submit" class="nm-login-modal__submit">로그인</button>
+				</div>
+			</form>
+			<div class="nm-login-modal__footer">
+				<a href="/member/find_id.jsp">아이디 찾기</a>
+				<a href="/member/find_passwd.jsp">비밀번호 찾기</a>
+				<a href="/member/regist.jsp">회원가입</a>
+			</div>
+		</div>
+	</div>
+	<iframe name="loginFrame" id="loginFrame" style="display:none;"></iframe>
+	
+	<script>
+	// 로그인 모달 열기
+	function openLoginModal() {
+		document.getElementById('loginModal').classList.add('active');
+		document.getElementById('login_id').focus();
+		document.body.style.overflow = 'hidden';
+	}
+	
+	// 로그인 모달 닫기
+	function closeLoginModal(event) {
+		if (event && event.target !== document.getElementById('loginModal')) return;
+		document.getElementById('loginModal').classList.remove('active');
+		document.body.style.overflow = '';
+		// 폼 초기화
+		document.getElementById('loginForm').reset();
+		document.getElementById('loginError').style.display = 'none';
+	}
+	
+	// 로그인 제출
+	function submitLogin() {
+		var id = document.getElementById('login_id').value.trim();
+		var passwd = document.getElementById('login_passwd').value;
+		
+		if (!id || !passwd) {
+			showLoginError('아이디와 비밀번호를 입력해주세요.');
+			return false;
+		}
+		
+		// 폼 제출 후 페이지 새로고침 (로그인 성공 시 returl로 이동)
+		setTimeout(function() {
+			location.reload();
+		}, 500);
+		
+		return true;
+	}
+	
+	// 로그인 에러 표시
+	function showLoginError(message) {
+		var errorDiv = document.getElementById('loginError');
+		errorDiv.textContent = message;
+		errorDiv.style.display = 'block';
+	}
+	
+	// 비밀번호 초기화 (login.jsp에서 호출)
+	function resetPassword() {
+		document.getElementById('login_passwd').value = '';
+		document.getElementById('login_passwd').focus();
+	}
+	
+	// ESC 키로 모달 닫기
+	document.addEventListener('keydown', function(e) {
+		if (e.key === 'Escape' && document.getElementById('loginModal').classList.contains('active')) {
+			closeLoginModal();
+		}
+	});
+	</script>
 </div>
