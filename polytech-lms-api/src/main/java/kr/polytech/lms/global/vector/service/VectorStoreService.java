@@ -1,8 +1,11 @@
 package kr.polytech.lms.global.vector.service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -22,7 +25,7 @@ public class VectorStoreService {
     public void upsertText(String text, Map<String, Object> metadata) {
         // 왜: 기존 코드 호환을 위해 id 없이 적재하는 메서드를 남깁니다.
         if (text == null || text.isBlank()) return;
-        vectorStore.add(List.of(new Document(text, metadata)));
+        vectorStore.add(List.of(new Document(text, safeMetadata(metadata))));
     }
 
     public void upsertText(String id, String text, Map<String, Object> metadata) {
@@ -30,11 +33,35 @@ public class VectorStoreService {
         if (text == null || text.isBlank()) return;
 
         if (id == null || id.isBlank()) {
-            vectorStore.add(List.of(new Document(text, metadata)));
+            vectorStore.add(List.of(new Document(text, safeMetadata(metadata))));
             return;
         }
 
-        vectorStore.add(List.of(new Document(id, text, metadata)));
+        String stableId = toStableDocumentId(id);
+        Map<String, Object> safeMetadata = safeMetadata(metadata);
+
+        if (!stableId.equals(id)) {
+            // 왜: Qdrant는 UUID를 문서 id로 요구하는 경우가 있어, 원본 id는 메타데이터로 보존합니다.
+            safeMetadata.putIfAbsent("doc_id", id);
+        }
+
+        vectorStore.add(List.of(new Document(stableId, text, safeMetadata)));
+    }
+
+    private Map<String, Object> safeMetadata(Map<String, Object> metadata) {
+        // 왜: 호출자가 넘긴 Map을 그대로 쓰면, 이후 수정/재사용 시 예기치 않은 사이드이펙트가 날 수 있습니다.
+        if (metadata == null) return new HashMap<>();
+        return new HashMap<>(metadata);
+    }
+
+    private String toStableDocumentId(String id) {
+        // 왜: Qdrant(VectorStore 구현체)는 문서 id를 UUID로 파싱하는 경우가 있어, 임의 문자열 id를 그대로 쓰면 실패합니다.
+        try {
+            UUID.fromString(id);
+            return id;
+        } catch (IllegalArgumentException ignored) {
+            return UUID.nameUUIDFromBytes(id.getBytes(StandardCharsets.UTF_8)).toString();
+        }
     }
 
     public List<VectorSearchResult> similaritySearch(String query, int topK, double similarityThreshold) {
