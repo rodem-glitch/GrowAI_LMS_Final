@@ -8,6 +8,9 @@ public record StudentVideoRecommendResponse(
     String title,
     String categoryNm,
     double score,
+    Boolean enrolled,
+    Boolean watched,
+    Boolean completed,
+    String lastDate,
     Map<String, Object> metadata
 ) {}
-

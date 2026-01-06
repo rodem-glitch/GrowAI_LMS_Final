@@ -26,9 +26,28 @@ public class StudentContentRecommendController {
         return studentContentRecommendService.recommendHome(request);
     }
 
+    @PostMapping("/home/more")
+    public List<StudentVideoRecommendResponse> recommendHomeMore(@RequestBody(required = false) StudentHomeRecommendRequest request) {
+        // 왜: "더보기"는 많이 보여주되, 이미 수강/시청/완료한 콘텐츠는 제외하지 않고 표시만 해주려는 요구가 있어 엔드포인트를 분리합니다.
+        StudentHomeRecommendRequest safe = request == null ? StudentHomeRecommendRequest.empty() : request;
+        StudentHomeRecommendRequest tuned = new StudentHomeRecommendRequest(
+            safe.userId(),
+            safe.siteId(),
+            safe.deptName(),
+            safe.majorName(),
+            safe.courseNames(),
+            safe.extraQuery(),
+            false,
+            false,
+            false,
+            safe.topK(),
+            safe.similarityThreshold()
+        );
+        return studentContentRecommendService.recommendHome(tuned);
+    }
+
     @PostMapping("/search")
     public List<StudentVideoRecommendResponse> recommendSearch(@RequestBody(required = false) StudentSearchRecommendRequest request) {
         return studentContentRecommendService.recommendSearch(request);
     }
 }
-
