@@ -887,6 +887,9 @@ function CurriculumStep({
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const currentSession = currentSessionId
+    ? formData.sessions.find((s) => s.id === currentSessionId) ?? null
+    : null;
 
   const addSession = () => {
     const newSession = {
@@ -1117,6 +1120,14 @@ function CurriculumStep({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSelect={handleContentSelect}
+        recommendContext={{
+          // 왜: 추천은 "과목/차시 입력값"을 기반으로 해야 품질이 나오므로, 현재 폼 상태를 그대로 전달합니다.
+          courseName: formData.subjectName,
+          courseIntro: formData.description,
+          courseDetail: formData.objectives,
+          lessonTitle: currentSession?.title ?? '',
+          lessonDescription: currentSession?.description ?? '',
+        }}
       />
     </div>
   );

@@ -15,6 +15,7 @@ interface Content {
   contentHeight?: number;
   lessonId?: number;
   originalFileName?: string;
+  score?: number;
 }
 
 interface ContentLibraryModalProps {
@@ -23,6 +24,13 @@ interface ContentLibraryModalProps {
   onSelect: (content: Content) => void;
   multiSelect?: boolean;
   onMultiSelect?: (contents: Content[]) => void;
+  recommendContext?: {
+    courseName?: string;
+    courseIntro?: string;
+    courseDetail?: string;
+    lessonTitle?: string;
+    lessonDescription?: string;
+  };
 }
 
 export function ContentLibraryModal({
@@ -31,9 +39,11 @@ export function ContentLibraryModal({
   onSelect,
   multiSelect = true,
   onMultiSelect,
+  recommendContext,
 }: ContentLibraryModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [activeTab, setActiveTab] = useState<'recommend' | 'all'>('all');
 
   const [contents, setContents] = useState<Content[]>([]);
   const [categories, setCategories] = useState<{ key: string; name: string }[]>([]);
@@ -44,16 +54,48 @@ export function ContentLibraryModal({
   const [selecting, setSelecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [recommendations, setRecommendations] = useState<Content[]>([]);
+  const [recommendLoading, setRecommendLoading] = useState(false);
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const limit = 20;
 
   React.useEffect(() => {
     if (!isOpen) return;
+
+    // 왜: 모달을 다시 열 때는 이전 검색/선택이 남아 있으면 혼란스러워서 기본 상태로 초기화합니다.
+    setSearchTerm('');
+    setCategoryFilter('');
+    setActiveTab(recommendContext ? 'recommend' : 'all');
+    setPage(1);
+    setContents([]);
+    setTotalCount(0);
+    setRecommendations([]);
+    setSelectedIds(new Set());
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // 왜: 탭을 바꾸면 조회 대상이 완전히 달라지므로, 선택/페이지/에러를 같이 초기화합니다.
+    setPage(1);
+    setContents([]);
+    setTotalCount(0);
+    setRecommendations([]);
+    setSelectedIds(new Set());
+    setErrorMessage(null);
+  }, [isOpen, activeTab]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // 왜: 검색/필터 변경 시 1페이지부터 다시 조회해야 정확한 목록이 됩니다.
+    if (activeTab !== 'all') return;
     setPage(1);
     setContents([]);
     setTotalCount(0);
     setSelectedIds(new Set());
-  }, [isOpen, searchTerm, categoryFilter]);
+  }, [isOpen, activeTab, searchTerm, categoryFilter]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -63,6 +105,7 @@ export function ContentLibraryModal({
 
   React.useEffect(() => {
     if (!isOpen) return;
+    if (activeTab !== 'all') return;
 
     let cancelled = false;
     const timer = setTimeout(() => {
@@ -121,7 +164,76 @@ export function ContentLibraryModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isOpen, searchTerm, categoryFilter, page]);
+  }, [isOpen, activeTab, searchTerm, categoryFilter, page]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (activeTab !== 'recommend') return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const fetchRecommendations = async () => {
+        setRecommendLoading(true);
+        setErrorMessage(null);
+        try {
+          const res = await tutorLmsApi.getContentRecommendations({
+            courseName: recommendContext?.courseName,
+            courseIntro: recommendContext?.courseIntro,
+            courseDetail: recommendContext?.courseDetail,
+            lessonTitle: recommendContext?.lessonTitle,
+            lessonDescription: recommendContext?.lessonDescription,
+            // 왜: 추천 탭에서도 사용자가 제목 검색을 하면, 검색어를 "추가 키워드"로 함께 보내서 추천 품질을 올립니다.
+            keywords: searchTerm,
+            topK: 50,
+            similarityThreshold: 0.2,
+          });
+          if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+          const rows = res.rst_data ?? [];
+          const mapped: Content[] = rows.map((row) => ({
+            id: String(row.lesson_id ?? row.id ?? row.media_content_key),
+            mediaKey: row.media_content_key,
+            title: row.title,
+            description: '',
+            category: (row.category_nm as string) || '카테고리 없음',
+            thumbnail: (row.thumbnail as string) || (row.snapshot_url as string) || '',
+            duration: (row.duration as string) || '-',
+            totalTime: Number((row.total_time as number) ?? 0),
+            contentWidth: Number((row.content_width as number) ?? 0),
+            contentHeight: Number((row.content_height as number) ?? 0),
+            lessonId: row.lesson_id ? Number(row.lesson_id) : undefined,
+            originalFileName: (row.original_file_name as string) || '',
+            score: row.score ? Number(row.score) : undefined,
+          }));
+
+          if (!cancelled) setRecommendations(mapped);
+        } catch (e) {
+          if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+        } finally {
+          if (!cancelled) setRecommendLoading(false);
+        }
+      };
+
+      fetchRecommendations();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    isOpen,
+    activeTab,
+    recommendContext?.courseName,
+    recommendContext?.courseIntro,
+    recommendContext?.courseDetail,
+    recommendContext?.lessonTitle,
+    recommendContext?.lessonDescription,
+    searchTerm,
+  ]);
+
+  const displayedContents = activeTab === 'recommend' ? recommendations : contents;
+  const displayedTotal = activeTab === 'recommend' ? recommendations.length : totalCount;
 
   const handleSelect = (content: Content) => {
     if (multiSelect) {
@@ -140,6 +252,13 @@ export function ContentLibraryModal({
   const handleSingleSelect = async (content: Content) => {
     try {
       setSelecting(true);
+      if (content.lessonId && content.lessonId > 0) {
+        // 왜: 추천 탭은 이미 레슨으로 연결된 콘텐츠가 오므로, 레슨 생성(upsert) 없이 바로 사용합니다.
+        const next = { ...content, id: String(content.lessonId) };
+        onSelect(next);
+        onClose();
+        return;
+      }
       const res = await tutorLmsApi.upsertKollusLesson({
         mediaContentKey: content.mediaKey,
         title: content.title,
@@ -161,13 +280,17 @@ export function ContentLibraryModal({
   };
 
   const handleAddSelected = async () => {
-    const selected = contents.filter((c) => selectedIds.has(c.id));
+    const selected = displayedContents.filter((c) => selectedIds.has(c.id));
     if (selected.length === 0) return;
 
     try {
       setSelecting(true);
       const mapped = await Promise.all(
         selected.map(async (content) => {
+          if (content.lessonId && content.lessonId > 0) {
+            // 왜: 추천 탭은 이미 레슨ID가 있으므로, 레슨 생성(upsert)을 건너뛰어 속도를 올립니다.
+            return { ...content, id: String(content.lessonId) };
+          }
           const res = await tutorLmsApi.upsertKollusLesson({
             mediaContentKey: content.mediaKey,
             title: content.title,
@@ -193,11 +316,18 @@ export function ContentLibraryModal({
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.size === contents.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(contents.map((c) => c.id)));
-    }
+    const ids = displayedContents.map((c) => c.id);
+    const allSelected = ids.length > 0 && ids.every((id) => selectedIds.has(id));
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        ids.forEach((id) => next.delete(id));
+      } else {
+        ids.forEach((id) => next.add(id));
+      }
+      return next;
+    });
   };
 
   if (!isOpen) return null;
@@ -213,6 +343,33 @@ export function ContentLibraryModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('recommend')}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  activeTab === 'recommend'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                추천
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('all')}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  activeTab === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                전체
+              </button>
+            </div>
+
+            <div className="text-sm text-gray-600">총: {displayedTotal}건</div>
+          </div>
+
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -220,22 +377,24 @@ export function ContentLibraryModal({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="제목으로 검색..."
+                placeholder={activeTab === 'recommend' ? '추천 키워드 추가...' : '제목으로 검색...'}
                 className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">전체</option>
-              {categories.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            {activeTab === 'all' && (
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">전체</option>
+                {categories.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex items-center justify-between mb-3">
@@ -264,13 +423,13 @@ export function ContentLibraryModal({
             </div>
           )}
 
-          {loading && (
+          {(loading || recommendLoading) && (
             <div className="py-12 text-center text-gray-500">
               <p>불러오는 중...</p>
             </div>
           )}
 
-          {!loading && (
+          {!loading && !recommendLoading && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -279,7 +438,10 @@ export function ContentLibraryModal({
                       <th className="px-3 py-2 w-10">
                         <input
                           type="checkbox"
-                          checked={selectedIds.size === contents.length && contents.length > 0}
+                          checked={
+                            displayedContents.length > 0 &&
+                            displayedContents.every((c) => selectedIds.has(c.id))
+                          }
                           onChange={handleSelectAll}
                           className="w-4 h-4 text-blue-600 rounded"
                         />
@@ -293,7 +455,7 @@ export function ContentLibraryModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {contents.map((content, index) => (
+                  {displayedContents.map((content, index) => (
                     <tr
                       key={content.id}
                       className={`hover:bg-blue-50 cursor-pointer transition-colors ${
@@ -331,15 +493,15 @@ export function ContentLibraryModal({
                 </tbody>
               </table>
 
-              {contents.length === 0 && (
+              {displayedContents.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
-                  <p>검색 결과가 없습니다.</p>
+                  <p>{activeTab === 'recommend' ? '추천 결과가 없습니다.' : '검색 결과가 없습니다.'}</p>
                 </div>
               )}
             </div>
           )}
 
-          {!loading && contents.length < totalCount && (
+          {!loading && !recommendLoading && activeTab === 'all' && contents.length < totalCount && (
             <div className="flex justify-center mt-6">
               <button
                 type="button"

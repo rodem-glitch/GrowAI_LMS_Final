@@ -837,6 +837,11 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
         onClose={() => setShowLibrary(false)}
         onSelect={handleVideoSelect}
         multiSelect={false}
+        recommendContext={{
+          // 왜: 관리 화면에서도 차시 제목/설명을 기반으로 추천을 먼저 보여주면 콘텐츠 선택이 더 빨라집니다.
+          lessonTitle: videoTitle,
+          lessonDescription: videoDescription,
+        }}
       />
     </>
   );

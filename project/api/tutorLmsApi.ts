@@ -344,6 +344,13 @@ export type TutorKollusRow = {
   media_id?: number;
 };
 
+export type TutorContentRecommendRow = TutorKollusRow & {
+  // 왜: 추천 탭에서는 "레슨 ID"가 있어야 바로 강의목차에 추가할 수 있습니다.
+  lesson_id?: number;
+  // 왜: 추천 점수는 디버깅/정렬/표시(선택)용입니다.
+  score?: number;
+};
+
 export type TutorKollusChannelRow = {
   key: string;
   name: string;
@@ -969,6 +976,34 @@ export const tutorLmsApi = {
       version: params.version,
     })}`;
     return requestJson<TutorKollusRow[]>(url);
+  },
+
+  async getContentRecommendations(payload: {
+    courseName?: string;
+    courseIntro?: string;
+    courseDetail?: string;
+    lessonTitle?: string;
+    lessonDescription?: string;
+    keywords?: string;
+    topK?: number;
+    similarityThreshold?: number;
+  }) {
+    // 왜: 프론트는 JSP API(`/tutor_lms/api/*`)만 호출하므로, 추천 API도 같은 패턴으로 제공해야 합니다.
+    const body = new URLSearchParams();
+    if (payload.courseName) body.set('course_name', payload.courseName);
+    if (payload.courseIntro) body.set('course_intro', payload.courseIntro);
+    if (payload.courseDetail) body.set('course_detail', payload.courseDetail);
+    if (payload.lessonTitle) body.set('lesson_title', payload.lessonTitle);
+    if (payload.lessonDescription) body.set('lesson_description', payload.lessonDescription);
+    if (payload.keywords) body.set('keywords', payload.keywords);
+    if (payload.topK !== undefined) body.set('top_k', String(payload.topK));
+    if (payload.similarityThreshold !== undefined) body.set('similarity_threshold', String(payload.similarityThreshold));
+
+    return requestJson<TutorContentRecommendRow[]>(`/tutor_lms/api/content_recommend.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
   },
 
   async getKollusWishlistList(params: { keyword?: string; page?: number; limit?: number } = {}) {
