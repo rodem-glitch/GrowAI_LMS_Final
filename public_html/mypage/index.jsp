@@ -41,7 +41,8 @@ DataSet coursesPrism = courseUser.query(
 	//     마이페이지에서는 정규(학사)/비정규(LMS)를 분리해 보여야 중복 노출이 없습니다.
 	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
-	+ " AND a.close_yn = 'N' AND a.end_date >= '" + today + "' "
+	// 왜: 데이터가 NULL/빈값으로 저장된 경우가 있어도 “수강중인 과정”이 누락되지 않게 합니다.
+	+ " AND IFNULL(a.close_yn, 'N') = 'N' AND IFNULL(a.end_date, '99991231') >= '" + today + "' "
 	+ " ORDER BY a.start_date DESC, a.id DESC "
 	, 10
 );
@@ -98,7 +99,6 @@ if(memberKeyInfo.next()) {
 	memberKey = uinfo.s("login_id");
 }
 
-String currentYear = m.time("yyyy");
 DataSet coursesHaksa = polyStudent.query(
 	" SELECT s.*, c.course_name, c.course_ename, c.dept_name, c.grad_name, c.week, c.grade "
 	+ " , c.curriculum_name, c.category, c.startdate, c.enddate, c.hour1, c.classroom "
@@ -107,7 +107,7 @@ DataSet coursesHaksa = polyStudent.query(
 	+ "   AND s.open_year = c.open_year AND s.open_term = c.open_term "
 	+ "   AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
 	+ " WHERE s.member_key = '" + memberKey + "' "
-	+ " AND s.open_year = '" + currentYear + "' "
+	// 왜: "현재년도만" 제한하면 이전년도에 수강 중인 과목이 화면에서 사라져 혼란을 줍니다.
 	+ " ORDER BY c.startdate DESC, c.course_name ASC "
 	, 10
 );

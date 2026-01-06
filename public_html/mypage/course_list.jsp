@@ -32,7 +32,8 @@ DataSet list1_prism = courseUser.query(
 	//     비정규(LMS) 목록에는 나오면 안 되므로 표식(etc2)으로 제외합니다.
 	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
-	+ " AND a.close_yn = 'N' AND a.end_date >= '" + today + "' "
+	// 왜: 데이터가 NULL/빈값으로 저장된 경우가 있어도 “수강중인 과정”이 누락되지 않게 합니다.
+	+ " AND IFNULL(a.close_yn, 'N') = 'N' AND IFNULL(a.end_date, '99991231') >= '" + today + "' "
 	+ " ORDER BY " + ord + ", a.id DESC "
 );
 while(list1_prism.next()) {
@@ -92,7 +93,6 @@ if(memberKeyInfo.next()) {
 	memberKey = uinfo.s("login_id");
 }
 
-String currentYear = m.time("yyyy");
 DataSet list1_haksa = polyStudent.query(
 	" SELECT s.*, c.course_name, c.course_ename, c.dept_name, c.grad_name, c.week, c.grade "
 	+ " , c.curriculum_name, c.category, c.startdate, c.enddate, c.hour1, c.classroom "
@@ -101,7 +101,8 @@ DataSet list1_haksa = polyStudent.query(
 	+ "   AND s.open_year = c.open_year AND s.open_term = c.open_term "
 	+ "   AND s.bunban_code = c.bunban_code AND s.group_code = c.group_code "
 	+ " WHERE s.member_key = '" + memberKey + "' "
-	+ " AND s.open_year = '" + currentYear + "' "
+	// 왜: 학생 화면에서 "현재년도만" 보여주면 테스트/운영에서 과목이 누락되어 보일 수 있습니다.
+	//     따라서 회원의 학사 수강 전체(연도 무관)를 보여주고, 정렬(최근 시작일)로 최신 과목이 위로 오게 합니다.
 	+ " ORDER BY c.startdate DESC, c.course_name ASC "
 );
 while(list1_haksa.next()) {
@@ -144,7 +145,8 @@ DataSet list2 = courseUser.query(
 	+ " WHERE a.user_id = " + userId + " AND a.status IN (1, 3) "
 	+ " AND IFNULL(c.etc2, '') != 'HAKSA_MAPPED' "
 	+ (!"".equals(type) ? " AND c.onoff_type " + ("on".equals(type) ? "=" : "!=") + " 'N' " : "")
-	+ " AND (a.end_date < '" + today + "' OR a.close_yn = 'Y') "
+	// 왜: 종료 판단도 NULL을 안전하게 처리해 “종료된 과정” 누락을 줄입니다.
+	+ " AND (IFNULL(a.end_date, '00000000') < '" + today + "' OR IFNULL(a.close_yn, 'N') = 'Y') "
 	+ " ORDER BY " + ord + ", a.id DESC "
 );
 while(list2.next()) {
