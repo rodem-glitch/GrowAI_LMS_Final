@@ -729,58 +729,78 @@ function LearnersStep({
   updateFormData: (updates: Partial<FormData>) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [campus, setCampus] = useState('전체');
   const [major, setMajor] = useState('전체');
 
   const [allLearners, setAllLearners] = useState<Learner[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 30;
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 왜: 샘플 배열이 아니라, 실제 회원(TB_USER)을 검색해서 선택해야 합니다.
+  React.useEffect(() => {
+    // 왜: 이름 검색은 입력할 때마다 API를 치면 서버/브라우저 모두 부담이 커집니다.
+    //     그래서 250ms 동안 입력이 멈췄을 때만 실제 검색어를 확정합니다.
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // 왜: 샘플 배열이 아니라, 실제 회원(TB_USER)을 "페이지 단위"로 검색해서 선택해야 합니다.
   React.useEffect(() => {
     let cancelled = false;
-    const timer = setTimeout(() => {
-      const fetchLearners = async () => {
-        setLoading(true);
-        setErrorMessage(null);
-        try {
-          const res = await tutorLmsApi.getLearners({ keyword: searchTerm, limit: 200 });
-          if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-          const rows = res.rst_data ?? [];
-          const mapped: Learner[] = rows.map((row: any) => {
-            const deptPath = String(row.dept_path || '');
-            const parts = deptPath.split(' > ').map((p: string) => p.trim()).filter(Boolean);
-            const campusName = parts[0] || String(row.dept_nm || '-') || '-';
-            const majorName = (parts.length > 0 ? parts[parts.length - 1] : String(row.dept_nm || '-')) || '-';
+    const fetchLearners = async () => {
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        // 왜: 캠퍼스/전공은 사이트마다 DB 필드가 달라서, 현재는 "부서명 포함 검색"으로 단순 지원합니다.
+        const deptKeyword = major !== '전체' ? major : (campus !== '전체' ? campus : undefined);
 
-            return {
-              id: String(row.id),
-              name: String(row.name || row.user_nm || '-'),
-              campus: campusName,
-              major: majorName,
-              studentId: String(row.student_id || ''),
-              email: String(row.email || ''),
-              deptPath,
-            };
-          });
+        const res = await tutorLmsApi.getLearners({
+          keyword: debouncedSearchTerm,
+          deptKeyword,
+          page,
+          limit: pageSize,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
-          if (!cancelled) setAllLearners(mapped);
-        } catch (e) {
-          if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
-        } finally {
-          if (!cancelled) setLoading(false);
+        const rows = res.rst_data ?? [];
+        const mapped: Learner[] = rows.map((row: any) => {
+          const deptPath = String(row.dept_path || '');
+          const parts = deptPath.split(' > ').map((p: string) => p.trim()).filter(Boolean);
+          const campusName = parts[0] || String(row.dept_nm || '-') || '-';
+          const majorName = (parts.length > 0 ? parts[parts.length - 1] : String(row.dept_nm || '-')) || '-';
+
+          return {
+            id: String(row.id),
+            name: String(row.name || row.user_nm || '-'),
+            campus: campusName,
+            major: majorName,
+            studentId: String(row.student_id || ''),
+            email: String(row.email || ''),
+            deptPath,
+          };
+        });
+
+        if (!cancelled) {
+          setAllLearners(mapped);
+          setTotalCount(Number(res.rst_total ?? res.rst_count ?? rows.length ?? 0));
         }
-      };
+      } catch (e) {
+        if (!cancelled) setErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
 
-      fetchLearners();
-    }, 250);
+    fetchLearners();
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
     };
-  }, [searchTerm]);
+  }, [debouncedSearchTerm, campus, major, page]);
 
   // 왜: DB 구조(부서 트리)에 따라 옵션이 달라지므로, 현재 조회된 목록 기준으로 필터 옵션을 만들어 제공합니다.
   const campusOptions = ['전체', ...Array.from(new Set(allLearners.map((l) => l.campus).filter(Boolean)))];
@@ -790,13 +810,6 @@ function LearnersStep({
       .map((l) => l.major)
       .filter(Boolean),
   ))];
-
-  const filteredLearners = allLearners.filter((learner) => {
-    const matchesSearch = learner.name.includes(searchTerm);
-    const matchesCampus = campus === '전체' || learner.campus === campus;
-    const matchesMajor = major === '전체' || learner.major === major;
-    return matchesSearch && matchesCampus && matchesMajor;
-  });
 
   const toggleLearner = (learner: Learner) => {
     const isSelected = formData.selectedLearners.some((l) => l.id === learner.id);
@@ -812,12 +825,17 @@ function LearnersStep({
   };
 
   const selectAll = () => {
-    updateFormData({ selectedLearners: [...filteredLearners] });
+    // 왜: 페이징 화면에서는 "현재 페이지에 보이는 목록"만 전체 선택하는 것이 안전합니다.
+    updateFormData({ selectedLearners: [...allLearners] });
   };
 
   const deselectAll = () => {
     updateFormData({ selectedLearners: [] });
   };
+
+  const totalPages = Math.max(1, Math.ceil((totalCount || 0) / pageSize));
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
 
   return (
     <div className="space-y-6">
@@ -833,7 +851,10 @@ function LearnersStep({
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
                 placeholder="학습자 이름 검색..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -846,6 +867,7 @@ function LearnersStep({
               onChange={(e) => {
                 setCampus(e.target.value);
                 setMajor('전체');
+                setPage(1);
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -858,7 +880,10 @@ function LearnersStep({
             <label className="block text-sm text-gray-700 mb-2">전공</label>
             <select
               value={major}
-              onChange={(e) => setMajor(e.target.value)}
+              onChange={(e) => {
+                setMajor(e.target.value);
+                setPage(1);
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {majorOptions.map((opt) => (
@@ -892,14 +917,14 @@ function LearnersStep({
             </button>
           </div>
           <div className="text-sm text-gray-600">
-            {loading ? '불러오는 중...' : `검색 결과: ${filteredLearners.length}명 / 선택된: ${formData.selectedLearners.length}명`}
+            {loading ? '불러오는 중...' : `검색 결과: ${totalCount}명 / 선택된: ${formData.selectedLearners.length}명`}
           </div>
         </div>
       </div>
 
       {/* 학습자 목록 */}
       <div className="grid grid-cols-3 gap-4">
-        {filteredLearners.map((learner) => {
+        {allLearners.map((learner) => {
           const isSelected = formData.selectedLearners.some((l) => l.id === learner.id);
           return (
             <div
@@ -924,6 +949,29 @@ function LearnersStep({
             </div>
           );
         })}
+      </div>
+
+      {/* 페이징 */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          disabled={loading || !canPrev}
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+        >
+          이전
+        </button>
+        <div className="text-sm text-gray-600">
+          {page} / {totalPages}
+        </div>
+        <button
+          type="button"
+          disabled={loading || !canNext}
+          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+        >
+          다음
+        </button>
       </div>
     </div>
   );

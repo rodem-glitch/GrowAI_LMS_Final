@@ -34,8 +34,12 @@ if(deptId > 0) {
 	where += " AND u.dept_id = ? ";
 	params.add(deptId);
 } else if(!"".equals(deptKeyword)) {
-	//왜: 사이트마다 부서 구조가 다르므로, 우선은 "부서명 포함"으로 가장 단순하게 제공합니다.
-	where += " AND d.dept_nm LIKE ? ";
+	//왜: 부서명 필터는 "조인"에 의존하면(LEFT JOIN 실패 등) 전체 조회가 깨질 수 있습니다.
+	//     그래서 EXISTS 서브쿼리로 필터를 걸어, 학습자 목록은 최대한 안정적으로 내려주도록 합니다.
+	where += " AND EXISTS ("
+		+ " SELECT 1 FROM " + userDept.table + " d"
+		+ " WHERE d.id = u.dept_id AND d.site_id = " + siteId + " AND d.status = 1 AND d.dept_nm LIKE ?"
+		+ " ) ";
 	params.add("%" + deptKeyword + "%");
 }
 
@@ -49,6 +53,24 @@ try {
 
 DataSet list = null;
 boolean deptFallback = false;
+
+//왜: 화면에서 "페이지 이동"을 만들려면 전체 건수(rst_total)가 필요합니다.
+//     목록 조회와 같은 조건(where/params)로 COUNT(*)를 같이 구합니다.
+int totalNum = 0;
+try {
+	DataSet total = user.query(
+		" SELECT COUNT(1) cnt "
+		+ " FROM " + user.table + " u "
+		+ " WHERE " + where
+		, params.toArray()
+	);
+	if(total.next()) totalNum = total.i("cnt");
+} catch(Exception e) {
+	// 왜: 전체 건수 계산이 실패해도, 목록 자체는 최대한 보여주기 위함입니다.
+	m.errorLog("학습자 목록 전체건수 조회 오류 - " + e.getMessage(), e);
+	totalNum = 0;
+}
+
 try {
 	list = user.query(
 		" SELECT u.id, u.login_id, u.user_nm, u.email, u.dept_id "
@@ -105,6 +127,9 @@ try {
 result.put("rst_code", "0000");
 result.put("rst_message", "성공");
 result.put("rst_count", list.size());
+result.put("rst_total", totalNum);
+result.put("rst_page", pageNo);
+result.put("rst_limit", limit);
 result.put("rst_data", list);
 result.print();
 
