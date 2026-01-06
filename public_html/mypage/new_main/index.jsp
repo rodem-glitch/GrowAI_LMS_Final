@@ -134,6 +134,12 @@ p.setVar("query", m.qs());
 p.setVar("form_script", f.getScript());
 p.setVar("user", uinfo);
 
+// 로그인 상태 및 사용자 정보
+p.setVar("login_block", userId > 0);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
+
 p.setLoop("courses_prism", coursesPrism);
 p.setLoop("courses_haksa", coursesHaksa);
 p.setLoop("qna_list", qnaList);

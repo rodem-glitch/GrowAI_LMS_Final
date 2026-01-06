@@ -7,6 +7,156 @@
 			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		}
 		
+		/* ========== 상단바 (Header) ========== */
+		.nm-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 24px;
+			height: 64px;
+			background: #fff;
+			border-bottom: 1px solid #e5e7eb;
+			position: sticky;
+			top: 0;
+			z-index: 1000;
+		}
+		.nm-header__logo {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			text-decoration: none;
+		}
+		.nm-header__logo img {
+			height: 36px;
+		}
+		.nm-header__logo-text {
+			font-size: 18px;
+			font-weight: 700;
+			color: #101828;
+		}
+		
+		/* 메인 네비게이션 */
+		.nm-header__nav {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.nm-header__nav-item {
+			padding: 10px 16px;
+			font-size: 14px;
+			font-weight: 500;
+			color: #344054;
+			text-decoration: none;
+			border-radius: 8px;
+			transition: all 0.2s;
+			cursor: pointer;
+		}
+		.nm-header__nav-item:hover {
+			background: #f3f4f6;
+			color: #2b58e6;
+		}
+		.nm-header__nav-item.active {
+			color: #2b58e6;
+			font-weight: 600;
+		}
+		
+		/* 우측 액션 버튼 */
+		.nm-header__actions {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+		}
+		.nm-header__icon-btn {
+			width: 40px;
+			height: 40px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border: none;
+			background: transparent;
+			border-radius: 50%;
+			cursor: pointer;
+			color: #667085;
+			font-size: 18px;
+			transition: all 0.2s;
+		}
+		.nm-header__icon-btn:hover {
+			background: #f3f4f6;
+			color: #2b58e6;
+		}
+		.nm-header__icon-btn .badge {
+			position: absolute;
+			top: -4px;
+			right: -4px;
+			background: #dc2626;
+			color: #fff;
+			font-size: 10px;
+			padding: 2px 5px;
+			border-radius: 10px;
+		}
+		.nm-header__user {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 6px 12px;
+			background: #f3f4f6;
+			border-radius: 20px;
+			font-size: 14px;
+			color: #344054;
+			cursor: pointer;
+		}
+		.nm-header__user-avatar {
+			width: 28px;
+			height: 28px;
+			background: linear-gradient(135deg, #2b58e6, #8e44ad);
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #fff;
+			font-size: 12px;
+			font-weight: 600;
+		}
+		.nm-header__login-btn {
+			padding: 8px 16px;
+			background: linear-gradient(135deg, #2b58e6, #8e44ad);
+			color: #fff;
+			border: none;
+			border-radius: 8px;
+			font-size: 14px;
+			font-weight: 500;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.nm-header__login-btn:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(43, 88, 230, 0.3);
+		}
+		
+		/* 모바일 메뉴 버튼 */
+		.nm-header__mobile-btn {
+			display: none;
+			width: 40px;
+			height: 40px;
+			align-items: center;
+			justify-content: center;
+			border: none;
+			background: transparent;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 20px;
+			color: #344054;
+		}
+		@media (max-width: 992px) {
+			.nm-header__nav {
+				display: none;
+			}
+			.nm-header__mobile-btn {
+				display: flex;
+			}
+		}
+		
+		
 		/* 히어로 섹션 */
 		.nm-hero {
 			background: linear-gradient(135deg, #2b58e6 0%, #8e44ad 100%);
@@ -346,8 +496,44 @@
 		}
 	</style>
 	
-	<!-- 뒤로가기 버튼 -->
-	<a href="/mypage/index.jsp" class="nm-back">← 기존 화면</a>
+	<!-- 상단바 (Header) -->
+	<header class="nm-header">
+		<!-- 로고 -->
+		<a href="javascript:void(0)" class="nm-header__logo" onclick="alert('메뉴 연결 예정')">
+			<img src="/html/images/demo/logo_plism.png" alt="PLISM" onerror="this.style.display='none'">
+			<span class="nm-header__logo-text">PLISM</span>
+		</a>
+		
+		<!-- 메인 네비게이션 -->
+		<nav class="nm-header__nav">
+			<a href="javascript:void(0)" class="nm-header__nav-item active" onclick="alert('메뉴 연결 예정')">홈</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">나의강의실</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">이러닝</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">전자도서관</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">직업정보</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">연구보고서</a>
+			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">이용안내</a>
+		</nav>
+		
+		<!-- 우측 액션 버튼 -->
+		<div class="nm-header__actions">
+			<button type="button" class="nm-header__icon-btn" onclick="alert('알림 기능 연결 예정')" title="알림">
+				<i class="bi bi-bell"></i>
+			</button>
+			<!--@if(login_block)-->
+			<div class="nm-header__user" onclick="alert('마이페이지 연결 예정')">
+				<div class="nm-header__user-avatar">{{SYS_USERNAME_INITIAL}}</div>
+				<span>{{SYS_USERNAME}}</span>
+			</div>
+			<!--/if(login_block)-->
+			<!--@nif(login_block)-->
+			<button type="button" class="nm-header__login-btn" onclick="alert('로그인 연결 예정')">로그인</button>
+			<!--/nif(login_block)-->
+			<button type="button" class="nm-header__mobile-btn" onclick="alert('모바일 메뉴 연결 예정')">
+				<i class="bi bi-list"></i>
+			</button>
+		</div>
+	</header>
 	
 	<!-- 히어로 섹션 -->
 	<section class="nm-hero">
@@ -466,45 +652,85 @@
 			</div>
 		</section>
 		
-		<!-- 숏폼 섹션 (샘플 데이터) -->
+		<!-- 숏폼 섹션 (YouTube API 동적 로딩) -->
 		<section class="nm-section" id="shorts">
 			<div class="nm-section__header">
 				<h2 class="nm-section__title">숏폼</h2>
-				<a href="#" class="nm-section__more">더보기 →</a>
+				<a href="https://www.youtube.com/@kopo_polytech/shorts" target="_blank" class="nm-section__more">더보기 →</a>
 			</div>
-			<div class="nm-grid nm-grid--6">
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">1분만에 알아보는 반도체 기초</p>
-				</div>
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">취업 성공 노하우 공개!</p>
-				</div>
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">AI 트렌드 총정리</p>
-				</div>
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">메타버스 활용 사례</p>
-				</div>
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">IoT 프로젝트 실습</p>
-				</div>
-				<div class="nm-shorts">
-					<img src="/html/images/common/noimage_course.gif" alt="숏폼" class="nm-shorts__img">
-					<i class="bi bi-youtube nm-shorts__play"></i>
-					<p class="nm-shorts__title">스마트팩토리 현장</p>
+			<div class="nm-grid nm-grid--6" id="shorts-container">
+				<!-- 로딩 스피너 -->
+				<div class="nm-shorts-loading" id="shorts-loading" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+					<i class="bi bi-arrow-clockwise" style="font-size: 32px; animation: spin 1s linear infinite;"></i>
+					<p style="margin-top: 12px; color: #667085;">숏폼 영상을 불러오는 중...</p>
 				</div>
 			</div>
 		</section>
+		
+		<style>
+			@keyframes spin {
+				from { transform: rotate(0deg); }
+				to { transform: rotate(360deg); }
+			}
+			.nm-shorts {
+				cursor: pointer;
+				transition: transform 0.2s, box-shadow 0.2s;
+			}
+			.nm-shorts:hover {
+				transform: scale(1.03);
+				box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+			}
+		</style>
+		
+		<script>
+		// YouTube Shorts 로딩
+		(function() {
+			function loadYoutubeShorts() {
+				var container = document.getElementById('shorts-container');
+				var loading = document.getElementById('shorts-loading');
+				
+				fetch('/api/youtube_shorts.jsp?maxResults=6')
+					.then(function(response) { return response.json(); })
+					.then(function(data) {
+						if (data.success && data.shorts && data.shorts.length > 0) {
+							var html = '';
+							data.shorts.forEach(function(short) {
+								html += '<a href="' + short.shortsUrl + '" target="_blank" class="nm-shorts" title="' + escapeHtml(short.title) + '">';
+								html += '  <img src="' + short.thumbnailUrl + '" alt="' + escapeHtml(short.title) + '" class="nm-shorts__img" onerror="this.src=\'/html/images/common/noimage_course.gif\'">';
+								html += '  <i class="bi bi-youtube nm-shorts__play"></i>';
+								html += '  <p class="nm-shorts__title">' + escapeHtml(truncateText(short.title, 30)) + '</p>';
+								html += '</a>';
+							});
+							container.innerHTML = html;
+						} else {
+							container.innerHTML = '<div class="nm-empty" style="grid-column: 1/-1;"><i class="bi bi-camera-video"></i><p>숏폼 영상이 없습니다.</p></div>';
+						}
+					})
+					.catch(function(error) {
+						console.error('YouTube Shorts 로딩 오류:', error);
+						container.innerHTML = '<div class="nm-empty" style="grid-column: 1/-1;"><i class="bi bi-exclamation-triangle"></i><p>영상을 불러오는 중 오류가 발생했습니다.</p></div>';
+					});
+			}
+			
+			function escapeHtml(text) {
+				var div = document.createElement('div');
+				div.textContent = text;
+				return div.innerHTML;
+			}
+			
+			function truncateText(text, maxLength) {
+				if (text.length <= maxLength) return text;
+				return text.substring(0, maxLength) + '...';
+			}
+			
+			// 페이지 로드 시 실행
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', loadYoutubeShorts);
+			} else {
+				loadYoutubeShorts();
+			}
+		})();
+		</script>
 		
 		<!-- 정규(학사) 강의 섹션 -->
 		<!--@if(courses_haksa)-->
