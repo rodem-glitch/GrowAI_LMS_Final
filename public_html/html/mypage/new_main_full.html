@@ -31,6 +31,7 @@
 			align-items: center;
 			gap: 10px;
 			text-decoration: none;
+			z-index: 1;
 		}
 		.nm-header__logo img {
 			height: 36px;
@@ -41,8 +42,11 @@
 			color: #101828;
 		}
 		
-		/* 메인 네비게이션 */
+		/* 메인 네비게이션 - 화면 중앙 고정 */
 		.nm-header__nav {
+			position: absolute;
+			left: 50%;
+			transform: translateX(-50%);
 			display: flex;
 			align-items: center;
 			gap: 8px;
@@ -757,6 +761,81 @@
 			margin-bottom: 16px;
 			display: none;
 		}
+
+		/* ========== 푸터 ========== */
+		.nm-footer {
+			background: #1e293b;
+			color: #94a3b8;
+			padding: 48px 0 0;
+		}
+		.nm-footer__container {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 0 24px;
+		}
+		.nm-footer__main {
+			padding-bottom: 32px;
+		}
+		.nm-footer__title {
+			font-size: 20px;
+			font-weight: 700;
+			color: #fff;
+			margin-bottom: 16px;
+		}
+		.nm-footer__desc {
+			font-size: 14px;
+			line-height: 1.7;
+			max-width: 500px;
+		}
+		.nm-footer__desc-highlight {
+			color: #a78bfa;
+		}
+		.nm-footer__social {
+			display: flex;
+			gap: 16px;
+			margin-top: 24px;
+		}
+		.nm-footer__social a {
+			width: 36px;
+			height: 36px;
+			background: #334155;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #94a3b8;
+			text-decoration: none;
+			transition: all 0.2s;
+		}
+		.nm-footer__social a:hover {
+			background: #4f46e5;
+			color: #fff;
+		}
+		.nm-footer__bottom {
+			border-top: 1px solid #334155;
+			padding: 20px 0;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 16px;
+		}
+		.nm-footer__copyright {
+			font-size: 13px;
+		}
+		.nm-footer__links {
+			display: flex;
+			gap: 24px;
+		}
+		.nm-footer__links a {
+			font-size: 13px;
+			color: #94a3b8;
+			text-decoration: none;
+			transition: color 0.2s;
+		}
+		.nm-footer__links a:hover {
+			color: #fff;
+		}
 	</style>
 	
 	<!-- 상단바 (Header) -->
@@ -1016,8 +1095,28 @@
 
 	</main>
 	
-	<!-- 푸터 여백 -->
-	<div style="height: 60px;"></div>
+	<!-- 푸터 -->
+	<footer class="nm-footer">
+		<div class="nm-footer__container">
+			<div class="nm-footer__main">
+				<h3 class="nm-footer__title">한국폴리텍대학 직업교육연구원</h3>
+				<p class="nm-footer__desc">
+					<span class="nm-footer__desc-highlight">미래지향적인 교육 콘텐츠</span> 개발과 정책연구를 통해 대한민국 직업교육의
+					<span class="nm-footer__desc-highlight">새로운 길을 열어갑니다</span>.
+				</p>
+				<div class="nm-footer__social">
+					<a href="https://www.youtube.com/channel/UCDlUa248Pg7_e4V-vwT5V8A" target="_blank" title="YouTube"><i class="bi bi-youtube"></i></a>
+				</div>
+			</div>
+			<div class="nm-footer__bottom">
+				<p class="nm-footer__copyright">© 2025 한국폴리텍대학 직업교육연구원. All Rights Reserved.</p>
+				<div class="nm-footer__links">
+					<a href="/etc/privacy.jsp">개인정보처리방침</a>
+					<a href="/etc/term.jsp">이용약관</a>
+				</div>
+			</div>
+		</div>
+	</footer>
 	
 	<!-- 로그인 모달 -->
 	<div class="nm-modal-overlay" id="loginModal" onclick="closeLoginModal(event)">
