@@ -507,11 +507,9 @@
 		<!-- 메인 네비게이션 -->
 		<nav class="nm-header__nav">
 			<a href="javascript:void(0)" class="nm-header__nav-item active" onclick="alert('메뉴 연결 예정')">홈</a>
-			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">나의강의실</a>
+			<a href="/mypage/index.jsp" class="nm-header__nav-item">나의강의실</a>
 			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">이러닝</a>
 			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">전자도서관</a>
-			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">직업정보</a>
-			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">연구보고서</a>
 			<a href="javascript:void(0)" class="nm-header__nav-item" onclick="alert('메뉴 연결 예정')">이용안내</a>
 		</nav>
 		
@@ -555,11 +553,58 @@
 	<!-- 메인 콘텐츠 -->
 	<main class="nm-container">
 		
-		<!-- 필터 탭 -->
+	<!-- 필터 탭 -->
 		<nav class="nm-tabs">
-			<a href="#continue" class="nm-tab active"><i class="bi bi-play-circle"></i>계속 학습하기</a>
+			<a href="#videos" class="nm-tab active"><i class="bi bi-film"></i>추천 동영상</a>
+			<a href="#courses" class="nm-tab"><i class="bi bi-book"></i>강의</a>
 			<a href="#shorts" class="nm-tab"><i class="bi bi-camera-video"></i>숏폼</a>
+			<a href="#continue" class="nm-tab"><i class="bi bi-play-circle"></i>계속 학습하기</a>
 		</nav>
+		
+		<!-- 추천 동영상 섹션 -->
+		<section class="nm-section" id="videos">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">추천 동영상</h2>
+				<a href="#" class="nm-section__more">더보기 →</a>
+			</div>
+			<div class="nm-grid nm-grid--4">
+				<!-- TODO: 실제 운영중인 동영상 데이터 연동 예정 -->
+				<div class="nm-empty" style="grid-column: 1/-1;">
+					<i class="bi bi-film"></i>
+					<p>추천 동영상이 준비 중입니다.</p>
+				</div>
+			</div>
+		</section>
+		
+		<!-- 강의 섹션 -->
+		<section class="nm-section" id="courses">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">강의</h2>
+				<a href="/course/course_list.jsp" class="nm-section__more">더보기 →</a>
+			</div>
+			<div class="nm-grid nm-grid--4">
+				<!-- TODO: 실제 운영중인 과목 데이터 연동 예정 -->
+				<div class="nm-empty" style="grid-column: 1/-1;">
+					<i class="bi bi-book"></i>
+					<p>강의가 준비 중입니다.</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- 숏폼 섹션 (YouTube API 동적 로딩) -->
+		<section class="nm-section" id="shorts">
+			<div class="nm-section__header">
+				<h2 class="nm-section__title">숏폼</h2>
+				<a href="https://www.youtube.com/channel/UCDlUa248Pg7_e4V-vwT5V8A" target="_blank" class="nm-section__more">더보기 →</a>
+			</div>
+			<div class="nm-grid nm-grid--6" id="shorts-container">
+				<!-- 로딩 스피너 -->
+				<div class="nm-shorts-loading" id="shorts-loading" style="grid-column: 1/-1; text-align: center; padding: 40px;">
+					<i class="bi bi-arrow-clockwise" style="font-size: 32px; animation: spin 1s linear infinite;"></i>
+					<p style="margin-top: 12px; color: #667085;">숏폼 영상을 불러오는 중...</p>
+				</div>
+		</div>
+		</section>
 		
 		<!-- 계속 학습하기 섹션 -->
 		<section class="nm-section" id="continue">
@@ -591,21 +636,6 @@
 					<p>수강 중인 과정이 없습니다.</p>
 				</div>
 				<!--/nif(courses_prism)-->
-			</div>
-		</section>
-
-		<!-- 숏폼 섹션 (YouTube API 동적 로딩) -->
-		<section class="nm-section" id="shorts">
-			<div class="nm-section__header">
-				<h2 class="nm-section__title">숏폼</h2>
-				<a href="https://www.youtube.com/@kopo_polytech/shorts" target="_blank" class="nm-section__more">더보기 →</a>
-			</div>
-			<div class="nm-grid nm-grid--6" id="shorts-container">
-				<!-- 로딩 스피너 -->
-				<div class="nm-shorts-loading" id="shorts-loading" style="grid-column: 1/-1; text-align: center; padding: 40px;">
-					<i class="bi bi-arrow-clockwise" style="font-size: 32px; animation: spin 1s linear infinite;"></i>
-					<p style="margin-top: 12px; color: #667085;">숏폼 영상을 불러오는 중...</p>
-				</div>
 			</div>
 		</section>
 		
