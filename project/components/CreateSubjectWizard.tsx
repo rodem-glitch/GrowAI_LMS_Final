@@ -76,8 +76,35 @@ interface CreateSubjectWizardProps {
   onStepChange?: (step: Step) => void;
 }
 
+function normalizeSessionCount(hours: string) {
+  // 왜: 시수는 사용자가 비워둘 수도 있어, "기본값 15"로 안전하게 보정합니다.
+  //     또 너무 큰 값이 들어오면(오타) 화면이 멈출 수 있어 상한을 둡니다.
+  const parsed = Number.parseInt(String(hours || '').trim(), 10);
+  const safe = Number.isFinite(parsed) && parsed > 0 ? parsed : 15;
+  return Math.min(safe, 200);
+}
+
+function buildSessionsByCount(count: number, prevSessions: SessionItem[]) {
+  // 왜: 사용자가 이미 입력한 차시 제목/설명/영상은 최대한 보존하면서, 필요한 개수만큼 차시를 맞춥니다.
+  const byId = new Map<string, SessionItem>();
+  prevSessions.forEach((session) => byId.set(String(session.id), session));
+
+  const next: SessionItem[] = [];
+  for (let i = 1; i <= count; i += 1) {
+    const id = String(i);
+    const existing = byId.get(id) ?? prevSessions[i - 1];
+    if (existing) {
+      next.push({ ...existing, id });
+    } else {
+      next.push({ id, title: '', description: '', videos: [] });
+    }
+  }
+  return next;
+}
+
 export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubjectWizardProps = {}) {
   const [currentStep, setCurrentStep] = useState<Step>(initialStep ?? 'basic');
+  const [autoSessionsEnabled, setAutoSessionsEnabled] = useState(true);
   useEffect(() => {
     // 왜: URL(부모)에서 내려온 step을 로컬 state에 "한 번만" 동기화해야 합니다.
     //     currentStep을 의존성에 넣으면, 사용자가 다음/이전으로 step을 바꾸는 순간
@@ -103,7 +130,7 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
     year: '2024',
     semester: '1학기',
     credits: '',
-    hours: '',
+    hours: '15',
     startDate: '',
     endDate: '',
     description: '',
@@ -120,6 +147,20 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
       },
     ],
   });
+
+  useEffect(() => {
+    if (!autoSessionsEnabled) return;
+
+    const count = normalizeSessionCount(formData.hours);
+    // 왜: 현재 차시 개수가 이미 맞으면 불필요한 setState로 리렌더를 만들지 않습니다.
+    if (formData.sessions.length === count) return;
+
+    setFormData((prev) => {
+      const nextCount = normalizeSessionCount(prev.hours);
+      if (prev.sessions.length === nextCount) return prev;
+      return { ...prev, sessions: buildSessionsByCount(nextCount, prev.sessions) };
+    });
+  }, [autoSessionsEnabled, formData.hours, formData.sessions.length]);
 
   useEffect(() => {
     // 왜: 관리자(sysop)와 같은 카테고리 목록(LM_CATEGORY)을 불러와서, PLISM에서도 같은 기준으로 선택하게 하기 위함입니다.
@@ -196,6 +237,7 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
       courseCategories.find((c) => (c.category_nm ?? '').includes('자율'));
 
     setCurrentStep('basic');
+    setAutoSessionsEnabled(true);
     setFormData({
       subjectName: '',
       selectedCourse: null,
@@ -203,7 +245,7 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
       year: '2024',
       semester: '1학기',
       credits: '',
-      hours: '',
+      hours: '15',
       startDate: '',
       endDate: '',
       description: '',
@@ -243,6 +285,7 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
     setSaving(true);
     try {
       const programId = formData.selectedCourse ? Number(formData.selectedCourse.id) : 0;
+      const lessonTime = String(normalizeSessionCount(formData.hours));
       const createRes = await tutorLmsApi.createCourse({
         courseName,
         year: formData.year.trim(),
@@ -252,7 +295,7 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
         categoryId: formData.categoryId > 0 ? formData.categoryId : undefined,
         semester: formData.semester,
         credit: formData.credits,
-        lessonTime: formData.hours,
+        lessonTime,
         content1: formData.description,
         content2: formData.objectives,
         courseFile: formData.courseFileName || undefined,
@@ -382,7 +425,11 @@ export function CreateSubjectWizard({ initialStep, onStepChange }: CreateSubject
           <LearnersStep formData={formData} updateFormData={updateFormData} />
         )}
         {currentStep === 'curriculum' && (
-          <CurriculumStep formData={formData} updateFormData={updateFormData} />
+          <CurriculumStep
+            formData={formData}
+            updateFormData={updateFormData}
+            onTouched={() => setAutoSessionsEnabled(false)}
+          />
         )}
         {currentStep === 'confirm' && <ConfirmStep formData={formData} courseCategories={courseCategories} />}
 
@@ -610,6 +657,11 @@ function BasicInfoStep({
             type="number"
             value={formData.hours}
             onChange={(e) => updateFormData({ hours: e.target.value })}
+            onBlur={() => {
+              // 왜: 입력을 비우고 넘어가면 기본값(15)로 동작하게 맞춥니다.
+              const normalized = String(normalizeSessionCount(formData.hours));
+              if (String(formData.hours || '').trim() !== normalized) updateFormData({ hours: normalized });
+            }}
             placeholder="48"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -881,9 +933,11 @@ function LearnersStep({
 function CurriculumStep({
   formData,
   updateFormData,
+  onTouched,
 }: {
   formData: FormData;
   updateFormData: (updates: Partial<FormData>) => void;
+  onTouched?: () => void;
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -892,6 +946,7 @@ function CurriculumStep({
     : null;
 
   const addSession = () => {
+    onTouched?.();
     const newSession = {
       id: String(formData.sessions.length + 1),
       title: '',
@@ -902,6 +957,7 @@ function CurriculumStep({
   };
 
   const updateSession = (id: string, updates: Partial<typeof formData.sessions[0]>) => {
+    onTouched?.();
     const updatedSessions = formData.sessions.map((session) =>
       session.id === id ? { ...session, ...updates } : session
     );
@@ -909,6 +965,7 @@ function CurriculumStep({
   };
 
   const removeSession = (id: string) => {
+    onTouched?.();
     if (formData.sessions.length > 1) {
       updateFormData({
         sessions: formData.sessions.filter((session) => session.id !== id),
@@ -917,6 +974,7 @@ function CurriculumStep({
   };
 
   const addVideo = (sessionId: string) => {
+    onTouched?.();
     const session = formData.sessions.find((s) => s.id === sessionId);
     if (session) {
       const newVideo = {
@@ -931,6 +989,7 @@ function CurriculumStep({
   };
 
   const updateVideo = (sessionId: string, videoId: string, updates: { title?: string; url?: string }) => {
+    onTouched?.();
     const session = formData.sessions.find((s) => s.id === sessionId);
     if (session) {
       const updatedVideos = session.videos.map((video) =>
@@ -941,6 +1000,7 @@ function CurriculumStep({
   };
 
   const removeVideo = (sessionId: string, videoId: string) => {
+    onTouched?.();
     const session = formData.sessions.find((s) => s.id === sessionId);
     if (session) {
       updateSession(sessionId, {
@@ -950,6 +1010,7 @@ function CurriculumStep({
   };
 
   const handleContentSelect = (content: any) => {
+    onTouched?.();
     if (currentSessionId) {
       const session = formData.sessions.find((s) => s.id === currentSessionId);
       if (session) {
