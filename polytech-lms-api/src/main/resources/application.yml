@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8081
 
 spring:
@@ -54,7 +54,7 @@ kollus:
   api-base-url: ${KOLLUS_API_BASE_URL:https://api.kr.kollus.com}
   access-token: ${KOLLUS_ACCESS_TOKEN:2jr164nizjp8ur0z}
   security-key: ${KOLLUS_SECURITY_KEY:newkl}
-  channel-key: ${KOLLUS_CHANNEL_KEY: u8p6y0itgnuaemiy}
+  channel-key: ${KOLLUS_CHANNEL_KEY:u8p6y0itgnuaemiy}
   client-user-id: ${KOLLUS_CLIENT_USER_ID:contentsummary}
   http-timeout: ${KOLLUS_HTTP_TIMEOUT:PT60S}
   media-token-expire-time: ${KOLLUS_MEDIA_TOKEN_EXPIRE:PT5M}
