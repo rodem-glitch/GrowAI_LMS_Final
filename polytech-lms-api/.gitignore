@@ -1,0 +1,11 @@
+# 왜: 개인 개발 환경 전용 설정(application-local.yml)은 Git에 올리지 않습니다.
+src/main/resources/application-local.yml
+
+# 왜: 로컬 환경변수 파일이 있다면 커밋되지 않게 합니다.
+.env
+
+# 왜: Gradle/IDE 산출물은 커밋 대상이 아닙니다.
+.gradle/
+build/
+.idea/
+*.iml
