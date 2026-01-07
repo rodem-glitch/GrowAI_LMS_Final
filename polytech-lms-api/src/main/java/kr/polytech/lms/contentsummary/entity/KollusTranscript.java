@@ -141,14 +141,33 @@ public class KollusTranscript {
     }
 
     public void markDone(String transcriptText) {
-        this.status = "DONE";
+        // 왜: 기존 코드와의 호환을 위해 남겨두되, 실제 의미는 "전사 완료(요약 대기)"입니다.
+        markTranscribed(transcriptText);
+    }
+
+    public void markTranscribed(String transcriptText) {
+        // 왜: 요약 단계가 추가되면서, 전사 완료와 "최종 완료(DONE)"를 분리해야 재시도 비용(재전사)을 줄일 수 있습니다.
+        this.status = "TRANSCRIBED";
         this.transcriptText = transcriptText;
         this.transcribedAt = LocalDateTime.now();
+        this.lastError = null;
+        this.retryCount = 0;
+    }
+
+    public void markSummaryDone() {
+        // 왜: 요약을 TB_RECO_CONTENT에 저장까지 끝났을 때 최종 완료로 표시합니다.
+        this.status = "DONE";
         this.lastError = null;
     }
 
     public void markFailed(String errorMessage) {
         this.status = "FAILED";
+        this.retryCount = (this.retryCount == null ? 0 : this.retryCount) + 1;
+        this.lastError = errorMessage;
+    }
+
+    public void markSummaryFailed(String errorMessage) {
+        this.status = "SUMMARY_FAILED";
         this.retryCount = (this.retryCount == null ? 0 : this.retryCount) + 1;
         this.lastError = errorMessage;
     }

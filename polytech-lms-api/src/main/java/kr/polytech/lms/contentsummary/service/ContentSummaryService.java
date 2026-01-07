@@ -14,10 +14,13 @@ import kr.polytech.lms.contentsummary.client.SttProperties;
 import kr.polytech.lms.contentsummary.dto.EnqueueBackfillResponse;
 import kr.polytech.lms.contentsummary.dto.KollusChannelContent;
 import kr.polytech.lms.contentsummary.dto.KollusWebhookIngestResponse;
+import kr.polytech.lms.contentsummary.dto.RecoContentSummaryDraft;
 import kr.polytech.lms.contentsummary.dto.RunTranscriptionItemResult;
 import kr.polytech.lms.contentsummary.dto.RunTranscriptionResponse;
 import kr.polytech.lms.contentsummary.entity.KollusTranscript;
 import kr.polytech.lms.contentsummary.repository.ContentSummaryRepository;
+import kr.polytech.lms.recocontent.entity.RecoContent;
+import kr.polytech.lms.recocontent.repository.RecoContentRepository;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,6 +33,8 @@ public class ContentSummaryService {
     private final SttProperties sttProperties;
     private final ContentTranscriptionProperties transcriptionProperties;
     private final ContentSummaryRepository transcriptRepository;
+    private final RecoContentSummaryGenerator recoContentSummaryGenerator;
+    private final RecoContentRepository recoContentRepository;
 
     public ContentSummaryService(
         KollusApiClient kollusApiClient,
@@ -38,7 +43,9 @@ public class ContentSummaryService {
         OpenAiWhisperSttClient sttClient,
         SttProperties sttProperties,
         ContentTranscriptionProperties transcriptionProperties,
-        ContentSummaryRepository transcriptRepository
+        ContentSummaryRepository transcriptRepository,
+        RecoContentSummaryGenerator recoContentSummaryGenerator,
+        RecoContentRepository recoContentRepository
     ) {
         // 왜: 전사는 "외부 API + 대용량 파일" 조합이라 실패 지점이 많습니다. 의존성을 분리해두면 원인 추적이 쉬워집니다.
         this.kollusApiClient = Objects.requireNonNull(kollusApiClient);
@@ -48,6 +55,8 @@ public class ContentSummaryService {
         this.sttProperties = Objects.requireNonNull(sttProperties);
         this.transcriptionProperties = Objects.requireNonNull(transcriptionProperties);
         this.transcriptRepository = Objects.requireNonNull(transcriptRepository);
+        this.recoContentSummaryGenerator = Objects.requireNonNull(recoContentSummaryGenerator);
+        this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
     }
 
     public KollusWebhookIngestResponse ingestKollusWebhook(Integer siteId, String mediaContentKey, String title) {
@@ -56,23 +65,39 @@ public class ContentSummaryService {
             throw new IllegalArgumentException("mediaContentKey가 비어 있습니다.");
         }
 
+        String mediaKey = mediaContentKey.trim();
+
+        // 왜: 이미 요약이 TB_RECO_CONTENT에 저장되어 있으면, 전사/요약을 다시 할 필요가 없습니다(비용/시간 절감).
+        if (recoContentRepository.findByLessonId(mediaKey).isPresent()) {
+            return new KollusWebhookIngestResponse(mediaKey, title, "SKIPPED_SUMMARY_EXISTS");
+        }
+
         KollusTranscript transcript = transcriptRepository
-            .findBySiteIdAndMediaContentKey(safeSiteId, mediaContentKey.trim())
-            .orElseGet(() -> new KollusTranscript(safeSiteId, safeChannelKeyFallback(), mediaContentKey.trim()));
+            .findBySiteIdAndMediaContentKey(safeSiteId, mediaKey)
+            .orElseGet(() -> new KollusTranscript(safeSiteId, safeChannelKeyFallback(), mediaKey));
 
         // 왜: 이미 DONE이면 "이미 DB에 요약/전사가 저장된 상태"이므로, webhook이 중복으로 와도 다시 돌리지 않습니다.
         if ("DONE".equalsIgnoreCase(transcript.getStatus())) {
-            return new KollusWebhookIngestResponse(mediaContentKey.trim(), title, "SKIPPED_DONE");
+            return new KollusWebhookIngestResponse(mediaKey, title, "SKIPPED_DONE");
         }
 
         // 왜: 이미 처리 중이면 상태를 되돌리면(다시 PENDING) 중복 처리/경합이 생길 수 있어 그대로 둡니다.
         if ("PROCESSING".equalsIgnoreCase(transcript.getStatus())) {
-            return new KollusWebhookIngestResponse(mediaContentKey.trim(), title, "SKIPPED_PROCESSING");
+            return new KollusWebhookIngestResponse(mediaKey, title, "SKIPPED_PROCESSING");
+        }
+
+        // 왜: 전사까지 끝났거나(TRANSCRIBED) 요약 재시도 상태이면, 다시 PENDING으로 되돌리면 재전사 비용이 나갑니다.
+        if ("TRANSCRIBED".equalsIgnoreCase(transcript.getStatus())
+            || "SUMMARY_PROCESSING".equalsIgnoreCase(transcript.getStatus())
+            || "SUMMARY_FAILED".equalsIgnoreCase(transcript.getStatus())
+            || "FAILED".equalsIgnoreCase(transcript.getStatus())
+        ) {
+            return new KollusWebhookIngestResponse(mediaKey, title, "SKIPPED_ALREADY_QUEUED");
         }
 
         transcript.markPending(title);
         transcriptRepository.save(transcript);
-        return new KollusWebhookIngestResponse(mediaContentKey.trim(), title, "ENQUEUED");
+        return new KollusWebhookIngestResponse(mediaKey, title, "ENQUEUED");
     }
 
     public EnqueueBackfillResponse enqueueBackfill(Integer siteId, int limit, String keyword) {
@@ -97,12 +122,25 @@ public class ContentSummaryService {
                 String mediaKey = c.mediaContentKey();
                 if (mediaKey == null || mediaKey.isBlank()) continue;
 
+                // 왜: 이미 요약이 TB_RECO_CONTENT에 있으면, backfill 대상이 아닙니다.
+                if (recoContentRepository.findByLessonId(mediaKey).isPresent()) {
+                    skippedDone++;
+                    continue;
+                }
+
                 Optional<KollusTranscript> existing = transcriptRepository.findBySiteIdAndMediaContentKey(safeSiteId, mediaKey);
                 if (existing.isPresent() && "DONE".equalsIgnoreCase(existing.get().getStatus())) {
                     skippedDone++;
                     continue;
                 }
                 if (existing.isPresent() && "PROCESSING".equalsIgnoreCase(existing.get().getStatus())) {
+                    continue;
+                }
+                if (existing.isPresent()
+                    && ("TRANSCRIBED".equalsIgnoreCase(existing.get().getStatus())
+                    || "SUMMARY_PROCESSING".equalsIgnoreCase(existing.get().getStatus())
+                    || "SUMMARY_FAILED".equalsIgnoreCase(existing.get().getStatus()))
+                ) {
                     continue;
                 }
 
@@ -127,6 +165,17 @@ public class ContentSummaryService {
         if (!"PROCESSING".equalsIgnoreCase(transcript.getStatus())) return;
 
         doTranscribe(transcript);
+    }
+
+    public void processSummaryById(Long transcriptId) {
+        if (transcriptId == null) return;
+        KollusTranscript transcript = transcriptRepository.findById(transcriptId).orElse(null);
+        if (transcript == null) return;
+
+        // 왜: 워커가 "SUMMARY_PROCESSING"으로 점유한 뒤 호출합니다.
+        if (!"SUMMARY_PROCESSING".equalsIgnoreCase(transcript.getStatus())) return;
+
+        doSummarizeToRecoContent(transcript);
     }
 
     public RunTranscriptionResponse runTranscription(Integer siteId, int limit, boolean force, String keyword) {
@@ -154,7 +203,9 @@ public class ContentSummaryService {
                     .orElseGet(() -> new KollusTranscript(safeSiteId, safeChannelKeyFallback(), mediaKey));
 
                 // 왜: 이미 DONE이면 같은 영상에 대해 매번 STT 비용이 나가므로, 강제(force)가 아니면 건너뜁니다.
-                if (!force && "DONE".equalsIgnoreCase(transcript.getStatus())) {
+                String status = transcript.getStatus();
+                boolean alreadyTranscribed = "TRANSCRIBED".equalsIgnoreCase(status) || "DONE".equalsIgnoreCase(status);
+                if (!force && alreadyTranscribed) {
                     skipped++;
                     items.add(new RunTranscriptionItemResult(mediaKey, c.title(), "SKIPPED", "이미 전사 완료"));
                     continue;
@@ -167,7 +218,7 @@ public class ContentSummaryService {
                     boolean ok = doTranscribe(transcript);
                     if (ok) {
                         processed++;
-                        items.add(new RunTranscriptionItemResult(mediaKey, c.title(), "DONE", "전사 완료"));
+                        items.add(new RunTranscriptionItemResult(mediaKey, c.title(), "TRANSCRIBED", "전사 완료"));
                     } else {
                         failed++;
                         items.add(new RunTranscriptionItemResult(mediaKey, c.title(), "FAILED", safeMessageFromTranscript(transcript)));
@@ -188,6 +239,13 @@ public class ContentSummaryService {
         Integer siteId = transcript.getSiteId() == null ? 1 : transcript.getSiteId();
         String mediaKey = transcript.getMediaContentKey();
 
+        // 왜: 이미 요약이 TB_RECO_CONTENT에 있으면, 전사까지 다시 돌릴 필요가 없습니다.
+        if (mediaKey != null && recoContentRepository.findByLessonId(mediaKey.trim()).isPresent()) {
+            transcript.markSummaryDone();
+            transcriptRepository.save(transcript);
+            return true;
+        }
+
         Path workDir = transcriptionProperties.tmpDir().resolve("site-" + siteId).resolve(safeFileName(mediaKey));
         Path videoFile = workDir.resolve("input.mp4");
         Path audioFile = workDir.resolve("audio.wav");
@@ -203,7 +261,7 @@ public class ContentSummaryService {
                 throw new IllegalStateException("전사 결과가 비어 있습니다. (STT 응답 확인 필요)");
             }
 
-            transcript.markDone(transcriptText);
+            transcript.markTranscribed(transcriptText);
             transcriptRepository.save(transcript);
             return true;
         } catch (Exception e) {
@@ -216,6 +274,96 @@ public class ContentSummaryService {
                 safeDeleteDir(workDir);
             }
         }
+    }
+
+    private boolean doSummarizeToRecoContent(KollusTranscript transcript) {
+        try {
+            String mediaKey = transcript.getMediaContentKey();
+            if (mediaKey == null || mediaKey.isBlank()) {
+                throw new IllegalStateException("media_content_key가 비어 있습니다.");
+            }
+
+            // 왜: 한 번 요약을 만들어 저장했다면, 동일 영상에 대해 다시 비용을 쓰지 않습니다.
+            Optional<RecoContent> existing = recoContentRepository.findByLessonId(mediaKey.trim());
+            if (existing.isPresent()) {
+                transcript.markSummaryDone();
+                transcriptRepository.save(transcript);
+                return true;
+            }
+
+            String transcriptText = transcript.getTranscriptText();
+            if (transcriptText == null || transcriptText.isBlank()) {
+                throw new IllegalStateException("전사 텍스트가 비어 있어 요약을 생성할 수 없습니다.");
+            }
+
+            String title = safeTitle(transcript.getTitle());
+            RecoContentSummaryDraft draft = recoContentSummaryGenerator.generate(title, transcriptText);
+
+            String categoryNm = safeCategory(draft.categoryNm());
+            String summary = safeSummary(draft.summary());
+            String keywords = joinKeywordsWithinLimit(draft.keywords(), 10, 500);
+
+            RecoContent content = new RecoContent(categoryNm, title, summary, keywords);
+            content.setLessonId(mediaKey.trim());
+            recoContentRepository.save(content);
+
+            transcript.markSummaryDone();
+            transcriptRepository.save(transcript);
+            return true;
+        } catch (Exception e) {
+            transcript.markSummaryFailed(truncateError(e, 2000));
+            transcriptRepository.save(transcript);
+            return false;
+        }
+    }
+
+    private static String safeTitle(String raw) {
+        String t = raw == null ? "" : raw.trim();
+        if (t.isBlank()) t = "(제목 없음)";
+        return trimToCodePoints(t, 200);
+    }
+
+    private static String safeCategory(String raw) {
+        String t = raw == null ? "" : raw.trim();
+        if (t.isBlank()) return "기타, 기타";
+        return trimToCodePoints(t, 100);
+    }
+
+    private static String safeSummary(String raw) {
+        String t = raw == null ? "" : raw.trim().replaceAll("\\s+", " ");
+        if (t.isBlank()) return "요약 정보를 생성하지 못했습니다.";
+        // 최대 길이는 DB 저장/정책(300자) 기준으로 자릅니다.
+        return trimToCodePoints(t, 300);
+    }
+
+    private static String joinKeywordsWithinLimit(List<String> keywords, int maxCount, int maxLen) {
+        if (keywords == null || keywords.isEmpty()) return "";
+        List<String> out = new ArrayList<>();
+        for (String k : keywords) {
+            if (k == null) continue;
+            String t = k.trim();
+            if (t.isBlank()) continue;
+            out.add(trimToCodePoints(t, 50));
+            if (out.size() >= maxCount) break;
+        }
+
+        // 왜: DB 컬럼 길이(500) 초과를 막기 위해, 길이가 넘으면 뒤에서부터 줄입니다.
+        while (!out.isEmpty()) {
+            String joined = String.join(", ", out);
+            if (joined.length() <= maxLen) return joined;
+            out.remove(out.size() - 1);
+        }
+        return "";
+    }
+
+    private static String trimToCodePoints(String s, int max) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.isBlank()) return "";
+        int len = t.codePointCount(0, t.length());
+        if (len <= max) return t;
+        int endIndex = t.offsetByCodePoints(0, max);
+        return t.substring(0, endIndex);
     }
 
     private static String safeMessageFromTranscript(KollusTranscript transcript) {
