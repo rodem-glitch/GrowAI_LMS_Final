@@ -12,8 +12,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import kr.polytech.lms.contentsummary.dto.KollusChannelContent;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 /**
  * 왜: Kollus API 호출(채널 콘텐츠 조회, media token 발급)을 한 곳에 모아두면,
@@ -21,6 +24,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class KollusApiClient {
+
+    private static final Pattern MEDIA_INFO_ATTRIBUTE_PATTERN = Pattern.compile(":media-info=\"([^\"]+)\"");
 
     private final KollusProperties properties;
     private final ObjectMapper objectMapper;
@@ -31,6 +36,7 @@ public class KollusApiClient {
         this.objectMapper = Objects.requireNonNull(objectMapper);
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(properties.httpTimeout())
+            .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     }
 
@@ -90,8 +96,87 @@ public class KollusApiClient {
         if (mediaToken == null || mediaToken.isBlank()) {
             throw new IllegalArgumentException("mediaToken이 비어 있습니다.");
         }
-        // 왜: 레거시에서는 플레이 URL(/s?)을 다운로드 URL(/si?)로 바꿉니다. media_token도 동일하게 /si?key= 로 접근 가능합니다.
-        return URI.create(properties.playerBaseUrl() + "/si?key=" + urlEncode(mediaToken.trim()));
+        // ✅ 왜: `get_media_link_by_userid`는 실제 파일(URL)이 아니라 "media_token"만 내려줍니다.
+        // `/si?key=<media_token>`로 바로 파일을 받을 수 있을 것처럼 보이지만,
+        // 실제로는 mp4가 아니라 토큰 문자열(text/plain)을 내려줘서 ffmpeg가 실패합니다.
+        //
+        // 해결: 플레이어 페이지(`/s?key=...`) HTML 안의 `:media-info="...JSON..."`에
+        // 서명된 mp4 URL(xcdn.kollus.com/...mp4?sign=...)이 들어있어,
+        // 그 mp4 URL을 찾아서 다운로드에 사용합니다.
+        URI playerPage = URI.create(properties.playerBaseUrl() + "/s?key=" + urlEncode(mediaToken.trim()));
+        HttpRequest request = HttpRequest.newBuilder(playerPage)
+            .timeout(properties.httpTimeout())
+            .GET()
+            .build();
+
+        String html = send(request);
+        return extractSignedMp4UriFromPlayerHtml(html);
+    }
+
+    private URI extractSignedMp4UriFromPlayerHtml(String html) {
+        try {
+            if (html == null || html.isBlank()) {
+                throw new IllegalStateException("플레이어 HTML 응답이 비어 있습니다.");
+            }
+
+            Matcher m = MEDIA_INFO_ATTRIBUTE_PATTERN.matcher(html);
+            if (!m.find()) {
+                throw new IllegalStateException("플레이어 HTML에서 media-info를 찾지 못했습니다.");
+            }
+
+            // HTML attribute 안이라 &quot; 같은 엔티티가 섞여 있습니다. JSON 파싱 전에 풀어줘야 합니다.
+            String encodedJson = m.group(1);
+            String json = HtmlUtils.htmlUnescape(encodedJson);
+            JsonNode root = objectMapper.readTree(json);
+
+            String mp4Url = findBestMp4Url(root);
+            if (mp4Url == null || mp4Url.isBlank()) {
+                throw new IllegalStateException("플레이어 media-info에서 MP4 URL을 찾지 못했습니다.");
+            }
+            return URI.create(mp4Url.trim());
+        } catch (Exception e) {
+            // ✅ media_token 같은 민감 값이 예외 메시지/로그에 섞이지 않도록, 원문 HTML은 포함하지 않습니다.
+            throw new IllegalStateException("Kollus 플레이어 HTML에서 다운로드 URL을 해석하지 못했습니다.", e);
+        }
+    }
+
+    private static String findBestMp4Url(JsonNode root) {
+        // 1) 가장 흔한 케이스: 서명 파라미터(sign=)가 붙은 mp4 URL
+        String signed = findFirstText(root, s -> isMp4Url(s) && s.contains("sign="));
+        if (signed != null) return signed;
+
+        // 2) fallback: sign이 없어도 mp4 URL이면 사용(환경/계정에 따라 다를 수 있음)
+        return findFirstText(root, KollusApiClient::isMp4Url);
+    }
+
+    private static boolean isMp4Url(String s) {
+        if (s == null) return false;
+        String t = s.trim();
+        if (!(t.startsWith("http://") || t.startsWith("https://"))) return false;
+        // 썸네일 파일명 패턴: xxx.mp4.[big].jpg 같은 케이스는 제외
+        if (t.contains(".mp4.")) return false;
+        return t.matches("(?i).+\\.mp4(\\?.*)?$");
+    }
+
+    private static String findFirstText(JsonNode node, java.util.function.Predicate<String> predicate) {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        if (node.isTextual()) {
+            String s = node.asText();
+            return predicate.test(s) ? s : null;
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                String found = findFirstText(child, predicate);
+                if (found != null) return found;
+            }
+        }
+        if (node.isObject()) {
+            for (java.util.Iterator<JsonNode> it = node.elements(); it.hasNext(); ) {
+                String found = findFirstText(it.next(), predicate);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private String send(HttpRequest request) {

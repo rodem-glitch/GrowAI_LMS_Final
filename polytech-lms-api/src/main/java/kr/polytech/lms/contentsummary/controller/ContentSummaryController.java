@@ -1,5 +1,7 @@
 package kr.polytech.lms.contentsummary.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import kr.polytech.lms.contentsummary.dto.EnqueueBackfillResponse;
 import kr.polytech.lms.contentsummary.dto.KollusWebhookIngestResponse;
@@ -24,16 +26,19 @@ public class ContentSummaryController {
     private final ContentSummaryService contentSummaryService;
     private final ContentSummaryRepository transcriptRepository;
     private final HttpServletRequest httpServletRequest;
+    private final ObjectMapper objectMapper;
 
     public ContentSummaryController(
         ContentSummaryService contentSummaryService,
         ContentSummaryRepository transcriptRepository,
-        HttpServletRequest httpServletRequest
+        HttpServletRequest httpServletRequest,
+        ObjectMapper objectMapper
     ) {
         // 왜: 전사 실행은 운영 리소스를 많이 쓰는 작업이라, API로 제어 가능하게 하되 기본은 로컬에서만 실행되게 막습니다.
         this.contentSummaryService = contentSummaryService;
         this.transcriptRepository = transcriptRepository;
         this.httpServletRequest = httpServletRequest;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/admin/transcribe")
@@ -67,16 +72,25 @@ public class ContentSummaryController {
         @RequestParam(name = "media_content_key", required = false) String mediaContentKeyParam,
         @RequestParam(name = "upload_file_key", required = false) String uploadFileKeyParam,
         @RequestParam(name = "title", required = false) String titleParam,
-        @org.springframework.web.bind.annotation.RequestBody(required = false) com.fasterxml.jackson.databind.JsonNode body
+        @org.springframework.web.bind.annotation.RequestBody(required = false) String body
     ) {
         ensureKollusWebhookAccess(webhookToken != null ? webhookToken : webhookTokenParam);
 
         // 왜: Kollus Webhook은 연동 방식에 따라 JSON 또는 form-urlencoded로 올 수 있습니다.
         // - form-urlencoded면 RequestParam으로 값이 들어오므로 그걸 우선 사용합니다.
         // - JSON이면 body에서 찾아옵니다.
+        JsonNode bodyNode = null;
+        if (body != null && !body.isBlank()) {
+            try {
+                bodyNode = objectMapper.readTree(body);
+            } catch (Exception ignored) {
+                // form-urlencoded일 수 있으니 JSON 파싱 실패는 무시합니다.
+            }
+        }
+
         String mediaContentKey = firstNonBlank(mediaContentKeyParam, uploadFileKeyParam);
-        if ((mediaContentKey == null || mediaContentKey.isBlank()) && body != null && !body.isNull()) {
-            mediaContentKey = findAnyText(body,
+        if ((mediaContentKey == null || mediaContentKey.isBlank()) && bodyNode != null && !bodyNode.isNull()) {
+            mediaContentKey = findAnyText(bodyNode,
                 "/media_content_key",
                 "/mediaContentKey",
                 "/upload_file_key",
@@ -94,8 +108,8 @@ public class ContentSummaryController {
         }
 
         String title = titleParam;
-        if ((title == null || title.isBlank()) && body != null && !body.isNull()) {
-            title = findAnyText(body,
+        if ((title == null || title.isBlank()) && bodyNode != null && !bodyNode.isNull()) {
+            title = findAnyText(bodyNode,
                 "/title",
                 "/data/title",
                 "/result/title",
