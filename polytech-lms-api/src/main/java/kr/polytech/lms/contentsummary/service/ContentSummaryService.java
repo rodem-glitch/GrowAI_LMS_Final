@@ -9,7 +9,7 @@ import java.util.Optional;
 import kr.polytech.lms.contentsummary.client.KollusApiClient;
 import kr.polytech.lms.contentsummary.client.KollusMediaDownloader;
 import kr.polytech.lms.contentsummary.client.KollusProperties;
-import kr.polytech.lms.contentsummary.client.OpenAiWhisperSttClient;
+import kr.polytech.lms.contentsummary.client.SttClient;
 import kr.polytech.lms.contentsummary.client.SttProperties;
 import kr.polytech.lms.contentsummary.dto.EnqueueBackfillResponse;
 import kr.polytech.lms.contentsummary.dto.KollusChannelContent;
@@ -29,7 +29,7 @@ public class ContentSummaryService {
     private final KollusApiClient kollusApiClient;
     private final KollusMediaDownloader kollusMediaDownloader;
     private final KollusProperties kollusProperties;
-    private final OpenAiWhisperSttClient sttClient;
+    private final SttClient sttClient;
     private final SttProperties sttProperties;
     private final ContentTranscriptionProperties transcriptionProperties;
     private final ContentSummaryRepository transcriptRepository;
@@ -40,7 +40,7 @@ public class ContentSummaryService {
         KollusApiClient kollusApiClient,
         KollusMediaDownloader kollusMediaDownloader,
         KollusProperties kollusProperties,
-        OpenAiWhisperSttClient sttClient,
+        SttClient sttClient,
         SttProperties sttProperties,
         ContentTranscriptionProperties transcriptionProperties,
         ContentSummaryRepository transcriptRepository,

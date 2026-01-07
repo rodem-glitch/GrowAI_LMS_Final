@@ -64,36 +64,44 @@ public class ContentSummaryController {
         @RequestHeader(name = "X-Kollus-Webhook-Token", required = false) String webhookToken,
         @RequestParam(name = "token", required = false) String webhookTokenParam,
         @RequestParam(name = "siteId", required = false) Integer siteId,
+        @RequestParam(name = "media_content_key", required = false) String mediaContentKeyParam,
+        @RequestParam(name = "upload_file_key", required = false) String uploadFileKeyParam,
+        @RequestParam(name = "title", required = false) String titleParam,
         @org.springframework.web.bind.annotation.RequestBody(required = false) com.fasterxml.jackson.databind.JsonNode body
     ) {
         ensureKollusWebhookAccess(webhookToken != null ? webhookToken : webhookTokenParam);
 
-        if (body == null || body.isNull()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요청 본문(JSON)이 비어 있습니다.");
+        // 왜: Kollus Webhook은 연동 방식에 따라 JSON 또는 form-urlencoded로 올 수 있습니다.
+        // - form-urlencoded면 RequestParam으로 값이 들어오므로 그걸 우선 사용합니다.
+        // - JSON이면 body에서 찾아옵니다.
+        String mediaContentKey = firstNonBlank(mediaContentKeyParam, uploadFileKeyParam);
+        if ((mediaContentKey == null || mediaContentKey.isBlank()) && body != null && !body.isNull()) {
+            mediaContentKey = findAnyText(body,
+                "/media_content_key",
+                "/mediaContentKey",
+                "/upload_file_key",
+                "/uploadFileKey",
+                "/data/media_content_key",
+                "/data/upload_file_key",
+                "/result/media_content_key",
+                "/result/item/media_content_key",
+                "/result/item/upload_file_key"
+            );
         }
-
-        String mediaContentKey = findAnyText(body,
-            "/media_content_key",
-            "/mediaContentKey",
-            "/upload_file_key",
-            "/uploadFileKey",
-            "/data/media_content_key",
-            "/data/upload_file_key",
-            "/result/media_content_key",
-            "/result/item/media_content_key",
-            "/result/item/upload_file_key"
-        );
 
         if (mediaContentKey == null || mediaContentKey.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "media_content_key(또는 upload_file_key)를 찾을 수 없습니다.");
         }
 
-        String title = findAnyText(body,
-            "/title",
-            "/data/title",
-            "/result/title",
-            "/result/item/title"
-        );
+        String title = titleParam;
+        if ((title == null || title.isBlank()) && body != null && !body.isNull()) {
+            title = findAnyText(body,
+                "/title",
+                "/data/title",
+                "/result/title",
+                "/result/item/title"
+            );
+        }
 
         return contentSummaryService.ingestKollusWebhook(siteId, mediaContentKey, title);
     }
@@ -159,6 +167,16 @@ public class ContentSummaryController {
             if (node == null || node.isMissingNode() || node.isNull()) continue;
             String s = node.asText(null);
             if (s != null && !s.isBlank()) return s.trim();
+        }
+        return null;
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (v == null) continue;
+            String t = v.trim();
+            if (!t.isBlank()) return t;
         }
         return null;
     }

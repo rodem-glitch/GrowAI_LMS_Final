@@ -65,12 +65,15 @@ public class ContentTranscriptionWorker {
 
     private void pollSummaryJobs() {
         List<Long> candidates = jdbcTemplate.queryForList("""
-            SELECT id
-            FROM TB_KOLLUS_TRANSCRIPT
-            WHERE status = 'TRANSCRIBED'
-               OR (status = 'SUMMARY_FAILED' AND retry_count < ? AND TIMESTAMPDIFF(SECOND, updated_at, NOW()) >= ?)
-               OR (status = 'SUMMARY_PROCESSING' AND retry_count < ? AND TIMESTAMPDIFF(SECOND, updated_at, NOW()) >= ?)
-            ORDER BY id ASC
+            SELECT t.id
+            FROM TB_KOLLUS_TRANSCRIPT t
+            LEFT JOIN TB_RECO_CONTENT r
+              ON r.lesson_id = t.media_content_key
+            WHERE t.status = 'TRANSCRIBED'
+               OR (t.status = 'DONE' AND r.id IS NULL)
+               OR (t.status = 'SUMMARY_FAILED' AND t.retry_count < ? AND TIMESTAMPDIFF(SECOND, t.updated_at, NOW()) >= ?)
+               OR (t.status = 'SUMMARY_PROCESSING' AND t.retry_count < ? AND TIMESTAMPDIFF(SECOND, t.updated_at, NOW()) >= ?)
+            ORDER BY t.id ASC
             LIMIT ?
             """,
             Long.class,
@@ -123,6 +126,7 @@ public class ContentTranscriptionWorker {
              WHERE id = ?
                AND (
                  status = 'TRANSCRIBED'
+                 OR status = 'DONE'
                  OR (status = 'SUMMARY_FAILED' AND retry_count < ? AND TIMESTAMPDIFF(SECOND, updated_at, NOW()) >= ?)
                  OR (status = 'SUMMARY_PROCESSING' AND retry_count < ? AND TIMESTAMPDIFF(SECOND, updated_at, NOW()) >= ?)
                )
@@ -136,4 +140,3 @@ public class ContentTranscriptionWorker {
         return updated == 1;
     }
 }
-
