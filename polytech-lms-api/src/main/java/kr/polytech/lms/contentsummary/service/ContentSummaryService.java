@@ -21,10 +21,15 @@ import kr.polytech.lms.contentsummary.entity.KollusTranscript;
 import kr.polytech.lms.contentsummary.repository.ContentSummaryRepository;
 import kr.polytech.lms.recocontent.entity.RecoContent;
 import kr.polytech.lms.recocontent.repository.RecoContentRepository;
+import kr.polytech.lms.recocontent.service.RecoContentVectorIndexService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ContentSummaryService {
+
+    private static final Logger log = LoggerFactory.getLogger(ContentSummaryService.class);
 
     private final KollusApiClient kollusApiClient;
     private final KollusMediaDownloader kollusMediaDownloader;
@@ -35,6 +40,7 @@ public class ContentSummaryService {
     private final ContentSummaryRepository transcriptRepository;
     private final RecoContentSummaryGenerator recoContentSummaryGenerator;
     private final RecoContentRepository recoContentRepository;
+    private final RecoContentVectorIndexService recoContentVectorIndexService;
 
     public ContentSummaryService(
         KollusApiClient kollusApiClient,
@@ -45,7 +51,8 @@ public class ContentSummaryService {
         ContentTranscriptionProperties transcriptionProperties,
         ContentSummaryRepository transcriptRepository,
         RecoContentSummaryGenerator recoContentSummaryGenerator,
-        RecoContentRepository recoContentRepository
+        RecoContentRepository recoContentRepository,
+        RecoContentVectorIndexService recoContentVectorIndexService
     ) {
         // 왜: 전사는 "외부 API + 대용량 파일" 조합이라 실패 지점이 많습니다. 의존성을 분리해두면 원인 추적이 쉬워집니다.
         this.kollusApiClient = Objects.requireNonNull(kollusApiClient);
@@ -57,6 +64,7 @@ public class ContentSummaryService {
         this.transcriptRepository = Objects.requireNonNull(transcriptRepository);
         this.recoContentSummaryGenerator = Objects.requireNonNull(recoContentSummaryGenerator);
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
+        this.recoContentVectorIndexService = Objects.requireNonNull(recoContentVectorIndexService);
     }
 
     public KollusWebhookIngestResponse ingestKollusWebhook(Integer siteId, String mediaContentKey, String title) {
@@ -305,7 +313,15 @@ public class ContentSummaryService {
 
             RecoContent content = new RecoContent(categoryNm, title, summary, keywords);
             content.setLessonId(mediaKey.trim());
-            recoContentRepository.save(content);
+            RecoContent saved = recoContentRepository.save(content);
+
+            // 왜: 추천은 벡터 DB(Qdrant)에서 유사도 검색을 하기 때문에, 가능하면 저장 직후 upsert해서 최신 데이터를 반영합니다.
+            // 단, Qdrant/임베딩 API 장애가 나도 요약 자체(DB 저장)는 성공 처리할 수 있게 "best-effort"로 둡니다.
+            try {
+                recoContentVectorIndexService.upsertOne(saved);
+            } catch (Exception e) {
+                log.warn("TB_RECO_CONTENT 벡터 upsert에 실패했습니다. (lesson_id={})", mediaKey, e);
+            }
 
             transcript.markSummaryDone();
             transcriptRepository.save(transcript);
