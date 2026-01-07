@@ -29,24 +29,30 @@ public class KosisStatisticsService {
     }
 
     public List<KosisPopulationRow> getPopulation(String year, String ageType, String gender) throws IOException {
+        return getPopulation(year, ageType, gender, null);
+    }
+
+    public List<KosisPopulationRow> getPopulation(String year, String ageType, String gender, String admCd) throws IOException {
         String resolvedYear = resolveYear(year);
         String resolvedAgeType = resolveAgeType(ageType);
         String resolvedGender = resolveGender(gender);
+        String resolvedAdmCd = resolveAdmCd(admCd);
 
-        List<KosisPopulationRow> cached = findPopulationFromCache(resolvedYear, resolvedAgeType, resolvedGender);
+        List<KosisPopulationRow> cached = findPopulationFromCache(resolvedYear, resolvedAgeType, resolvedGender, resolvedAdmCd);
         if (!cached.isEmpty()) {
             return cached;
         }
 
-        List<KosisPopulationRow> fetched = kosisClient.fetchPopulation(resolvedYear, resolvedAgeType, resolvedGender);
+        List<KosisPopulationRow> fetched = kosisClient.fetchPopulation(resolvedYear, resolvedAgeType, resolvedGender, resolvedAdmCd);
         savePopulationToCache(resolvedYear, resolvedAgeType, resolvedGender, fetched);
         return fetched;
     }
 
-    private List<KosisPopulationRow> findPopulationFromCache(String year, String ageType, String gender) {
+    private List<KosisPopulationRow> findPopulationFromCache(String year, String ageType, String gender, String admCd) {
         // 왜: 레거시와 동일하게 "DB에 있으면 DB 우선"으로 외부 API 호출을 줄입니다.
-        List<KosisPopulation> entities =
-                kosisPopulationRepository.findByIdYearAndIdAgeTypeAndIdGenderOrderByIdAdmCdAsc(year, ageType, gender);
+        List<KosisPopulation> entities = (StringUtils.hasText(admCd))
+                ? kosisPopulationRepository.findByIdYearAndIdAgeTypeAndIdGenderAndIdAdmCd(year, ageType, gender, admCd)
+                : kosisPopulationRepository.findByIdYearAndIdAgeTypeAndIdGenderOrderByIdAdmCdAsc(year, ageType, gender);
         return entities.stream().map(this::toRow).toList();
     }
 
@@ -106,5 +112,13 @@ public class KosisStatisticsService {
             return "0";
         }
         return gender.trim();
+    }
+
+    private String resolveAdmCd(String admCd) {
+        // 왜: 행정구역을 고정하면 응답이 1행만 내려와서 "연령대별 분포" 계산이 훨씬 빨라집니다.
+        if (!StringUtils.hasText(admCd)) {
+            return null;
+        }
+        return admCd.trim();
     }
 }

@@ -10,6 +10,8 @@ public class KosisProperties {
     private String consumerSecret;
     private String authUrl;
     private String populationUrl;
+    private String industryCodeUrl;
+    private String companyUrl;
 
     public String getConsumerKey() {
         return consumerKey;
@@ -41,5 +43,21 @@ public class KosisProperties {
 
     public void setPopulationUrl(String populationUrl) {
         this.populationUrl = populationUrl;
+    }
+
+    public String getIndustryCodeUrl() {
+        return industryCodeUrl;
+    }
+
+    public void setIndustryCodeUrl(String industryCodeUrl) {
+        this.industryCodeUrl = industryCodeUrl;
+    }
+
+    public String getCompanyUrl() {
+        return companyUrl;
+    }
+
+    public void setCompanyUrl(String companyUrl) {
+        this.companyUrl = companyUrl;
     }
 }

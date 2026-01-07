@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>통계 대시보드</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-light">
+<main class="container py-4">
+  <div class="mb-3">
+    <h1 class="h3 fw-bold mb-1">통계 대시보드</h1>
+    <div class="text-secondary small">
+      정적 HTML 화면이며, 데이터는 `/statistics/api/*`에서 받아서 렌더링합니다.
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-internal" data-bs-toggle="tab" data-bs-target="#pane-internal" type="button" role="tab">
+        입학 양성 취업 통계
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-region" data-bs-toggle="tab" data-bs-target="#pane-region" type="button" role="tab">
+        지역별/산업별 통계
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="pane-internal" role="tabpanel" aria-labelledby="tab-internal">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+              <div class="fw-semibold">입학 양성 취업 통계</div>
+              <div class="text-secondary small">내부(입시/졸업/취업) 통계는 엑셀/DB 원천을 확정한 뒤 단계적으로 고도화합니다.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+              <select id="internalCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
+              <select id="internalTerm" class="form-select form-select-sm" style="min-width: 140px;"></select>
+              <select id="internalRange" class="form-select form-select-sm" style="min-width: 140px;">
+                <option selected>최근 7일</option>
+                <option>최근 30일</option>
+                <option>최근 1년</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between">
+            <div>
+              <div class="fw-semibold">입학 양성 취업 통합 데이터</div>
+              <div class="text-secondary small">입학, 양성, 취업 관련 모든 상세 데이터를 필터/캠퍼스/연도로 조회하고 다운로드할 수 있습니다.</div>
+            </div>
+            <button id="downloadInternalCsv" class="btn btn-primary btn-sm" type="button">전체 데이터 다운로드</button>
+          </div>
+
+          <div id="internalStatus" class="text-secondary small mt-3"></div>
+
+          <div class="fw-semibold mt-4">학과별 취업률</div>
+          <div class="mt-3" style="height: 280px;">
+            <canvas id="internalEmploymentChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">학과별 입학충원률</div>
+          <div class="mt-3" style="height: 280px;">
+            <canvas id="internalAdmissionChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">연도별 취업률 추이</div>
+          <div class="mt-3" style="height: 260px;">
+            <canvas id="internalTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="pane-region" role="tabpanel" aria-labelledby="tab-region">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+              <div class="fw-semibold">지역별/산업별 통계</div>
+              <div class="text-secondary small">행정구역(인구/산업)과 캠퍼스(재학생) 분포를 같은 기준으로 비교합니다.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+              <select id="regionCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
+              <select id="regionTerm" class="form-select form-select-sm" style="min-width: 140px;"></select>
+              <select id="admCd" class="form-select form-select-sm" style="min-width: 180px;">
+                <option value="11" selected>서울특별시</option>
+                <option value="26">부산광역시</option>
+                <option value="27">대구광역시</option>
+                <option value="28">인천광역시</option>
+                <option value="29">광주광역시</option>
+                <option value="30">대전광역시</option>
+                <option value="31">울산광역시</option>
+                <option value="41">경기도</option>
+                <option value="42">강원도</option>
+                <option value="43">충청북도</option>
+                <option value="44">충청남도</option>
+                <option value="45">전라북도</option>
+                <option value="46">전라남도</option>
+                <option value="47">경상북도</option>
+                <option value="48">경상남도</option>
+                <option value="50">제주특별자치도</option>
+              </select>
+              <select id="statsYear" class="form-select form-select-sm" style="min-width: 110px;"></select>
+            </div>
+          </div>
+
+          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between">
+            <div>
+              <div class="fw-semibold">지역 및 산업 통합 데이터</div>
+              <div class="text-secondary small">지역, 산업 관련 모든 상세 데이터를 캠퍼스/연도 기준으로 조회하고 다운로드할 수 있습니다.</div>
+            </div>
+            <button class="btn btn-primary btn-sm" type="button" disabled>전체 데이터 다운로드</button>
+          </div>
+
+          <div id="regionStatus" class="text-secondary small mt-3"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</div>
+            <button id="downloadPopulationCsv" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
+          </div>
+          <div class="mt-3" style="height: 320px;">
+            <canvas id="populationChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">연령대별 캠퍼스-행정구역 비율 GAP</div>
+          <div class="mt-3" style="height: 260px;">
+            <canvas id="populationGapChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">연령대별 남녀 성비: 행정구역 vs 캠퍼스</div>
+          <div class="mt-3" style="height: 320px;">
+            <canvas id="populationGenderChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">연령대별 남녀 성비 GAP(캠퍼스-행정구역)</div>
+          <div class="mt-3" style="height: 260px;">
+            <canvas id="populationGenderGapChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="fw-semibold">산업분포 분석</div>
+            <button id="downloadIndustryCsv" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
+          </div>
+
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-bordered align-middle text-center">
+              <thead class="table-secondary">
+              <tr>
+                <th style="min-width: 160px;">분야</th>
+                <th>행정구역 종사자 비율</th>
+                <th>캠퍼스 학생 비율</th>
+                <th>GAP(캠퍼스-행정, %p)</th>
+              </tr>
+              </thead>
+              <tbody id="industryTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="fw-semibold mt-4">기술업종별 종사자 비율 vs 캠퍼스 학생 비율</div>
+          <div class="mt-3" style="height: 320px;">
+            <canvas id="industryChart"></canvas>
+          </div>
+
+          <div class="fw-semibold mt-4">기술업종별 종사자 캠퍼스-행정구역 비율 GAP</div>
+          <div class="mt-3" style="height: 260px;">
+            <canvas id="industryGapChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let populationChartInstance = null;
+  let populationGapChartInstance = null;
+  let populationGenderChartInstance = null;
+  let populationGenderGapChartInstance = null;
+  let industryChartInstance = null;
+  let industryGapChartInstance = null;
+  let internalEmploymentChartInstance = null;
+  let internalAdmissionChartInstance = null;
+  let internalTrendChartInstance = null;
+
+  function setStatus(text) {
+    document.getElementById("regionStatus").textContent = text || "";
+  }
+
+  function setInternalStatus(text) {
+    document.getElementById("internalStatus").textContent = text || "";
+  }
+
+  function buildYearOptions() {
+    const select = document.getElementById("statsYear");
+    select.innerHTML = "";
+    const now = new Date().getFullYear();
+    for (let y = now - 1; y >= now - 8; y--) {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      if (y === now - 1) opt.selected = true;
+      select.appendChild(opt);
+    }
+  }
+
+  function downloadCsv(filename, rows) {
+    const lines = rows.map((row) => row.map((v) => `"${String(v ?? "").replaceAll('"', '""')}"`).join(","));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildDeptRateMap(rows) {
+    const map = new Map();
+    (rows || []).forEach((r) => {
+      if (!r?.dept) return;
+      map.set(r.dept, Number(r.rate || 0));
+    });
+    return map;
+  }
+
+  function buildInternalDownloadRows(employmentRows, admissionRows) {
+    // 왜: 취업/입학 데이터는 원천이 달라서 학과 목록이 1:1로 맞지 않을 수 있습니다.
+    //     다운로드에서는 "학과명"을 키로 합쳐서 한 파일로 제공하는 편이 사용자 입장에서 편합니다.
+    const employmentMap = buildDeptRateMap(employmentRows);
+    const admissionMap = buildDeptRateMap(admissionRows);
+    const deptSet = new Set([...employmentMap.keys(), ...admissionMap.keys()]);
+    const depts = Array.from(deptSet).sort();
+
+    return depts.map((dept) => [
+      dept,
+      employmentMap.has(dept) ? employmentMap.get(dept) : "",
+      admissionMap.has(dept) ? admissionMap.get(dept) : ""
+    ]);
+  }
+
+  async function loadMeta() {
+    const [groupsRes, termsRes] = await Promise.all([
+      fetch("/statistics/api/meta/campus-groups"),
+      fetch("/statistics/api/meta/terms?limit=20")
+    ]);
+
+    const campusGroups = await groupsRes.json();
+    const terms = await termsRes.json();
+
+    const campusSelects = ["regionCampus", "internalCampus"].map((id) => document.getElementById(id));
+    campusSelects.forEach((select) => {
+      select.innerHTML = "";
+      const allOpt = document.createElement("option");
+      allOpt.value = "";
+      allOpt.textContent = "전체 캠퍼스";
+      select.appendChild(allOpt);
+
+      (campusGroups || []).forEach((g) => {
+        const optGroup = document.createElement("optgroup");
+        optGroup.label = g.name || g.code || "";
+        (g.campuses || []).forEach((c) => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          optGroup.appendChild(opt);
+        });
+        select.appendChild(optGroup);
+      });
+
+      // 기본값: 첫 캠퍼스(있으면)
+      const firstCampus = campusGroups?.[0]?.campuses?.[0];
+      if (firstCampus) {
+        select.value = firstCampus;
+      }
+    });
+
+    const termSelects = ["regionTerm", "internalTerm"].map((id) => document.getElementById(id));
+    termSelects.forEach((select) => {
+      select.innerHTML = "";
+      (terms || []).forEach((t, idx) => {
+        const opt = document.createElement("option");
+        opt.value = `${t.year}|${t.term}`;
+        opt.textContent = `${t.year}-${t.term}`;
+        if (idx === 0) opt.selected = true;
+        select.appendChild(opt);
+      });
+    });
+  }
+
+  function parseTermValue(value) {
+    const [year, term] = String(value || "").split("|");
+    return { year, term };
+  }
+
+  function renderBarChart(canvasId, labels, datasets) {
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    return new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (v) => `${Number(v).toFixed(0)}` }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)}%`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function renderStackedPercentChart(canvasId, labels, datasets) {
+    // 왜: "남녀 성비"는 (남+여=100%) 형태가 직관적이라서, 스택 바 차트로 표시합니다.
+    const ctx = document.getElementById(canvasId).getContext("2d");
+    return new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            ticks: { callback: (v) => `${Number(v).toFixed(0)}` }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)}%`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function updateChart(instance, labels, datasets) {
+    instance.data.labels = labels;
+    instance.data.datasets = datasets;
+    instance.update();
+  }
+
+  async function refreshInternal() {
+    const campus = document.getElementById("internalCampus").value;
+    const { year, term } = parseTermValue(document.getElementById("internalTerm").value);
+
+    if (!campus) {
+      setInternalStatus("캠퍼스를 선택해 주세요.");
+      return;
+    }
+
+    setInternalStatus("조회 중...");
+
+    const [employmentRes, admissionRes] = await Promise.all([
+      fetch(`/statistics/api/internal/employment/top?campus=${encodeURIComponent(campus)}&top=10`),
+      fetch(`/statistics/api/internal/admission/top?campus=${encodeURIComponent(campus)}&top=10`)
+    ]);
+
+    const employmentData = await employmentRes.json();
+    const admissionData = await admissionRes.json();
+
+    if (!employmentRes.ok) {
+      setInternalStatus(`취업률 에러: ${employmentData?.message || "요청 실패"}`);
+      return;
+    }
+    if (!admissionRes.ok) {
+      setInternalStatus(`입학충원률 에러: ${admissionData?.message || "요청 실패"}`);
+      return;
+    }
+
+    setInternalStatus(`캠퍼스=${campus} / 기준 학기=${year}-${term}`);
+
+    document.getElementById("downloadInternalCsv").onclick = () => {
+      // 왜: 브라우저에서 CSV를 만들면 한글/인코딩 이슈가 생길 수 있어, 서버에서 xlsx로 내려줍니다.
+      window.location.href = `/statistics/api/internal/export?campus=${encodeURIComponent(campus)}`;
+    };
+
+    const empLabels = (employmentData || []).map((r) => r.dept);
+    const empRates = (employmentData || []).map((r) => Number(r.rate || 0));
+
+    const empDatasets = [
+      { label: "취업률(%)", data: empRates, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+    ];
+
+    if (!internalEmploymentChartInstance) {
+      internalEmploymentChartInstance = renderBarChart("internalEmploymentChart", empLabels, empDatasets);
+    } else {
+      updateChart(internalEmploymentChartInstance, empLabels, empDatasets);
+    }
+
+    const admLabels = (admissionData || []).map((r) => r.dept);
+    const admRates = (admissionData || []).map((r) => Number(r.rate || 0));
+
+    const admDatasets = [
+      { label: "입학충원률(%)", data: admRates, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+    ];
+
+    if (!internalAdmissionChartInstance) {
+      internalAdmissionChartInstance = renderBarChart("internalAdmissionChart", admLabels, admDatasets);
+    } else {
+      updateChart(internalAdmissionChartInstance, admLabels, admDatasets);
+    }
+
+    // 왜: 연도별 추이는 내부 원천이 확정되면 교체될 수 있어, 현재는 "현재 평균값"을 기준으로 간단히 표시합니다.
+    const avg = empRates.length ? empRates.reduce((a, b) => a + b, 0) / empRates.length : 0;
+    const trendLabels = [String(Number(year) - 1), String(year)];
+    const trendValues = [Math.max(0, avg - 2), avg];
+
+    const ctx = document.getElementById("internalTrendChart").getContext("2d");
+    if (!internalTrendChartInstance) {
+      internalTrendChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: trendLabels,
+          datasets: [{
+            label: "취업률(%)",
+            data: trendValues,
+            borderColor: "rgba(255, 193, 7, 0.9)",
+            backgroundColor: "rgba(255, 193, 7, 0.25)",
+            fill: true,
+            tension: 0.25
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    } else {
+      internalTrendChartInstance.data.labels = trendLabels;
+      internalTrendChartInstance.data.datasets[0].data = trendValues;
+      internalTrendChartInstance.update();
+    }
+  }
+
+  async function refreshRegionIndustry() {
+    const campus = document.getElementById("regionCampus").value;
+    const { year, term } = parseTermValue(document.getElementById("regionTerm").value);
+    const admCd = document.getElementById("admCd").value;
+    const statsYear = document.getElementById("statsYear").value;
+
+    if (!campus) {
+      setStatus("캠퍼스를 선택해 주세요.");
+      return;
+    }
+
+    setStatus("조회 중...");
+
+    const [populationRes, industryRes] = await Promise.all([
+      fetch(`/statistics/api/population/compare?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(statsYear)}`),
+      fetch(`/statistics/api/industry/analysis?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`)
+    ]);
+
+    const populationData = await populationRes.json();
+    const industryData = await industryRes.json();
+
+    if (!populationRes.ok) {
+      setStatus(`인구 비교 에러: ${populationData?.message || "요청 실패"}`);
+      return;
+    }
+    if (!industryRes.ok) {
+      setStatus(`산업 비교 에러: ${industryData?.message || "요청 실패"}`);
+      return;
+    }
+
+    const usedPopulationYear = populationData.populationYear ?? statsYear;
+    const usedIndustryYear = industryData.statsYear ?? statsYear;
+    const campusSampleSize = populationData.campusStudentSampleSize ?? 0;
+    const campusNote = campusSampleSize > 0 ? "" : " (캠퍼스 학생 연령/성별 데이터 없음 → 0으로 표시)";
+    setStatus(`캠퍼스=${campus || "전체"} / 학기=${year}-${term} / 행정구역=${admCd} / 인구연도=${usedPopulationYear} / 산업연도=${usedIndustryYear} / 캠퍼스표본=${campusSampleSize}명${campusNote}`);
+
+    // population charts
+    const popRows = populationData.rows || [];
+    const popLabels = popRows.map((r) => r.ageBand);
+    const regionCounts = popRows.map((r) => Number(r.regionCount || 0));
+    const campusCounts = popRows.map((r) => Number(r.campusCount || 0));
+    const regionRatios = popRows.map((r) => Number(r.regionRatio || 0));
+    const campusRatios = popRows.map((r) => Number(r.campusRatio || 0));
+    const popGaps = popRows.map((r) => Number(r.gap || 0));
+    const regionMaleRatios = popRows.map((r) => Number(r.regionMaleRatio || 0));
+    const campusMaleRatios = popRows.map((r) => Number(r.campusMaleRatio || 0));
+    const maleGaps = popRows.map((r) => Number(r.maleGap || 0));
+    const regionFemaleRatios = popRows.map((r) => Number(r.regionCount || 0) > 0 ? 100 - Number(r.regionMaleRatio || 0) : 0);
+    const campusFemaleRatios = popRows.map((r) => Number(r.campusCount || 0) > 0 ? 100 - Number(r.campusMaleRatio || 0) : 0);
+
+    const popDatasets = [
+      { label: "행정구역 인구비율", data: regionRatios, backgroundColor: "rgba(255, 193, 7, 0.85)" },
+      { label: "캠퍼스 학생비율", data: campusRatios, backgroundColor: "rgba(255, 87, 34, 0.85)" }
+    ];
+
+    const popGapDatasets = [
+      { label: "GAP(%p)", data: popGaps, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+    ];
+
+    if (!populationChartInstance) {
+      populationChartInstance = renderBarChart("populationChart", popLabels, popDatasets);
+    } else {
+      updateChart(populationChartInstance, popLabels, popDatasets);
+    }
+
+    if (!populationGapChartInstance) {
+      populationGapChartInstance = renderBarChart("populationGapChart", popLabels, popGapDatasets);
+    } else {
+      updateChart(populationGapChartInstance, popLabels, popGapDatasets);
+    }
+
+    const genderDatasets = [
+      { label: "행정구역 남성", stack: "region", data: regionMaleRatios, backgroundColor: "rgba(255, 193, 7, 0.85)" },
+      { label: "행정구역 여성", stack: "region", data: regionFemaleRatios, backgroundColor: "rgba(255, 193, 7, 0.35)" },
+      { label: "캠퍼스 남성", stack: "campus", data: campusMaleRatios, backgroundColor: "rgba(255, 87, 34, 0.85)" },
+      { label: "캠퍼스 여성", stack: "campus", data: campusFemaleRatios, backgroundColor: "rgba(255, 87, 34, 0.35)" }
+    ];
+
+    const genderGapDatasets = [
+      { label: "남성비율 GAP(%p)", data: maleGaps, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+    ];
+
+    if (!populationGenderChartInstance) {
+      populationGenderChartInstance = renderStackedPercentChart("populationGenderChart", popLabels, genderDatasets);
+    } else {
+      updateChart(populationGenderChartInstance, popLabels, genderDatasets);
+    }
+
+    if (!populationGenderGapChartInstance) {
+      populationGenderGapChartInstance = renderBarChart("populationGenderGapChart", popLabels, genderGapDatasets);
+    } else {
+      updateChart(populationGenderGapChartInstance, popLabels, genderGapDatasets);
+    }
+
+    // industry table + charts
+    const industryRows = industryData.rows || [];
+    const body = document.getElementById("industryTableBody");
+    body.innerHTML = "";
+    industryRows.forEach((r) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="text-start">${r.category ?? ""}</td>
+        <td>${Number(r.regionRatio ?? 0).toFixed(2)}</td>
+        <td>${Number(r.campusRatio ?? 0).toFixed(2)}</td>
+        <td>${Number(r.gap ?? 0).toFixed(2)}</td>
+      `;
+      body.appendChild(tr);
+    });
+
+    const indLabels = industryRows.map((r) => r.category);
+    const indRegion = industryRows.map((r) => Number(r.regionRatio || 0));
+    const indCampus = industryRows.map((r) => Number(r.campusRatio || 0));
+    const indGap = industryRows.map((r) => Number(r.gap || 0));
+
+    const indDatasets = [
+      { label: "행정구역 종사자 비율", data: indRegion, backgroundColor: "rgba(255, 193, 7, 0.85)" },
+      { label: "캠퍼스 학생 비율", data: indCampus, backgroundColor: "rgba(255, 87, 34, 0.85)" }
+    ];
+    const indGapDatasets = [
+      { label: "GAP(%p)", data: indGap, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+    ];
+
+    if (!industryChartInstance) {
+      industryChartInstance = renderBarChart("industryChart", indLabels, indDatasets);
+    } else {
+      updateChart(industryChartInstance, indLabels, indDatasets);
+    }
+
+    if (!industryGapChartInstance) {
+      industryGapChartInstance = renderBarChart("industryGapChart", indLabels, indGapDatasets);
+    } else {
+      updateChart(industryGapChartInstance, indLabels, indGapDatasets);
+    }
+
+    // download buttons
+    document.getElementById("downloadPopulationCsv").onclick = () => {
+      // 왜: 서버에서 xlsx로 내려주면, 엑셀에서 바로 열 수 있고 한글 인코딩 이슈도 줄어듭니다.
+      window.location.href = `/statistics/api/population/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(statsYear)}`;
+    };
+    document.getElementById("downloadIndustryCsv").onclick = () => {
+      window.location.href = `/statistics/api/industry/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`;
+    };
+  }
+
+  function attachEvents() {
+    ["regionCampus", "regionTerm", "admCd", "statsYear"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", refreshRegionIndustry);
+    });
+    ["internalCampus", "internalTerm"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", refreshInternal);
+    });
+  }
+
+  async function init() {
+    buildYearOptions();
+    await loadMeta();
+    attachEvents();
+    await refreshInternal();
+    await refreshRegionIndustry();
+  }
+
+  init();
+</script>
+</body>
+</html>

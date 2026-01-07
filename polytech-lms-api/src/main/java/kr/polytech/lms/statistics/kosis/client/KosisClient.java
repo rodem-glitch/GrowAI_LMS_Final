@@ -39,20 +39,34 @@ public class KosisClient {
     }
 
     public List<KosisPopulationRow> fetchPopulation(String year, String ageType, String gender) throws IOException {
-        // 왜: 토큰 만료를 신경 쓰지 않도록, 호출 시점에 자동으로 토큰을 확보합니다.
-        KosisToken token = getOrRefreshToken();
+        return fetchPopulation(year, ageType, gender, null);
+    }
 
-        URI uri = UriComponentsBuilder.fromHttpUrl(properties.getPopulationUrl())
-                .queryParam("accessToken", token.accessToken())
+    public List<KosisPopulationRow> fetchPopulation(String year, String ageType, String gender, String admCd) throws IOException {
+        // 왜: 토큰 만료를 신경 쓰지 않도록, 호출 시점에 자동으로 토큰을 확보합니다.
+        String accessToken = getAccessToken();
+
+        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(properties.getPopulationUrl())
+                .queryParam("accessToken", accessToken)
                 .queryParam("year", year)
                 .queryParam("age_type", ageType)
-                .queryParam("gender", gender)
-                .build(true)
-                .toUri();
+                .queryParam("gender", gender);
+
+        if (StringUtils.hasText(admCd)) {
+            // 왜: 특정 행정구역만 필요할 때 전체 목록을 받지 않아도 되도록 필터 파라미터를 지원합니다.
+            builder.queryParam("adm_cd", admCd.trim());
+        }
+
+        URI uri = builder.build(true).toUri();
 
         String responseBody = restClient.get().uri(uri).retrieve().body(String.class);
 
         return parsePopulationResponse(responseBody);
+    }
+
+    public String getAccessToken() throws IOException {
+        // 왜: 인구 외(산업 등) 다른 SGIS API에서도 동일 토큰을 재사용하기 위해, 토큰 문자열만 노출합니다.
+        return getOrRefreshToken().accessToken();
     }
 
     private KosisToken getOrRefreshToken() throws IOException {

@@ -28,13 +28,16 @@ public class KosisStatisticsController {
             @RequestParam(value = "year", required = false) String year,
             @RequestParam(value = "ageType", required = false) String ageType,
             @RequestParam(value = "age_type", required = false) String ageTypeLegacy,
-            @RequestParam(value = "gender", required = false) String gender
+            @RequestParam(value = "gender", required = false) String gender,
+            @RequestParam(value = "admCd", required = false) String admCd,
+            @RequestParam(value = "adm_cd", required = false) String admCdLegacy
     ) throws IOException {
         // 왜: 레거시 화면(TestPage.jsp)은 `age_type`를 사용하므로 호환 파라미터를 함께 받습니다.
         String resolvedAgeType = (ageType != null) ? ageType : ageTypeLegacy;
+        String resolvedAdmCd = (admCd != null) ? admCd : admCdLegacy;
 
         try {
-            List<KosisPopulationRow> rows = kosisStatisticsService.getPopulation(year, resolvedAgeType, gender);
+            List<KosisPopulationRow> rows = kosisStatisticsService.getPopulation(year, resolvedAgeType, gender, resolvedAdmCd);
             return ResponseEntity.ok(rows);
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(e.getMessage()));
