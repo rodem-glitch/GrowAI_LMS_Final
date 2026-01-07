@@ -179,6 +179,24 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   } | null>(null);
 
   const normalizeText = (value?: string) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const buildHaksaCourseId = (row: any) => {
+    // 왜: 학사 과목은 (강좌코드/연도/학기/분반/그룹) 5종 키로 식별되는데,
+    //     서버에서 내려주는 id가 환경/버전에 따라 중복될 수 있어(예: 연도/학기 누락),
+    //     React 목록에서 key 충돌이 나면 클릭한 행과 다른 과목이 열리는 문제가 생깁니다.
+    //     그래서 화면에서는 5종 키를 조합한 "항상 유일한 id"를 만들어 사용합니다.
+    const courseCode = String(row?.haksa_course_code ?? '').trim();
+    const openYear = String(row?.haksa_open_year ?? '').trim();
+    const openTerm = String(row?.haksa_open_term ?? '').trim();
+    const bunbanCode = String(row?.haksa_bunban_code ?? '').trim();
+    const groupCode = String(row?.haksa_group_code ?? '').trim();
+
+    const parts = [courseCode, openYear, openTerm, bunbanCode, groupCode].filter(Boolean);
+    if (parts.length === 5) return `H_${parts.join('_')}`;
+
+    // 왜: 일부 필드가 비어 있는 예외 데이터(테스트/초기 동기화 전)가 있을 수 있어 안전한 fallback을 둡니다.
+    const fallback = String(row?.course_id_conv ?? row?.course_cd ?? row?.id ?? '').trim();
+    return `H_${courseCode || 'UNKNOWN'}_${bunbanCode || '0'}_${fallback || '0'}`;
+  };
 
   const getRouteParam = useCallback((keys: string[]) => {
     for (const key of keys) {
@@ -366,7 +384,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
           ].filter(Boolean);
 
           return {
-            id: String(row.id),
+            id: activeTab === 'haksa' ? buildHaksaCourseId(row) : String(row.id),
             mappedCourseId: row.mapped_course_id ? Number(row.mapped_course_id) : undefined,
             sourceType: activeTab,
             courseId: row.course_id_conv || row.course_cd || String(row.id),
@@ -465,6 +483,20 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
     const normalizedTargetId = normalizeText(targetIdRaw);
     const targetId = Number(targetIdRaw);
     const normalizedTargetName = normalizeText(targetName);
+
+    // 왜: URL로 넘어오는 courseName은 "부분 문자열"인 경우가 있어,
+    //     includes 매칭을 먼저 쓰면 '시드 학사과목(2026)'처럼 공통 접두어를 가진 과목에서
+    //     '... B'가 먼저 잡혀서 엉뚱한 과목이 열릴 수 있습니다.
+    //     그래서 이름이 있을 때는 "정확히 같은 이름"을 최우선으로 매칭합니다.
+    if (normalizedTargetName) {
+      const exact = courses.find((course) => {
+        const subjectName = normalizeText(course.subjectName);
+        const programName = normalizeText(course.programName);
+        return subjectName === normalizedTargetName || programName === normalizedTargetName;
+      });
+      if (exact) return exact;
+    }
+
     return courses.find((course) => {
       const courseIdNum = Number(course.id);
       const mappedIdNum = Number(course.mappedCourseId ?? NaN);

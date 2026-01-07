@@ -318,7 +318,10 @@ else if("haksa".equals(tab)) {
 
             // ===== 기존 호환 필드 (목록 화면용) =====
             resultList.put("source_type", "haksa");
-            resultList.put("id", "H_" + courseCode + "_" + bunbanCode);
+            // 왜: 학사 과목은 (강좌코드/연도/학기/분반/그룹) 5종 키로 식별됩니다.
+            //     기존에는 course_code + bunban_code만으로 id를 만들어, 연도/학기 등이 다른 과목이 같은 id가 되어
+            //     화면(React)에서 행 key가 충돌하고 "다른 행을 눌렀는데 엉뚱한 과목이 열리는" 문제가 생길 수 있습니다.
+            resultList.put("id", "H_" + courseCode + "_" + openYear + "_" + openTerm + "_" + bunbanCode + "_" + groupCode);
             resultList.put("course_cd", courseCode);
             resultList.put("course_id_conv", courseCode);
             resultList.put("course_nm", courseName);
@@ -526,7 +529,9 @@ else if("haksa".equals(tab)) {
         resultList.put("haksa_is_syllabus", isSyllabus);
         
         // ===== 기존 호환 필드 (목록 화면용) =====
-        resultList.put("id", "H_" + courseCode + "_" + bunbanCode);
+        // 왜: 학사 과목은 (강좌코드/연도/학기/분반/그룹) 5종 키로 식별됩니다.
+        //     목록 행을 안정적으로 구분하기 위해 id도 5종 키를 포함합니다.
+        resultList.put("id", "H_" + courseCode + "_" + openYear + "_" + openTerm + "_" + bunbanCode + "_" + groupCode);
         resultList.put("course_cd", courseCode);
         resultList.put("course_id_conv", courseCode);
         resultList.put("course_nm", courseName);

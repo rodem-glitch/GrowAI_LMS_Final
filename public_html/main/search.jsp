@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %><%@ page import="java.io.*" %><%@ page import="java.net.*" %><%@ page import="java.nio.charset.StandardCharsets" %><%@ page import="malgnsoft.json.*" %><%@ include file="init.jsp" %><%
 
 //기본키
 String keyword = m.replace(m.rs("s_keyword").trim().replaceAll("[^가-힣a-zA-Z0-9\\s]", ""), " ", "|");
@@ -7,6 +7,13 @@ if(keyword.startsWith("|")) keyword = keyword.substring(1);
 if(keyword.endsWith("|")) keyword = keyword.substring(0, keyword.length() - 1);
 if("".equals(keyword)) { m.jsError(_message.get("alert.common.enter_keyword")); return; }
 if(100 < keyword.length()) keyword = m.cutString(keyword, 100, "");
+
+// 왜: DB 정규식(REGEXP) 검색용 키워드(keyword)는 '|' 구분자를 쓰지만,
+//     벡터(추천) 검색은 자연어 입력이 더 잘 맞기 때문에 공백 기반 query를 따로 준비합니다.
+String vectorQuery = m.rs("s_keyword").trim();
+vectorQuery = vectorQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ");
+vectorQuery = vectorQuery.replaceAll("\\s+", " ").trim();
+if(vectorQuery.length() > 200) vectorQuery = m.cutString(vectorQuery, 200, "");
 
 //객체
 CourseDao course = new CourseDao();
@@ -32,6 +39,127 @@ f2.addElement("s_keyword", null, null);
 
 //변수
 String today = m.time("yyyyMMdd");
+
+// ===== 벡터(추천) 검색 - 학생 검색 추천(동영상/강의) =====
+// 왜: 기존 통합검색은 DB REGEXP 기반이라 "의미 기반" 검색이 약합니다.
+//     그래서 학생 벡터검색 결과(강의/동영상)를 기존 '강의' 영역에서 함께 보여주기 위해 여기서 미리 조회합니다.
+DataSet recoLessonsAll = new DataSet();
+DataSet recoLessonsPreview = new DataSet();
+int recoLessonTotal = 0;
+try {
+	if(!"".equals(vectorQuery)) {
+		String apiBase = System.getenv("POLYTECH_LMS_API_BASE");
+		if(apiBase == null || "".equals(apiBase.trim())) apiBase = "http://localhost:8081";
+		apiBase = apiBase.replaceAll("/+$", "");
+
+		String url = apiBase + "/student/content-recommend/search";
+
+		JSONObject payload = new JSONObject();
+		if(userId > 0) payload.put("userId", userId);
+		payload.put("siteId", siteId);
+		payload.put("query", vectorQuery);
+		// 왜: '더보기'에서는 더 많이 보여줄 수 있어야 해서 넉넉히 받아옵니다. (상단은 5개만 미리보기)
+		payload.put("topK", 200);
+
+		String responseBody = "";
+		int httpCode = 0;
+
+		HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+		conn.setRequestMethod("POST");
+		conn.setConnectTimeout(5000);
+		conn.setReadTimeout(20000);
+		conn.setDoOutput(true);
+		conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+		conn.setRequestProperty("Accept", "application/json");
+
+		byte[] bodyBytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+		conn.setFixedLengthStreamingMode(bodyBytes.length);
+		try(OutputStream os = conn.getOutputStream()) {
+			os.write(bodyBytes);
+		}
+
+		httpCode = conn.getResponseCode();
+		InputStream is = (httpCode >= 200 && httpCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+		if(is != null) {
+			try(BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+				StringBuilder sb = new StringBuilder();
+				String line;
+				while((line = br.readLine()) != null) sb.append(line);
+				responseBody = sb.toString();
+			}
+		}
+
+		if(httpCode >= 200 && httpCode < 300) {
+			DataSet recoRows = new DataSet();
+			try {
+				String trimmed = responseBody == null ? "" : responseBody.trim();
+				if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
+			} catch(Exception ignore) {}
+
+			LessonDao lesson = new LessonDao();
+			KollusDao kollus = new KollusDao(siteId);
+
+			while(recoRows.next()) {
+				int lid = m.parseInt(recoRows.s("lessonId"));
+				if(lid <= 0) continue;
+
+				DataSet linfo = lesson.find(
+					"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
+					"id, lesson_nm, start_url, total_time, lesson_type"
+				);
+				if(!linfo.next()) continue;
+
+				// 왜: 템플릿에서는 '강의(courses)' 목록을 재사용하므로, 동일한 키로 맞춰서 내려줍니다.
+				recoLessonsAll.addRow();
+				recoLessonsAll.put("is_reco_video", true);
+				recoLessonsAll.put("id", lid);
+				recoLessonsAll.put("course_nm", linfo.s("lesson_nm"));
+				recoLessonsAll.put("course_nm_conv", m.cutString(linfo.s("lesson_nm"), 48));
+				recoLessonsAll.put("category_nm", recoRows.s("categoryNm"));
+				recoLessonsAll.put("onoff_type_conv", "온라인");
+				recoLessonsAll.put("recomm_yn", true);
+
+				boolean enrolled = "true".equalsIgnoreCase(recoRows.s("enrolled")) || "1".equals(recoRows.s("enrolled")) || "Y".equalsIgnoreCase(recoRows.s("enrolled"));
+				boolean watched = "true".equalsIgnoreCase(recoRows.s("watched")) || "1".equals(recoRows.s("watched")) || "Y".equalsIgnoreCase(recoRows.s("watched"));
+				boolean completed = "true".equalsIgnoreCase(recoRows.s("completed")) || "1".equals(recoRows.s("completed")) || "Y".equalsIgnoreCase(recoRows.s("completed"));
+
+				String badge = "";
+				if(completed) badge = "완료";
+				else if(watched) badge = "시청중";
+				else if(enrolled) badge = "수강중";
+				recoLessonsAll.put("status_badge", badge);
+
+				String playUrl = "";
+				if("05".equals(linfo.s("lesson_type"))) {
+					playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
+					if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
+				} else {
+					playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
+				}
+				recoLessonsAll.put("play_url", playUrl);
+
+				int totalMin = linfo.i("total_time");
+				recoLessonsAll.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
+
+				String thumbnail = "/html/images/common/noimage_course.gif";
+				try {
+					if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
+						DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
+						if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) thumbnail = kinfo.s("snapshot_url");
+					}
+				} catch(Exception ignore) {}
+				recoLessonsAll.put("course_file_url", thumbnail);
+			}
+
+			recoLessonTotal = recoLessonsAll.size();
+			recoLessonsAll.first();
+			while(recoLessonsAll.next()) {
+				if(recoLessonsPreview.size() >= 5) break;
+				recoLessonsPreview.addRow(recoLessonsAll.getRow());
+			}
+		}
+	}
+} catch(Exception ignore) {}
 
 //정보-과정
 DataSet courses = new DataSet();
@@ -86,6 +214,19 @@ while(coursesAll.next()) {
 	coursesAll.put("tutor_nm", courseTutor.getTutorSummary(coursesAll.i("id")));
 
 	courses.addRow(coursesAll.getRow());
+}
+
+// ===== 강의(과정) + 벡터(추천) 강의 합치기(미리보기) =====
+// 왜: 사용자는 검색결과에서 '강의' 영역만 보면 되므로, 벡터검색 결과를 같은 리스트에 섞어 보여줍니다.
+DataSet coursesMerged = new DataSet();
+recoLessonsPreview.first();
+while(recoLessonsPreview.next()) {
+	coursesMerged.addRow(recoLessonsPreview.getRow());
+}
+courses.first();
+while(courses.next()) {
+	if(coursesMerged.size() >= 5) break;
+	coursesMerged.addRow(courses.getRow());
 }
 
 //정보-방송
@@ -218,7 +359,8 @@ while(postsAll.next()) {
 }
 
 //변수
-int searchTotal = tutorTotal + courseTotal + webtvTotal + postTotal;
+int mergedCourseTotal = courseTotal + recoLessonTotal;
+int searchTotal = tutorTotal + mergedCourseTotal + webtvTotal + postTotal;
 
 //출력
 p.setLayout("search");
@@ -230,17 +372,21 @@ p.setVar("subject_query", m.qs("id,subject"));
 p.setVar("form_script", f2.getScript());
 
 p.setLoop("tutors", tutors);
-p.setLoop("courses", courses);
+p.setLoop("courses", coursesMerged);
 p.setLoop("webtvs", webtvs);
 p.setLoop("posts", posts);
 
 //p.setVar("s_keyword", keyword.replaceAll("\\|", " "));
 p.setVar("tutor_total", m.nf(tutorTotal));
-p.setVar("course_total", m.nf(courseTotal));
+p.setVar("course_total", m.nf(mergedCourseTotal));
 p.setVar("webtv_total", m.nf(webtvTotal));
 p.setVar("post_total", m.nf(postTotal));
 p.setVar("search_total", m.nf(searchTotal));
 p.setVar("no_result", 0 == searchTotal);
+
+// 왜: '강의 더보기'는 벡터검색 전체 결과를 보여주는 모드로 이동시킵니다.
+//     (기존 검색 파라미터를 그대로 유지하면서 mode만 추가)
+p.setVar("course_more_query", m.qs() + "&mode=vector");
 p.display();
 
 %>

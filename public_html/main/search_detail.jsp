@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %><%@ page import="java.io.*" %><%@ page import="java.net.*" %><%@ page import="java.nio.charset.StandardCharsets" %><%@ page import="malgnsoft.json.*" %><%@ include file="init.jsp" %><%
 
 //기본키
 String subject = m.rs("subject");
@@ -39,7 +39,127 @@ String[] subjectList = {"tutor=>강사", "course=>강의", "webtv=>방송", "pos
 ListManager lm = new ListManager();
 DataSet list = new DataSet();
 
-if("post".equals(searchType)) {
+// 왜: 강의(=과정) 상세 '더보기' 화면에서도 벡터검색 결과를 전체로 보고 싶다는 요구가 있어서,
+//     subject=course 이면서 mode=vector면 DB REGEXP 대신 벡터검색 API 결과를 그대로 출력합니다.
+String mode = m.rs("mode").trim();
+
+if("course".equals(searchType) && "vector".equals(mode)) {
+	// ===== 벡터(추천) 검색 - 학생 검색 추천(동영상/강의) 전체 =====
+	// 주의: JSP에는 기본 내장객체로 JspWriter `out`이 이미 있어서, 변수명 충돌을 피해야 합니다.
+	DataSet vectorList = new DataSet();
+	try {
+		String vectorQuery = m.rs("s_keyword").trim();
+		vectorQuery = vectorQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ");
+		vectorQuery = vectorQuery.replaceAll("\\s+", " ").trim();
+		if(vectorQuery.length() > 200) vectorQuery = m.cutString(vectorQuery, 200, "");
+
+		if(!"".equals(vectorQuery)) {
+			String apiBase = System.getenv("POLYTECH_LMS_API_BASE");
+			if(apiBase == null || "".equals(apiBase.trim())) apiBase = "http://localhost:8081";
+			apiBase = apiBase.replaceAll("/+$", "");
+
+			String url = apiBase + "/student/content-recommend/search";
+
+			JSONObject payload = new JSONObject();
+			if(userId > 0) payload.put("userId", userId);
+			payload.put("siteId", siteId);
+			payload.put("query", vectorQuery);
+			payload.put("topK", 200);
+
+			String responseBody = "";
+			int httpCode = 0;
+
+			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+			conn.setRequestMethod("POST");
+			conn.setConnectTimeout(5000);
+			conn.setReadTimeout(20000);
+			conn.setDoOutput(true);
+			conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+			conn.setRequestProperty("Accept", "application/json");
+
+			byte[] bodyBytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+			conn.setFixedLengthStreamingMode(bodyBytes.length);
+			try(OutputStream os = conn.getOutputStream()) {
+				os.write(bodyBytes);
+			}
+
+			httpCode = conn.getResponseCode();
+			InputStream is = (httpCode >= 200 && httpCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+			if(is != null) {
+				try(BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+					StringBuilder sb = new StringBuilder();
+					String line;
+					while((line = br.readLine()) != null) sb.append(line);
+					responseBody = sb.toString();
+				}
+			}
+
+			if(httpCode >= 200 && httpCode < 300) {
+				DataSet recoRows = new DataSet();
+				try {
+					String trimmed = responseBody == null ? "" : responseBody.trim();
+					if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
+				} catch(Exception ignore) {}
+
+				LessonDao lesson = new LessonDao();
+				KollusDao kollus = new KollusDao(siteId);
+
+				while(recoRows.next()) {
+					int lid = m.parseInt(recoRows.s("lessonId"));
+					if(lid <= 0) continue;
+
+					DataSet linfo = lesson.find(
+						"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
+					"id, lesson_nm, start_url, total_time, lesson_type"
+					);
+					if(!linfo.next()) continue;
+
+					vectorList.addRow();
+					vectorList.put("is_reco_video", true);
+					vectorList.put("id", lid);
+					vectorList.put("course_nm", linfo.s("lesson_nm"));
+					vectorList.put("course_nm_conv", m.cutString(linfo.s("lesson_nm"), 48));
+					vectorList.put("category_nm", recoRows.s("categoryNm"));
+					vectorList.put("onoff_type_conv", "온라인");
+					vectorList.put("recomm_yn", true);
+
+					boolean enrolled = "true".equalsIgnoreCase(recoRows.s("enrolled")) || "1".equals(recoRows.s("enrolled")) || "Y".equalsIgnoreCase(recoRows.s("enrolled"));
+					boolean watched = "true".equalsIgnoreCase(recoRows.s("watched")) || "1".equals(recoRows.s("watched")) || "Y".equalsIgnoreCase(recoRows.s("watched"));
+					boolean completed = "true".equalsIgnoreCase(recoRows.s("completed")) || "1".equals(recoRows.s("completed")) || "Y".equalsIgnoreCase(recoRows.s("completed"));
+
+					String badge = "";
+					if(completed) badge = "완료";
+					else if(watched) badge = "시청중";
+					else if(enrolled) badge = "수강중";
+					vectorList.put("status_badge", badge);
+
+					String playUrl = "";
+					if("05".equals(linfo.s("lesson_type"))) {
+						playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
+						if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
+					} else {
+						playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
+					}
+					vectorList.put("play_url", playUrl);
+
+					int totalMin = linfo.i("total_time");
+					vectorList.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
+
+					String thumbnail = "/html/images/common/noimage_course.gif";
+					try {
+						if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
+							DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
+							if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) thumbnail = kinfo.s("snapshot_url");
+						}
+					} catch(Exception ignore) {}
+					vectorList.put("course_file_url", thumbnail);
+				}
+			}
+		}
+	} catch(Exception ignore) {}
+
+	list = vectorList;
+} else if("post".equals(searchType)) {
 	//목록
 	//lm.d(out);
 	lm.setRequest(request);
@@ -196,8 +316,13 @@ p.setVar("subject_query", m.qs("id,subject,page"));
 p.setVar("form_script", f2.getScript());
 
 p.setLoop("list", list);
-p.setVar("pagebar", lm.getPaging());
-p.setVar("search_total", lm.getTotalNum());
+if("course".equals(searchType) && "vector".equals(mode)) {
+	p.setVar("pagebar", "");
+	p.setVar("search_total", list.size());
+} else {
+	p.setVar("pagebar", lm.getPaging());
+	p.setVar("search_total", lm.getTotalNum());
+}
 
 //p.setVar("s_keyword", keyword.replaceAll("\\|", " "));
 p.setVar(searchType + "_block", true);
