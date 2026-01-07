@@ -45,12 +45,6 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <select id="internalCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="internalTerm" class="form-select form-select-sm" style="min-width: 140px;"></select>
-              <select id="internalRange" class="form-select form-select-sm" style="min-width: 140px;">
-                <option selected>최근 7일</option>
-                <option>최근 30일</option>
-                <option>최근 1년</option>
-              </select>
             </div>
           </div>
 
@@ -92,7 +86,6 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <select id="populationCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="populationTerm" class="form-select form-select-sm" style="min-width: 140px;"></select>
               <select id="populationAdmCd" class="form-select form-select-sm" style="min-width: 180px;">
                 <option value="11" selected>서울특별시</option>
                 <option value="26">부산광역시</option>
@@ -165,7 +158,6 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <select id="industryCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="industryTerm" class="form-select form-select-sm" style="min-width: 140px;"></select>
               <select id="industryAdmCd" class="form-select form-select-sm" style="min-width: 180px;">
                 <option value="11" selected>서울특별시</option>
                 <option value="26">부산광역시</option>
@@ -312,15 +304,12 @@
   }
 
   async function loadMeta() {
-    const [groupsRes, termsRes] = await Promise.all([
-      fetch("/statistics/api/meta/campus-groups"),
-      fetch("/statistics/api/meta/terms?limit=20")
-    ]);
+    const groupsRes = await fetch("/statistics/api/meta/campus-groups");
 
     const campusGroups = await groupsRes.json();
-    const terms = await termsRes.json();
 
-    // 왜: 탭이 3개(내부/인구/산업)라서, 캠퍼스/학기 선택 박스도 각각 따로 둡니다.
+    // 왜: 통계 기준이 "내부 DB 학기"가 아니라 "엑셀/통계청 API"이므로, 화면에서 학기(OPEN_TERM)를 노출하지 않습니다.
+    //     탭이 3개(내부/인구/산업)라서, 캠퍼스 선택 박스는 각각 따로 둡니다.
     const campusSelects = ["populationCampus", "industryCampus", "internalCampus"].map((id) => document.getElementById(id));
     campusSelects.forEach((select) => {
       select.innerHTML = "";
@@ -347,23 +336,44 @@
         select.value = firstCampus;
       }
     });
-
-    const termSelects = ["populationTerm", "industryTerm", "internalTerm"].map((id) => document.getElementById(id));
-    termSelects.forEach((select) => {
-      select.innerHTML = "";
-      (terms || []).forEach((t, idx) => {
-        const opt = document.createElement("option");
-        opt.value = `${t.year}|${t.term}`;
-        opt.textContent = `${t.year}-${t.term}`;
-        if (idx === 0) opt.selected = true;
-        select.appendChild(opt);
-      });
-    });
   }
 
-  function parseTermValue(value) {
-    const [year, term] = String(value || "").split("|");
-    return { year, term };
+  function termCodeToKoreanLabel(term) {
+    // 왜: OPEN_TERM 값(예: 10, 11, 20, 30)은 통계청(KOSIS) 코드가 아니라 "내부 학사(미러) 학기 코드"라서,
+    //     숫자만 보여주면 사용자가 의미를 알 수 없습니다. 화면에서는 최대한 한글 라벨로 풀어서 보여줍니다.
+    const t = String(term || "").trim().toUpperCase();
+
+    const baseMap = {
+      "1": "1학기",
+      "2": "2학기",
+      "S": "여름학기",
+      "W": "겨울학기"
+    };
+    if (baseMap[t]) return baseMap[t];
+
+    if (/^\d+$/.test(t)) {
+      // 왜: 폴리텍 학사 연동 데이터는 환경에 따라 1/2/S/W 대신 10/11/20/21/30 같은 코드로 들어오는 경우가 있어,
+      //     가장 보수적으로 "앞자리(1/2/3)" 기준으로 학기를 추정하고, 실제 코드는 괄호로 병기합니다.
+      if (t.startsWith("1")) return "1학기";
+      if (t.startsWith("2")) return "2학기";
+      if (t.startsWith("3")) return "계절학기";
+    }
+
+    return `학기코드(${t})`;
+  }
+
+  function formatYearTermLabel(year, term) {
+    const label = termCodeToKoreanLabel(term);
+    // 왜: 화면/다운로드 등에서 같은 코드가 반복되므로, 사용자가 나중에 추적할 수 있게 코드도 같이 보여줍니다.
+    if (label.startsWith("학기코드")) {
+      return `${year}년 ${label}`;
+    }
+    return `${year}년 ${label} (코드:${term})`;
+  }
+
+  function getSelectedOptionText(selectId) {
+    const el = document.getElementById(selectId);
+    return el?.selectedOptions?.[0]?.textContent || "";
   }
 
   function renderBarChart(canvasId, labels, datasets) {
@@ -428,7 +438,6 @@
 
   async function refreshInternal() {
     const campus = document.getElementById("internalCampus").value;
-    const { year, term } = parseTermValue(document.getElementById("internalTerm").value);
 
     if (!campus) {
       setInternalStatus("캠퍼스를 선택해 주세요.");
@@ -437,13 +446,30 @@
 
     setInternalStatus("조회 중...");
 
-    const [employmentRes, admissionRes] = await Promise.all([
-      fetch(`/statistics/api/internal/employment/top?campus=${encodeURIComponent(campus)}&top=10`),
-      fetch(`/statistics/api/internal/admission/top?campus=${encodeURIComponent(campus)}&top=10`)
-    ]);
+    let employmentRes, admissionRes;
+    try {
+      [employmentRes, admissionRes] = await Promise.all([
+        fetch(`/statistics/api/internal/employment/top?campus=${encodeURIComponent(campus)}&top=10`),
+        fetch(`/statistics/api/internal/admission/top?campus=${encodeURIComponent(campus)}&top=10`)
+      ]);
+    } catch (e) {
+      setInternalStatus(`내부 통계 요청 실패: ${e?.message || "요청 실패"}`);
+      return;
+    }
 
-    const employmentData = await employmentRes.json();
-    const admissionData = await admissionRes.json();
+    let employmentData, admissionData;
+    try {
+      employmentData = await employmentRes.json();
+    } catch (e) {
+      setInternalStatus("취업률 응답을 해석하지 못했습니다. (서버 응답 형식 확인 필요)");
+      return;
+    }
+    try {
+      admissionData = await admissionRes.json();
+    } catch (e) {
+      setInternalStatus("입학충원률 응답을 해석하지 못했습니다. (서버 응답 형식 확인 필요)");
+      return;
+    }
 
     if (!employmentRes.ok) {
       setInternalStatus(`취업률 에러: ${employmentData?.message || "요청 실패"}`);
@@ -454,7 +480,8 @@
       return;
     }
 
-    setInternalStatus(`캠퍼스=${campus} / 기준 학기=${year}-${term}`);
+    // 왜: 내부 통계는 "학기(내부 DB)" 기준이 아니라, 현재 엑셀 집계 데이터를 기준으로 표시합니다.
+    setInternalStatus(`캠퍼스=${campus} / 기준=엑셀 집계`);
 
     document.getElementById("downloadInternalCsv").onclick = () => {
       // 왜: 브라우저에서 CSV를 만들면 한글/인코딩 이슈가 생길 수 있어, 서버에서 xlsx로 내려줍니다.
@@ -489,7 +516,8 @@
 
     // 왜: 연도별 추이는 내부 원천이 확정되면 교체될 수 있어, 현재는 "현재 평균값"을 기준으로 간단히 표시합니다.
     const avg = empRates.length ? empRates.reduce((a, b) => a + b, 0) / empRates.length : 0;
-    const trendLabels = [String(Number(year) - 1), String(year)];
+    const nowYear = new Date().getFullYear();
+    const trendLabels = [String(nowYear - 1), String(nowYear)];
     const trendValues = [Math.max(0, avg - 2), avg];
 
     const ctx = document.getElementById("internalTrendChart").getContext("2d");
@@ -522,8 +550,8 @@
 
   async function refreshPopulation() {
     const campus = document.getElementById("populationCampus").value;
-    const { year, term } = parseTermValue(document.getElementById("populationTerm").value);
     const admCd = document.getElementById("populationAdmCd").value;
+    const admLabel = getSelectedOptionText("populationAdmCd");
     const populationYear = document.getElementById("populationYear").value;
 
     if (!campus) {
@@ -534,7 +562,7 @@
     setPopulationStatus("조회 중...");
 
     const populationRes = await fetch(
-      `/statistics/api/population/compare?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`
+      `/statistics/api/population/compare?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`
     );
     const populationData = await populationRes.json();
 
@@ -546,7 +574,9 @@
     const usedPopulationYear = populationData.populationYear ?? populationYear;
     const campusSampleSize = populationData.campusStudentSampleSize ?? 0;
     const campusNote = campusSampleSize > 0 ? "" : " (캠퍼스 학생 연령/성별 데이터 없음 → 0으로 표시)";
-    setPopulationStatus(`캠퍼스=${campus || "전체"} / 학기=${year}-${term} / 행정구역=${admCd} / 인구연도=${usedPopulationYear} / 캠퍼스표본=${campusSampleSize}명${campusNote}`);
+    setPopulationStatus(
+      `캠퍼스=${campus || "전체"} / 행정구역=${admLabel}(${admCd}) / 인구연도=${usedPopulationYear} / 캠퍼스표본=${campusSampleSize}명${campusNote}`
+    );
 
     // population charts
     const popRows = populationData.rows || [];
@@ -607,17 +637,17 @@
     // download buttons
     document.getElementById("downloadPopulationCsv").onclick = () => {
       // 왜: 서버에서 xlsx로 내려주면, 엑셀에서 바로 열 수 있고 한글 인코딩 이슈도 줄어듭니다.
-      window.location.href = `/statistics/api/population/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`;
+      window.location.href = `/statistics/api/population/export?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`;
     };
     document.getElementById("downloadPopulationCsvTop").onclick = () => {
-      window.location.href = `/statistics/api/population/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`;
+      window.location.href = `/statistics/api/population/export?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&populationYear=${encodeURIComponent(populationYear)}`;
     };
   }
 
   async function refreshIndustry() {
     const campus = document.getElementById("industryCampus").value;
-    const { year, term } = parseTermValue(document.getElementById("industryTerm").value);
     const admCd = document.getElementById("industryAdmCd").value;
+    const admLabel = getSelectedOptionText("industryAdmCd");
     const statsYear = document.getElementById("industryYear").value;
 
     if (!campus) {
@@ -628,7 +658,7 @@
     setIndustryStatus("조회 중...");
 
     const industryRes = await fetch(
-      `/statistics/api/industry/analysis?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`
+      `/statistics/api/industry/analysis?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`
     );
     const industryData = await industryRes.json();
 
@@ -638,7 +668,9 @@
     }
 
     const usedIndustryYear = industryData.statsYear ?? statsYear;
-    setIndustryStatus(`캠퍼스=${campus || "전체"} / 학기=${year}-${term} / 행정구역=${admCd} / 산업연도=${usedIndustryYear}`);
+    setIndustryStatus(
+      `캠퍼스=${campus || "전체"} / 행정구역=${admLabel}(${admCd}) / 산업연도=${usedIndustryYear}`
+    );
 
     // industry table + charts
     const industryRows = industryData.rows || [];
@@ -682,22 +714,22 @@
 
     // download buttons
     document.getElementById("downloadIndustryCsv").onclick = () => {
-      window.location.href = `/statistics/api/industry/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`;
+      window.location.href = `/statistics/api/industry/export?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`;
     };
     document.getElementById("downloadIndustryCsvTop").onclick = () => {
-      window.location.href = `/statistics/api/industry/export?campus=${encodeURIComponent(campus)}&year=${encodeURIComponent(year)}&term=${encodeURIComponent(term)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`;
+      window.location.href = `/statistics/api/industry/export?campus=${encodeURIComponent(campus)}&admCd=${encodeURIComponent(admCd)}&statsYear=${encodeURIComponent(statsYear)}`;
     };
   }
 
   function attachEvents() {
     // 왜: 인구/산업 탭이 분리되어, 각 탭의 필터 변경이 해당 탭만 갱신하도록 분리합니다.
-    ["populationCampus", "populationTerm", "populationAdmCd", "populationYear"].forEach((id) => {
+    ["populationCampus", "populationAdmCd", "populationYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshPopulation);
     });
-    ["industryCampus", "industryTerm", "industryAdmCd", "industryYear"].forEach((id) => {
+    ["industryCampus", "industryAdmCd", "industryYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshIndustry);
     });
-    ["internalCampus", "internalTerm"].forEach((id) => {
+    ["internalCampus"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshInternal);
     });
   }

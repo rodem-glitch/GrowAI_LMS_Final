@@ -6,7 +6,6 @@ import kr.polytech.lms.statistics.dashboard.service.StatisticsExcelExportService
 import kr.polytech.lms.statistics.dashboard.service.StatisticsMetaService;
 import kr.polytech.lms.statistics.internalstats.InternalStatisticsService;
 import kr.polytech.lms.statistics.mapping.MajorIndustryMappingService;
-import kr.polytech.lms.statistics.student.persistence.StudentStatisticsJdbcRepository;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -51,23 +50,14 @@ public class StatisticsDashboardApiController {
         return statisticsMetaService.getCampusGroups();
     }
 
-    @GetMapping("/meta/terms")
-    public List<StudentStatisticsJdbcRepository.YearTerm> recentTerms(
-            @RequestParam(name = "limit", defaultValue = "10") int limit
-    ) {
-        return statisticsMetaService.getRecentYearTerms(limit);
-    }
-
     @GetMapping("/industry/analysis")
     public ResponseEntity<?> industryAnalysis(
             @RequestParam(name = "campus", required = false) String campus,
-            @RequestParam(name = "year", required = false) String year,
-            @RequestParam(name = "term", required = false) String term,
             @RequestParam(name = "admCd", required = false) String admCd,
             @RequestParam(name = "statsYear", required = false) Integer statsYear
     ) throws IOException {
         try {
-            return ResponseEntity.ok(industryAnalysisService.analyze(campus, year, term, admCd, statsYear));
+            return ResponseEntity.ok(industryAnalysisService.analyze(campus, admCd, statsYear));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
         } catch (IllegalStateException e) {
@@ -78,13 +68,11 @@ public class StatisticsDashboardApiController {
     @GetMapping("/population/compare")
     public ResponseEntity<?> populationCompare(
             @RequestParam(name = "campus") String campus,
-            @RequestParam(name = "year", required = false) String year,
-            @RequestParam(name = "term", required = false) String term,
             @RequestParam(name = "admCd", required = false) String admCd,
             @RequestParam(name = "populationYear", required = false) Integer populationYear
     ) throws IOException {
         try {
-            return ResponseEntity.ok(populationComparisonService.compare(campus, year, term, admCd, populationYear));
+            return ResponseEntity.ok(populationComparisonService.compare(campus, admCd, populationYear));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
         } catch (IllegalStateException e) {
@@ -141,22 +129,14 @@ public class StatisticsDashboardApiController {
     @GetMapping("/population/export")
     public ResponseEntity<?> exportPopulationExcel(
             @RequestParam(name = "campus") String campus,
-            @RequestParam(name = "year", required = false) String year,
-            @RequestParam(name = "term", required = false) String term,
             @RequestParam(name = "admCd", required = false) String admCd,
             @RequestParam(name = "populationYear", required = false) Integer populationYear
     ) throws IOException {
         try {
             PopulationComparisonService.PopulationComparisonResponse response =
-                    populationComparisonService.compare(campus, year, term, admCd, populationYear);
+                    populationComparisonService.compare(campus, admCd, populationYear);
             byte[] bytes = statisticsExcelExportService.exportPopulation(response);
-            String filename = "인구비율_%s_%s-%s_%s_%s.xlsx".formatted(
-                    campus,
-                    response.year(),
-                    response.term(),
-                    response.admCd(),
-                    response.populationYear()
-            );
+            String filename = "인구비율_%s_%s_%s.xlsx".formatted(campus, response.admCd(), response.populationYear());
             return toExcelResponse(filename, bytes);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
@@ -168,19 +148,15 @@ public class StatisticsDashboardApiController {
     @GetMapping("/industry/export")
     public ResponseEntity<?> exportIndustryExcel(
             @RequestParam(name = "campus", required = false) String campus,
-            @RequestParam(name = "year", required = false) String year,
-            @RequestParam(name = "term", required = false) String term,
             @RequestParam(name = "admCd", required = false) String admCd,
             @RequestParam(name = "statsYear", required = false) Integer statsYear
     ) throws IOException {
         try {
             IndustryAnalysisService.IndustryAnalysisResponse response =
-                    industryAnalysisService.analyze(campus, year, term, admCd, statsYear);
+                    industryAnalysisService.analyze(campus, admCd, statsYear);
             byte[] bytes = statisticsExcelExportService.exportIndustry(response);
-            String filename = "산업비율_%s_%s-%s_%s_%s.xlsx".formatted(
+            String filename = "산업비율_%s_%s_%s.xlsx".formatted(
                     response.campus() == null ? "전체" : response.campus(),
-                    response.year(),
-                    response.term(),
                     response.admCd(),
                     response.statsYear()
             );

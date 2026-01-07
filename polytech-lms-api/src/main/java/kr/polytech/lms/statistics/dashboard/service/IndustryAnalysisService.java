@@ -3,7 +3,6 @@ package kr.polytech.lms.statistics.dashboard.service;
 import kr.polytech.lms.statistics.mapping.MajorIndustryMappingService;
 import kr.polytech.lms.statistics.sgis.service.SgisCompanyCacheService;
 import kr.polytech.lms.statistics.student.excel.CampusStudentQuotaExcelService;
-import kr.polytech.lms.statistics.student.persistence.StudentStatisticsJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -33,37 +32,31 @@ public class IndustryAnalysisService {
     );
 
     private final MajorIndustryMappingService majorIndustryMappingService;
-    private final StudentStatisticsJdbcRepository studentStatisticsJdbcRepository;
     private final SgisCompanyCacheService sgisCompanyCacheService;
     private final CampusStudentQuotaExcelService campusStudentQuotaExcelService;
 
     public IndustryAnalysisService(
             MajorIndustryMappingService majorIndustryMappingService,
-            StudentStatisticsJdbcRepository studentStatisticsJdbcRepository,
             SgisCompanyCacheService sgisCompanyCacheService,
             CampusStudentQuotaExcelService campusStudentQuotaExcelService
     ) {
         this.majorIndustryMappingService = majorIndustryMappingService;
-        this.studentStatisticsJdbcRepository = studentStatisticsJdbcRepository;
         this.sgisCompanyCacheService = sgisCompanyCacheService;
         this.campusStudentQuotaExcelService = campusStudentQuotaExcelService;
     }
 
     public IndustryAnalysisResponse analyze(
             String campus,
-            String year,
-            String term,
             String admCd,
             Integer statsYear
     ) throws IOException {
-        ResolvedTerm resolvedTerm = resolveYearTerm(year, term);
         String resolvedCampus = normalizeCampus(campus);
         String resolvedAdmCd = resolveAdmCd(admCd);
 
         int desiredStatsYear = resolveStatsYear(statsYear);
         int usedStatsYear = resolveAvailableStatsYear(desiredStatsYear, resolvedAdmCd);
 
-        Map<String, Long> campusCategoryCounts = countCampusStudentsByCategory(resolvedTerm, resolvedCampus);
+        Map<String, Long> campusCategoryCounts = countCampusStudentsByCategory(resolvedCampus);
         long campusTotal = campusCategoryCounts.values().stream().mapToLong(Long::longValue).sum();
 
         Map<String, Long> regionCategoryCounts = countRegionCompaniesByCategory(usedStatsYear, resolvedAdmCd);
@@ -83,8 +76,6 @@ public class IndustryAnalysisService {
 
         return new IndustryAnalysisResponse(
                 resolvedCampus,
-                resolvedTerm.year(),
-                resolvedTerm.term(),
                 resolvedAdmCd,
                 usedStatsYear,
                 campusTotal,
@@ -93,21 +84,18 @@ public class IndustryAnalysisService {
         );
     }
 
-    private Map<String, Long> countCampusStudentsByCategory(ResolvedTerm term, String campus) {
+    private Map<String, Long> countCampusStudentsByCategory(String campus) {
         Map<String, Long> categoryCounts = new LinkedHashMap<>();
         for (String category : CATEGORY_ORDER) {
             categoryCounts.put(category, 0L);
         }
 
-        boolean usedExcel = applyCampusCountsFromAdmissionQuotaExcel(campus, categoryCounts);
-        if (!usedExcel) {
-            applyCampusCountsFromDatabase(term, campus, categoryCounts);
-        }
+        applyCampusCountsFromAdmissionQuotaExcel(campus, categoryCounts);
 
         return categoryCounts;
     }
 
-    private boolean applyCampusCountsFromAdmissionQuotaExcel(String campus, Map<String, Long> categoryCounts) {
+    private void applyCampusCountsFromAdmissionQuotaExcel(String campus, Map<String, Long> categoryCounts) {
         // 왜: 사용자가 "현재 엑셀 데이터만으로 통계를 보고 싶다"는 요구가 있어,
         //     DB 재학생 대신 입시율관리.xlsx의 "정원"을 학생수 대체 지표로 사용합니다.
         List<CampusStudentQuotaExcelService.CampusDeptQuota> quotas = campusStudentQuotaExcelService.getCampusDeptQuotas();
@@ -121,28 +109,6 @@ public class IndustryAnalysisService {
                     .ifPresent(category -> categoryCounts.compute(
                             category,
                             (k, existing) -> (existing == null ? 0L : existing) + row.quota()
-                    ));
-        }
-
-        long total = categoryCounts.values().stream().mapToLong(Long::longValue).sum();
-        return total > 0;
-    }
-
-    private void applyCampusCountsFromDatabase(ResolvedTerm term, String campus, Map<String, Long> categoryCounts) {
-        // 왜: 입시율관리.xlsx가 준비되지 않은 환경에서도 화면을 확인할 수 있게 DB 기반 계산을 fallback으로 둡니다.
-        List<StudentStatisticsJdbcRepository.CampusDeptCount> deptCounts =
-                studentStatisticsJdbcRepository.countEnrolledStudentsByCampusAndDept(term.year(), term.term());
-
-        for (StudentStatisticsJdbcRepository.CampusDeptCount row : deptCounts) {
-            if (StringUtils.hasText(campus) && !campus.equals(row.campus())) {
-                continue;
-            }
-
-            majorIndustryMappingService
-                    .findCategoryByCampusAndDept(row.campus(), row.dept())
-                    .ifPresent(category -> categoryCounts.compute(
-                            category,
-                            (k, existing) -> (existing == null ? 0L : existing) + row.studentCount()
                     ));
         }
     }
@@ -183,20 +149,6 @@ public class IndustryAnalysisService {
         return desiredYear;
     }
 
-    private ResolvedTerm resolveYearTerm(String year, String term) {
-        if (StringUtils.hasText(year) && StringUtils.hasText(term)) {
-            return new ResolvedTerm(year.trim(), term.trim());
-        }
-
-        List<StudentStatisticsJdbcRepository.YearTerm> recent = studentStatisticsJdbcRepository.findRecentYearTerms(1);
-        if (!recent.isEmpty()) {
-            StudentStatisticsJdbcRepository.YearTerm first = recent.get(0);
-            return new ResolvedTerm(first.year(), first.term());
-        }
-
-        throw new IllegalStateException("재학생 기준 학기를 찾지 못했습니다. LM_POLY_STUDENT 데이터가 있는지 확인해 주세요.");
-    }
-
     private int resolveStatsYear(Integer statsYear) {
         if (statsYear != null) {
             return statsYear;
@@ -229,8 +181,6 @@ public class IndustryAnalysisService {
 
     public record IndustryAnalysisResponse(
             String campus,
-            String year,
-            String term,
             String admCd,
             int statsYear,
             long campusStudentTotal,
@@ -247,8 +197,5 @@ public class IndustryAnalysisService {
             double campusRatio,
             double gap
     ) {
-    }
-
-    private record ResolvedTerm(String year, String term) {
     }
 }

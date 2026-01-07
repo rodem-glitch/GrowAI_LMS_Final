@@ -3,7 +3,6 @@ package kr.polytech.lms.statistics.dashboard.service;
 import kr.polytech.lms.statistics.kosis.client.dto.KosisPopulationRow;
 import kr.polytech.lms.statistics.kosis.service.KosisStatisticsService;
 import kr.polytech.lms.statistics.student.excel.CampusStudentPopulationExcelService;
-import kr.polytech.lms.statistics.student.persistence.StudentStatisticsJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -18,7 +17,7 @@ import java.util.Map;
 public class PopulationComparisonService {
     // 왜: 인구 탭은 "지역(행정구역) 인구 분포"와 "캠퍼스 학생(재학생) 분포"를 같은 연령대 축으로 비교하는 화면입니다.
     // - 지역 인구는 KOSIS(SGIS) API로,
-    // - 캠퍼스 학생은 (1) 엑셀 기반 또는 (2) 내부 DB 기반으로 계산합니다.
+    // - 캠퍼스 학생은 엑셀 기반으로 계산합니다. (내부 DB와 무관하게 동작해야 한다는 요구사항 반영)
 
     private static final List<AgeBand> AGE_BANDS = List.of(
             new AgeBand("10대", List.of("31")),
@@ -32,22 +31,17 @@ public class PopulationComparisonService {
 
     private final KosisStatisticsService kosisStatisticsService;
     private final CampusStudentPopulationExcelService campusStudentPopulationExcelService;
-    private final StudentStatisticsJdbcRepository studentStatisticsJdbcRepository;
 
     public PopulationComparisonService(
             KosisStatisticsService kosisStatisticsService,
-            CampusStudentPopulationExcelService campusStudentPopulationExcelService,
-            StudentStatisticsJdbcRepository studentStatisticsJdbcRepository
+            CampusStudentPopulationExcelService campusStudentPopulationExcelService
     ) {
         this.kosisStatisticsService = kosisStatisticsService;
         this.campusStudentPopulationExcelService = campusStudentPopulationExcelService;
-        this.studentStatisticsJdbcRepository = studentStatisticsJdbcRepository;
     }
 
     public PopulationComparisonResponse compare(
             String campus,
-            String year,
-            String term,
             String admCd,
             Integer populationYear
     ) throws IOException {
@@ -56,7 +50,6 @@ public class PopulationComparisonService {
         }
 
         String resolvedCampus = campus.trim();
-        ResolvedTerm resolvedTerm = resolveYearTerm(year, term);
         String resolvedAdmCd = resolveAdmCd(admCd);
         int desiredPopulationYear = resolvePopulationYear(populationYear);
         int usedPopulationYear = resolveAvailablePopulationYear(desiredPopulationYear, resolvedAdmCd);
@@ -64,7 +57,7 @@ public class PopulationComparisonService {
         Map<String, GenderCount> regionCounts = loadRegionPopulationGenderCounts(resolvedAdmCd, usedPopulationYear);
         long regionTotal = regionCounts.values().stream().mapToLong(GenderCount::total).sum();
 
-        Map<String, GenderCount> campusCounts = loadCampusStudentAgeGenderCounts(resolvedCampus, resolvedTerm, usedPopulationYear);
+        Map<String, GenderCount> campusCounts = loadCampusStudentAgeGenderCounts(resolvedCampus, usedPopulationYear);
         long campusTotal = campusCounts.values().stream().mapToLong(GenderCount::total).sum();
 
         List<AgeRow> rows = new ArrayList<>();
@@ -95,8 +88,6 @@ public class PopulationComparisonService {
 
         return new PopulationComparisonResponse(
                 resolvedCampus,
-                resolvedTerm.year(),
-                resolvedTerm.term(),
                 resolvedAdmCd,
                 usedPopulationYear,
                 campusTotal,
@@ -119,10 +110,15 @@ public class PopulationComparisonService {
         return result;
     }
 
-    private Map<String, GenderCount> loadCampusStudentAgeGenderCounts(String campus, ResolvedTerm term, int baseYear) {
+    private Map<String, GenderCount> loadCampusStudentAgeGenderCounts(String campus, int baseYear) {
+        Map<String, GenderCount> empty = new LinkedHashMap<>();
+        for (AgeBand band : AGE_BANDS) {
+            empty.put(band.label(), GenderCount.empty());
+        }
+
         if (campusStudentPopulationExcelService.isEnabled()) {
             Map<String, CampusStudentPopulationExcelService.GenderCount> rows =
-                    campusStudentPopulationExcelService.countByAgeBandAndGender(campus, term.year(), term.term(), baseYear);
+                    campusStudentPopulationExcelService.countByAgeBandAndGender(campus, null, null, baseYear);
             Map<String, GenderCount> result = new LinkedHashMap<>();
             for (AgeBand band : AGE_BANDS) {
                 CampusStudentPopulationExcelService.GenderCount c = rows.getOrDefault(band.label(), CampusStudentPopulationExcelService.GenderCount.empty());
@@ -131,45 +127,8 @@ public class PopulationComparisonService {
             return result;
         }
 
-        // 왜: 엑셀 파일이 없으면(또는 로컬에서 아직 준비되지 않으면) DB 기반 계산으로라도 화면을 확인할 수 있게 합니다.
-        List<StudentStatisticsJdbcRepository.AgeBandGenderCount> rows =
-                studentStatisticsJdbcRepository.countEnrolledStudentsByAgeBandAndGender(term.year(), term.term(), campus, baseYear);
-
-        Map<String, GenderCount> result = new LinkedHashMap<>();
-        for (AgeBand band : AGE_BANDS) {
-            result.put(band.label(), GenderCount.empty());
-        }
-
-        for (StudentStatisticsJdbcRepository.AgeBandGenderCount row : rows) {
-            if (!result.containsKey(row.ageBand())) {
-                continue;
-            }
-
-            GenderCount existing = result.get(row.ageBand());
-            if ("1".equals(row.gender())) {
-                result.put(row.ageBand(), new GenderCount(existing.male() + row.studentCount(), existing.female()));
-                continue;
-            }
-            if ("2".equals(row.gender())) {
-                result.put(row.ageBand(), new GenderCount(existing.male(), existing.female() + row.studentCount()));
-            }
-        }
-
-        return result;
-    }
-
-    private ResolvedTerm resolveYearTerm(String year, String term) {
-        if (StringUtils.hasText(year) && StringUtils.hasText(term)) {
-            return new ResolvedTerm(year.trim(), term.trim());
-        }
-
-        List<StudentStatisticsJdbcRepository.YearTerm> recent = studentStatisticsJdbcRepository.findRecentYearTerms(1);
-        if (!recent.isEmpty()) {
-            StudentStatisticsJdbcRepository.YearTerm first = recent.get(0);
-            return new ResolvedTerm(first.year(), first.term());
-        }
-
-        throw new IllegalStateException("재학생 기준 학기를 찾지 못했습니다. LM_POLY_STUDENT 데이터가 있는지 확인해 주세요.");
+        // 왜: 현재 요구사항은 "내부 DB와 무관"이므로, 엑셀 파일이 없으면 0으로 표시합니다(오류 대신 안전한 기본값).
+        return empty;
     }
 
     private int resolvePopulationYear(Integer populationYear) {
@@ -216,13 +175,8 @@ public class PopulationComparisonService {
     private record AgeBand(String label, List<String> ageTypes) {
     }
 
-    private record ResolvedTerm(String year, String term) {
-    }
-
     public record PopulationComparisonResponse(
             String campus,
-            String year,
-            String term,
             String admCd,
             int populationYear,
             long campusStudentSampleSize,
