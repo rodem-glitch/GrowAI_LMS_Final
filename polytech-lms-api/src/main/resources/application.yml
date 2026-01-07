@@ -44,3 +44,51 @@ spring:
         collection-name: ${QDRANT_COLLECTION:video_summary_vectors}
         use-tls: ${QDRANT_USE_TLS:false}
         initialize-schema: ${QDRANT_INIT_SCHEMA:true}
+
+# =========================
+# Kollus 전사(요약 전 단계)
+# =========================
+# 왜: 아래 값들은 운영/로컬 환경마다 다르고, 특히 토큰/키는 Git에 올리면 바로 사고가 납니다.
+# 그래서 환경변수(.env, Run Configuration)나 application-local.yml로만 주입해 주세요.
+kollus:
+  api-base-url: ${KOLLUS_API_BASE_URL:https://api.kr.kollus.com}
+  access-token: ${KOLLUS_ACCESS_TOKEN:}
+  security-key: ${KOLLUS_SECURITY_KEY:}
+  channel-key: ${KOLLUS_CHANNEL_KEY:}
+  client-user-id: ${KOLLUS_CLIENT_USER_ID:contentsummary}
+  http-timeout: ${KOLLUS_HTTP_TIMEOUT:PT60S}
+  media-token-expire-time: ${KOLLUS_MEDIA_TOKEN_EXPIRE:PT5M}
+  player-base-url: ${KOLLUS_PLAYER_BASE_URL:https://v.kr.kollus.com}
+
+stt:
+  provider: ${STT_PROVIDER:openai}
+  language: ${STT_LANGUAGE:ko}
+  http-timeout: ${STT_HTTP_TIMEOUT:PT5M}
+  openai:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
+
+contentsummary:
+  transcription:
+    # 비워두면 OS 임시폴더 하위(`.../polytech-lms-api/contentsummary`)를 사용합니다.
+    tmp-dir: ${CONTENTSUMMARY_TMP_DIR:}
+    keep-temp-files: ${CONTENTSUMMARY_KEEP_TEMP:false}
+  worker:
+    # 왜: 운영에 올리자마자 자동으로 대량 처리되면 비용/부하가 커질 수 있어서, 기본은 꺼두고 환경변수로 켜게 합니다.
+    enabled: ${CONTENTSUMMARY_WORKER_ENABLED:false}
+    poll-delay-ms: ${CONTENTSUMMARY_WORKER_POLL_DELAY_MS:30000}
+    batch-size: ${CONTENTSUMMARY_WORKER_BATCH_SIZE:3}
+    max-retries: ${CONTENTSUMMARY_WORKER_MAX_RETRIES:5}
+    retry-delay-seconds: ${CONTENTSUMMARY_WORKER_RETRY_DELAY_SECONDS:300}
+    processing-timeout-seconds: ${CONTENTSUMMARY_WORKER_PROCESSING_TIMEOUT_SECONDS:7200}
+
+# 전사 실행 관리자 토큰(선택)
+# - 운영에서 `/contentsummary/admin/transcribe`를 외부에서 호출하려면 아래 환경변수로 보호해 주세요.
+# - 설정하지 않으면 "로컬(127.0.0.1)"에서만 실행되게 막아둡니다.
+#   CONTENTSUMMARY_ADMIN_TOKEN=...
+
+# Kollus Webhook 토큰(선택)
+# - 운영에서 Kollus가 호출할 webhook 엔드포인트: `POST /contentsummary/webhooks/kollus`
+# - 외부 호출이므로 토큰을 강력 권장합니다(없으면 로컬에서만 허용).
+#   KOLLUS_WEBHOOK_TOKEN=...
