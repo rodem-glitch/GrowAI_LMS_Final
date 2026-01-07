@@ -43,6 +43,8 @@ export function ContentLibraryModal({
   recommendContext,
   excludeLessonIds,
 }: ContentLibraryModalProps) {
+  // 왜: 추천 탭은 현재 임시로 숨겨야 해서, UI/로직 모두 전체 탭만 사용하도록 고정합니다.
+  const hideRecommendTab = true;
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [activeTab, setActiveTab] = useState<'recommend' | 'all'>('all');
@@ -70,7 +72,7 @@ export function ContentLibraryModal({
     // 왜: 모달을 다시 열 때는 이전 검색/선택이 남아 있으면 혼란스러워서 기본 상태로 초기화합니다.
     setSearchTerm('');
     setCategoryFilter('');
-    setActiveTab(recommendContext ? 'recommend' : 'all');
+    setActiveTab('all');
     setPage(1);
     setContents([]);
     setTotalCount(0);
@@ -395,17 +397,19 @@ export function ContentLibraryModal({
         <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab('recommend')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  activeTab === 'recommend'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                추천
-              </button>
+              {!hideRecommendTab && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('recommend')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    activeTab === 'recommend'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  추천
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setActiveTab('all')}
