@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import kr.polytech.lms.statistics.util.StatisticsFileLocator;
+
 @Service
 public class CampusStudentQuotaExcelService {
     // 왜: "캠퍼스 학생 비율"을 DB가 아니라, 현재 통계 폴더의 엑셀만으로 바로 보여줘야 하는 요구가 있습니다.
@@ -100,11 +102,11 @@ public class CampusStudentQuotaExcelService {
             throw new IllegalStateException("statistics.data.admission-file 설정이 없습니다.");
         }
 
-        Path path = Path.of(file);
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("입시율관리.xlsx 파일을 찾을 수 없습니다. path=" + path);
-        }
-        return path;
+        Path configured = Path.of(file);
+        return StatisticsFileLocator.tryResolve(file)
+                .orElseThrow(() -> new IllegalStateException(
+                        "입시율관리.xlsx 파일을 찾을 수 없습니다. path=" + configured + " (현재작업폴더=" + Path.of("").toAbsolutePath() + ")"
+                ));
     }
 
     private long getLastModifiedMillis(Path path) {
@@ -184,4 +186,3 @@ public class CampusStudentQuotaExcelService {
     public record CampusDeptQuota(String campus, String dept, long quota) {
     }
 }
-

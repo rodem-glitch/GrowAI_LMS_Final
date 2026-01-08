@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
+import kr.polytech.lms.statistics.util.StatisticsFileLocator;
+
 @Service
 public class InternalStatisticsService {
     // 왜: 내부(입학/취업) 통계는 실제 운영에서는 DB 적재가 정석이지만,
@@ -201,11 +203,11 @@ public class InternalStatisticsService {
             throw new IllegalStateException("통계 파일 설정이 없습니다. " + configKeyName + " 을 설정해 주세요.");
         }
 
-        Path path = Path.of(filePath);
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("통계 파일을 찾을 수 없습니다. 경로=" + path);
-        }
-        return path;
+        Path configured = Path.of(filePath);
+        return StatisticsFileLocator.tryResolve(filePath)
+                .orElseThrow(() -> new IllegalStateException(
+                        "통계 파일을 찾을 수 없습니다. 경로=" + configured + " (현재작업폴더=" + Path.of("").toAbsolutePath() + ")"
+                ));
     }
 
     private String requireCampus(String campus) {

@@ -32,6 +32,17 @@
         산업별 통계
       </button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-ai" data-bs-toggle="tab" data-bs-target="#pane-ai" type="button" role="tab">
+        <span class="d-flex align-items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/>
+            <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/>
+          </svg>
+          AI 통계
+        </span>
+      </button>
+    </li>
   </ul>
 
   <div class="tab-content">
@@ -226,6 +237,384 @@
         </div>
       </div>
     </div>
+
+    <!-- AI 통계 탭 -->
+    <div class="tab-pane fade" id="pane-ai" role="tabpanel" aria-labelledby="tab-ai">
+      <!-- 스타일 정의 -->
+      <style>
+        .ai-prompt-container {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 16px;
+          padding: 24px;
+          margin-bottom: 24px;
+        }
+        .ai-prompt-textarea {
+          border: none;
+          border-radius: 12px;
+          padding: 16px;
+          font-size: 15px;
+          resize: none;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .ai-prompt-textarea:focus {
+          outline: none;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
+        .ai-submit-btn {
+          background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+          border: none;
+          border-radius: 12px;
+          padding: 12px 28px;
+          font-weight: 600;
+          color: white;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0,114,255,0.4);
+        }
+        .ai-submit-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,114,255,0.5);
+          color: white;
+        }
+        .ai-submit-btn:disabled {
+          opacity: 0.6;
+          transform: none;
+        }
+        .ai-submit-btn .spinner-border {
+          width: 16px;
+          height: 16px;
+          border-width: 2px;
+        }
+        .example-btn {
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-size: 13px;
+          transition: all 0.2s ease;
+          border-color: rgba(255,255,255,0.5);
+          color: rgba(255,255,255,0.9);
+        }
+        .example-btn:hover {
+          background: rgba(255,255,255,0.2);
+          border-color: white;
+          color: white;
+          transform: translateY(-1px);
+        }
+        .result-card {
+          border-radius: 12px;
+          border: 1px solid #e5e7eb;
+          background: white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          overflow: hidden;
+        }
+        .result-card .card-header {
+          background: #f8fafc;
+          border-bottom: 1px solid #e5e7eb;
+          padding: 12px 16px;
+          font-weight: 600;
+        }
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
+        }
+        .summary-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 8px 12px;
+          background: #f1f5f9;
+          border-radius: 8px;
+        }
+        .summary-item .icon {
+          color: #6366f1;
+          flex-shrink: 0;
+        }
+        .summary-item .label {
+          font-size: 12px;
+          color: #64748b;
+          margin-bottom: 2px;
+        }
+        .summary-item .value {
+          font-size: 14px;
+          font-weight: 500;
+          color: #1e293b;
+        }
+        .source-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 10px;
+          background: #e0f2fe;
+          color: #0369a1;
+          border-radius: 16px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        .warning-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 10px 12px;
+          background: #fef3c7;
+          border-left: 3px solid #f59e0b;
+          border-radius: 4px;
+          font-size: 13px;
+          color: #92400e;
+        }
+        .clarify-card {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 12px;
+          padding: 20px;
+        }
+        .clarify-option-btn {
+          background: white;
+          border: 2px solid #f59e0b;
+          border-radius: 8px;
+          padding: 10px 20px;
+          font-weight: 500;
+          color: #92400e;
+          transition: all 0.2s ease;
+        }
+        .clarify-option-btn:hover {
+          background: #fef3c7;
+          border-color: #d97706;
+          transform: translateY(-1px);
+        }
+        .unsupported-card {
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          border-radius: 12px;
+          padding: 20px;
+          text-align: center;
+        }
+        .ai-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px;
+        }
+        .ai-loading .dots {
+          display: flex;
+          gap: 8px;
+        }
+        .ai-loading .dot {
+          width: 12px;
+          height: 12px;
+          background: #6366f1;
+          border-radius: 50%;
+          animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .ai-loading .dot:nth-child(1) { animation-delay: -0.32s; }
+        .ai-loading .dot:nth-child(2) { animation-delay: -0.16s; }
+        .ai-loading .dot:nth-child(3) { animation-delay: 0s; }
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0); }
+          40% { transform: scale(1); }
+        }
+        .fade-in {
+          animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      </style>
+
+      <!-- 프롬프트 입력 영역 -->
+      <div class="ai-prompt-container">
+        <div class="mb-3">
+          <h5 class="text-white mb-1 fw-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" class="me-1" style="vertical-align: -3px;">
+              <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/>
+              <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/>
+            </svg>
+            AI 통계 자유질문
+          </h5>
+          <p class="text-white-50 small mb-0">자연어로 질문하면 차트와 표로 분석 결과를 보여드립니다.</p>
+        </div>
+        
+        <div class="d-flex gap-3 mb-3">
+          <textarea 
+            id="aiPromptInput" 
+            class="form-control ai-prompt-textarea flex-grow-1" 
+            rows="2" 
+            placeholder="예: 서울캠퍼스 학과별 취업률 Top 10을 보여줘"
+          ></textarea>
+          <button id="aiSubmitBtn" class="ai-submit-btn d-flex align-items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+            </svg>
+            질문하기
+          </button>
+        </div>
+
+        <!-- 예시 질문 버튼 -->
+        <div class="d-flex flex-wrap gap-2">
+          <div class="text-white-50 small me-2 d-flex align-items-center">예시 질문:</div>
+          <button class="btn example-btn" data-prompt="취업률 Top 10 학과를 보여줘">취업률 Top10 학과</button>
+          <button class="btn example-btn" data-prompt="서울 행정구역 20대 인구 비율을 분석해줘">서울 20대 인구 비율</button>
+          <button class="btn example-btn" data-prompt="산업-학생 비율 GAP이 큰 분야를 보여줘">산업-학생 GAP 큰 분야</button>
+          <button class="btn example-btn" data-prompt="캠퍼스별 입학충원률을 비교해줘">캠퍼스별 입학충원률 비교</button>
+          <button class="btn example-btn" data-prompt="최근 5년간 취업률 추이를 보여줘">연도별 취업률 추이</button>
+        </div>
+      </div>
+
+      <!-- 결과 영역 컨테이너 -->
+      <div id="aiResultContainer">
+        <!-- 초기 안내 상태 -->
+        <div id="aiInitialState" class="text-center py-5">
+          <div class="mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#d1d5db" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+            </svg>
+          </div>
+          <h5 class="text-secondary mb-2">AI에게 질문해보세요</h5>
+          <p class="text-muted small">위 입력창에 질문을 입력하거나 예시 질문을 클릭하세요.<br>데이터 카탈로그 내 정보만 조회 가능합니다.</p>
+        </div>
+
+        <!-- 로딩 상태 -->
+        <div id="aiLoadingState" class="ai-loading d-none">
+          <div class="dots mb-3">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+          <div class="text-secondary">AI가 분석 중입니다...</div>
+        </div>
+
+        <!-- 정상 결과 -->
+        <div id="aiSuccessResult" class="d-none fade-in">
+          <!-- 차트 영역 -->
+          <div class="result-card mb-4">
+            <div class="card-header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                <path d="M4 11H2v3h2v-3zm5-4H7v7h2V7zm5-5v12h-2V2h2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1h-2zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-3z"/>
+              </svg>
+              <span id="aiChartTitle">분석 결과</span>
+            </div>
+            <div class="card-body p-3">
+              <div style="height: 320px;">
+                <canvas id="aiResultChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- 데이터 테이블 -->
+          <div class="result-card mb-4">
+            <div class="card-header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"/>
+              </svg>
+              데이터 테이블
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" id="aiResultTable">
+                  <thead class="table-light">
+                    <tr id="aiTableHeader"></tr>
+                  </thead>
+                  <tbody id="aiTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 요약/출처/경고 카드 -->
+          <div class="row g-3">
+            <!-- 요약 카드 -->
+            <div class="col-md-6">
+              <div class="result-card h-100">
+                <div class="card-header">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                  </svg>
+                  분석 조건 요약
+                </div>
+                <div class="card-body p-3">
+                  <div class="summary-grid" id="aiSummaryGrid">
+                    <!-- 동적으로 채워짐 -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 출처 카드 -->
+            <div class="col-md-6">
+              <div class="result-card h-100">
+                <div class="card-header">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                    <path d="M4.5 0a.5.5 0 0 1 .5.5V1h6V.5a.5.5 0 0 1 1 0V1h1.5A1.5 1.5 0 0 1 15 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H4V.5a.5.5 0 0 1 .5-.5zM2.5 2a.5.5 0 0 0-.5.5V4h12V2.5a.5.5 0 0 0-.5-.5h-11zM2 5v8.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V5H2z"/>
+                  </svg>
+                  데이터 출처
+                </div>
+                <div class="card-body p-3">
+                  <div class="d-flex flex-wrap gap-2" id="aiSourceList">
+                    <!-- 동적으로 채워짐 -->
+                  </div>
+                  <div class="small text-muted mt-2" id="aiQueryTime"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 경고 카드 (경고가 있을 때만 표시) -->
+          <div id="aiWarningContainer" class="mt-3 d-none">
+            <div class="result-card">
+              <div class="card-header text-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-1">
+                  <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+                주의사항
+              </div>
+              <div class="card-body p-3">
+                <div id="aiWarningList">
+                  <!-- 동적으로 채워짐 -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 되물음 상태 -->
+        <div id="aiClarifyState" class="d-none fade-in">
+          <div class="clarify-card">
+            <div class="d-flex align-items-start gap-3 mb-3">
+              <div class="bg-warning rounded-circle p-2 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#92400e" viewBox="0 0 16 16">
+                  <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                  <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+                </svg>
+              </div>
+              <div>
+                <div class="fw-semibold text-dark mb-1">추가 정보가 필요합니다</div>
+                <div class="text-dark" id="aiClarifyQuestion">어느 캠퍼스를 기준으로 조회할까요?</div>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2" id="aiClarifyOptions">
+              <!-- 동적으로 채워짐 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 불가 상태 -->
+        <div id="aiUnsupportedState" class="d-none fade-in">
+          <div class="unsupported-card">
+            <div class="mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#dc2626" viewBox="0 0 16 16">
+                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </div>
+            <h5 class="text-danger mb-2">요청을 처리할 수 없습니다</h5>
+            <p class="text-dark mb-3" id="aiUnsupportedMessage">해당 질문은 현재 지원하지 않습니다.</p>
+            <div class="small text-muted mb-2">다음과 같은 질문을 시도해보세요:</div>
+            <div class="d-flex flex-wrap justify-content-center gap-2" id="aiSuggestedExamples">
+              <!-- 동적으로 채워짐 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -240,6 +629,617 @@
   let internalEmploymentChartInstance = null;
   let internalAdmissionChartInstance = null;
   let internalTrendChartInstance = null;
+  let aiResultChartInstance = null;
+  let aiCatalog = null;
+  let aiLastPrompt = null;
+  let aiContext = {};
+
+  // ==================== AI 통계 기능 ====================
+
+  async function loadAiCatalog() {
+    // 왜: 되물음(캠퍼스/지역/연도 선택)에서 선택지를 바로 보여주기 위해 catalog를 미리 받아 둡니다.
+    try {
+      const res = await fetch("/statistics/api/ai/catalog");
+      if (!res.ok) return;
+      aiCatalog = await res.json();
+    } catch (e) {
+      // 왜: catalog는 UX 개선용이라, 실패하더라도 핵심 기능(query)은 동작해야 합니다.
+      aiCatalog = null;
+    }
+  }
+
+  function flattenCampusesFromCatalog(catalog) {
+    const groups = catalog?.campusGroups || [];
+    const campuses = [];
+    (groups || []).forEach((g) => {
+      (g?.campuses || []).forEach((c) => {
+        if (c) campuses.push(c);
+      });
+    });
+    return Array.from(new Set(campuses)).sort();
+  }
+
+  function normalizeAiSummary(summary) {
+    if (!summary) return {};
+    if (typeof summary === "string") {
+      // 왜: 백엔드는 요약을 한 문장으로 내려주고, 화면은 키-값 카드로 보여주므로 래핑합니다.
+      return { "요약": summary };
+    }
+    return summary;
+  }
+
+  function normalizeAiSources(sources) {
+    return (sources || []).map((s) => {
+      if (!s) return "";
+      if (typeof s === "string") return s;
+      const name = s.name || "";
+      const note = s.note ? ` (${s.note})` : "";
+      return `${name}${note}`.trim();
+    }).filter(Boolean);
+  }
+
+  function normalizeAiWarnings(warnings) {
+    return (warnings || []).map((w) => {
+      if (!w) return "";
+      if (typeof w === "string") return w;
+      return w.message || "";
+    }).filter(Boolean);
+  }
+  
+  // AI 통계용 Mock 데이터 (백엔드 연동 전 테스트용)
+  const aiMockData = {
+    // 취업률 Top 10 결과
+    'employment_top10': {
+      type: 'success',
+      chart: {
+        type: 'bar',
+        title: '학과별 취업률 Top 10',
+        data: {
+          labels: ['기계공학과', '전기공학과', '컴퓨터공학과', '자동차공학과', '전자공학과', 
+                   '정보통신과', '산업디자인과', '건축과', '메카트로닉스과', '화학공학과'],
+          datasets: [{
+            label: '취업률(%)',
+            data: [95.2, 93.8, 92.1, 91.5, 90.3, 88.7, 87.5, 86.2, 84.9, 83.1],
+            backgroundColor: 'rgba(99, 102, 241, 0.8)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            borderWidth: 1
+          }]
+        }
+      },
+      table: {
+        columns: ['순위', '학과명', '취업률(%)'],
+        rows: [
+          ['1', '기계공학과', '95.2'],
+          ['2', '전기공학과', '93.8'],
+          ['3', '컴퓨터공학과', '92.1'],
+          ['4', '자동차공학과', '91.5'],
+          ['5', '전자공학과', '90.3'],
+          ['6', '정보통신과', '88.7'],
+          ['7', '산업디자인과', '87.5'],
+          ['8', '건축과', '86.2'],
+          ['9', '메카트로닉스과', '84.9'],
+          ['10', '화학공학과', '83.1']
+        ]
+      },
+      summary: {
+        캠퍼스: '전체',
+        연도: '2024',
+        단위: '%',
+        집계방식: '취업자 / 졸업자 × 100'
+      },
+      sources: ['내부 취업 통계 엑셀 (2024.01 집계)'],
+      warnings: []
+    },
+
+    // 인구 비율 분석
+    'population_20s': {
+      type: 'success',
+      chart: {
+        type: 'bar',
+        title: '서울 20대 인구 비율',
+        data: {
+          labels: ['20~24세', '25~29세'],
+          datasets: [
+            {
+              label: '행정구역 인구비율(%)',
+              data: [6.8, 7.2],
+              backgroundColor: 'rgba(251, 191, 36, 0.8)',
+              borderColor: 'rgba(251, 191, 36, 1)',
+              borderWidth: 1
+            },
+            {
+              label: '캠퍼스 학생비율(%)',
+              data: [45.2, 38.5],
+              backgroundColor: 'rgba(239, 68, 68, 0.8)',
+              borderColor: 'rgba(239, 68, 68, 1)',
+              borderWidth: 1
+            }
+          ]
+        }
+      },
+      table: {
+        columns: ['연령대', '행정구역 인구비율(%)', '캠퍼스 학생비율(%)', 'GAP(%p)'],
+        rows: [
+          ['20~24세', '6.8', '45.2', '+38.4'],
+          ['25~29세', '7.2', '38.5', '+31.3']
+        ]
+      },
+      summary: {
+        행정구역: '서울특별시',
+        캠퍼스: '서울캠퍼스',
+        연도: '2024',
+        단위: '%'
+      },
+      sources: ['KOSIS 인구통계 API', '내부 학생 현황 DB'],
+      warnings: ['캠퍼스 학생 표본 수: 1,234명']
+    },
+
+    // 산업-학생 GAP
+    'industry_gap': {
+      type: 'success',
+      chart: {
+        type: 'bar',
+        title: '산업-학생 비율 GAP 분석',
+        data: {
+          labels: ['제조업', 'IT/SW', '건설업', '의료/복지', '도소매', '금융/보험', '교육서비스'],
+          datasets: [{
+            label: 'GAP(%p)',
+            data: [12.5, -8.3, 5.2, -4.1, 3.8, -2.5, -1.2],
+            backgroundColor: (context) => {
+              const value = context.raw;
+              return value >= 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(239, 68, 68, 0.8)';
+            },
+            borderColor: (context) => {
+              const value = context.raw;
+              return value >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
+            },
+            borderWidth: 1
+          }]
+        }
+      },
+      table: {
+        columns: ['업종', '지역 종사자비율(%)', '캠퍼스 학생비율(%)', 'GAP(%p)'],
+        rows: [
+          ['제조업', '25.3', '37.8', '+12.5'],
+          ['IT/SW', '18.5', '10.2', '-8.3'],
+          ['건설업', '12.1', '17.3', '+5.2'],
+          ['의료/복지', '9.8', '5.7', '-4.1'],
+          ['도소매', '8.5', '12.3', '+3.8'],
+          ['금융/보험', '6.2', '3.7', '-2.5'],
+          ['교육서비스', '5.1', '3.9', '-1.2']
+        ]
+      },
+      summary: {
+        행정구역: '전국',
+        캠퍼스: '전체',
+        연도: '2024',
+        단위: '%p'
+      },
+      sources: ['KOSIS 산업통계 API', '내부 학과 분류 매핑'],
+      warnings: ['일부 학과는 복수 업종에 매핑됨']
+    },
+
+    // 되물음 예시 (캠퍼스 선택 필요)
+    'need_campus': {
+      type: 'clarification',
+      question: '어느 캠퍼스를 기준으로 조회할까요?',
+      options: ['서울', '인천', '성남', '청주', '대전', '광주', '대구', '부산', '창원']
+    },
+
+    // 연도별 추이
+    'trend': {
+      type: 'success',
+      chart: {
+        type: 'line',
+        title: '연도별 취업률 추이',
+        data: {
+          labels: ['2020', '2021', '2022', '2023', '2024'],
+          datasets: [{
+            label: '취업률(%)',
+            data: [78.5, 80.2, 83.1, 85.7, 88.3],
+            borderColor: 'rgba(99, 102, 241, 1)',
+            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+            fill: true,
+            tension: 0.3
+          }]
+        }
+      },
+      table: {
+        columns: ['연도', '취업률(%)', '전년대비'],
+        rows: [
+          ['2020', '78.5', '-'],
+          ['2021', '80.2', '+1.7%p'],
+          ['2022', '83.1', '+2.9%p'],
+          ['2023', '85.7', '+2.6%p'],
+          ['2024', '88.3', '+2.6%p']
+        ]
+      },
+      summary: {
+        캠퍼스: '전체',
+        기간: '2020~2024',
+        단위: '%'
+      },
+      sources: ['내부 취업 통계 엑셀'],
+      warnings: []
+    },
+
+    // 불가 응답
+    'unsupported': {
+      type: 'unsupported',
+      message: '해당 질문은 현재 데이터 카탈로그에서 지원하지 않습니다.',
+      examples: ['취업률 Top 10', '서울 20대 인구 비율', '산업-학생 GAP 분석', '연도별 추이']
+    }
+  };
+
+  // 왜: 프롬프트에서 키워드를 매칭해서 적절한 Mock 응답을 반환합니다.
+  function getMockResponseForPrompt(prompt) {
+    const lower = prompt.toLowerCase();
+    
+    if (lower.includes('취업률') && (lower.includes('top') || lower.includes('순위') || lower.includes('높은'))) {
+      return aiMockData['employment_top10'];
+    }
+    if (lower.includes('인구') && (lower.includes('20대') || lower.includes('비율'))) {
+      return aiMockData['population_20s'];
+    }
+    if (lower.includes('gap') || lower.includes('격차') || lower.includes('산업')) {
+      return aiMockData['industry_gap'];
+    }
+    if (lower.includes('추이') || lower.includes('연도별') || lower.includes('변화')) {
+      return aiMockData['trend'];
+    }
+    if (lower.includes('입학충원률') || lower.includes('캠퍼스별')) {
+      return aiMockData['need_campus'];
+    }
+    
+    // 기본: 불가 응답
+    return aiMockData['unsupported'];
+  }
+
+  // UI 상태 전환 함수들
+  function hideAllAiStates() {
+    document.getElementById('aiInitialState').classList.add('d-none');
+    document.getElementById('aiLoadingState').classList.add('d-none');
+    document.getElementById('aiSuccessResult').classList.add('d-none');
+    document.getElementById('aiClarifyState').classList.add('d-none');
+    document.getElementById('aiUnsupportedState').classList.add('d-none');
+  }
+
+  function showAiState(stateId) {
+    hideAllAiStates();
+    document.getElementById(stateId).classList.remove('d-none');
+  }
+
+  // 요약 그리드 렌더링
+  function renderSummaryGrid(summary) {
+    const grid = document.getElementById('aiSummaryGrid');
+    grid.innerHTML = '';
+
+    const normalized = normalizeAiSummary(summary);
+    
+    const icons = {
+      '캠퍼스': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.5 10c-.276 0-.5-.448-.5-1s.224-1 .5-1 .5.448.5 1-.224 1-.5 1z"/><path d="M10.828.122A.5.5 0 0 1 11 .5V1h.5A1.5 1.5 0 0 1 13 2.5V15h1.5a.5.5 0 0 1 0 1h-13a.5.5 0 0 1 0-1H3V1.5a.5.5 0 0 1 .43-.495l7-1a.5.5 0 0 1 .398.117zM11.5 2H11v13h1V2.5a.5.5 0 0 0-.5-.5zM4 1.934V15h6V1.077l-6 .857z"/></svg>',
+      '연도': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4V.5zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2z"/></svg>',
+      '행정구역': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>',
+      '단위': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M10.854 6.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 8.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2z"/></svg>',
+      '기간': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/></svg>',
+      '집계방식': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M6 4.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm-1 0a.5.5 0 1 0-1 0 .5.5 0 0 0 1 0z"/><path d="M2 1h4.586a1 1 0 0 1 .707.293l7 7a1 1 0 0 1 0 1.414l-4.586 4.586a1 1 0 0 1-1.414 0l-7-7A1 1 0 0 1 1 6.586V2a1 1 0 0 1 1-1z"/></svg>'
+    };
+    
+    Object.entries(normalized).forEach(([key, value]) => {
+      const icon = icons[key] || icons['단위'];
+      grid.innerHTML += `
+        <div class="summary-item">
+          <div class="icon">${icon}</div>
+          <div>
+            <div class="label">${key}</div>
+            <div class="value">${value}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  // 출처 목록 렌더링
+  function renderSourceList(sources) {
+    const list = document.getElementById('aiSourceList');
+    list.innerHTML = '';
+
+    normalizeAiSources(sources).forEach(src => {
+      list.innerHTML += `<span class="source-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/>
+        </svg>
+        ${src}
+      </span>`;
+    });
+    
+    document.getElementById('aiQueryTime').textContent = '조회 시점: ' + new Date().toLocaleString('ko-KR');
+  }
+
+  // 경고 목록 렌더링
+  function renderWarnings(warnings) {
+    const container = document.getElementById('aiWarningContainer');
+    const list = document.getElementById('aiWarningList');
+    const normalized = normalizeAiWarnings(warnings);
+    
+    if (!normalized || normalized.length === 0) {
+      container.classList.add('d-none');
+      return;
+    }
+    
+    container.classList.remove('d-none');
+    list.innerHTML = '';
+    
+    normalized.forEach(warn => {
+      list.innerHTML += `
+        <div class="warning-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="flex-shrink-0 mt-1">
+            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+          </svg>
+          <span>${warn}</span>
+        </div>
+      `;
+    });
+  }
+
+  // 테이블 렌더링
+  function renderTable(tableData) {
+    const header = document.getElementById('aiTableHeader');
+    const body = document.getElementById('aiTableBody');
+    
+    header.innerHTML = '';
+    body.innerHTML = '';
+    
+    tableData.columns.forEach(col => {
+      header.innerHTML += `<th class="text-center">${col}</th>`;
+    });
+    
+    tableData.rows.forEach(row => {
+      let tr = '<tr>';
+      row.forEach(cell => {
+        tr += `<td class="text-center">${cell}</td>`;
+      });
+      tr += '</tr>';
+      body.innerHTML += tr;
+    });
+  }
+
+  // 차트 렌더링
+  function renderAiChart(chartConfig) {
+    const ctx = document.getElementById('aiResultChart').getContext('2d');
+    
+    // 기존 차트 제거
+    if (aiResultChartInstance) {
+      aiResultChartInstance.destroy();
+      aiResultChartInstance = null;
+    }
+    
+    document.getElementById('aiChartTitle').textContent = chartConfig.title || '분석 결과';
+
+    const palette = [
+      { bg: 'rgba(99, 102, 241, 0.8)', border: 'rgba(99, 102, 241, 1)' },
+      { bg: 'rgba(251, 191, 36, 0.8)', border: 'rgba(251, 191, 36, 1)' },
+      { bg: 'rgba(239, 68, 68, 0.8)', border: 'rgba(239, 68, 68, 1)' },
+      { bg: 'rgba(34, 197, 94, 0.8)', border: 'rgba(34, 197, 94, 1)' },
+      { bg: 'rgba(14, 165, 233, 0.8)', border: 'rgba(14, 165, 233, 1)' }
+    ];
+
+    const rawType = chartConfig.type || 'bar';
+    const isStacked = rawType === 'stacked_bar';
+    const chartType = isStacked ? 'bar' : rawType;
+
+    const datasets = (chartConfig?.data?.datasets || []).map((ds, idx) => {
+      const p = palette[idx % palette.length];
+      const base = {
+        borderWidth: 1,
+        backgroundColor: p.bg,
+        borderColor: p.border
+      };
+      const merged = Object.assign({}, base, ds || {});
+      if (chartType === 'line') {
+        merged.fill = merged.fill ?? true;
+        merged.tension = merged.tension ?? 0.3;
+      }
+      return merged;
+    });
+
+    const data = {
+      labels: chartConfig?.data?.labels || [],
+      datasets
+    };
+
+    aiResultChartInstance = new Chart(ctx, {
+      type: chartType,
+      data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top'
+          }
+        },
+        scales: chartType === 'line'
+          ? { y: { beginAtZero: false } }
+          : {
+            x: { stacked: isStacked },
+            y: { beginAtZero: true, stacked: isStacked }
+          }
+      }
+    });
+  }
+
+  // 되물음 옵션 렌더링
+  function renderClarifyOptions(options, originalPrompt) {
+    const container = document.getElementById('aiClarifyOptions');
+    container.innerHTML = '';
+
+    const fields = options?.fields || [];
+
+    const campusGroups = options?.campusGroups || aiCatalog?.campusGroups || [];
+    const campuses = flattenCampusesFromCatalog({ campusGroups });
+
+    const admRegions = options?.admRegions || aiCatalog?.admRegions || [];
+    const years = options?.recommendedYears || aiCatalog?.recommendedYears || [];
+
+    const choices = [];
+
+    if (fields.includes('campus')) {
+      campuses.slice(0, 40).forEach((c) => choices.push({ label: c, context: { campus: c } }));
+    }
+    if (fields.includes('admCd')) {
+      (admRegions || []).forEach((r) => choices.push({ label: r.name || r.admCd, context: { admCd: r.admCd } }));
+    }
+    if (fields.includes('populationYear') || fields.includes('statsYear')) {
+      (years || []).forEach((y) => choices.push({ label: String(y), context: { populationYear: y, statsYear: y } }));
+    }
+
+    // 왜: fields가 비어도 사용자가 선택할 수 있도록 캠퍼스를 기본 후보로 제공합니다.
+    if (choices.length === 0 && campuses.length > 0) {
+      campuses.slice(0, 30).forEach((c) => choices.push({ label: c, context: { campus: c } }));
+    }
+
+    if (choices.length === 0) {
+      const btn = document.createElement('button');
+      btn.className = 'btn clarify-option-btn';
+      btn.textContent = '다시 질문하기';
+      btn.onclick = () => {
+        document.getElementById('aiPromptInput').value = originalPrompt;
+        handleAiSubmit();
+      };
+      container.appendChild(btn);
+      return;
+    }
+
+    choices.slice(0, 40).forEach((choice) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn clarify-option-btn';
+      btn.textContent = choice.label;
+      btn.onclick = () => {
+        // 왜: 프롬프트 문자열을 억지로 수정하면 LLM 해석이 흔들릴 수 있어, context로 값을 넘깁니다.
+        aiContext = Object.assign({}, aiContext, choice.context || {});
+        document.getElementById('aiPromptInput').value = originalPrompt;
+        handleAiSubmit();
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  // 불가 응답의 예시 질문 렌더링
+  function renderSuggestedExamples(examples) {
+    const container = document.getElementById('aiSuggestedExamples');
+    container.innerHTML = '';
+    
+    examples.forEach(ex => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-outline-secondary btn-sm';
+      btn.textContent = ex;
+      btn.onclick = () => {
+        document.getElementById('aiPromptInput').value = ex;
+        handleAiSubmit();
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  // AI 질문 제출 핸들러
+  async function handleAiSubmit() {
+    const prompt = document.getElementById('aiPromptInput').value.trim();
+    const submitBtn = document.getElementById('aiSubmitBtn');
+    
+    if (!prompt) {
+      alert('질문을 입력해주세요.');
+      return;
+    }
+
+    // 왜: 프롬프트가 바뀌면 이전 되물음 컨텍스트(캠퍼스/연도 등)가 오히려 방해가 될 수 있어 초기화합니다.
+    if (aiLastPrompt !== prompt) {
+      aiLastPrompt = prompt;
+      aiContext = {};
+    }
+    
+    // 로딩 상태 표시
+    showAiState('aiLoadingState');
+    submitBtn.disabled = true;
+
+    try {
+      const res = await fetch("/statistics/api/ai/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, context: aiContext })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || "요청에 실패했습니다.");
+      }
+
+      if (data.needClarification) {
+        showAiState('aiClarifyState');
+        document.getElementById('aiClarifyQuestion').textContent = data.question || '추가 정보가 필요합니다.';
+        renderClarifyOptions(data.options || {}, prompt);
+        renderSuggestedExamples(data.examples || []);
+        return;
+      }
+
+      // 불가(지원하지 않는 질문)
+      if (data.message && (!data.charts || data.charts.length === 0)) {
+        showAiState('aiUnsupportedState');
+        document.getElementById('aiUnsupportedMessage').textContent = data.message;
+        renderSuggestedExamples(data.examples || []);
+        return;
+      }
+
+      // 성공
+      showAiState('aiSuccessResult');
+
+      const firstChart = (data.charts || [])[0];
+      if (firstChart) {
+        renderAiChart(firstChart);
+      }
+      if (data.table) {
+        renderTable(data.table);
+      }
+      renderSummaryGrid(data.summary);
+      renderSourceList(data.sources || []);
+      renderWarnings(data.warnings || []);
+       
+    } catch (err) {
+      console.error('AI 질의 오류:', err);
+      showAiState('aiUnsupportedState');
+      document.getElementById('aiUnsupportedMessage').textContent = err?.message || '처리 중 오류가 발생했습니다.';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+
+  // AI 통계 이벤트 바인딩
+  function initAiStatistics() {
+    loadAiCatalog();
+    // 제출 버튼 클릭
+    document.getElementById('aiSubmitBtn').addEventListener('click', handleAiSubmit);
+    
+    // Enter 키로 제출 (Shift+Enter는 줄바꿈)
+    document.getElementById('aiPromptInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleAiSubmit();
+      }
+    });
+    
+    // 예시 질문 버튼들
+    document.querySelectorAll('.example-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prompt = btn.getAttribute('data-prompt');
+        document.getElementById('aiPromptInput').value = prompt;
+        aiLastPrompt = null;
+        aiContext = {};
+        handleAiSubmit();
+      });
+    });
+  }
+
+  // ==================== 기존 기능 ====================
 
   function setPopulationStatus(text) {
     document.getElementById("populationStatus").textContent = text || "";
@@ -740,6 +1740,7 @@
     buildYearOptions("industryYear");
     await loadMeta();
     attachEvents();
+    initAiStatistics(); // AI 통계 기능 초기화
     await refreshInternal();
     await refreshPopulation();
     await refreshIndustry();

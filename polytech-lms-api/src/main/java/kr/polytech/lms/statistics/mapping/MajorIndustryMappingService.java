@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import kr.polytech.lms.statistics.util.StatisticsFileLocator;
+
 @Service
 public class MajorIndustryMappingService {
     // 왜: "캠퍼스 전공(학과) 재학생 비율"을 "기술업종 분류(첨단/고기술/…)"로 변환하고,
@@ -100,11 +102,11 @@ public class MajorIndustryMappingService {
             throw new IllegalStateException("전공-산업 매핑 파일 설정이 없습니다. statistics.mapping.major-industry-file 을 설정해 주세요.");
         }
 
-        Path path = Path.of(file);
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("전공-산업 매핑 파일을 찾을 수 없습니다. 경로=" + path);
-        }
-        return path;
+        Path configured = Path.of(file);
+        return StatisticsFileLocator.tryResolve(file)
+                .orElseThrow(() -> new IllegalStateException(
+                        "전공-산업 매핑 파일을 찾을 수 없습니다. 경로=" + configured + " (현재작업폴더=" + Path.of("").toAbsolutePath() + ")"
+                ));
     }
 
     private Sheet resolveTargetSheet(Workbook workbook) {

@@ -12,6 +12,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 
+import kr.polytech.lms.statistics.util.StatisticsFileLocator;
+
 @Service
 public class CampusStudentPopulationExcelService {
     // 왜: "캠퍼스 학생비율(연령대/성별)"을 DB가 아니라 엑셀 기반으로 계산해야 하는 경우가 있습니다.
@@ -34,7 +36,7 @@ public class CampusStudentPopulationExcelService {
         if (!StringUtils.hasText(file)) {
             return findDefaultFile().isPresent();
         }
-        return Files.exists(Path.of(file));
+        return StatisticsFileLocator.tryResolve(file).isPresent();
     }
 
     public Map<String, GenderCount> countByAgeBandAndGender(
@@ -405,20 +407,19 @@ public class CampusStudentPopulationExcelService {
                     .orElseThrow(() -> new IllegalStateException("statistics.data.student-population-file 설정이 없습니다. (환경변수: STATISTICS_STUDENT_POPULATION_FILE)"));
         }
 
-        Path path = Path.of(filePath);
-        if (!Files.exists(path)) {
-            throw new IllegalStateException("캠퍼스 학생비율(인구) 엑셀 파일을 찾을 수 없습니다. path=" + path);
-        }
-        return path;
+        Path configured = Path.of(filePath);
+        return StatisticsFileLocator.tryResolve(filePath)
+                .orElseThrow(() -> new IllegalStateException(
+                        "캠퍼스 학생비율(인구) 엑셀 파일을 찾을 수 없습니다. path=" + configured + " (현재작업폴더=" + Path.of("").toAbsolutePath() + ")"
+                ));
     }
 
     private Optional<Path> findDefaultFile() {
         // 왜: 사용자가 환경변수/설정 파일을 따로 지정하지 않아도,
         //     통계 폴더(../통계)에 "재학생/인구/성별/연령" 관련 파일을 두면 자동으로 잡히게 합니다.
-        Path dir = Path.of("../통계");
-        if (!Files.exists(dir) || !Files.isDirectory(dir)) {
-            return Optional.empty();
-        }
+        Optional<Path> dirOpt = StatisticsFileLocator.findStatisticsDirectory();
+        if (dirOpt.isEmpty()) return Optional.empty();
+        Path dir = dirOpt.get();
 
         try (var stream = Files.list(dir)) {
             return stream
