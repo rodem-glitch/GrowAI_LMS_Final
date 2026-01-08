@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -38,6 +40,16 @@ public class GeminiClient {
         String model = StringUtils.hasText(properties.getModel()) ? properties.getModel().trim() : "gemini-1.5-flash";
         String path = "/v1beta/models/" + model + ":generateContent";
 
+        // 왜: LLM이 종종 JSON 앞뒤로 설명을 섞거나, 괄호를 닫지 못해 파싱이 깨질 수 있습니다.
+        //     공식 문서의 Structured Output 옵션(responseMimeType/responseSchema)으로 "JSON만" 반환하도록 강제합니다.
+        // 참고(공식): https://ai.google.dev/api/rest/v1beta/GenerationConfig
+        Map<String, Object> generationConfig = new LinkedHashMap<>();
+        generationConfig.put("temperature", 0.1);
+        // 왜: 실행계획(JSON)이 길어질 수 있어, 잘림을 줄이기 위해 토큰 상한을 늘립니다.
+        generationConfig.put("maxOutputTokens", 8192);
+        generationConfig.put("responseMimeType", "application/json");
+        generationConfig.put("responseSchema", buildPlanResponseSchema());
+
         Map<String, Object> body = Map.of(
                 "contents", new Object[]{
                         Map.of(
@@ -45,11 +57,7 @@ public class GeminiClient {
                                 "parts", new Object[]{Map.of("text", prompt)}
                         )
                 },
-                // 왜: 실행계획(JSON) 생성은 창의성이 필요하지 않아, temperature를 낮춰 재현성을 높입니다.
-                "generationConfig", Map.of(
-                        "temperature", 0.1,
-                        "maxOutputTokens", 2048
-                )
+                "generationConfig", generationConfig
         );
 
         JsonNode response = restClient.post()
@@ -75,6 +83,59 @@ public class GeminiClient {
         }
 
         return textNode.asText();
+    }
+
+    private Map<String, Object> buildPlanResponseSchema() {
+        // 왜: v2는 "실행계획(JSON)"을 파싱해 동작하므로, 가능한 한 엄격한 스키마로 유효 JSON을 받습니다.
+        //     ※ responseSchema는 "표준 JSON Schema"가 아니라 Gemini API의 Schema 포맷이라
+        //        additionalProperties 같은 필드가 지원되지 않습니다(400 발생).
+        //     그래서 params는 '지원하는 키들의 합집합'으로 정의해, 모델이 그 범위 안에서만 JSON을 만들게 유도합니다.
+
+        Map<String, Object> paramProperties = new LinkedHashMap<>();
+        paramProperties.put("admCd", Map.of("type", "string"));
+        paramProperties.put("years", Map.of("type", "array", "items", Map.of("type", "number")));
+        paramProperties.put("metric", Map.of("type", "string"));
+        paramProperties.put("category", Map.of("type", "string"));
+        paramProperties.put("classCodes", Map.of("type", "array", "items", Map.of("type", "string")));
+        paramProperties.put("ageType", Map.of("type", "string"));
+        paramProperties.put("gender", Map.of("type", "string"));
+        paramProperties.put("campus", Map.of("type", "string"));
+        paramProperties.put("dept", Map.of("type", "string"));
+        paramProperties.put("top", Map.of("type", "number"));
+        paramProperties.put("chartType", Map.of("type", "string"));
+        paramProperties.put("title", Map.of("type", "string"));
+        paramProperties.put("seriesRefs", Map.of("type", "array", "items", Map.of("type", "string")));
+        paramProperties.put("seriesRef", Map.of("type", "string"));
+        paramProperties.put("xRef", Map.of("type", "string"));
+        paramProperties.put("yRef", Map.of("type", "string"));
+        paramProperties.put("leftRef", Map.of("type", "string"));
+        paramProperties.put("rightRef", Map.of("type", "string"));
+
+        Map<String, Object> stepProperties = new LinkedHashMap<>();
+        stepProperties.put("id", Map.of("type", "string"));
+        stepProperties.put("agent", Map.of("type", "string"));
+        stepProperties.put("op", Map.of("type", "string"));
+        stepProperties.put("as", Map.of("type", "string"));
+        stepProperties.put("params", Map.of("type", "object", "properties", paramProperties));
+
+        Map<String, Object> stepSchema = new LinkedHashMap<>();
+        stepSchema.put("type", "object");
+        stepSchema.put("properties", stepProperties);
+        stepSchema.put("required", List.of("id", "agent", "op"));
+
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("action", Map.of("type", "string"));
+        properties.put("question", Map.of("type", "string"));
+        properties.put("fields", Map.of("type", "array", "items", Map.of("type", "string")));
+        properties.put("message", Map.of("type", "string"));
+        properties.put("examples", Map.of("type", "array", "items", Map.of("type", "string")));
+        properties.put("steps", Map.of("type", "array", "items", stepSchema));
+        schema.put("properties", properties);
+        schema.put("required", List.of("action"));
+        return schema;
     }
 
     private String safeTruncate(String text, int max) {

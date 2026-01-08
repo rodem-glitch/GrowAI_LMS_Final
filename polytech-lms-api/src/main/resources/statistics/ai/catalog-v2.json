@@ -1,0 +1,92 @@
+{
+  "version": "v2",
+  "dataSources": [
+    {
+      "id": "kosis_population",
+      "name": "인구 통계",
+      "provider": "KOSIS(통계청)",
+      "description": "연령대/성별/행정구역별 인구 수",
+      "dimensions": ["year", "ageType", "gender", "admCd"],
+      "metrics": ["population"],
+      "notes": "실제 수치는 KosisStatisticsService를 통해서만 조회합니다."
+    },
+    {
+      "id": "sgis_industry",
+      "name": "산업별 종사자 통계",
+      "provider": "SGIS(통계청)",
+      "description": "산업분류별 사업체 수(corpCnt), 종사자 수(totWorker)",
+      "dimensions": ["year", "admCd", "classCode"],
+      "metrics": ["corpCnt", "totWorker"],
+      "notes": "실제 수치는 SgisCompanyCacheService(캐시/DB 우선)를 통해서만 조회합니다."
+    },
+    {
+      "id": "internal_employment",
+      "name": "캠퍼스/학과별 취업률",
+      "provider": "내부 엑셀",
+      "description": "캠퍼스별/학과별 취업률(%)",
+      "dimensions": ["campus", "dept"],
+      "metrics": ["employmentRate"],
+      "notes": "실제 수치는 InternalStatisticsService를 통해서만 조회합니다."
+    },
+    {
+      "id": "internal_admission",
+      "name": "캠퍼스/학과별 입학충원률",
+      "provider": "내부 엑셀",
+      "description": "캠퍼스별/학과별 입학충원률(%)",
+      "dimensions": ["campus", "dept"],
+      "metrics": ["fillRate", "quota"],
+      "notes": "실제 수치는 InternalStatisticsService/CampusStudentQuotaExcelService를 통해서만 조회합니다."
+    }
+  ],
+  "operations": [
+    {
+      "id": "SGIS_METRIC_SERIES",
+      "description": "SGIS에서 특정 지역/산업분류의 연도별 metric 시계열을 생성합니다.",
+      "params": ["admCd", "years", "classCodes|category", "metric"]
+    },
+    {
+      "id": "KOSIS_POPULATION_SERIES",
+      "description": "KOSIS에서 특정 조건의 연도별 인구 시계열을 생성합니다.",
+      "params": ["years", "ageType", "gender", "admCd"]
+    },
+    {
+      "id": "INTERNAL_EMPLOYMENT_TOP",
+      "description": "캠퍼스 내 취업률 Top N 학과를 조회합니다.",
+      "params": ["campus", "top"]
+    },
+    {
+      "id": "INTERNAL_ADMISSION_TOP",
+      "description": "캠퍼스 내 입학충원률 Top N 학과를 조회합니다.",
+      "params": ["campus", "top"]
+    },
+    {
+      "id": "INTERNAL_EMPLOYMENT_SERIES",
+      "description": "내부 취업률을 연도별 시계열로 조회합니다. (연도별 파일이 있으면 자동으로 매칭합니다)",
+      "params": ["years", "campus(선택)", "dept(선택) 또는 category(선택)"]
+    },
+    {
+      "id": "CHEMIST_CORRELATION",
+      "description": "두 시계열의 피어슨 상관계수를 계산합니다(라벨 교집합 기준).",
+      "params": ["xRef", "yRef"]
+    },
+    {
+      "id": "CHEMIST_GROWTH_RATE",
+      "description": "시작/끝 값 기반 성장률(%)을 계산합니다.",
+      "params": ["seriesRef"]
+    },
+    {
+      "id": "CHEMIST_DELTA_POINTS",
+      "description": "시작/끝 값 기반 변화량(%p)을 계산합니다. (예: 취업률 85%→92%면 +7.0%p)",
+      "params": ["seriesRef"]
+    },
+    {
+      "id": "DESIGNER_CHART",
+      "description": "서버가 결과 데이터로 Chart.js 호환 차트 데이터를 만듭니다(LLM은 차트 타입/축/대상만 선택).",
+      "params": ["chartType", "title", "seriesRefs"]
+    }
+  ],
+  "mappings": {
+    "admRegionExample": { "서울": "11", "부산": "26", "대구": "27" },
+    "industryCategoryHint": "MajorIndustryMappingService의 카테고리(예: ICT, 첨단기술 등)를 사용할 수 있습니다."
+  }
+}

@@ -10,13 +10,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.InputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import kr.polytech.lms.statistics.util.StatisticsFileLocator;
 
@@ -28,15 +35,46 @@ public class InternalStatisticsService {
     private final StatisticsDataProperties properties;
     private final DataFormatter formatter;
 
+    private static final Pattern YEAR_PATTERN = Pattern.compile("(?<!\\d)(20\\d{2})(?!\\d)");
+
     private volatile List<EmploymentRow> cachedEmploymentRows;
     private final Object employmentLock = new Object();
 
     private volatile List<AdmissionRow> cachedAdmissionRows;
     private final Object admissionLock = new Object();
 
+    private final Map<Path, EmploymentFileCache> employmentFileCache = new ConcurrentHashMap<>();
+
     public InternalStatisticsService(StatisticsDataProperties properties) {
         this.properties = properties;
         this.formatter = new DataFormatter(Locale.KOREA);
+    }
+
+    public List<Integer> getAvailableEmploymentYears() {
+        // 왜: LLM이 "가능한 연도"를 알고 계획을 세우면, 불필요한 되물음이 줄어듭니다.
+        try {
+            Path base = resolveEmploymentFilePath();
+            return indexEmploymentFiles(base).keySet().stream().sorted().toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    public List<EmploymentStat> getEmploymentStatsForYear(int year) {
+        Optional<Path> file = resolveEmploymentFilePathForYear(year);
+        if (file.isEmpty()) {
+            return List.of();
+        }
+
+        List<EmploymentRow> rows = getOrLoadEmploymentRows(file.get());
+        return rows.stream()
+                .map(r -> new EmploymentStat(r.campus(), r.dept(), r.employmentRate()))
+                .toList();
+    }
+
+    public Optional<Path> resolveEmploymentFilePathForYear(int year) {
+        Path base = resolveEmploymentFilePath();
+        return Optional.ofNullable(indexEmploymentFiles(base).get(year));
     }
 
     public List<DepartmentRate> getEmploymentRates(String campus) {
@@ -81,9 +119,21 @@ public class InternalStatisticsService {
             if (cachedEmploymentRows != null) {
                 return cachedEmploymentRows;
             }
-            cachedEmploymentRows = loadEmploymentRowsFromExcel();
+            cachedEmploymentRows = loadEmploymentRowsFromExcel(resolveEmploymentFilePath());
             return cachedEmploymentRows;
         }
+    }
+
+    private List<EmploymentRow> getOrLoadEmploymentRows(Path path) {
+        long lastModified = safeLastModifiedMillis(path);
+        EmploymentFileCache cached = employmentFileCache.get(path);
+        if (cached != null && cached.lastModifiedMillis() == lastModified) {
+            return cached.rows();
+        }
+
+        List<EmploymentRow> rows = loadEmploymentRowsFromExcel(path);
+        employmentFileCache.put(path, new EmploymentFileCache(lastModified, rows));
+        return rows;
     }
 
     private List<AdmissionRow> getOrLoadAdmissionRows() {
@@ -101,9 +151,7 @@ public class InternalStatisticsService {
         }
     }
 
-    private List<EmploymentRow> loadEmploymentRowsFromExcel() {
-        Path path = resolveFilePath(properties.getEmploymentFile(), "statistics.data.employment-file");
-
+    private List<EmploymentRow> loadEmploymentRowsFromExcel(Path path) {
         try (InputStream in = Files.newInputStream(path); Workbook workbook = WorkbookFactory.create(in)) {
             Sheet sheet = Objects.requireNonNullElse(workbook.getSheet("학과별취업현황(종합)"), workbook.getSheetAt(0));
 
@@ -137,6 +185,72 @@ public class InternalStatisticsService {
             return rows;
         } catch (Exception e) {
             throw new IllegalStateException("취업 통계 엑셀을 읽지 못했습니다. statistics.data.employment-file 경로를 확인해 주세요.", e);
+        }
+    }
+
+    private Path resolveEmploymentFilePath() {
+        return resolveFilePath(properties.getEmploymentFile(), "statistics.data.employment-file");
+    }
+
+    private Map<Integer, Path> indexEmploymentFiles(Path baseFile) {
+        // 왜: 운영에서는 취업률 파일이 연도별로 쌓이는 경우가 많아서, 파일명에 들어있는 연도(20xx)를 기준으로 자동 매칭합니다.
+        Map<Integer, Path> byYear = new LinkedHashMap<>();
+
+        addEmploymentFileCandidate(byYear, baseFile);
+
+        Path dir = baseFile.getParent();
+        if (dir == null || !Files.isDirectory(dir)) {
+            return byYear;
+        }
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "*.xlsx")) {
+            for (Path p : stream) {
+                addEmploymentFileCandidate(byYear, p);
+            }
+        } catch (Exception ignored) {
+            // 왜: 폴더 접근이 실패해도, 최소한 baseFile로는 동작하게 둡니다.
+        }
+
+        return byYear;
+    }
+
+    private void addEmploymentFileCandidate(Map<Integer, Path> byYear, Path file) {
+        String name = file.getFileName() == null ? "" : file.getFileName().toString();
+        Integer year = extractYear(name);
+        if (year == null) {
+            return;
+        }
+
+        // 왜: 같은 연도 파일이 여러 개면(수정본/재배포본 등) 마지막 수정 시간이 더 최신인 걸 우선합니다.
+        Path existing = byYear.get(year);
+        if (existing == null) {
+            byYear.put(year, file);
+            return;
+        }
+
+        long existingLm = safeLastModifiedMillis(existing);
+        long candidateLm = safeLastModifiedMillis(file);
+        if (candidateLm >= existingLm) {
+            byYear.put(year, file);
+        }
+    }
+
+    private Integer extractYear(String text) {
+        if (!StringUtils.hasText(text)) return null;
+        Matcher m = YEAR_PATTERN.matcher(text);
+        if (!m.find()) return null;
+        try {
+            return Integer.parseInt(m.group(1));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private long safeLastModifiedMillis(Path path) {
+        try {
+            return Files.getLastModifiedTime(path).toMillis();
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
@@ -279,10 +393,20 @@ public class InternalStatisticsService {
     private record EmploymentRow(String campus, String dept, double employmentRate) {
     }
 
+    public record EmploymentStat(String campus, String dept, double employmentRate) {
+    }
+
     private record AdmissionRow(String campus, String dept, double fillRate) {
     }
 
     public record DepartmentRate(String dept, double rate) {
+    }
+
+    private record EmploymentFileCache(long lastModifiedMillis, List<EmploymentRow> rows) {
+        EmploymentFileCache(long lastModifiedMillis, List<EmploymentRow> rows) {
+            this.lastModifiedMillis = lastModifiedMillis;
+            this.rows = (rows == null) ? List.of() : List.copyOf(rows);
+        }
     }
 
     private enum AdmissionBasis {

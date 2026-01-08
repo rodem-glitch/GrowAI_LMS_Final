@@ -3,10 +3,11 @@ package kr.polytech.lms.statistics.dashboard.service;
 import kr.polytech.lms.statistics.kosis.client.dto.KosisPopulationRow;
 import kr.polytech.lms.statistics.kosis.service.KosisStatisticsService;
 import kr.polytech.lms.statistics.student.excel.CampusStudentPopulationExcelService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,6 +33,8 @@ public class PopulationComparisonService {
     private final KosisStatisticsService kosisStatisticsService;
     private final CampusStudentPopulationExcelService campusStudentPopulationExcelService;
 
+    private static final Logger log = LoggerFactory.getLogger(PopulationComparisonService.class);
+
     public PopulationComparisonService(
             KosisStatisticsService kosisStatisticsService,
             CampusStudentPopulationExcelService campusStudentPopulationExcelService
@@ -44,7 +47,7 @@ public class PopulationComparisonService {
             String campus,
             String admCd,
             Integer populationYear
-    ) throws IOException {
+    ) {
         if (!StringUtils.hasText(campus)) {
             throw new IllegalArgumentException("campus는 필수입니다.");
         }
@@ -52,6 +55,7 @@ public class PopulationComparisonService {
         String resolvedCampus = campus.trim();
         String resolvedAdmCd = resolveAdmCd(admCd);
         int desiredPopulationYear = resolvePopulationYear(populationYear);
+
         int usedPopulationYear = resolveAvailablePopulationYear(desiredPopulationYear, resolvedAdmCd);
 
         Map<String, GenderCount> regionCounts = loadRegionPopulationGenderCounts(resolvedAdmCd, usedPopulationYear);
@@ -96,14 +100,14 @@ public class PopulationComparisonService {
         );
     }
 
-    private Map<String, GenderCount> loadRegionPopulationGenderCounts(String admCd, int year) throws IOException {
+    private Map<String, GenderCount> loadRegionPopulationGenderCounts(String admCd, int year) {
         Map<String, GenderCount> result = new LinkedHashMap<>();
         for (AgeBand band : AGE_BANDS) {
             long maleSum = 0L;
             long femaleSum = 0L;
             for (String ageType : band.ageTypes()) {
-                maleSum += sumPopulation(kosisStatisticsService.getPopulation(String.valueOf(year), ageType, "1", admCd));
-                femaleSum += sumPopulation(kosisStatisticsService.getPopulation(String.valueOf(year), ageType, "2", admCd));
+                maleSum += safeSumPopulation(year, ageType, "1", admCd);
+                femaleSum += safeSumPopulation(year, ageType, "2", admCd);
             }
             result.put(band.label(), new GenderCount(maleSum, femaleSum));
         }
@@ -111,10 +115,7 @@ public class PopulationComparisonService {
     }
 
     private Map<String, GenderCount> loadCampusStudentAgeGenderCounts(String campus, int baseYear) {
-        Map<String, GenderCount> empty = new LinkedHashMap<>();
-        for (AgeBand band : AGE_BANDS) {
-            empty.put(band.label(), GenderCount.empty());
-        }
+        Map<String, GenderCount> empty = emptyGenderCounts();
 
         if (campusStudentPopulationExcelService.isEnabled()) {
             Map<String, CampusStudentPopulationExcelService.GenderCount> rows =
@@ -135,15 +136,15 @@ public class PopulationComparisonService {
         if (populationYear != null) {
             return populationYear;
         }
-        // 왜: KOSIS 인구 통계도 당해 연도는 미제공일 수 있어, 기본값을 전년도(-1)로 둡니다.
-        return Year.now().getValue() - 1;
+        // 왜: 기본 화면 기본값을 2024로 고정해 혼선을 줄입니다.
+        return 2024;
     }
 
-    private int resolveAvailablePopulationYear(int desiredYear, String admCd) throws IOException {
+    private int resolveAvailablePopulationYear(int desiredYear, String admCd) {
         // 왜: KOSIS 인구 통계는 최신 연도가 바로 제공되지 않을 수 있어, 사용 가능한 연도를 자동 보정합니다.
         // - 예: 2024가 N/A면 2023으로 내려가서 조회
         for (int y = desiredYear; y >= desiredYear - 5; y--) {
-            long sample = sumPopulation(kosisStatisticsService.getPopulation(String.valueOf(y), "32", "0", admCd));
+            long sample = safeSumPopulation(y, "32", "0", admCd);
             if (sample > 0) {
                 return y;
             }
@@ -170,6 +171,25 @@ public class PopulationComparisonService {
             return 0L;
         }
         return rows.stream().mapToLong(KosisPopulationRow::getPopulation).sum();
+    }
+
+    private long safeSumPopulation(int year, String ageType, String gender, String admCd) {
+        // 왜: 외부 API(KOSIS)는 키/토큰/장애 등으로 실패할 수 있습니다.
+        //     화면 전체가 500으로 깨지지 않도록, 실패는 0으로 처리하고 나머지(캠퍼스 학생 분포)는 계속 보여줍니다.
+        try {
+            return sumPopulation(kosisStatisticsService.getPopulation(String.valueOf(year), ageType, gender, admCd));
+        } catch (Exception e) {
+            log.warn("KOSIS 인구 조회 실패(폴백=0): year={}, ageType={}, gender={}, admCd={}", year, ageType, gender, admCd, e);
+            return 0L;
+        }
+    }
+
+    private Map<String, GenderCount> emptyGenderCounts() {
+        Map<String, GenderCount> empty = new LinkedHashMap<>();
+        for (AgeBand band : AGE_BANDS) {
+            empty.put(band.label(), GenderCount.empty());
+        }
+        return empty;
     }
 
     private record AgeBand(String label, List<String> ageTypes) {

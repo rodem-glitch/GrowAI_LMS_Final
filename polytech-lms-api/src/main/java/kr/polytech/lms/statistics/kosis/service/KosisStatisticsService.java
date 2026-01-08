@@ -91,9 +91,9 @@ public class KosisStatisticsService {
     }
 
     private String resolveYear(String year) {
-        // 왜: 화면 없이 API만 테스트할 때도 바로 호출해 볼 수 있도록 기본값을 제공합니다.
+        // 왜: 기본 화면 기본값을 2024로 고정해 혼선을 줄입니다.
         if (!StringUtils.hasText(year)) {
-            return String.valueOf(Year.now().getValue());
+            return "2024";
         }
         return year.trim();
     }

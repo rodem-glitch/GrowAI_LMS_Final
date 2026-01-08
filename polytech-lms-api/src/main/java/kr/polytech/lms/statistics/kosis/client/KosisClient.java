@@ -119,14 +119,69 @@ public class KosisClient {
     }
 
     private List<KosisPopulationRow> parsePopulationResponse(String responseBody) throws IOException {
-        JsonNode root = objectMapper.readTree(Objects.requireNonNullElse(responseBody, ""));
+        // 왜: KOSIS/SGIS는 에러 응답(예: errCd/errMsg)이거나 result가 없는 응답이 올 수 있습니다.
+        //     기존 구현은 result가 없을 때 JsonToken.NOT_AVAILABLE로 역직렬화가 터져서, 원인 파악이 어렵습니다.
+        if (!StringUtils.hasText(responseBody)) {
+            return List.of();
+        }
+
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(responseBody);
+        } catch (IOException e) {
+            // 왜: 간혹 HTML(차단/오류 페이지)이나 깨진 JSON이 내려오면, 응답 본문을 안 보면 원인을 모릅니다.
+            throw new IllegalStateException("KOSIS 인구 응답이 JSON이 아닙니다. 응답=" + safeTruncate(responseBody, 500), e);
+        }
+        if (root == null || root.isNull() || root.isMissingNode()) {
+            return List.of();
+        }
+
+        // 1) 에러 응답 방어 (SGIS/KOSIS 공통 형태)
+        String errCd = textAny(root, List.of("errCd", "err_cd", "errorCode", "error_code"));
+        String errMsg = textAny(root, List.of("errMsg", "err_msg", "errorMsg", "error_msg", "message"));
+        if (StringUtils.hasText(errCd) && !"0".equals(errCd.trim())) {
+            throw new IllegalStateException("KOSIS 인구 조회에 실패했습니다. errCd=" + errCd.trim()
+                    + (StringUtils.hasText(errMsg) ? (", errMsg=" + errMsg.trim()) : ""));
+        }
+
+        // 2) 정상 응답은 보통 {"result":[...]} 형태지만, 환경에 따라 배열이 루트로 올 수도 있어 폴백을 둡니다.
         JsonNode resultNode = root.path("result");
+        if (resultNode.isMissingNode() || resultNode.isNull()) {
+            if (root.isArray()) {
+                resultNode = root;
+            }
+        }
+
+        if (resultNode == null || !resultNode.isArray()) {
+            throw new IllegalStateException("KOSIS 인구 응답에 result 배열이 없습니다. 응답=" + safeTruncate(root.toString(), 500));
+        }
 
         return objectMapper.readValue(
-                resultNode.traverse(),
+                objectMapper.treeAsTokens(resultNode),
                 new TypeReference<>() {
                 }
         );
+    }
+
+    private String textAny(JsonNode root, List<String> keys) {
+        if (root == null || keys == null) return null;
+        for (String k : keys) {
+            if (!StringUtils.hasText(k)) continue;
+            JsonNode v = root.get(k);
+            if (v != null && v.isValueNode()) {
+                String s = v.asText(null);
+                if (StringUtils.hasText(s)) {
+                    return s;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String safeTruncate(String text, int max) {
+        if (text == null) return null;
+        if (text.length() <= max) return text;
+        return text.substring(0, max) + "...";
     }
 
     private record KosisToken(String accessToken, long accessTimeoutEpochMs) {
