@@ -11,13 +11,15 @@ public record SttProperties(
     String provider,
     String language,
     OpenAi openai,
+    Google google,
     Duration httpTimeout
 ) {
     public SttProperties {
         provider = (provider == null || provider.isBlank()) ? "openai" : provider.trim();
         language = (language == null || language.isBlank()) ? "ko" : language.trim();
         openai = openai == null ? new OpenAi(null, null, null) : openai;
-        httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;
+        google = google == null ? new Google(null, null, null, null, null, false, true, null, null, null) : google;
+        httpTimeout = safeTimeout(httpTimeout, Duration.ofMinutes(5));
     }
 
     public record OpenAi(
@@ -36,6 +38,42 @@ public record SttProperties(
             if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
             return "https://" + trimmed;
         }
+    }
+
+    public record Google(
+        String projectId,
+        String location,
+        String recognizerId,
+        String gcsBucket,
+        String gcsPrefix,
+        boolean keepUploadedFiles,
+        boolean enableAutomaticPunctuation,
+        Duration pollingInterval,
+        Duration pollingTimeout,
+        String model
+    ) {
+        public Google {
+            location = (location == null || location.isBlank()) ? "global" : location.trim();
+            recognizerId = (recognizerId == null || recognizerId.isBlank()) ? "_" : recognizerId.trim();
+            gcsPrefix = normalizeGcsPrefix(gcsPrefix, "contentsummary/stt");
+            pollingInterval = safeTimeout(pollingInterval, Duration.ofSeconds(2));
+            pollingTimeout = safeTimeout(pollingTimeout, Duration.ofHours(2));
+            model = (model == null || model.isBlank()) ? "latest_long" : model.trim();
+        }
+
+        private static String normalizeGcsPrefix(String prefix, String defaultValue) {
+            if (prefix == null || prefix.isBlank()) return defaultValue;
+            String trimmed = prefix.trim();
+            while (trimmed.startsWith("/")) trimmed = trimmed.substring(1);
+            while (trimmed.endsWith("/")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+            return trimmed.isBlank() ? defaultValue : trimmed;
+        }
+    }
+
+    private static Duration safeTimeout(Duration configured, Duration fallback) {
+        if (configured == null) return fallback;
+        if (configured.isZero() || configured.isNegative()) return fallback;
+        return configured;
     }
 }
 
