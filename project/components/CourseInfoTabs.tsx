@@ -1335,11 +1335,15 @@ function HaksaEvaluationTab({ course }: { course: any }) {
     etc: 10,
   });
 
-  // 성적 컷오프
+  // 성적 컷오프 (A+~D 및 F)
   const [cutoffs, setCutoffs] = useState({
+    'A+': 95,
     A: 90,
+    'B+': 85,
     B: 80,
+    'C+': 75,
     C: 70,
+    'D+': 65,
     D: 60,
     F: 0, // F는 D 미만
   });
@@ -1368,10 +1372,18 @@ function HaksaEvaluationTab({ course }: { course: any }) {
             const parsed = JSON.parse(raw) as HaksaEvalSettings;
             if (!cancelled) {
               setWeights(parsed.weights);
-              // 왜: 학사 화면은 A~D만 입력받고, F는 D 미만으로 자동 처리합니다.
+              // 왜: 기존 데이터에 + 등급이 없을 수 있으므로 기본값 설정
+              const c = parsed.cutoffs || {};
               setCutoffs({
-                ...parsed.cutoffs,
-                F: Math.max(0, toInt(parsed.cutoffs?.D ?? 60, 60) - 1),
+                'A+': toInt(c['A+'], 95),
+                A: toInt(c.A, 90),
+                'B+': toInt(c['B+'], 85),
+                B: toInt(c.B, 80),
+                'C+': toInt(c['C+'], 75),
+                C: toInt(c.C, 70),
+                'D+': toInt(c['D+'], 65),
+                D: toInt(c.D, 60),
+                F: Math.max(0, toInt(c.D ?? 60, 60) - 1),
               });
             }
             return;
@@ -1390,10 +1402,18 @@ function HaksaEvaluationTab({ course }: { course: any }) {
               } as HaksaEvalSettings;
               if (!cancelled) {
                 setWeights(next.weights);
-                // 왜: 기존 저장값에 F가 있어도 화면에서는 A~D만 보여주므로 D 기준으로 보정합니다.
+                // 왜: 기존 데이터에 + 등급이 없을 수 있으므로 기본값 설정
+                const c = next.cutoffs || {};
                 setCutoffs({
-                  ...next.cutoffs,
-                  F: Math.max(0, toInt(next.cutoffs?.D ?? 60, 60) - 1),
+                  'A+': toInt(c['A+'], 95),
+                  A: toInt(c.A, 90),
+                  'B+': toInt(c['B+'], 85),
+                  B: toInt(c.B, 80),
+                  'C+': toInt(c['C+'], 75),
+                  C: toInt(c.C, 70),
+                  'D+': toInt(c['D+'], 65),
+                  D: toInt(c.D, 60),
+                  F: Math.max(0, toInt(c.D ?? 60, 60) - 1),
                 });
               }
               await tutorLmsApi.updateHaksaCourseEval({
@@ -1536,11 +1556,27 @@ function HaksaEvaluationTab({ course }: { course: any }) {
       {/* 성적 컷오프 */}
       <div className="border border-gray-200 rounded-lg p-6 space-y-4">
         <div>
-          <h4 className="text-gray-900 mb-1">성적 등급 기준 (A~D)</h4>
+          <h4 className="text-gray-900 mb-1">성적 등급 기준 (A+~D)</h4>
           <p className="text-sm text-gray-600">각 등급의 최소 점수를 입력해 주세요. (해당 점수 이상이면 해당 등급)</p>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        {/* A+, A, B+, B */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-blue-800 mb-2 text-center">A+ 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs['A+']}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, 'A+': toInt(e.target.value, 95) }))}
+                className={`${numberInputClass} bg-blue-100 border-blue-300`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~100점</p>
+          </div>
           <div>
             <label className="block text-sm font-medium text-blue-700 mb-2 text-center">A 등급</label>
             <div className="relative">
@@ -1552,9 +1588,24 @@ function HaksaEvaluationTab({ course }: { course: any }) {
                 min={0}
                 max={100}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
             </div>
-            <p className="text-xs text-center text-gray-500 mt-1">~100점</p>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs['A+'] - 1}점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-green-800 mb-2 text-center">B+ 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs['B+']}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, 'B+': toInt(e.target.value, 85) }))}
+                className={`${numberInputClass} bg-green-100 border-green-300`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.A - 1}점</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-green-700 mb-2 text-center">B 등급</label>
@@ -1567,9 +1618,28 @@ function HaksaEvaluationTab({ course }: { course: any }) {
                 min={0}
                 max={100}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
             </div>
-            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.A - 1}점</p>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs['B+'] - 1}점</p>
+          </div>
+        </div>
+
+        {/* C+, C, D+, D */}
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-yellow-800 mb-2 text-center">C+ 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs['C+']}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, 'C+': toInt(e.target.value, 75) }))}
+                className={`${numberInputClass} bg-yellow-100 border-yellow-300`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.B - 1}점</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-yellow-700 mb-2 text-center">C 등급</label>
@@ -1582,9 +1652,24 @@ function HaksaEvaluationTab({ course }: { course: any }) {
                 min={0}
                 max={100}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
             </div>
-            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.B - 1}점</p>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs['C+'] - 1}점</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-orange-800 mb-2 text-center">D+ 등급</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={cutoffs['D+']}
+                onChange={(e) => setCutoffs(prev => ({ ...prev, 'D+': toInt(e.target.value, 65) }))}
+                className={`${numberInputClass} bg-orange-100 border-orange-300`}
+                min={0}
+                max={100}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.C - 1}점</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-orange-700 mb-2 text-center">D 등급</label>
@@ -1597,20 +1682,25 @@ function HaksaEvaluationTab({ course }: { course: any }) {
                 min={0}
                 max={100}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">점 이상</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">점 이상</span>
             </div>
-            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs.C - 1}점</p>
+            <p className="text-xs text-center text-gray-500 mt-1">~{cutoffs['D+'] - 1}점</p>
           </div>
         </div>
 
         {/* 등급 요약 */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
           <h5 className="text-sm font-medium text-gray-700 mb-2">등급 요약</h5>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">A: {cutoffs.A}~100점</span>
-            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">B: {cutoffs.B}~{cutoffs.A - 1}점</span>
-            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">C: {cutoffs.C}~{cutoffs.B - 1}점</span>
-            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full">D: {cutoffs.D}~{cutoffs.C - 1}점</span>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span className="px-3 py-1 bg-blue-200 text-blue-800 rounded-full">A+: {cutoffs['A+']}~100점</span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">A: {cutoffs.A}~{cutoffs['A+'] - 1}점</span>
+            <span className="px-3 py-1 bg-green-200 text-green-800 rounded-full">B+: {cutoffs['B+']}~{cutoffs.A - 1}점</span>
+            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">B: {cutoffs.B}~{cutoffs['B+'] - 1}점</span>
+            <span className="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full">C+: {cutoffs['C+']}~{cutoffs.B - 1}점</span>
+            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">C: {cutoffs.C}~{cutoffs['C+'] - 1}점</span>
+            <span className="px-3 py-1 bg-orange-200 text-orange-800 rounded-full">D+: {cutoffs['D+']}~{cutoffs.C - 1}점</span>
+            <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full">D: {cutoffs.D}~{cutoffs['D+'] - 1}점</span>
+            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full">F: 0~{cutoffs.D - 1}점</span>
           </div>
         </div>
       </div>

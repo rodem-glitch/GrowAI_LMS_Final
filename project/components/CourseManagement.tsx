@@ -5044,20 +5044,28 @@ function HaksaGradingContent({
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // 성적 기준
+  // 성적 기준 (A+~F, A~D까지 + 등급 포함)
   const GRADES = [
-    { value: 'A', label: 'A (90-100)', min: 90, color: 'bg-blue-100 text-blue-700' },
-    { value: 'B', label: 'B (80-89)', min: 80, color: 'bg-green-100 text-green-700' },
-    { value: 'C', label: 'C (70-79)', min: 70, color: 'bg-yellow-100 text-yellow-700' },
-    { value: 'D', label: 'D (60-69)', min: 60, color: 'bg-orange-100 text-orange-700' },
+    { value: 'A+', label: 'A+ (95-100)', min: 95, color: 'bg-blue-200 text-blue-800' },
+    { value: 'A', label: 'A (90-94)', min: 90, color: 'bg-blue-100 text-blue-700' },
+    { value: 'B+', label: 'B+ (85-89)', min: 85, color: 'bg-green-200 text-green-800' },
+    { value: 'B', label: 'B (80-84)', min: 80, color: 'bg-green-100 text-green-700' },
+    { value: 'C+', label: 'C+ (75-79)', min: 75, color: 'bg-yellow-200 text-yellow-800' },
+    { value: 'C', label: 'C (70-74)', min: 70, color: 'bg-yellow-100 text-yellow-700' },
+    { value: 'D+', label: 'D+ (65-69)', min: 65, color: 'bg-orange-200 text-orange-800' },
+    { value: 'D', label: 'D (60-64)', min: 60, color: 'bg-orange-100 text-orange-700' },
     { value: 'F', label: 'F (0-59)', min: 0, color: 'bg-red-100 text-red-700' },
   ];
 
   // 점수에서 자동 등급 계산
   const calculateGrade = (score: number): string => {
+    if (score >= 95) return 'A+';
     if (score >= 90) return 'A';
+    if (score >= 85) return 'B+';
     if (score >= 80) return 'B';
+    if (score >= 75) return 'C+';
     if (score >= 70) return 'C';
+    if (score >= 65) return 'D+';
     if (score >= 60) return 'D';
     return 'F';
   };
