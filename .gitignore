@@ -25,6 +25,9 @@ var/log/**/*.log
 polytech-lms-api/src/main/resources/application-local.yml
 polytech-lms-api/src/main/resources/application-local.properties
 
+# Google 서비스계정(로컬 전용, 커밋 금지)
+polytech-lms-api/src/main/java/kr/polytech/lms/contentsummary/gen-lang-client-*.json
+
 # Web app build / temp
 WEB-INF/classes/
 WEB-INF/tmp/

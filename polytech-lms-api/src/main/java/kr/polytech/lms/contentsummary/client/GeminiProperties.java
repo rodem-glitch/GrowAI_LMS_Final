@@ -17,10 +17,10 @@ public record GeminiProperties(
 ) {
     public GeminiProperties {
         baseUrl = normalizeBaseUrl(baseUrl, "https://generativelanguage.googleapis.com/v1beta");
-        model = (model == null || model.isBlank()) ? "gemini-1.5-flash" : model.trim();
+        model = (model == null || model.isBlank()) ? "gemini-3-flash" : model.trim();
         temperature = temperature == null ? 0.2d : temperature;
-        maxOutputTokens = maxOutputTokens == null ? 1024 : maxOutputTokens;
-        httpTimeout = httpTimeout == null ? Duration.ofSeconds(60) : httpTimeout;
+        maxOutputTokens = maxOutputTokens == null ? 2048 : maxOutputTokens;
+        httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;
     }
 
     private static String normalizeBaseUrl(String baseUrl, String defaultValue) {
