@@ -13,13 +13,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
  * 왜: "전사"는 요약보다 앞 단계라서 실패 원인이 다양합니다(파일 포맷/용량/네트워크).
  * 그래서 HTTP 요청/응답을 최대한 단순하고 확실하게(멀티파트 직접 구성) 처리합니다.
+ *
+ * 주의: 이 클라이언트는 stt.enabled=true인 경우에만 로드됩니다.
  */
 @Component
+@ConditionalOnProperty(name = "stt.enabled", havingValue = "true", matchIfMissing = false)
 public class OpenAiWhisperSttClient implements SttClient {
 
     private final SttProperties properties;

@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -40,8 +41,12 @@ import org.springframework.stereotype.Component;
  * 전제:
  * - 인증: 서비스계정 JSON 파일 경로를 `GOOGLE_APPLICATION_CREDENTIALS` 환경변수로 지정합니다.
  * - 권한: Speech-to-Text 사용 권한 + GCS 버킷 Object 접근 권한이 필요합니다.
+ *
+ * 주의: 이 클라이언트는 stt.enabled=true인 경우에만 로드됩니다.
+ * Gemini 영상 직접 처리 방식을 사용하는 경우 이 빈은 로드되지 않습니다.
  */
 @Component
+@ConditionalOnProperty(name = "stt.enabled", havingValue = "true", matchIfMissing = false)
 public class GoogleSpeechV2SttClient implements SttClient {
 
     private static final URI SPEECH_API_BASE = URI.create("https://speech.googleapis.com/v2/");

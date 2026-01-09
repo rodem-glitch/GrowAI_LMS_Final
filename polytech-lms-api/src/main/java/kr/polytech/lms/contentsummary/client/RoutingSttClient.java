@@ -3,6 +3,7 @@ package kr.polytech.lms.contentsummary.client;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Objects;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
@@ -12,9 +13,12 @@ import org.springframework.stereotype.Component;
  *
  * - OpenAI STT 코드는 삭제하지 않고 유지합니다(요구사항).
  * - 어떤 STT를 쓸지는 `stt.provider`로 결정합니다.
+ *
+ * 주의: 이 클라이언트는 stt.enabled=true인 경우에만 로드됩니다.
  */
 @Primary
 @Component
+@ConditionalOnProperty(name = "stt.enabled", havingValue = "true", matchIfMissing = false)
 public class RoutingSttClient implements SttClient {
 
     private final SttProperties properties;
