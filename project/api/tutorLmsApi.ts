@@ -345,10 +345,13 @@ export type TutorKollusRow = {
 };
 
 export type TutorContentRecommendRow = TutorKollusRow & {
-  // 왜: 추천 탭에서는 "레슨 ID"가 있어야 바로 강의목차에 추가할 수 있습니다.
-  lesson_id?: number;
+  // 왜: 추천 탭에서는 콜러스 영상 키값(문자열)이 있어야 바로 재생할 수 있습니다.
+  lesson_id?: string;
   // 왜: 추천 점수는 디버깅/정렬/표시(선택)용입니다.
   score?: number;
+  // 왜: TB_RECO_CONTENT의 요약/키워드를 표시하기 위함입니다.
+  summary?: string;
+  keywords?: string;
 };
 
 export type TutorKollusChannelRow = {

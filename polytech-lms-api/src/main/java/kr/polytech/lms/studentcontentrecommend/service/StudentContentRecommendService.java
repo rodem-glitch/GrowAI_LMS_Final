@@ -158,6 +158,8 @@ public class StudentContentRecommendService {
 
         String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
         String categoryNm = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        String summary = meta.get("summary") != null ? String.valueOf(meta.get("summary")) : null;
+        String keywords = meta.get("keywords") != null ? String.valueOf(meta.get("keywords")) : null;
 
         LessonStudyStatus status = (lessonId == null || lessonId.isBlank()) ? null : statusByLessonId.get(lessonId);
         return new StudentVideoRecommendResponse(
@@ -165,6 +167,8 @@ public class StudentContentRecommendService {
             recoContentId,
             title,
             categoryNm,
+            summary,
+            keywords,
             result.score(),
             status == null ? null : status.enrolled(),
             status == null ? null : status.watched(),

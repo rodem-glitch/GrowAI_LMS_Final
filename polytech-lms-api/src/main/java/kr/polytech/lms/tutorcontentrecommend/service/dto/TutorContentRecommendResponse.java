@@ -7,6 +7,8 @@ public record TutorContentRecommendResponse(
     Long recoContentId,
     String title,
     String categoryNm,
+    String summary,
+    String keywords,
     double score,
     Map<String, Object> metadata
 ) {}

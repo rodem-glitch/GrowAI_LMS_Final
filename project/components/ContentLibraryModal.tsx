@@ -13,9 +13,11 @@ interface Content {
   totalTime?: number;
   contentWidth?: number;
   contentHeight?: number;
-  lessonId?: number;
+  lessonId?: string;  // 콜러스 영상 키값 (문자열)
   originalFileName?: string;
   score?: number;
+  summary?: string;
+  keywords?: string;
 }
 
 interface ContentLibraryModalProps {
@@ -43,8 +45,8 @@ export function ContentLibraryModal({
   recommendContext,
   excludeLessonIds,
 }: ContentLibraryModalProps) {
-  // 왜: 추천 탭은 현재 임시로 숨겨야 해서, UI/로직 모두 전체 탭만 사용하도록 고정합니다.
-  const hideRecommendTab = true;
+  // 왜: 콜러스 외부 영상 추천 기능이 완성되어, 추천 탭을 다시 노출합니다.
+  const hideRecommendTab = false;
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [activeTab, setActiveTab] = useState<'recommend' | 'all' | 'external'>('all');
@@ -70,6 +72,7 @@ export function ContentLibraryModal({
   const [recommendCacheKey, setRecommendCacheKey] = useState<string>('');
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);  // 왜: 추천 탭에서 요약 아코디언을 위한 확장 상태
   const limit = 20;
 
   React.useEffect(() => {
@@ -224,7 +227,7 @@ export function ContentLibraryModal({
           const rows = res.rst_data ?? [];
           const mapped: Content[] = rows.map((row) => ({
             id: String(row.lesson_id ?? row.id ?? row.media_content_key),
-            mediaKey: row.media_content_key,
+            mediaKey: row.media_content_key || String(row.lesson_id ?? ''),
             title: row.title,
             description: '',
             category: (row.category_nm as string) || '카테고리 없음',
@@ -233,9 +236,11 @@ export function ContentLibraryModal({
             totalTime: Number((row.total_time as number) ?? 0),
             contentWidth: Number((row.content_width as number) ?? 0),
             contentHeight: Number((row.content_height as number) ?? 0),
-            lessonId: row.lesson_id ? Number(row.lesson_id) : undefined,
+            lessonId: row.lesson_id ? String(row.lesson_id) : undefined,
             originalFileName: (row.original_file_name as string) || '',
             score: row.score ? Number(row.score) : undefined,
+            summary: row.summary || '',
+            keywords: row.keywords || '',
           }));
 
           if (!cancelled) {
@@ -274,13 +279,12 @@ export function ContentLibraryModal({
     if (activeTab !== 'recommend') return;
 
     // 왜: 과목 전체 차시에 이미 추가된 레슨은 추천에서 제외해야 하며, 제외 후에도 50개를 유지하는 게 UX가 좋습니다.
-    const excludeSet = new Set<number>();
+    const excludeSet = new Set<string>();
     (excludeLessonIds ?? []).forEach((v) => {
-      const n = typeof v === 'number' ? v : Number(String(v).replace(/[^0-9]/g, ''));
-      if (Number.isFinite(n) && n > 0) excludeSet.add(n);
+      excludeSet.add(String(v));
     });
 
-    const dedupe = new Set<number>();
+    const dedupe = new Set<string>();
     const filtered = recommendationsRaw
       .filter((c) => {
         if (!c.lessonId) return false;
@@ -314,9 +318,9 @@ export function ContentLibraryModal({
   const handleSingleSelect = async (content: Content) => {
     try {
       setSelecting(true);
-      if (content.lessonId && content.lessonId > 0) {
-        // 왜: 추천 탭은 이미 레슨으로 연결된 콘텐츠가 오므로, 레슨 생성(upsert) 없이 바로 사용합니다.
-        const next = { ...content, id: String(content.lessonId) };
+      if (content.lessonId) {
+        // 왜: 추천 탭은 콜러스 영상 키값을 바로 사용합니다.
+        const next = { ...content, id: content.lessonId };
         onSelect(next);
         onClose();
         return;
@@ -349,9 +353,9 @@ export function ContentLibraryModal({
       setSelecting(true);
       const mapped = await Promise.all(
         selected.map(async (content) => {
-          if (content.lessonId && content.lessonId > 0) {
-            // 왜: 추천 탭은 이미 레슨ID가 있으므로, 레슨 생성(upsert)을 건너뛰어 속도를 올립니다.
-            return { ...content, id: String(content.lessonId) };
+          if (content.lessonId) {
+            // 왜: 추천 탭은 콜러스 영상 키값이 있으므로, 레슨 생성(upsert)을 건너뜁니다.
+            return { ...content, id: content.lessonId };
           }
           const res = await tutorLmsApi.upsertKollusLesson({
             mediaContentKey: content.mediaKey,
@@ -636,46 +640,95 @@ export function ContentLibraryModal({
                     )}
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">No</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">카테고리</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">강의명</th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">시간</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">원본파일</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">
+                      {activeTab === 'recommend' ? '제목 / 키워드' : '강의명'}
+                    </th>
+                    {activeTab !== 'recommend' && (
+                      <>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">시간</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">원본파일</th>
+                      </>
+                    )}
+                    {activeTab === 'recommend' && (
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">내용</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {displayedContents.map((content, index) => (
-                    <tr
-                      key={content.id}
-                      className={`hover:bg-blue-50 cursor-pointer transition-colors ${
-                        selectedIds.has(content.id) ? 'bg-blue-50' : ''
-                      }`}
-                      onClick={() => handleSelect(content)}
-                    >
-                      {multiSelect && (
-                        <td className="px-3 py-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(content.id)}
-                            onChange={() => {}}
-                            className="w-4 h-4 text-blue-600 rounded"
-                          />
+                    <React.Fragment key={content.id}>
+                      <tr
+                        className={`hover:bg-blue-50 cursor-pointer transition-colors ${
+                          selectedIds.has(content.id) ? 'bg-blue-50' : ''
+                        }`}
+                        onClick={() => handleSelect(content)}
+                      >
+                        {multiSelect && (
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(content.id)}
+                              onChange={() => {}}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                          </td>
+                        )}
+                        <td className="px-3 py-2 text-sm text-gray-600">{index + 1}</td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                            {content.category}
+                          </span>
                         </td>
+                        <td className="px-3 py-2 text-sm text-gray-900">
+                          <div className="max-w-md">
+                            <div className="truncate font-medium">{content.title}</div>
+                            {activeTab === 'recommend' && content.keywords && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {content.keywords.split(',').slice(0, 5).map((kw, i) => (
+                                  <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                                    {kw.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        {activeTab !== 'recommend' && (
+                          <>
+                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                              {content.totalTime ? `${content.totalTime}분` : content.duration}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-500 max-w-xs truncate">
+                              {content.originalFileName || '-'}
+                            </td>
+                          </>
+                        )}
+                        {activeTab === 'recommend' && (
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedId(expandedId === content.id ? null : content.id);
+                              }}
+                              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors"
+                            >
+                              {expandedId === content.id ? '닫기' : '보기'}
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                      {/* 왜: 추천 탭에서 요약 내용을 펼쳐서 보여주는 아코디언 행 */}
+                      {activeTab === 'recommend' && expandedId === content.id && content.summary && (
+                        <tr className="bg-gray-50">
+                          <td colSpan={multiSelect ? 5 : 4} className="px-6 py-4">
+                            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                              <strong className="text-gray-900">요약:</strong> {content.summary}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                      <td className="px-3 py-2 text-sm text-gray-600">{index + 1}</td>
-                      <td className="px-3 py-2">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
-                          {content.category}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate">
-                        {content.title}
-                      </td>
-                      <td className="px-3 py-2 text-center text-sm text-gray-600">
-                        {content.totalTime ? `${content.totalTime}분` : content.duration}
-                      </td>
-                      <td className="px-3 py-2 text-sm text-gray-500 max-w-xs truncate">
-                        {content.originalFileName || '-'}
-                      </td>
-                    </tr>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

@@ -73,12 +73,16 @@ public class TutorContentRecommendService {
 
         String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
         String category = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        String summary = meta.get("summary") != null ? String.valueOf(meta.get("summary")) : null;
+        String keywords = meta.get("keywords") != null ? String.valueOf(meta.get("keywords")) : null;
 
         return new TutorContentRecommendResponse(
             lessonId,
             recoContentId,
             title,
             category,
+            summary,
+            keywords,
             result.score(),
             meta
         );

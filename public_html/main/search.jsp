@@ -100,55 +100,29 @@ try {
 			KollusDao kollus = new KollusDao(siteId);
 
 			while(recoRows.next()) {
-				int lid = m.parseInt(recoRows.s("lessonId"));
-				if(lid <= 0) continue;
-
-				DataSet linfo = lesson.find(
-					"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
-					"id, lesson_nm, start_url, total_time, lesson_type"
-				);
-				if(!linfo.next()) continue;
+				String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
+				if("".equals(lessonId)) continue;
 
 				// 왜: 템플릿에서는 '강의(courses)' 목록을 재사용하므로, 동일한 키로 맞춰서 내려줍니다.
 				recoLessonsAll.addRow();
 				recoLessonsAll.put("is_reco_video", true);
-				recoLessonsAll.put("id", lid);
-				recoLessonsAll.put("course_nm", linfo.s("lesson_nm"));
-				recoLessonsAll.put("course_nm_conv", m.cutString(linfo.s("lesson_nm"), 48));
+				recoLessonsAll.put("id", lessonId);
+				recoLessonsAll.put("course_nm", recoRows.s("title"));
+				recoLessonsAll.put("course_nm_conv", m.cutString(recoRows.s("title"), 48));
 				recoLessonsAll.put("category_nm", recoRows.s("categoryNm"));
 				recoLessonsAll.put("onoff_type_conv", "온라인");
 				recoLessonsAll.put("recomm_yn", true);
 
-				boolean enrolled = "true".equalsIgnoreCase(recoRows.s("enrolled")) || "1".equals(recoRows.s("enrolled")) || "Y".equalsIgnoreCase(recoRows.s("enrolled"));
-				boolean watched = "true".equalsIgnoreCase(recoRows.s("watched")) || "1".equals(recoRows.s("watched")) || "Y".equalsIgnoreCase(recoRows.s("watched"));
-				boolean completed = "true".equalsIgnoreCase(recoRows.s("completed")) || "1".equals(recoRows.s("completed")) || "Y".equalsIgnoreCase(recoRows.s("completed"));
+				// 왜: 외부 콜러스 영상은 학습 상태가 없으므로 빈 값
+				recoLessonsAll.put("status_badge", "");
 
-				String badge = "";
-				if(completed) badge = "완료";
-				else if(watched) badge = "시청중";
-				else if(enrolled) badge = "수강중";
-				recoLessonsAll.put("status_badge", badge);
-
-				String playUrl = "";
-				if("05".equals(linfo.s("lesson_type"))) {
-					playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
-					if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
-				} else {
-					playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
-				}
+				// 왜: 콜러스 외부 영상은 콜러스 플레이어로 재생합니다.
+				String playUrl = kollus.getPlayUrl(lessonId, "");
+				if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
 				recoLessonsAll.put("play_url", playUrl);
 
-				int totalMin = linfo.i("total_time");
-				recoLessonsAll.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
-
-				String thumbnail = "/html/images/common/noimage_course.gif";
-				try {
-					if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
-						DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
-						if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) thumbnail = kinfo.s("snapshot_url");
-					}
-				} catch(Exception ignore) {}
-				recoLessonsAll.put("course_file_url", thumbnail);
+				recoLessonsAll.put("duration_conv", "");
+				recoLessonsAll.put("course_file_url", "/html/images/common/noimage_course.gif");
 			}
 
 			recoLessonTotal = recoLessonsAll.size();

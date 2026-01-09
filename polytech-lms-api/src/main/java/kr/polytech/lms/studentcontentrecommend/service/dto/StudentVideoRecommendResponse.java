@@ -7,6 +7,8 @@ public record StudentVideoRecommendResponse(
     Long recoContentId,
     String title,
     String categoryNm,
+    String summary,
+    String keywords,
     double score,
     Boolean enrolled,
     Boolean watched,
