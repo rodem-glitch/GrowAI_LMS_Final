@@ -1,0 +1,273 @@
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-01-09T16:54:01.243+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Starting PolytechLmsApiApplication using Java 21.0.9 with PID 5648 (C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api\build\classes\java\main started by NEWKL1 in C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api)
+2026-01-09T16:54:01.244+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : The following 1 profile is active: "local"
+2026-01-09T16:54:01.277+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-09T16:54:01.277+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-09T16:54:02.545+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-09T16:54:02.662+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 111 ms. Found 2 JPA repository interfaces.
+2026-01-09T16:54:03.477+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-09T16:54:03.489+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-09T16:54:03.489+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-01-09T16:54:03.518+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-09T16:54:03.519+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2241 ms
+2026-01-09T16:54:03.764+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-09T16:54:03.821+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-01-09T16:54:03.855+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-09T16:54:04.042+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-09T16:54:04.063+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-09T16:54:04.187+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@6cd3f383
+2026-01-09T16:54:04.189+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-09T16:54:04.871+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-09T16:54:04.873+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-09T16:54:05.683+09:00  WARN 5648 --- [polytech-lms-api] [  restartedMain] io.qdrant.client.QdrantGrpcClient        : Failed to obtain server version. Unable to check client-server compatibility. Set checkCompatibility=false to skip version check.
+2026-01-09T16:54:06.068+09:00  WARN 5648 --- [polytech-lms-api] [  restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-09T16:54:06.563+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-01-09T16:54:06.572+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-09T16:54:06.620+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-01-09T16:54:06.630+09:00  INFO 5648 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Started PolytechLmsApiApplication in 5.676 seconds (process running for 5.983)
+2026-01-09T16:54:20.346+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-09T16:54:20.347+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-09T16:54:20.348+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-01-09T16:55:58.095+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 다운로드 완료: HlbZJrZV (C:\Users\NEWKL1\AppData\Local\Temp\polytech-lms-api\contentsummary\site-1\HlbZJrZV\input.mp4)
+2026-01-09T16:55:58.096+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 요약 목표 길이 계산: mediaKey=HlbZJrZV, totalTimeSeconds=118, targetSummaryLength=220
+2026-01-09T16:55:58.096+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 시작: input.mp4 (23647360bytes, video/mp4)
+2026-01-09T16:56:01.915+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 파일 활성화 대기 중: https://generativelanguage.googleapis.com/v1beta/files/d5bltru2trdp
+2026-01-09T16:56:02.250+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:07.580+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:12.807+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: ACTIVE
+2026-01-09T16:56:12.807+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 및 활성화 완료: https://generativelanguage.googleapis.com/v1beta/files/d5bltru2trdp
+2026-01-09T16:56:12.807+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 요약 요청 URI: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=HIDDEN_KEY
+2026-01-09T16:56:12.913+09:00 ERROR 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 요약 처리 실패: HlbZJrZV - Gemini API 통신 중 오류가 발생했습니다.
+
+java.lang.IllegalStateException: Gemini API 통신 중 오류가 발생했습니다.
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:405) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.summarizeFromVideo(GeminiVideoSummaryClient.java:128) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.uploadAndSummarize(GeminiVideoSummaryClient.java:140) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.doVideoSummarize(ContentSummaryService.java:279) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.runTranscription(ContentSummaryService.java:229) ~[main/:na]
+	at kr.polytech.lms.contentsummary.controller.ContentSummaryController.runTranscription(ContentSummaryController.java:53) ~[main/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:206) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:109) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1736) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.IllegalStateException: Gemini API 호출 실패 (HTTP 404): {   "error": {     "code": 404,     "message": "models/gemini-3-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",     "status": "NOT_FOUND"   } }
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:401) ~[main/:na]
+	... 57 common frames omitted
+
+2026-01-09T16:56:21.429+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 다운로드 완료: qvMaHhQZ (C:\Users\NEWKL1\AppData\Local\Temp\polytech-lms-api\contentsummary\site-1\qvMaHhQZ\input.mp4)
+2026-01-09T16:56:21.429+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 요약 목표 길이 계산: mediaKey=qvMaHhQZ, totalTimeSeconds=567, targetSummaryLength=295
+2026-01-09T16:56:21.431+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 시작: input.mp4 (116410208bytes, video/mp4)
+2026-01-09T16:56:30.430+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 파일 활성화 대기 중: https://generativelanguage.googleapis.com/v1beta/files/1u4i2zln7drc
+2026-01-09T16:56:30.697+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:35.927+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:41.190+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:46.452+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:51.721+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:56:56.997+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: ACTIVE
+2026-01-09T16:56:56.997+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 및 활성화 완료: https://generativelanguage.googleapis.com/v1beta/files/1u4i2zln7drc
+2026-01-09T16:56:56.997+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 요약 요청 URI: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=HIDDEN_KEY
+2026-01-09T16:56:57.104+09:00 ERROR 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 요약 처리 실패: qvMaHhQZ - Gemini API 통신 중 오류가 발생했습니다.
+
+java.lang.IllegalStateException: Gemini API 통신 중 오류가 발생했습니다.
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:405) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.summarizeFromVideo(GeminiVideoSummaryClient.java:128) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.uploadAndSummarize(GeminiVideoSummaryClient.java:140) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.doVideoSummarize(ContentSummaryService.java:279) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.runTranscription(ContentSummaryService.java:229) ~[main/:na]
+	at kr.polytech.lms.contentsummary.controller.ContentSummaryController.runTranscription(ContentSummaryController.java:53) ~[main/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:206) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:109) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1736) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.IllegalStateException: Gemini API 호출 실패 (HTTP 404): {   "error": {     "code": 404,     "message": "models/gemini-3-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",     "status": "NOT_FOUND"   } }
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:401) ~[main/:na]
+	... 57 common frames omitted
+
+2026-01-09T16:56:59.605+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 다운로드 완료: fO3AFVeK (C:\Users\NEWKL1\AppData\Local\Temp\polytech-lms-api\contentsummary\site-1\fO3AFVeK\input.mp4)
+2026-01-09T16:56:59.605+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 요약 목표 길이 계산: mediaKey=fO3AFVeK, totalTimeSeconds=433, targetSummaryLength=272
+2026-01-09T16:56:59.605+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 시작: input.mp4 (88572389bytes, video/mp4)
+2026-01-09T16:57:07.332+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 파일 활성화 대기 중: https://generativelanguage.googleapis.com/v1beta/files/ue9dmrr5ebp8
+2026-01-09T16:57:07.587+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:57:12.846+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:57:18.093+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T16:57:23.356+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: ACTIVE
+2026-01-09T16:57:23.357+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 및 활성화 완료: https://generativelanguage.googleapis.com/v1beta/files/ue9dmrr5ebp8
+2026-01-09T16:57:23.357+09:00  INFO 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 요약 요청 URI: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=HIDDEN_KEY
+2026-01-09T16:57:23.458+09:00 ERROR 5648 --- [polytech-lms-api] [nio-8081-exec-3] k.p.l.c.service.ContentSummaryService    : 영상 요약 처리 실패: fO3AFVeK - Gemini API 통신 중 오류가 발생했습니다.
+
+java.lang.IllegalStateException: Gemini API 통신 중 오류가 발생했습니다.
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:405) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.summarizeFromVideo(GeminiVideoSummaryClient.java:128) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.uploadAndSummarize(GeminiVideoSummaryClient.java:140) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.doVideoSummarize(ContentSummaryService.java:279) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.runTranscription(ContentSummaryService.java:229) ~[main/:na]
+	at kr.polytech.lms.contentsummary.controller.ContentSummaryController.runTranscription(ContentSummaryController.java:53) ~[main/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:206) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:109) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1736) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.IllegalStateException: Gemini API 호출 실패 (HTTP 404): {   "error": {     "code": 404,     "message": "models/gemini-3-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",     "status": "NOT_FOUND"   } }
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.send(GeminiVideoSummaryClient.java:401) ~[main/:na]
+	... 57 common frames omitted
+
+
+> Task :bootRun FAILED
+4 actionable tasks: 4 executed
