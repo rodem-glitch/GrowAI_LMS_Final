@@ -124,13 +124,13 @@ public class StudentContentRecommendService {
         boolean excludeWatched,
         boolean excludeCompleted
     ) {
-        Map<Long, LessonStudyStatus> statusByLessonId = fetchLessonStudyStatus(userId, siteId);
-        Set<Long> seenLessonIds = new HashSet<>();
+        Map<String, LessonStudyStatus> statusByLessonId = fetchLessonStudyStatus(userId, siteId);
+        Set<String> seenLessonIds = new HashSet<>();
         List<StudentVideoRecommendResponse> out = new ArrayList<>();
 
         for (VectorSearchResult result : results) {
             StudentVideoRecommendResponse response = toResponse(result, statusByLessonId);
-            Long lessonId = response.lessonId();
+            String lessonId = response.lessonId();
 
             // 왜: 임시 데이터(lesson_id 없는 문서)도 존재할 수 있으니, 그 경우는 그냥 통과시킵니다.
             if (lessonId != null) {
@@ -150,16 +150,16 @@ public class StudentContentRecommendService {
         return out;
     }
 
-    private StudentVideoRecommendResponse toResponse(VectorSearchResult result, Map<Long, LessonStudyStatus> statusByLessonId) {
+    private StudentVideoRecommendResponse toResponse(VectorSearchResult result, Map<String, LessonStudyStatus> statusByLessonId) {
         Map<String, Object> meta = result.metadata() == null ? new HashMap<>() : new HashMap<>(result.metadata());
 
-        Long lessonId = toLong(meta.get("lesson_id"));
+        String lessonId = toStringValue(meta.get("lesson_id"));
         Long recoContentId = toLong(meta.get("content_id"));
 
         String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
         String categoryNm = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
 
-        LessonStudyStatus status = lessonId == null ? null : statusByLessonId.get(lessonId);
+        LessonStudyStatus status = (lessonId == null || lessonId.isBlank()) ? null : statusByLessonId.get(lessonId);
         return new StudentVideoRecommendResponse(
             lessonId,
             recoContentId,
@@ -186,6 +186,13 @@ public class StudentContentRecommendService {
         }
     }
 
+    private String toStringValue(Object value) {
+        // 왜: 콜러스 영상 키값은 '5vcd73vW' 같은 문자열이므로, 그대로 String으로 변환합니다.
+        if (value == null) return null;
+        String s = String.valueOf(value).trim();
+        return s.isBlank() ? null : s;
+    }
+
     private int computeFetchTopK(int desiredTopK, boolean needBuffer) {
         if (!needBuffer) return desiredTopK;
         // 왜: 제외 조건이 켜지면 결과가 부족할 수 있으니, Qdrant에서 더 많이 가져옵니다(네트워크/CPU 균형을 위해 상한 둠).
@@ -193,49 +200,11 @@ public class StudentContentRecommendService {
         return Math.max(desiredTopK, Math.min(buffered, 300));
     }
 
-    private Map<Long, LessonStudyStatus> fetchLessonStudyStatus(Long userId, Integer siteId) {
-        // 왜: 학생 정보가 아직 인증/세션 연동 전일 수 있으니, userId가 없으면 상태 표시를 하지 않습니다.
-        if (userId == null) return Map.of();
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("""
-            SELECT
-                LESSON_ID AS lesson_id,
-                MAX(LAST_DATE) AS last_date,
-                MAX(CASE WHEN COMPLETE_YN = 'Y' THEN 1 ELSE 0 END) AS completed,
-                MAX(CASE WHEN (IFNULL(VIEW_CNT, 0) > 0 OR IFNULL(RATIO, 0) > 0 OR IFNULL(LAST_TIME, 0) > 0) THEN 1 ELSE 0 END) AS watched,
-                COUNT(*) AS enrolled_cnt
-            FROM LM_COURSE_PROGRESS
-            WHERE STATUS = 1
-              AND USER_ID = ?
-            """);
-
-        List<Object> args = new ArrayList<>();
-        args.add(userId);
-
-        if (siteId != null) {
-            sql.append(" AND SITE_ID = ? ");
-            args.add(siteId);
-        }
-
-        sql.append(" GROUP BY LESSON_ID ");
-
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), args.toArray());
-        Map<Long, LessonStudyStatus> out = new HashMap<>();
-
-        for (Map<String, Object> row : rows) {
-            Long lessonId = toLong(row.get("lesson_id"));
-            if (lessonId == null) continue;
-
-            boolean completed = toLong(row.get("completed")) != null && toLong(row.get("completed")) > 0;
-            boolean watched = toLong(row.get("watched")) != null && toLong(row.get("watched")) > 0;
-            boolean enrolled = toLong(row.get("enrolled_cnt")) != null && toLong(row.get("enrolled_cnt")) > 0;
-            String lastDate = row.get("last_date") != null ? String.valueOf(row.get("last_date")) : null;
-
-            out.put(lessonId, new LessonStudyStatus(enrolled, watched, completed, lastDate));
-        }
-
-        return out;
+    private Map<String, LessonStudyStatus> fetchLessonStudyStatus(Long userId, Integer siteId) {
+        // 왜: 콜러스 영상은 외부 콘텐츠라서 기존 LMS DB(LM_COURSE_PROGRESS)에 학습 기록이 없습니다.
+        // 추후 콜러스 시청 기록을 별도 테이블로 관리하게 되면, 여기서 조회하면 됩니다.
+        // 현재는 빈 Map을 반환하여 수강/시청/완료 상태 표시 없이 추천만 합니다.
+        return Map.of();
     }
 
     private record LessonStudyStatus(

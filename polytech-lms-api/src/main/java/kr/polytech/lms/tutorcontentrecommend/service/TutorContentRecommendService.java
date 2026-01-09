@@ -68,7 +68,7 @@ public class TutorContentRecommendService {
     private TutorContentRecommendResponse toResponse(VectorSearchResult result) {
         Map<String, Object> meta = result.metadata() == null ? new HashMap<>() : new HashMap<>(result.metadata());
 
-        Long lessonId = toLong(meta.get("lesson_id"));
+        String lessonId = toStringValue(meta.get("lesson_id"));
         Long recoContentId = toLong(meta.get("content_id"));
 
         String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
@@ -94,5 +94,12 @@ public class TutorContentRecommendService {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private String toStringValue(Object value) {
+        // 왜: 콜러스 영상 키값은 '5vcd73vW' 같은 문자열이므로, 그대로 String으로 변환합니다.
+        if (value == null) return null;
+        String s = String.valueOf(value).trim();
+        return s.isBlank() ? null : s;
     }
 }

@@ -15,8 +15,8 @@ public class RecoContent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "lesson_id")
-    private Long lessonId;
+    @Column(name = "lesson_id", length = 50)
+    private String lessonId;
 
     @Column(name = "category_nm", nullable = false, length = 100)
     private String categoryNm;
@@ -42,7 +42,7 @@ public class RecoContent {
         this.keywords = keywords;
     }
 
-    public void setLessonId(Long lessonId) {
+    public void setLessonId(String lessonId) {
         // 왜: 추천 결과를 실제 레거시 영상(레슨ID)과 연결해야 화면에서 바로 "추가"가 가능합니다.
         this.lessonId = lessonId;
     }
@@ -51,7 +51,7 @@ public class RecoContent {
         return id;
     }
 
-    public Long getLessonId() {
+    public String getLessonId() {
         return lessonId;
     }
 

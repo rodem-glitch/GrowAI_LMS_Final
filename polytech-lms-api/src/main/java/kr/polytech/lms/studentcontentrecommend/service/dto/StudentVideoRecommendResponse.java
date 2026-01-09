@@ -3,7 +3,7 @@ package kr.polytech.lms.studentcontentrecommend.service.dto;
 import java.util.Map;
 
 public record StudentVideoRecommendResponse(
-    Long lessonId,
+    String lessonId,
     Long recoContentId,
     String title,
     String categoryNm,
