@@ -214,10 +214,12 @@ public class StatisticsAiV2Service {
         }
 
         // 2) 취업률 추이(트렌드) 최소 지원
-        if (wantsEmployment && wantsTrend && StringUtils.hasText(category)) {
+        if (wantsEmployment && (wantsTrend || !StringUtils.hasText(category))) {
             Map<String, Object> employmentParams = new LinkedHashMap<>();
             employmentParams.put("years", years);
-            employmentParams.put("category", category);
+            if (StringUtils.hasText(category)) {
+                employmentParams.put("category", category);
+            }
             if (context != null) {
                 Object campus = context.get("campus");
                 Object dept = context.get("dept");
@@ -240,7 +242,7 @@ public class StatisticsAiV2Service {
                             "chart",
                             Map.of(
                                     "chartType", "line",
-                                    "title", "취업률 추이 (폴백)",
+                                    "title", StringUtils.hasText(category) ? category + " 취업률 추이 (폴백)" : "우리 학교 전체 취업률 추이 (폴백)",
                                     "seriesRefs", List.of("employment")
                             )
                     )
@@ -250,37 +252,156 @@ public class StatisticsAiV2Service {
                     StatisticsAiV2Plan.Action.EXECUTE,
                     null,
                     null,
-                    message,
+                    message + (StringUtils.hasText(category) ? "" : " (전체 데이터 기준)"),
                     defaultExamples(),
                     steps,
                     "{\"fallback\":true}"
             );
         }
 
-        // 3) 그 외는 "있는 데이터" 기준으로 기본값 실행
-        String ageType = text.contains("20대") ? "32" : null;
+        // 2.5) 입학충원률 추이 폴백
+        boolean wantsAdmission = containsAny(text, List.of("입학", "충원", "충원률", "정원", "입학률"));
+        if (wantsAdmission) {
+            List<StatisticsAiV2Plan.Step> steps = List.of(
+                    new StatisticsAiV2Plan.Step(
+                            "a1",
+                            StatisticsAiV2Plan.Agent.ANALYST,
+                            StatisticsAiV2Ops.INTERNAL_ADMISSION_TOP,
+                            "topAdmission",
+                            Map.of("top", 10)
+                    ),
+                    new StatisticsAiV2Plan.Step(
+                            "d1",
+                            StatisticsAiV2Plan.Agent.DESIGNER,
+                            StatisticsAiV2Ops.DESIGNER_CHART,
+                            "chart1",
+                            Map.of(
+                                    "chartType", "bar",
+                                    "title", "입학충원률 Top 10 (폴백)",
+                                    "seriesRefs", List.of("topAdmission")
+                            )
+                    )
+            );
+
+            return new StatisticsAiV2Plan(
+                    StatisticsAiV2Plan.Action.EXECUTE,
+                    null,
+                    null,
+                    message + " (입학충원률 통계 기본 제공)",
+                    defaultExamples(),
+                    steps,
+                    "{\"fallback\":true}"
+            );
+        }
+
+        // 3) 인구 통계 질문 폴백
+        boolean wantsPopulation = containsAny(text, List.of("인구", "연령", "성별", "20대", "30대", "40대", "50대", "60대"));
+        if (wantsPopulation) {
+            List<StatisticsAiV2Plan.Step> steps = List.of(
+                    new StatisticsAiV2Plan.Step(
+                            "a1",
+                            StatisticsAiV2Plan.Agent.ANALYST,
+                            StatisticsAiV2Ops.KOSIS_POPULATION_SERIES,
+                            "population",
+                            Map.of(
+                                    "years", years,
+                                    "admCd", admCd,
+                                    "ageType", "31",  // 기본값: 20대
+                                    "gender", "0"     // 기본값: 전체
+                            )
+                    ),
+                    new StatisticsAiV2Plan.Step(
+                            "d1",
+                            StatisticsAiV2Plan.Agent.DESIGNER,
+                            StatisticsAiV2Ops.DESIGNER_CHART,
+                            "chart1",
+                            Map.of(
+                                    "chartType", "line",
+                                    "title", "인구 추이 (폴백)",
+                                    "seriesRefs", List.of("population")
+                            )
+                    )
+            );
+
+            return new StatisticsAiV2Plan(
+                    StatisticsAiV2Plan.Action.EXECUTE,
+                    null,
+                    null,
+                    message + " (인구 통계 기본 제공)",
+                    defaultExamples(),
+                    steps,
+                    "{\"fallback\":true}"
+            );
+        }
+
+        // 4) 산업/종사자 통계 질문 폴백
+        boolean wantsIndustryData = containsAny(text, List.of("제조업", "서비스업", "건설업", "종사자", "사업체", "전국", "지역"));
+        if (wantsIndustryData || wantsIndustry) {
+            String industryCategory = StringUtils.hasText(category) ? category : "제조업";
+            List<String> classCodes = majorIndustryMappingService.getSgisClassCodesByCategory().getOrDefault(industryCategory, List.of("C"));
+
+            List<StatisticsAiV2Plan.Step> steps = List.of(
+                    new StatisticsAiV2Plan.Step(
+                            "a1",
+                            StatisticsAiV2Plan.Agent.ANALYST,
+                            StatisticsAiV2Ops.SGIS_METRIC_SERIES,
+                            "industryWorkers",
+                            Map.of(
+                                    "years", years,
+                                    "admCd", admCd,
+                                    "metric", "TOTWORKER",
+                                    "classCodes", classCodes
+                            )
+                    ),
+                    new StatisticsAiV2Plan.Step(
+                            "d1",
+                            StatisticsAiV2Plan.Agent.DESIGNER,
+                            StatisticsAiV2Ops.DESIGNER_CHART,
+                            "chart1",
+                            Map.of(
+                                    "chartType", "line",
+                                    "title", industryCategory + " 종사자 추이 (폴백)",
+                                    "seriesRefs", List.of("industryWorkers")
+                            )
+                    )
+            );
+
+            return new StatisticsAiV2Plan(
+                    StatisticsAiV2Plan.Action.EXECUTE,
+                    null,
+                    null,
+                    message + " (" + industryCategory + " 통계 기본 제공)",
+                    defaultExamples(),
+                    steps,
+                    "{\"fallback\":true}"
+            );
+        }
+
+        // 5) 정보가 완전히 부족할 때: 우리 학교 취업 현황을 기본으로 제공
         List<StatisticsAiV2Plan.Step> steps = List.of(
                 new StatisticsAiV2Plan.Step(
                         "a1",
                         StatisticsAiV2Plan.Agent.ANALYST,
-                        StatisticsAiV2Ops.KOSIS_POPULATION_SERIES,
-                        "population",
-                        Map.of(
-                                "admCd", admCd,
-                                "years", years,
-                                "ageType", ageType == null ? "32" : ageType,
-                                "gender", "0"
-                        )
+                        StatisticsAiV2Ops.INTERNAL_EMPLOYMENT_TOP,
+                        "topEmployment",
+                        Map.of("top", 5)
+                ),
+                new StatisticsAiV2Plan.Step(
+                        "a2",
+                        StatisticsAiV2Plan.Agent.ANALYST,
+                        StatisticsAiV2Ops.INTERNAL_EMPLOYMENT_SERIES,
+                        "employmentSeries",
+                        Map.of("years", years)
                 ),
                 new StatisticsAiV2Plan.Step(
                         "d1",
                         StatisticsAiV2Plan.Agent.DESIGNER,
                         StatisticsAiV2Ops.DESIGNER_CHART,
-                        "chart",
+                        "chart1",
                         Map.of(
-                                "chartType", "line",
-                                "title", "인구 추이 (기본값)",
-                                "seriesRefs", List.of("population")
+                                "chartType", "bar",
+                                "title", "학교 전체 취업률 현황 (기본 제공)",
+                                "seriesRefs", List.of("employmentSeries")
                         )
                 )
         );
@@ -289,7 +410,7 @@ public class StatisticsAiV2Service {
                 StatisticsAiV2Plan.Action.EXECUTE,
                 null,
                 null,
-                message + " (정보 부족으로 기본값 적용)",
+                message + " (정보 부족으로 학교 취업 통계 기본 제공)",
                 defaultExamples(),
                 steps,
                 "{\"fallback\":true}"
@@ -328,9 +449,31 @@ public class StatisticsAiV2Service {
 
     private String pickIndustryCategory(String text) {
         if (!StringUtils.hasText(text)) return null;
-        // 왜: 폴백은 최소 기능만 제공하므로, 현재는 ICT만 우선 지원합니다.
-        if (containsAny(text, List.of("it", "ict", "정보통신", "컴퓨터", "소프트웨어"))) {
+        // 왜: 폴백에서 질문의 키워드로 산업 분류를 추정합니다.
+        //     키워드가 명확하지 않으면 null을 반환하고, 호출부에서 기본값을 사용합니다.
+        if (containsAny(text, List.of("it", "ict", "정보통신", "컴퓨터", "소프트웨어", "인공지능", "ai"))) {
             return "ICT";
+        }
+        if (containsAny(text, List.of("첨단", "첨단기술", "첨단산업"))) {
+            return "첨단기술";
+        }
+        if (containsAny(text, List.of("고기술", "고기술산업"))) {
+            return "고기술";
+        }
+        if (containsAny(text, List.of("제조", "제조업", "공장", "생산"))) {
+            return "제조업";
+        }
+        if (containsAny(text, List.of("서비스", "서비스업", "금융", "보험"))) {
+            return "서비스업";
+        }
+        if (containsAny(text, List.of("건설", "건설업", "건축", "토목"))) {
+            return "건설업";
+        }
+        if (containsAny(text, List.of("도소매", "유통", "판매"))) {
+            return "도소매업";
+        }
+        if (containsAny(text, List.of("관광", "숙박", "여행"))) {
+            return "관광업";
         }
         return null;
     }
@@ -454,6 +597,7 @@ public class StatisticsAiV2Service {
         }
 
         // 3) DESIGNER: steps가 있으면 그걸 우선, 없으면 기본 추천(휴리스틱)
+        // 3) DESIGNER: steps가 있으면 그걸 우선, 없으면 기본 추천(휴리스틱)
         List<StatisticsAiQueryResponse.ChartSpec> charts = new ArrayList<>();
         StatisticsAiQueryResponse.TableSpec table = null;
 
@@ -471,7 +615,12 @@ public class StatisticsAiV2Service {
                         table = out.table;
                     }
                 } catch (Exception e) {
-                    warnings.add(new StatisticsAiQueryResponse.WarningSpec("DESIGNER_ERROR", "시각화 생성 실패: " + stepKey(step) + " (" + safeMessage(e) + ")"));
+                    log.warn("DESIGNER 실행 실패(무시): id={}, op={}, err={}", step.id(), step.op(), e.getMessage());
+                    String msg = "시계열 시각화(차트) 생성 중 설정 오류가 발생했습니다. (id=" + step.id() + ")";
+                    if (e.getMessage().contains("seriesRefs")) {
+                        msg = "시각화 대상(seriesRefs) 데이터가 지정되지 않아 차트를 생성하지 못했습니다.";
+                    }
+                    warnings.add(new StatisticsAiQueryResponse.WarningSpec("DESIGNER_ERROR", msg));
                 }
             }
 
@@ -656,26 +805,25 @@ public class StatisticsAiV2Service {
     private String buildSummary(Map<String, V2Result> results, List<StatisticsAiQueryResponse.WarningSpec> warnings) {
         // 왜: PRD v2의 Explain은 LLM 역할이지만, 숫자 환각 위험이 크므로
         //     v2 1차는 서버가 '계산된 결과만'으로 요약/인사이트를 만듭니다.
-        int seriesCount = 0;
-        int tableCount = 0;
-        int analysisCount = 0;
+        long seriesCount = results.values().stream().filter(r -> r instanceof TimeSeriesResult).count();
+        long tableCount = results.values().stream().filter(r -> r instanceof TableResult).count();
+        long analysisCount = results.values().stream().filter(r -> r instanceof ObjectResult).count();
 
-        for (V2Result r : results.values()) {
-            if (r.kind() == Kind.TIME_SERIES) seriesCount++;
-            if (r.kind() == Kind.TABLE) tableCount++;
-            if (r.kind() == Kind.OBJECT) analysisCount++;
-        }
-
-        String base = "생성된 결과: 시계열 " + seriesCount + "개, 표 " + tableCount + "개, 분석 " + analysisCount + "개";
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("📊 AI가 분석한 데이터 가이드: 시계열 %d건, 표 %d건, 분석 %d건을 찾았습니다.", seriesCount, tableCount, analysisCount));
 
         String insight = buildInsight(results);
         if (StringUtils.hasText(insight)) {
-            base = base + " / " + insight;
+            sb.append("\n\n💡 [핵심 요약]: ").append(insight);
         }
-        if (warnings == null || warnings.isEmpty()) {
-            return base;
+
+        if (warnings != null && !warnings.isEmpty()) {
+            sb.append("\n\n⚠️ ").append(warnings.size()).append("건의 안내 사항이 있습니다. (차트 하단 Warning 참고)");
         }
-        return base + " (경고 " + warnings.size() + "건)";
+
+        sb.append("\n\n🔍 더 궁금하신 내용이 있나요? 학과별 상세 취업률이나 지역별 인구 변화와의 상관관계를 물어보셔도 좋습니다.");
+
+        return sb.toString();
     }
 
     private String buildInsight(Map<String, V2Result> results) {
@@ -685,49 +833,39 @@ public class StatisticsAiV2Service {
         Double employmentDelta = null;
 
         for (V2Result r : results.values()) {
-            if (!(r instanceof ObjectResult or)) {
-                continue;
-            }
+            if (!(r instanceof ObjectResult or)) continue;
 
             String type = String.valueOf(or.meta.getOrDefault("type", ""));
             if ("correlation".equals(type)) {
                 Object v = or.values.get("correlation");
                 if (v instanceof Number n) correlation = n.doubleValue();
-                continue;
-            }
-
-            if ("deltaPoints".equals(type)) {
+            } else if ("deltaPoints".equals(type)) {
                 Object v = or.values.get("deltaPoints");
                 if (v instanceof Number n) employmentDelta = n.doubleValue();
-                continue;
-            }
-
-            if ("growthRate".equals(type)) {
+            } else if ("growthRate".equals(type)) {
                 String ref = String.valueOf(or.meta.getOrDefault("seriesRef", ""));
                 Object v = or.values.get("growthRatePercent");
-                if (!(v instanceof Number n) || !StringUtils.hasText(ref)) {
-                    continue;
-                }
-
-                V2Result referenced = results.get(ref);
-                if (referenced instanceof TimeSeriesResult ts) {
-                    String source = String.valueOf(ts.meta.getOrDefault("source", ""));
-                    if ("SGIS".equals(source) && sgisGrowth == null) {
-                        sgisGrowth = n.doubleValue();
-                    } else if ("내부 엑셀".equals(source) && internalGrowth == null) {
-                        internalGrowth = n.doubleValue();
+                if (v instanceof Number n && StringUtils.hasText(ref)) {
+                    V2Result referenced = results.get(ref);
+                    if (referenced instanceof TimeSeriesResult ts) {
+                        String source = String.valueOf(ts.meta.getOrDefault("source", ""));
+                        if ("SGIS".equals(source)) sgisGrowth = n.doubleValue();
+                        else if ("내부 엑셀".equals(source)) internalGrowth = n.doubleValue();
                     }
                 }
             }
         }
 
-        List<String> parts = new ArrayList<>();
-        if (correlation != null) parts.add("상관계수 r=" + round4(correlation));
-        if (sgisGrowth != null) parts.add("산업 성장률 " + round2(sgisGrowth) + "%");
-        if (internalGrowth != null) parts.add("취업률 성장률 " + round2(internalGrowth) + "%");
-        if (employmentDelta != null) parts.add("취업률 변화 " + round2(employmentDelta) + "%p");
+        List<String> insightParts = new ArrayList<>();
+        if (correlation != null) {
+            String level = Math.abs(correlation) > 0.7 ? "높은" : (Math.abs(correlation) > 0.4 ? "보통 수준의" : "낮은");
+            insightParts.add(String.format("두 데이터 간에 %s 상관관계(r=%.2f)가 관찰됩니다.", level, correlation));
+        }
+        if (sgisGrowth != null) insightParts.add(String.format("산업 종사자가 %.1f%% 성장하는 추세입니다.", sgisGrowth));
+        if (internalGrowth != null) insightParts.add(String.format("학교 내부 통계상 %.1f%%의 성장률을 기록하고 있습니다.", internalGrowth));
+        if (employmentDelta != null) insightParts.add(String.format("이전 대비 %+.1f%%p의 변화가 확인되었습니다.", employmentDelta));
 
-        return parts.isEmpty() ? null : String.join(", ", parts);
+        return insightParts.isEmpty() ? "데이터 추이가 안정적입니다." : String.join(" ", insightParts);
     }
 
     private DesignerOutput autoDesign(Map<String, V2Result> results) {
@@ -748,7 +886,9 @@ public class StatisticsAiV2Service {
         if (series.size() == 2) {
             TimeSeriesResult a = series.get(0);
             TimeSeriesResult b = series.get(1);
-            charts.add(toDualAxisLineChart(seriesKeys.get(0) + " vs " + seriesKeys.get(1), a, b));
+            String titleA = humanTitle(a, seriesKeys.get(0));
+            String titleB = humanTitle(b, seriesKeys.get(1));
+            charts.add(toDualAxisLineChart(titleA + " vs " + titleB, a, b));
             table = buildAlignedSeriesTable(a, b);
             return new DesignerOutput(charts, table);
         }
@@ -756,16 +896,42 @@ public class StatisticsAiV2Service {
         for (Map.Entry<String, V2Result> e : results.entrySet()) {
             V2Result r = e.getValue();
             if (r instanceof TimeSeriesResult ts) {
-                charts.add(toLineChart(e.getKey(), ts));
+                charts.add(toLineChart(humanTitle(ts, e.getKey()), ts));
             } else if (r instanceof TableResult tr) {
                 if (table == null) {
                     table = new StatisticsAiQueryResponse.TableSpec(tr.columns, tr.rows);
                 }
-                charts.add(toBarChart(e.getKey(), tr));
+                charts.add(toBarChart(humanTitle(tr, e.getKey()), tr));
             }
         }
 
         return new DesignerOutput(charts, table);
+    }
+
+    private String humanTitle(V2Result result, String fallbackKey) {
+        // 왜: LLM이 생성한 step key(예: mfg_workers, s1 등)보다 데이터의 실제 의미(seriesLabel, source, metric)를 사용해야
+        //     사용자가 차트를 이해하는 데 훨씬 도움이 됩니다.
+        if (result instanceof TimeSeriesResult ts) {
+            if (StringUtils.hasText(ts.seriesLabel())) {
+                String source = String.valueOf(ts.meta().getOrDefault("source", ""));
+                String metric = String.valueOf(ts.meta().getOrDefault("metric", ""));
+                StringBuilder sb = new StringBuilder();
+                if (StringUtils.hasText(source) && !"null".equals(source)) {
+                    sb.append("[").append(source).append("] ");
+                }
+                sb.append(ts.seriesLabel());
+                if (StringUtils.hasText(metric) && !"null".equals(metric) && !ts.seriesLabel().contains(metric)) {
+                    sb.append(" (").append(metric).append(")");
+                }
+                return sb.toString();
+            }
+        }
+        if (result instanceof TableResult tr) {
+            if (!tr.columns().isEmpty()) {
+                return tr.columns().get(0) + " 통계";
+            }
+        }
+        return fallbackKey;
     }
 
     private StatisticsAiQueryResponse.TableSpec buildAlignedSeriesTable(TimeSeriesResult left, TimeSeriesResult right) {
@@ -788,50 +954,56 @@ public class StatisticsAiV2Service {
         String chartType = stringParam(step.params(), "chartType");
         String title = stringParam(step.params(), "title");
         List<String> seriesRefs = stringListParam(step.params(), "seriesRefs");
+
+        // 왜: LLM이 seriesRefs를 빠뜨리거나 잘못된 형식을 줄 수 있습니다.
+        //     이 경우 예외를 던지기보다, 현재 가용한 결과물 중 가장 적합한 것을 자동으로 골라 보여주는 것이 UX 상 훨씬 낫습니다.
         if (seriesRefs.isEmpty()) {
-            throw new IllegalArgumentException("seriesRefs는 필수입니다.");
+            List<String> autoRefs = new ArrayList<>();
+            for (Map.Entry<String, V2Result> e : results.entrySet()) {
+                if (e.getValue() instanceof TimeSeriesResult || e.getValue() instanceof TableResult) {
+                    autoRefs.add(e.getKey());
+                }
+            }
+            seriesRefs = autoRefs;
+            log.info("DESIGNER seriesRefs 누락으로 자동 복구 수행: stepId={}, autoRefs={}", step.id(), seriesRefs);
+        }
+
+        if (seriesRefs.isEmpty()) {
+            throw new IllegalArgumentException("시각화할 수 있는 데이터 결과가 없습니다. (seriesRefs missing and no data available)");
         }
 
         List<StatisticsAiQueryResponse.ChartSpec> charts = new ArrayList<>();
         StatisticsAiQueryResponse.TableSpec table = null;
 
-        String resolvedTitle = StringUtils.hasText(title) ? title : ("차트(" + chartType + ")");
+        String resolvedTitle = StringUtils.hasText(title) ? title : ("조회 결과 (" + chartType + ")");
 
-        if ("line".equalsIgnoreCase(chartType)) {
-            TimeSeriesResult ts = requireTimeSeries(results, seriesRefs.get(0));
-            charts.add(new StatisticsAiQueryResponse.ChartSpec(resolvedTitle, "line", toChartData(ts)));
-            return new DesignerOutput(charts, null);
-        }
-
-        if ("dual_axis_line".equalsIgnoreCase(chartType)) {
-            if (seriesRefs.size() < 2) {
-                throw new IllegalArgumentException("dual_axis_line은 seriesRefs 2개가 필요합니다.");
-            }
-            TimeSeriesResult a = requireTimeSeries(results, seriesRefs.get(0));
-            TimeSeriesResult b = requireTimeSeries(results, seriesRefs.get(1));
-            charts.add(toDualAxisLineChart(resolvedTitle, a, b));
-            return new DesignerOutput(charts, null);
-        }
-
-        if ("line_dual_axis".equalsIgnoreCase(chartType)) {
-            // 왜: 화면/타입 이름과 혼동이 잦아, 동일 의미의 별칭을 허용합니다.
-            if (seriesRefs.size() < 2) {
-                throw new IllegalArgumentException("line_dual_axis는 seriesRefs 2개가 필요합니다.");
-            }
-            TimeSeriesResult a = requireTimeSeries(results, seriesRefs.get(0));
-            TimeSeriesResult b = requireTimeSeries(results, seriesRefs.get(1));
-            charts.add(toDualAxisLineChart(resolvedTitle, a, b));
-            return new DesignerOutput(charts, null);
-        }
-
+        // 차트 타입별 유연한 처리
         if ("bar".equalsIgnoreCase(chartType)) {
-            TableResult tr = requireTable(results, seriesRefs.get(0));
-            charts.add(toBarChart(resolvedTitle, tr));
-            table = new StatisticsAiQueryResponse.TableSpec(tr.columns, tr.rows);
+            V2Result r = results.get(seriesRefs.get(0));
+            if (r instanceof TableResult tr) {
+                charts.add(toBarChart(resolvedTitle, tr));
+                table = new StatisticsAiQueryResponse.TableSpec(tr.columns, tr.rows);
+            } else if (r instanceof TimeSeriesResult ts) {
+                // 시계열도 바 차트로 보여줄 수 있음
+                charts.add(new StatisticsAiQueryResponse.ChartSpec(resolvedTitle, "bar", toChartData(ts)));
+            }
             return new DesignerOutput(charts, table);
         }
 
-        throw new IllegalArgumentException("지원하지 않는 chartType 입니다. chartType=" + chartType);
+        if ("line".equalsIgnoreCase(chartType) || "dual_axis_line".equalsIgnoreCase(chartType) || "line_dual_axis".equalsIgnoreCase(chartType)) {
+            if (seriesRefs.size() >= 2 && results.get(seriesRefs.get(0)) instanceof TimeSeriesResult && results.get(seriesRefs.get(1)) instanceof TimeSeriesResult) {
+                TimeSeriesResult a = (TimeSeriesResult) results.get(seriesRefs.get(0));
+                TimeSeriesResult b = (TimeSeriesResult) results.get(seriesRefs.get(1));
+                charts.add(toDualAxisLineChart(resolvedTitle, a, b));
+                return new DesignerOutput(charts, null);
+            } else if (!seriesRefs.isEmpty() && results.get(seriesRefs.get(0)) instanceof TimeSeriesResult ts) {
+                charts.add(new StatisticsAiQueryResponse.ChartSpec(resolvedTitle, "line", toChartData(ts)));
+                return new DesignerOutput(charts, null);
+            }
+        }
+
+        // 도저히 타입을 맞출 수 없으면 autoDesign에 맡김
+        return autoDesign(results);
     }
 
     private StatisticsAiQueryResponse.ChartSpec toLineChart(String title, TimeSeriesResult ts) {
@@ -1471,24 +1643,25 @@ public class StatisticsAiV2Service {
         String dataStoreHint = buildDataStoreHintForPrompt(userPrompt, context);
 
         return """
-                당신은 'AI 통계 v2 실행계획 생성기'입니다.
+                당신은 'AI 통계 데이터 가이드(Guide)'입니다.
+                사용자의 질문을 분석하여 최적의 통계 소스를 조합하고 시각화 계획을 세웁니다.
 
                 [핵심 철학]
-                - 당신(LLM)은 계획(Plan), 조합(Combine), 설명(Explain)만 담당합니다.
-                - 실제 숫자는 서버가 KOSIS/SGIS/내부엑셀 같은 확정적 소스에서만 가져옵니다.
+                - 당신(LLM)은 계획(Plan), 조합(Combine), 데이터 가이드(Guide) 역할입니다.
+                - 사용자가 모호하게 질문하더라도 시스템이 가진 데이터를 최대한 활용해 '뭐라도' 보여주세요.
+                - 실제 수치는 서버가 KOSIS/SGIS/내부엑셀에서 가져오므로 숫자를 조작하지 마세요.
 
                 [중요 규칙]
-                - 반드시 JSON 객체만 출력하세요. (설명/코드블록/마크다운 금지)
-                - 통계 값(숫자)을 추측/생성하지 마세요.
-                - SQL을 만들거나 DB를 직접 조회하는 계획을 만들지 마세요.
-                - 아래 allowlist(op)만 사용하세요.
-                - 필수 값(연도/캠퍼스/지역/산업/학과 등)이 없거나 애매하더라도, 가능한 기본값/가용 데이터로 EXECUTE 하세요.
-                  (부족한 항목은 notice로 안내하고, 가능한 항목만이라도 최대한 보여주세요)
+                - 반드시 JSON 객체만 출력하세요. (설명/코드블록 금지)
+                - [시각화 필수 규칙]: DESIGNER_CHART의 params.seriesRefs는 반드시 이전 step의 'as' 또는 'id' 값들을 **배열([])**로 포함해야 합니다.
+                - [기본값 우선]: 연도/지역 등이 없으면 '최신 5년', '서울(11)' 등 카탈로그의 권장값을 사용해 즉시 EXECUTE 하세요. 되물음(CLARIFY)은 데이터가 아예 없을 때만 하세요.
+                - [우리 데이터 강조]: "우리", "학교", "내부" 등의 표현이 있다면 INTERNAL_* 연산(내부 취업/입학 통계)을 최우선으로 배치하세요.
+                - [풍부한 결과]: 가능하면 시계열 조회와 TOP N 조회를 조합하여 풍부한 리포트를 구성하세요.
 
-                [카탈로그(JSON, 참고)]
+                [카탈로그(참고)]
                 %s
 
-                [데이터 스토어 힌트(RAG/검색 결과, 참고)]
+                [데이터 스토어 힌트(참고)]
                 %s
 
                 [allowlist op]
@@ -1506,19 +1679,16 @@ public class StatisticsAiV2Service {
                   - %s (params: chartType(line|dual_axis_line|bar), title, seriesRefs)
 
                 [출력 JSON 형식]
-                - 실행:
+                - 실행(EXECUTE):
                   {
                     "action":"EXECUTE",
                     "steps":[
                       {"id":"a1","agent":"ANALYST","op":"SGIS_METRIC_SERIES","as":"itWorkers","params":{"admCd":"11","years":[2020,2021,2022,2023],"metric":"totWorker","category":"ICT"}},
-                      {"id":"c1","agent":"CHEMIST","op":"CHEMIST_GROWTH_RATE","as":"growth","params":{"seriesRef":"itWorkers"}},
-                      {"id":"d1","agent":"DESIGNER","op":"DESIGNER_CHART","as":"chart1","params":{"chartType":"line","title":"서울 ICT 종사자 수 추이","seriesRefs":["itWorkers"]}}
+                      {"id":"d1","agent":"DESIGNER","op":"DESIGNER_CHART","as":"chart1","params":{"chartType":"line","title":"서울 ICT 종사자 수 변화","seriesRefs":["itWorkers"]}}
                     ]
                   }
-                - 되물음:
-                  {"action":"CLARIFY","question":"어느 캠퍼스를 기준으로 볼까요?","fields":["campus"]}
-                - 불가:
-                  {"action":"UNSUPPORTED","message":"현재 지원 범위를 벗어났습니다.","examples":["서울(11) ICT 종사자 수를 2020~2023으로 보여줘"]}
+                - 되물음(CLARIFY): 데이터가 정말 부족할 때만 사용하며, 구체적인 선택지를 제안하세요.
+                  {"action":"CLARIFY","question":"어느 대상을 볼까요? '전국' 혹은 '서울' 지역을 선택하거나 특정 '학과'를 말씀해 주세요.","fields":["admCd"]}
 
                 %s
 

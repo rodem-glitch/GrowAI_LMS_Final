@@ -101,14 +101,14 @@ public class StatisticsAiV2DataStoreService {
         if (containsAny(text, List.of("인구", "연령", "성별", "인구수"))) {
             out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("kosis_population", "인구 통계", "질문에 인구/연령/성별 키워드가 있습니다."));
         }
-        if (containsAny(text, List.of("산업", "종사자", "사업체", "it산업", "ict", "주력 산업", "성장률"))) {
-            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("sgis_industry", "산업별 종사자 통계", "질문에 산업/종사자/사업체/성장률 키워드가 있습니다."));
+        if (containsAny(text, List.of("산업", "종사자", "사업체", "it산업", "ict", "주력 산업", "성장률", "제조업", "서비스업", "건설업", "도소매", "전국", "지역"))) {
+            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("sgis_industry", "산업별 종사자 통계", "질문에 산업/종사자/제조업/전국 키워드가 있습니다."));
         }
-        if (containsAny(text, List.of("취업", "취업률", "졸업", "양성"))) {
-            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("internal_employment", "캠퍼스/학과별 취업률", "질문에 취업/취업률 키워드가 있습니다."));
+        if (containsAny(text, List.of("취업", "취업률", "졸업", "양성", "우리", "학교", "내부", "학과"))) {
+            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("internal_employment", "캠퍼스/학과별 취업률", "질문에 취업/우리/내부/학과 키워드가 있습니다."));
         }
-        if (containsAny(text, List.of("입학", "충원", "정원", "입학률", "충원률"))) {
-            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("internal_admission", "캠퍼스/학과별 입학충원률", "질문에 입학/충원 키워드가 있습니다."));
+        if (containsAny(text, List.of("입학", "충원", "정원", "입학률", "충원률", "우리", "학교", "내부"))) {
+            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate("internal_admission", "캠퍼스/학과별 입학충원률", "질문에 입학/충원/우리/내부 키워드가 있습니다."));
         }
     }
 
@@ -127,13 +127,13 @@ public class StatisticsAiV2DataStoreService {
             out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate(StatisticsAiV2Ops.CHEMIST_DELTA_POINTS, "변화량(%p) 계산", "취업률/변화량(증감) 관련 키워드가 있습니다."));
         }
 
-        if (containsAny(text, List.of("it산업", "ict", "종사자", "사업체"))) {
-            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate(StatisticsAiV2Ops.SGIS_METRIC_SERIES, "SGIS 시계열 조회", "산업/종사자/사업체를 연도별로 비교할 수 있습니다."));
+        if (containsAny(text, List.of("it산업", "ict", "종사자", "사업체", "제조업", "서비스업", "전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "경기"))) {
+            out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate(StatisticsAiV2Ops.SGIS_METRIC_SERIES, "SGIS 시계열 조회", "산업/종사자/제조업/지역별 데이터를 연도별로 비교할 수 있습니다."));
         }
         if (containsAny(text, List.of("인구", "연령", "성별"))) {
             out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate(StatisticsAiV2Ops.KOSIS_POPULATION_SERIES, "KOSIS 시계열 조회", "인구 데이터를 연도별로 비교할 수 있습니다."));
         }
-        if (containsAny(text, List.of("취업률", "it학과", "우리 학과"))) {
+        if (containsAny(text, List.of("취업률", "it학과", "우리 학과", "우리", "학교", "내부", "학과"))) {
             out.add(new StatisticsAiV2DataStoreSearchResponse.Candidate(StatisticsAiV2Ops.INTERNAL_EMPLOYMENT_SERIES, "내부 취업률 시계열 조회", "내부 취업률을 연도별로 비교할 수 있습니다."));
         }
 
