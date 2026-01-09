@@ -152,12 +152,14 @@ public class RecoContentSummaryGenerator {
         String s = summary.trim();
         if (s.isBlank()) return false;
         int len = s.codePointCount(0, s.length());
-        return len >= 200 && len <= 300;
+        // ✅ 요약 길이는 호출부에서 "목표 글자 수"로 제어하고, 여기서는 비어있지만 않으면 통과시킵니다.
+        return len > 0;
     }
 
     private RecoContentSummaryDraft normalizeLengths(RecoContentSummaryDraft draft) {
         String category = trimToCodePoints(draft.categoryNm(), 100);
-        String summary = trimToCodePoints(draft.summary(), 300);
+        // ✅ 더 이상 요약을 300자로 자르지 않습니다. (긴 영상/긴 텍스트 요약이 잘리는 문제 방지)
+        String summary = draft.summary();
         if (summary != null) summary = summary.trim();
 
         List<String> keywords = draft.keywords() == null ? List.of() : draft.keywords();

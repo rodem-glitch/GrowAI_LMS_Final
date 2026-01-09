@@ -267,13 +267,16 @@ public class ContentSummaryService {
         try {
             // 1. Kollus에서 영상 다운로드
             String mediaToken = kollusApiClient.issueMediaToken(mediaKey);
-            kollusMediaDownloader.downloadTo(kollusApiClient.buildDownloadUriByMediaToken(mediaToken), videoFile);
+            KollusApiClient.DownloadInfo downloadInfo = kollusApiClient.resolveDownloadInfoByMediaToken(mediaToken);
+            kollusMediaDownloader.downloadTo(downloadInfo.downloadUri(), videoFile);
 
             log.info("영상 다운로드 완료: {} ({})", mediaKey, videoFile);
 
             // 2. Gemini로 영상 직접 요약 (STT 단계 없음!)
             String title = safeTitle(transcript.getTitle());
-            RecoContentSummaryDraft draft = geminiVideoSummaryClient.uploadAndSummarize(videoFile, title);
+            int targetSummaryLength = computeTargetSummaryLength(downloadInfo.totalTimeSeconds());
+            log.info("요약 목표 길이 계산: mediaKey={}, totalTimeSeconds={}, targetSummaryLength={}", mediaKey, downloadInfo.totalTimeSeconds(), targetSummaryLength);
+            RecoContentSummaryDraft draft = geminiVideoSummaryClient.uploadAndSummarize(videoFile, title, targetSummaryLength);
 
             log.info("Gemini 영상 요약 완료: {} - 카테고리={}", mediaKey, draft.categoryNm());
 
@@ -359,7 +362,30 @@ public class ContentSummaryService {
     private static String safeSummary(String raw) {
         String t = raw == null ? "" : raw.trim().replaceAll("\\s+", " ");
         if (t.isBlank()) return "요약 정보를 생성하지 못했습니다.";
-        return trimToCodePoints(t, 300);
+        // ✅ 여기서는 더 이상 고정 길이(예: 300자)로 자르지 않습니다.
+        // 요약 길이는 Gemini 프롬프트에 "목표 글자 수"로 전달하여 자연스럽게 조절되도록 합니다.
+        return t;
+    }
+
+    private static int computeTargetSummaryLength(Integer totalTimeSeconds) {
+        // ✅ 왜 필요한가요?
+        // - 예전에는 요약을 300자로 고정해서 저장하는 코드가 있어서, 긴 영상도 항상 300자에서 잘렸습니다.
+        // - 영상 길이에 비례해서 "목표 글자 수"를 잡아두면, 긴 영상은 내용이 부족하지 않게 저장할 수 있습니다.
+        //
+        // ✅ 규칙(요청사항)
+        // - 목표자 = 200 + (분 * 10)
+        // - 분은 (초 / 60)이며, 1분 미만은 1분으로 취급합니다.
+        int base = 200;
+        int perMinute = 10;
+
+        if (totalTimeSeconds == null || totalTimeSeconds <= 0) {
+            // ?? Kollus에서 길이 정보(total_time/duration)를 못 찾는 경우가 드물게 있어,
+            // 너무 짧게 저장되지 않도록 기존 기본값(300)을 사용합니다.
+            return 300;
+        }
+
+        double minutes = Math.max(1.0d, totalTimeSeconds / 60.0d);
+        return (int) Math.round(base + (minutes * perMinute));
     }
 
     private static String joinKeywordsWithinLimit(List<String> keywords, int maxCount, int maxLen) {

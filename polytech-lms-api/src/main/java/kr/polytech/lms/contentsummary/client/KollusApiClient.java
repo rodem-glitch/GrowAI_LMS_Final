@@ -174,7 +174,7 @@ public class KollusApiClient {
 
                 if (isDurationKey(key)) {
                     Integer raw = numberToIntOrNull(value);
-                    Integer seconds = normalizeDurationSeconds(raw);
+                    Integer seconds = normalizeDurationSeconds(raw, key);
                     if (seconds != null) return seconds;
                 }
 
@@ -222,17 +222,34 @@ public class KollusApiClient {
         }
     }
 
-    private static Integer normalizeDurationSeconds(Integer raw) {
-        if (raw == null) return null;
-        if (raw <= 0) return null;
+    private static Integer normalizeDurationSeconds(Integer raw, String key) {
+        if (raw == null || raw <= 0) return null;
 
         int v = raw;
-        // 왜: 어떤 응답은 ms 단위(예: 3,600,000)로 내려오기도 해서, "너무 큰 값"이면 ms로 보고 초로 변환합니다.
-        if (v >= 1_000_000) {
-            v = v / 1000;
+
+        // 왜: Kollus player media-info에서 `duration` 필드는 ms(밀리초)로 내려오는 케이스가 있어,
+        // 값이 1,000,000 미만(= 16.7분 미만)이더라도 초로 착각하면 "수십 시간"처럼 잘못 계산됩니다.
+        String normalizedKey = normalizeDurationKey(key);
+        boolean preferMillis = "duration".equals(normalizedKey)
+            || "play_time".equals(normalizedKey)
+            || "playtime".equals(normalizedKey);
+
+        if (preferMillis) {
+            int seconds = (int) Math.ceil(v / 1000.0d);
+            return seconds > 0 ? seconds : null;
         }
 
+        // 왜: 그 외 필드는 기본적으로 초 단위인 경우가 많지만, 큰 값이면 ms로 보고 초로 변환합니다.
+        if (v >= 1_000_000) v = v / 1000;
+
         return v > 0 ? v : null;
+    }
+
+    private static String normalizeDurationKey(String key) {
+        if (key == null) return "";
+        String trimmed = key.trim();
+        if (trimmed.isEmpty()) return "";
+        return trimmed.toLowerCase(Locale.ROOT).replace("-", "_");
     }
 
     private static String findBestMp4Url(JsonNode root) {
