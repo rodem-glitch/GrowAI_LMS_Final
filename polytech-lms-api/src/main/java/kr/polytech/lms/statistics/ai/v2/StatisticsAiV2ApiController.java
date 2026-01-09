@@ -2,8 +2,10 @@ package kr.polytech.lms.statistics.ai.v2;
 
 import kr.polytech.lms.statistics.ai.StatisticsAiQueryRequest;
 import kr.polytech.lms.statistics.ai.StatisticsAiQueryResponse;
+import kr.polytech.lms.statistics.ai.v3.StatisticsAiV3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,14 +19,22 @@ import java.util.Map;
 @RestController
 @RequestMapping("/statistics/api/ai/v2")
 public class StatisticsAiV2ApiController {
-    // 왜: v1과 호환성을 유지하면서도, v2(멀티 step 실행계획)를 별도 엔드포인트로 확장합니다.
+    // 왜: v3 서비스를 기본으로 사용하고, 설정으로 v2로 롤백 가능하게 함
 
     private static final Logger log = LoggerFactory.getLogger(StatisticsAiV2ApiController.class);
 
     private final StatisticsAiV2Service statisticsAiV2Service;
+    private final StatisticsAiV3Service statisticsAiV3Service;
+    
+    @Value("${statistics.ai.use-v3:true}")
+    private boolean useV3;
 
-    public StatisticsAiV2ApiController(StatisticsAiV2Service statisticsAiV2Service) {
+    public StatisticsAiV2ApiController(
+            StatisticsAiV2Service statisticsAiV2Service,
+            StatisticsAiV3Service statisticsAiV3Service
+    ) {
         this.statisticsAiV2Service = statisticsAiV2Service;
+        this.statisticsAiV3Service = statisticsAiV3Service;
     }
 
     @GetMapping("/catalog")
@@ -35,11 +45,13 @@ public class StatisticsAiV2ApiController {
     @PostMapping("/query")
     public ResponseEntity<?> query(@RequestBody StatisticsAiQueryRequest request) {
         try {
+            // 왜: v3 서비스가 더 심플하고 유연하므로 기본으로 사용
+            //     문제 발생 시 설정(statistics.ai.use-v3=false)으로 v2로 롤백 가능
+            if (useV3) {
+                return ResponseEntity.ok(statisticsAiV3Service.query(request));
+            }
             return ResponseEntity.ok(statisticsAiV2Service.query(request));
         } catch (IllegalArgumentException e) {
-            // 왜: 화면은 실패 시 "지원하지 않음" 상태로 예시 질문 버튼을 보여주도록 구현되어 있습니다.
-            //     HTTP 에러로 내려버리면 예시/가이드가 비어 UX가 나빠지므로, 200 + 메시지/예시로 내려줍니다.
-            //     다만 원인 파악을 위해 서버 로그는 반드시 남깁니다.
             log.warn("AI 통계 v2 요청 검증 실패: prompt={}, contextKeys={}",
                     safePrompt(request), safeContextKeys(request), e);
             return ResponseEntity.ok(errorResponse(e.getMessage()));
@@ -50,7 +62,7 @@ public class StatisticsAiV2ApiController {
         } catch (Exception e) {
             log.error("AI 통계 v2 처리 중 예외: prompt={}, contextKeys={}",
                     safePrompt(request), safeContextKeys(request), e);
-            return ResponseEntity.ok(errorResponse("AI 통계(v2) 처리 중 오류가 발생했습니다."));
+            return ResponseEntity.ok(errorResponse("AI 통계 처리 중 오류가 발생했습니다."));
         }
     }
 
