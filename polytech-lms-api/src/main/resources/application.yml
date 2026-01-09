@@ -61,13 +61,9 @@ kollus:
   player-base-url: ${KOLLUS_PLAYER_BASE_URL:https://v.kr.kollus.com}
 
 stt:
-  provider: ${STT_PROVIDER:openai}
+  provider: ${STT_PROVIDER:google}
   language: ${STT_LANGUAGE:ko}
   http-timeout: ${STT_HTTP_TIMEOUT:PT5M}
-  openai:
-    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
-    api-key: ${OPENAI_API_KEY:}
-    model: ${OPENAI_TRANSCRIBE_MODEL:gpt-4o-mini-transcribe}
   google:
     # 왜: Speech-to-Text(v2)는 API Key가 아니라 서비스계정(OAuth) 인증을 주로 씁니다.
     # - 로컬: `GOOGLE_APPLICATION_CREDENTIALS=C:\\path\\service-account.json`

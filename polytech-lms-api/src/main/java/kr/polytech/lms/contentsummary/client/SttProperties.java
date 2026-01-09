@@ -10,34 +10,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record SttProperties(
     String provider,
     String language,
-    OpenAi openai,
     Google google,
     Duration httpTimeout
 ) {
     public SttProperties {
-        provider = (provider == null || provider.isBlank()) ? "openai" : provider.trim();
+        provider = (provider == null || provider.isBlank()) ? "google" : provider.trim();
         language = (language == null || language.isBlank()) ? "ko" : language.trim();
-        openai = openai == null ? new OpenAi(null, null, null) : openai;
         google = google == null ? new Google(null, null, null, null, null, false, true, null, null, null) : google;
         httpTimeout = safeTimeout(httpTimeout, Duration.ofMinutes(5));
-    }
-
-    public record OpenAi(
-        String baseUrl,
-        String apiKey,
-        String model
-    ) {
-        public OpenAi {
-            baseUrl = normalizeBaseUrl(baseUrl, "https://api.openai.com/v1");
-            model = (model == null || model.isBlank()) ? "gpt-4o-mini-transcribe" : model.trim();
-        }
-
-        private static String normalizeBaseUrl(String baseUrl, String defaultValue) {
-            if (baseUrl == null || baseUrl.isBlank()) return defaultValue;
-            String trimmed = baseUrl.trim();
-            if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-            return "https://" + trimmed;
-        }
     }
 
     public record Google(

@@ -68,7 +68,10 @@ public class GeminiVideoSummaryClient {
         // Step 2: Upload file content
         String fileUri = uploadFileContent(uploadUrl, videoFile, fileSize);
 
-        log.info("Gemini File API 업로드 완료: {}", fileUri);
+        // Step 3: Wait for file to become ACTIVE
+        waitForFileActive(fileUri, apiKey);
+
+        log.info("Gemini File API 업로드 및 활성화 완료: {}", fileUri);
         return fileUri;
     }
 
@@ -199,6 +202,47 @@ public class GeminiVideoSummaryClient {
         } catch (Exception e) {
             throw new IllegalStateException("Gemini File API 응답 파싱 실패: " + response.body(), e);
         }
+    }
+
+    /**
+     * 파일 상태가 ACTIVE가 될 때까지 폴링하며 기다립니다.
+     */
+    private void waitForFileActive(String fileUri, String apiKey) throws IOException, InterruptedException {
+        log.info("Gemini 파일 활성화 대기 중: {}", fileUri);
+        
+        URI uri = URI.create(fileUri + "?key=" + urlEncode(apiKey));
+        HttpRequest request = HttpRequest.newBuilder(uri)
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+
+        long start = System.currentTimeMillis();
+        long timeoutMs = 10 * 60 * 1000; // 최대 10분 대기
+
+        while (System.currentTimeMillis() - start < timeoutMs) {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            
+            if (response.statusCode() != 200) {
+                log.warn("파일 상태 확인 실패 (HTTP {}): {}", response.statusCode(), response.body());
+            } else {
+                JsonNode root = objectMapper.readTree(response.body());
+                String state = root.has("state") ? root.get("state").asText() : "UNKNOWN";
+
+                log.info("파일 상태: {}", state);
+
+                if ("ACTIVE".equalsIgnoreCase(state)) {
+                    return;
+                }
+                if ("FAILED".equalsIgnoreCase(state)) {
+                    throw new IllegalStateException("Gemini 파일 처리 실패: " + response.body());
+                }
+            }
+
+            // 5초 대기
+            Thread.sleep(5000);
+        }
+
+        throw new IllegalStateException("Gemini 파일 활성화 타임아웃 (10분 초과)");
     }
 
     private String buildVideoSummaryPrompt(String title) {
