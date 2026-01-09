@@ -78,7 +78,7 @@ public class GeminiVideoSummaryClient {
     /**
      * 업로드된 영상에서 직접 요약을 생성합니다.
      */
-    public RecoContentSummaryDraft summarizeFromVideo(String fileUri, String title, String mimeType) {
+    public RecoContentSummaryDraft summarizeFromVideo(String fileUri, String title, String mimeType, int targetSummaryLength) {
         if (fileUri == null || fileUri.isBlank()) {
             throw new IllegalArgumentException("fileUri가 비어 있습니다.");
         }
@@ -94,7 +94,10 @@ public class GeminiVideoSummaryClient {
             + urlEncode(apiKey.trim()));
 
         log.info("Gemini 요약 요청 URI: {}", uri.toString().replace(apiKey, "HIDDEN_KEY"));
-        String prompt = buildVideoSummaryPrompt(safeTitle);
+        // 왜: 영상 길이가 길수록 "한 문단 요약"에 담아야 할 정보가 늘어나므로,
+        // 길이에 비례해 목표 글자 수를 늘릴 수 있도록 목표 길이를 파라미터로 받습니다.
+        int safeTargetLength = Math.max(1, targetSummaryLength);
+        String prompt = buildVideoSummaryPrompt(safeTitle, safeTargetLength);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("contents", List.of(
@@ -131,10 +134,17 @@ public class GeminiVideoSummaryClient {
     /**
      * 영상 파일을 업로드하고 바로 요약을 생성합니다 (편의 메서드).
      */
-    public RecoContentSummaryDraft uploadAndSummarize(Path videoFile, String title) throws IOException, InterruptedException {
+    public RecoContentSummaryDraft uploadAndSummarize(Path videoFile, String title, int targetSummaryLength) throws IOException, InterruptedException {
         String mimeType = detectMimeType(videoFile);
         String fileUri = uploadVideo(videoFile);
-        return summarizeFromVideo(fileUri, title, mimeType);
+        return summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
+    }
+
+    /**
+     * 하위 호환을 위해 기본 목표 길이(300자)를 유지하는 오버로드를 남깁니다.
+     */
+    public RecoContentSummaryDraft uploadAndSummarize(Path videoFile, String title) throws IOException, InterruptedException {
+        return uploadAndSummarize(videoFile, title, 300);
     }
 
     private String initiateResumableUpload(String apiKey, long fileSize, String mimeType, String displayName) 
@@ -245,19 +255,19 @@ public class GeminiVideoSummaryClient {
         throw new IllegalStateException("Gemini 파일 활성화 타임아웃 (10분 초과)");
     }
 
-    private String buildVideoSummaryPrompt(String title) {
+    private String buildVideoSummaryPrompt(String title, int targetSummaryLength) {
         StringBuilder sb = new StringBuilder();
         sb.append("당신은 교육용 영상 콘텐츠를 추천하기 위한 메타데이터를 생성하는 도우미입니다.\n");
         sb.append("이 영상을 분석하고, 반드시 JSON만 출력하세요(설명/마크다운/코드블록 금지).\n");
         sb.append("JSON 스키마:\n");
         sb.append("{\n");
         sb.append("  \"category_nm\": \"기술분야 키워드 2개(쉼표로 구분)\",\n");
-        sb.append("  \"summary\": \"영상 내용 요약 200~300자(공백 포함, 한글)\",\n");
+        sb.append("  \"summary\": \"영상 내용 요약 약 ").append(targetSummaryLength).append("자(공백 포함, 한글)\",\n");
         sb.append("  \"keywords\": [\"키워드1\", \"키워드2\", \"... 최대 10개\"]\n");
         sb.append("}\n");
         sb.append("규칙:\n");
         sb.append("- category_nm은 정확히 2개 키워드로 구성하고, 너무 일반적인 단어(예: 기술, 강의)는 피하세요.\n");
-        sb.append("- summary는 200~300자(공백 포함) 1문단으로 작성하세요.\n");
+        sb.append("- summary는 약 ").append(targetSummaryLength).append("자(공백 포함) 1문단으로 작성하세요.\n");
         sb.append("- keywords는 영상 내용을 대표하는 키워드를 최대 10개까지, 중복 없이 작성하세요.\n");
         sb.append("- 영상의 음성과 화면 내용을 모두 참고하여 분석하세요.\n");
         if (!title.isBlank()) {

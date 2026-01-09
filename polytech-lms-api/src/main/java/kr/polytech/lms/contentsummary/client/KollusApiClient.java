@@ -10,7 +10,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +29,16 @@ import org.springframework.web.util.HtmlUtils;
 public class KollusApiClient {
 
     private static final Pattern MEDIA_INFO_ATTRIBUTE_PATTERN = Pattern.compile(":media-info=\"([^\"]+)\"");
+
+    /**
+     * Kollus 플레이어 HTML의 media-info에서 추출한 다운로드/메타 정보.
+     * 왜: 영상 길이(초)를 알면 "영상 길이에 비례한 요약 글자 수" 같은 정책을 적용할 수 있습니다.
+     */
+    public record DownloadInfo(
+        URI downloadUri,
+        Integer totalTimeSeconds
+    ) {
+    }
 
     private final KollusProperties properties;
     private final ObjectMapper objectMapper;
@@ -93,10 +106,14 @@ public class KollusApiClient {
     }
 
     public URI buildDownloadUriByMediaToken(String mediaToken) {
+        return resolveDownloadInfoByMediaToken(mediaToken).downloadUri();
+    }
+
+    public DownloadInfo resolveDownloadInfoByMediaToken(String mediaToken) {
         if (mediaToken == null || mediaToken.isBlank()) {
             throw new IllegalArgumentException("mediaToken이 비어 있습니다.");
         }
-        // ✅ 왜: `get_media_link_by_userid`는 실제 파일(URL)이 아니라 "media_token"만 내려줍니다.
+        // 왜: `get_media_link_by_userid`는 실제 파일(URL)이 아니라 "media_token"만 내려줍니다.
         // `/si?key=<media_token>`로 바로 파일을 받을 수 있을 것처럼 보이지만,
         // 실제로는 mp4가 아니라 토큰 문자열(text/plain)을 내려줘서 ffmpeg가 실패합니다.
         //
@@ -110,10 +127,10 @@ public class KollusApiClient {
             .build();
 
         String html = send(request);
-        return extractSignedMp4UriFromPlayerHtml(html);
+        return extractDownloadInfoFromPlayerHtml(html);
     }
 
-    private URI extractSignedMp4UriFromPlayerHtml(String html) {
+    private DownloadInfo extractDownloadInfoFromPlayerHtml(String html) {
         try {
             if (html == null || html.isBlank()) {
                 throw new IllegalStateException("플레이어 HTML 응답이 비어 있습니다.");
@@ -133,11 +150,89 @@ public class KollusApiClient {
             if (mp4Url == null || mp4Url.isBlank()) {
                 throw new IllegalStateException("플레이어 media-info에서 MP4 URL을 찾지 못했습니다.");
             }
-            return URI.create(mp4Url.trim());
+
+            // 왜: media-info JSON에는 영상 길이(초/밀리초)가 같이 들어오는 경우가 있어,
+            // 가능하면 함께 추출해 두면 요약 길이 정책에 활용할 수 있습니다.
+            Integer totalTimeSeconds = findTotalTimeSeconds(root);
+
+            return new DownloadInfo(URI.create(mp4Url.trim()), totalTimeSeconds);
         } catch (Exception e) {
-            // ✅ media_token 같은 민감 값이 예외 메시지/로그에 섞이지 않도록, 원문 HTML은 포함하지 않습니다.
+            // 왜: media_token 같은 민감 값이 예외 메시지/로그에 섞이지 않도록, 원문 HTML은 포함하지 않습니다.
             throw new IllegalStateException("Kollus 플레이어 HTML에서 다운로드 URL을 해석하지 못했습니다.", e);
         }
+    }
+
+    private static Integer findTotalTimeSeconds(JsonNode node) {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+
+        if (node.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> it = node.fields();
+            while (it.hasNext()) {
+                Map.Entry<String, JsonNode> e = it.next();
+                String key = e.getKey();
+                JsonNode value = e.getValue();
+
+                if (isDurationKey(key)) {
+                    Integer raw = numberToIntOrNull(value);
+                    Integer seconds = normalizeDurationSeconds(raw);
+                    if (seconds != null) return seconds;
+                }
+
+                Integer found = findTotalTimeSeconds(value);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                Integer found = findTotalTimeSeconds(child);
+                if (found != null) return found;
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean isDurationKey(String key) {
+        if (key == null || key.isBlank()) return false;
+        String normalized = key.trim()
+            .toLowerCase(Locale.ROOT)
+            .replace("-", "_");
+
+        return "total_time".equals(normalized)
+            || "total_time_seconds".equals(normalized)
+            || "totaltime".equals(normalized)
+            || "duration".equals(normalized)
+            || "play_time".equals(normalized)
+            || "playtime".equals(normalized);
+    }
+
+    private static Integer numberToIntOrNull(JsonNode node) {
+        if (node == null || node.isNull() || node.isMissingNode()) return null;
+        try {
+            if (node.isNumber()) {
+                return (int) Math.round(node.asDouble());
+            }
+            String s = node.asText(null);
+            if (s == null || s.isBlank()) return null;
+            return (int) Math.round(Double.parseDouble(s.trim()));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static Integer normalizeDurationSeconds(Integer raw) {
+        if (raw == null) return null;
+        if (raw <= 0) return null;
+
+        int v = raw;
+        // 왜: 어떤 응답은 ms 단위(예: 3,600,000)로 내려오기도 해서, "너무 큰 값"이면 ms로 보고 초로 변환합니다.
+        if (v >= 1_000_000) {
+            v = v / 1000;
+        }
+
+        return v > 0 ? v : null;
     }
 
     private static String findBestMp4Url(JsonNode root) {
@@ -260,4 +355,3 @@ public class KollusApiClient {
         }
     }
 }
-
