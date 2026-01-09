@@ -90,80 +90,7 @@ public class StatisticsAiV3Service {
         }
     }
 
-    // ========== 프롬프트 빌드 ==========
 
-    private String buildPrompt(String question, DataBundle data) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("""
-            당신은 한국폴리텍대학의 AI 통계 분석가입니다.
-            
-            [핵심 규칙]
-            - 반드시 JSON만 응답하세요. 설명이나 마크다운 금지.
-            - 절대 되묻지 마세요. 주어진 데이터로 최선의 분석을 하세요.
-            - 숫자를 조작하거나 만들어내지 마세요. 주어진 데이터만 사용하세요.
-            - 사용자에게 친근하고 인사이트 있는 분석을 제공하세요.
-            
-            [출력 JSON 형식]
-            {
-               "summary": "분석 결과 요약 (2-3문장)",
-               "insight": "핵심 인사이트 (1문장)",
-               "chartType": "line 또는 bar",
-               "chartTitle": "차트 제목",
-               "labels": ["라벨1", "라벨2", ...],
-               "datasets": [
-                   {"label": "데이터셋명", "values": [숫자1, 숫자2, ...]}
-               ],
-               "tableHeaders": ["헤더1", "헤더2"],
-               "tableRows": [["값1", "값2"], ...]
-            }
-            
-            """);
-
-        // 데이터 추가
-        sb.append("[현재 보유 데이터]\n");
-        
-        boolean hasData = false;
-        
-        if (data.employmentTop != null && !data.employmentTop.isEmpty()) {
-            sb.append("- 취업률 Top 10:\n");
-            for (var r : data.employmentTop) {
-                sb.append("  - ").append(r.dept()).append(": ").append(r.rate()).append("%\n");
-            }
-            hasData = true;
-        }
-
-        if (data.employmentSeries != null && !data.employmentSeries.isEmpty()) {
-            sb.append("- 연도별 평균 취업률:\n");
-            for (var entry : data.employmentSeries.entrySet()) {
-                sb.append("  - ").append(entry.getKey()).append("년: ").append(entry.getValue()).append("%\n");
-            }
-            hasData = true;
-        }
-
-        if (data.admissionTop != null && !data.admissionTop.isEmpty()) {
-            sb.append("- 입학충원률 Top 10:\n");
-            for (var r : data.admissionTop) {
-                sb.append("  - ").append(r.dept()).append(": ").append(r.rate()).append("%\n");
-            }
-            hasData = true;
-        }
-
-        if (data.industryData != null && !data.industryData.isEmpty()) {
-            sb.append("- 서울 ICT 종사자 수:\n");
-            for (var entry : data.industryData.entrySet()) {
-                sb.append("  - ").append(entry.getKey()).append("년: ").append(String.format("%,d", entry.getValue())).append("명\n");
-            }
-            hasData = true;
-        }
-        
-        if (!hasData) {
-            sb.append("(관련된 데이터가 없습니다. 일반적인 답변을 해주세요.)\n");
-        }
-
-        sb.append("\n[사용자 질문]\n").append(question).append("\n");
-
-        return sb.toString();
-    }
 
     // ========== 데이터 플래닝 (LLM) ==========
 
@@ -238,8 +165,11 @@ public class StatisticsAiV3Service {
 
     private DataBundle fetchDataBasedOnPlan(List<PlanItem> plans) {
         DataBundle data = new DataBundle();
+        // 동적 연도 감지 로직 임시 제거 (빌드 안정화)
         int currentYear = Year.now().getValue();
-        List<Integer> defaultYears = List.of(currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1);
+        // 기본 4년치 데이터 사용
+        List<Integer> availableYears = List.of(currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1);
+        final List<Integer> targetYears = availableYears;
 
         for (PlanItem item : plans) {
             try {
@@ -251,7 +181,7 @@ public class StatisticsAiV3Service {
                     }
                     case "EMPLOYMENT_TREND" -> {
                         if (data.employmentSeries == null) {
-                            data.employmentSeries = loadInternalEmploymentSeries(item.campus, defaultYears);
+                            data.employmentSeries = loadInternalEmploymentSeries(item.campus, targetYears);
                         }
                     }
                     case "ADMISSION_TOP" -> {
@@ -261,7 +191,8 @@ public class StatisticsAiV3Service {
                     }
                     case "INDUSTRY_ICT" -> {
                         if (data.industryData == null) {
-                            data.industryData = loadIndustryData("11", defaultYears); // 서울(11) 고정
+                            // 산업 데이터도 가용 연도 기준으로 조회하되, SGIS 데이터가 없을 수 있으므로 기본적으로 targetYears 사용
+                            data.industryData = loadIndustryData("11", targetYears); // 서울(11) 고정
                         }
                     }
                 }
@@ -320,7 +251,7 @@ public class StatisticsAiV3Service {
 
     // ========== 프롬프트 빌드 ==========
 
-    private String buildPrompt(String question, DataBundle data, QueryIntent intent) {
+    private String buildPrompt(String question, DataBundle data) {
         StringBuilder sb = new StringBuilder();
         sb.append("""
             당신은 한국폴리텍대학의 AI 통계 분석가입니다.
