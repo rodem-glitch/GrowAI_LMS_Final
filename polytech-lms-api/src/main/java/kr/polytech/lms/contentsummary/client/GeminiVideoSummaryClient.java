@@ -173,7 +173,7 @@ public class GeminiVideoSummaryClient {
             .timeout(Duration.ofMinutes(30)) // 대용량 파일 업로드 타임아웃
             .header("X-Goog-Upload-Offset", "0")
             .header("X-Goog-Upload-Command", "upload, finalize")
-            .header("Content-Length", String.valueOf(fileSize))
+            // Content-Length는 HttpClient가 자동 설정하므로 생략
             .POST(HttpRequest.BodyPublishers.ofByteArray(fileBytes))
             .build();
 
