@@ -319,6 +319,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
     // 왜: 학사 진도는 "차시 선택"이 먼저 필요하므로 기본 차시를 자동 선택합니다.
     if (!isHaksaCourse) return;
 
+    // 왜: 사용자가 "전체 정보 보기"를 눌렀다면 자동 선택 로직이 덮어쓰지 않도록 그대로 둡니다.
+    if (selectedSessionId === 'overall') return;
+
     if (haksaSessionsFlat.length === 0) {
       setSelectedSessionId(null);
       setSelectedLessonId(null);
@@ -335,6 +338,11 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
   useEffect(() => {
     if (!isHaksaCourse) return;
+    // 왜: 전체 보기 모드에서는 selectedLessonId를 -1로 유지해야 API가 전체 진도를 조회합니다.
+    if (selectedSessionId === 'overall') {
+      setSelectedLessonId(-1);
+      return;
+    }
     const session = haksaSessionsFlat.find((s) => s.sessionId === selectedSessionId);
     const nextLessonId = session?.videoLessons[0]?.lessonId ?? null;
     setSelectedLessonId(nextLessonId);
@@ -382,7 +390,8 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
   };
 
   useEffect(() => {
-    if (!selectedLessonId || !effectiveCourseId) return;
+    // 왜: selectedLessonId가 -1(전체 보기)일 때도 API를 호출해야 합니다.
+    if (selectedLessonId === null || selectedLessonId === 0 || !effectiveCourseId) return;
     fetchStudents(selectedLessonId);
   }, [selectedLessonId, effectiveCourseId]);
 
@@ -458,6 +467,24 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
             )}
 
             <div className="divide-y divide-gray-200">
+              {/* 전체 정보 보기 옵션 */}
+              <button
+                onClick={() => {
+                  setSelectedSessionId('overall');
+                  setSelectedLessonId(-1);
+                }}
+                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                  selectedSessionId === 'overall' ? 'bg-purple-50' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm text-purple-700 font-medium">📊 전체 정보 보기</div>
+                    <div className="text-xs text-gray-600">전체 진도율 확인</div>
+                  </div>
+                  <ChevronRight className={`w-4 h-4 ${selectedSessionId === 'overall' ? 'text-purple-600' : 'text-gray-400'}`} />
+                </div>
+              </button>
               {haksaWeekGroups.map((week) => (
                 <div key={`week-${week.weekNumber}`}>
                   <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
@@ -504,7 +531,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
           <div className="col-span-8 border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
               <div className="text-sm text-gray-700">
-                {selectedHaksaSession ? (
+                {selectedSessionId === 'overall' ? (
+                  <span className="text-purple-700 font-medium">📊 전체 정보 보기</span>
+                ) : selectedHaksaSession ? (
                   <>
                     <span className="text-gray-900">
                       {selectedHaksaSession.weekTitle} · {selectedHaksaSession.sessionName}
@@ -558,17 +587,23 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
             )}
             {studentError && <div className="p-4 text-sm text-red-600">{studentError}</div>}
 
-            {selectedLessonId && (
+            {(selectedLessonId === -1 || selectedLessonId) && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white border-b border-gray-200">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm text-gray-700">학번</th>
                       <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">학습시간</th>
-                      <th className="px-4 py-3 text-center text-sm text-gray-700">진도율</th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">마지막 학습</th>
-                      <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                      <th className="px-4 py-3 text-left text-sm text-gray-700">총 학습시간</th>
+                      <th className="px-4 py-3 text-center text-sm text-gray-700">
+                        {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm text-gray-700">
+                        {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
+                      </th>
+                      {selectedLessonId !== -1 && (
+                        <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -585,29 +620,39 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                             <div className="flex items-center justify-center gap-2">
                               <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full ${complete ? 'bg-green-600' : 'bg-blue-600'}`}
+                                  className={`h-full rounded-full ${selectedLessonId === -1 ? 'bg-purple-600' : complete ? 'bg-green-600' : 'bg-blue-600'}`}
                                   style={{ width: `${ratio}%` }}
                                 />
                               </div>
                               <span className="text-sm text-gray-900">{Math.round(ratio)}%</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{row.last_date_conv || '-'}</td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() => openDetail(row)}
-                              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                            >
-                              보기
-                            </button>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {selectedLessonId === -1 ? (
+                              <span className={`px-2 py-1 rounded text-xs ${complete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {complete ? '수료' : '미수료'}
+                              </span>
+                            ) : (
+                              row.last_date_conv || '-'
+                            )}
                           </td>
+                          {selectedLessonId !== -1 && (
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => openDetail(row)}
+                                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                              >
+                                보기
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
 
                     {!studentLoading && !studentError && filteredStudents.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={selectedLessonId === -1 ? 5 : 6} className="px-4 py-10 text-center text-sm text-gray-500">
                           표시할 수강생이 없습니다.
                         </td>
                       </tr>
@@ -649,6 +694,21 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
           )}
 
           <div className="divide-y divide-gray-200">
+            {/* 전체 정보 보기 옵션 */}
+            <button
+              onClick={() => setSelectedLessonId(-1)}
+              className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                selectedLessonId === -1 ? 'bg-purple-50' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-sm text-purple-700 font-medium">📊 전체 정보 보기</div>
+                  <div className="text-xs text-gray-600">전체 진도율 확인</div>
+                </div>
+                <ChevronRight className={`w-4 h-4 ${selectedLessonId === -1 ? 'text-purple-600' : 'text-gray-400'}`} />
+              </div>
+            </button>
             {summaryRows.map((row) => {
               const isActive = Number(row.lesson_id) === Number(selectedLessonId);
               const completeRate = Number(row.complete_rate ?? 0);
@@ -681,7 +741,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
         <div className="col-span-8 border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
             <div className="text-sm text-gray-700">
-              {selectedSummary ? (
+              {selectedLessonId === -1 ? (
+                <span className="text-purple-700 font-medium">📊 전체 정보 보기</span>
+              ) : selectedSummary ? (
                 <>
                   <span className="text-gray-900">{selectedSummary.chapter}차시</span>
                   <span className="text-gray-600"> · {selectedSummary.lesson_nm}</span>
@@ -716,10 +778,16 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                 <tr>
                   <th className="px-4 py-3 text-left text-sm text-gray-700">학번</th>
                   <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">학습시간</th>
-                  <th className="px-4 py-3 text-center text-sm text-gray-700">진도율</th>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">마지막 학습</th>
-                  <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                  <th className="px-4 py-3 text-left text-sm text-gray-700">총 학습시간</th>
+                  <th className="px-4 py-3 text-center text-sm text-gray-700">
+                    {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm text-gray-700">
+                    {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
+                  </th>
+                  {selectedLessonId !== -1 && (
+                    <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -736,29 +804,39 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                         <div className="flex items-center justify-center gap-2">
                           <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${complete ? 'bg-green-600' : 'bg-blue-600'}`}
+                              className={`h-full rounded-full ${selectedLessonId === -1 ? 'bg-purple-600' : complete ? 'bg-green-600' : 'bg-blue-600'}`}
                               style={{ width: `${ratio}%` }}
                             />
                           </div>
                           <span className="text-sm text-gray-900">{Math.round(ratio)}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{row.last_date_conv || '-'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => openDetail(row)}
-                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                        >
-                          보기
-                        </button>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {selectedLessonId === -1 ? (
+                          <span className={`px-2 py-1 rounded text-xs ${complete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {complete ? '수료' : '미수료'}
+                          </span>
+                        ) : (
+                          row.last_date_conv || '-'
+                        )}
                       </td>
+                      {selectedLessonId !== -1 && (
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => openDetail(row)}
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            보기
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
 
                 {!studentLoading && !studentError && filteredStudents.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                    <td colSpan={selectedLessonId === -1 ? 5 : 6} className="px-4 py-10 text-center text-sm text-gray-500">
                       표시할 수강생이 없습니다.
                     </td>
                   </tr>

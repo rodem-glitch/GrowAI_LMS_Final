@@ -458,6 +458,7 @@ export type TutorProgressStudentRow = {
   name?: string;
   email?: string;
   ratio?: number;
+  total_progress_ratio?: number;
   study_time?: number;
   study_time_conv?: string;
   complete_yn?: 'Y' | 'N';
