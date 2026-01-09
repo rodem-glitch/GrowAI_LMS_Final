@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import kr.polytech.lms.global.vector.service.VectorStoreService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
+import kr.polytech.lms.recocontent.entity.RecoContent;
+import kr.polytech.lms.recocontent.repository.RecoContentRepository;
 import kr.polytech.lms.tutorcontentrecommend.service.dto.TutorContentRecommendRequest;
 import kr.polytech.lms.tutorcontentrecommend.service.dto.TutorContentRecommendResponse;
 import org.springframework.stereotype.Service;
@@ -14,10 +16,15 @@ import org.springframework.stereotype.Service;
 public class TutorContentRecommendService {
 
     private final VectorStoreService vectorStoreService;
+    private final RecoContentRepository recoContentRepository;
 
-    public TutorContentRecommendService(VectorStoreService vectorStoreService) {
+    public TutorContentRecommendService(
+        VectorStoreService vectorStoreService,
+        RecoContentRepository recoContentRepository
+    ) {
         // 왜: 벡터 DB(Qdrant) 검색은 공통 VectorStoreService로 통일해서, 추천 도메인별로 재사용합니다.
         this.vectorStoreService = Objects.requireNonNull(vectorStoreService);
+        this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
     }
 
     public List<TutorContentRecommendResponse> recommendLessons(TutorContentRecommendRequest request) {
@@ -71,10 +78,32 @@ public class TutorContentRecommendService {
         String lessonId = toStringValue(meta.get("lesson_id"));
         Long recoContentId = toLong(meta.get("content_id"));
 
-        String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
-        String category = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
-        String summary = meta.get("summary") != null ? String.valueOf(meta.get("summary")) : null;
-        String keywords = meta.get("keywords") != null ? String.valueOf(meta.get("keywords")) : null;
+        // 왜: 벡터 메타데이터에는 summary가 없을 수 있으므로, DB에서 직접 조회합니다.
+        String title = null;
+        String category = null;
+        String summary = null;
+        String keywords = null;
+
+        if (recoContentId != null) {
+            RecoContent content = recoContentRepository.findById(recoContentId).orElse(null);
+            if (content != null) {
+                title = content.getTitle();
+                category = content.getCategoryNm();
+                summary = content.getSummary();
+                keywords = content.getKeywords();
+                if (lessonId == null) {
+                    lessonId = content.getLessonId();
+                }
+            }
+        }
+
+        // 왜: DB 조회 실패 시 메타데이터에서 fallback
+        if (title == null) {
+            title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
+        }
+        if (category == null) {
+            category = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        }
 
         return new TutorContentRecommendResponse(
             lessonId,
@@ -107,3 +136,4 @@ public class TutorContentRecommendService {
         return s.isBlank() ? null : s;
     }
 }
+

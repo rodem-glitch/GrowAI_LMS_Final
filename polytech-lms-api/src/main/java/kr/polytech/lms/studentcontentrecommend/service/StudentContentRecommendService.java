@@ -9,6 +9,8 @@ import java.util.Objects;
 import java.util.Set;
 import kr.polytech.lms.global.vector.service.VectorStoreService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
+import kr.polytech.lms.recocontent.entity.RecoContent;
+import kr.polytech.lms.recocontent.repository.RecoContentRepository;
 import kr.polytech.lms.studentcontentrecommend.service.dto.StudentHomeRecommendRequest;
 import kr.polytech.lms.studentcontentrecommend.service.dto.StudentSearchRecommendRequest;
 import kr.polytech.lms.studentcontentrecommend.service.dto.StudentVideoRecommendResponse;
@@ -20,12 +22,18 @@ public class StudentContentRecommendService {
 
     private final VectorStoreService vectorStoreService;
     private final JdbcTemplate jdbcTemplate;
+    private final RecoContentRepository recoContentRepository;
 
-    public StudentContentRecommendService(VectorStoreService vectorStoreService, JdbcTemplate jdbcTemplate) {
+    public StudentContentRecommendService(
+        VectorStoreService vectorStoreService,
+        JdbcTemplate jdbcTemplate,
+        RecoContentRepository recoContentRepository
+    ) {
         // 왜: 교수자/학생 모두 같은 벡터 DB(Qdrant)를 쓰므로, 검색 코어(VectorStoreService)는 공통으로 재사용합니다.
         this.vectorStoreService = Objects.requireNonNull(vectorStoreService);
         // 왜: 레거시 LMS DB에서 "수강/시청/완료" 상태를 빠르게 확인해야 해서 JdbcTemplate을 사용합니다.
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
+        this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
     }
 
     public List<StudentVideoRecommendResponse> recommendHome(StudentHomeRecommendRequest request) {
@@ -156,10 +164,32 @@ public class StudentContentRecommendService {
         String lessonId = toStringValue(meta.get("lesson_id"));
         Long recoContentId = toLong(meta.get("content_id"));
 
-        String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
-        String categoryNm = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
-        String summary = meta.get("summary") != null ? String.valueOf(meta.get("summary")) : null;
-        String keywords = meta.get("keywords") != null ? String.valueOf(meta.get("keywords")) : null;
+        // 왜: 벡터 메타데이터에는 summary가 없을 수 있으므로, DB에서 직접 조회합니다.
+        String title = null;
+        String categoryNm = null;
+        String summary = null;
+        String keywords = null;
+
+        if (recoContentId != null) {
+            RecoContent content = recoContentRepository.findById(recoContentId).orElse(null);
+            if (content != null) {
+                title = content.getTitle();
+                categoryNm = content.getCategoryNm();
+                summary = content.getSummary();
+                keywords = content.getKeywords();
+                if (lessonId == null) {
+                    lessonId = content.getLessonId();
+                }
+            }
+        }
+
+        // 왜: DB 조회 실패 시 메타데이터에서 fallback
+        if (title == null) {
+            title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
+        }
+        if (categoryNm == null) {
+            categoryNm = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        }
 
         LessonStudyStatus status = (lessonId == null || lessonId.isBlank()) ? null : statusByLessonId.get(lessonId);
         return new StudentVideoRecommendResponse(
