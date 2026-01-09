@@ -26,6 +26,7 @@ import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
 import { ExamCreateModal } from './ExamCreateModal';
 import { AssignmentCreateModal } from './AssignmentCreateModal';
+import { AssignmentDetailModal } from './AssignmentDetailModal';
 import { HomeworkTaskDetailModal } from './HomeworkTaskDetailModal';
 import { tutorLmsApi, type HaksaCourseKey } from '../api/tutorLmsApi';
 import { buildHaksaCourseKey } from '../utils/haksa';
@@ -33,6 +34,7 @@ import { CurriculumTab } from './courseManagement/CurriculumTab';
 import { StudentsTab } from './courseManagement/StudentsTab';
 import { AttendanceTab } from './courseManagement/AttendanceTab';
 import { downloadCsv } from '../utils/csv';
+
 
 interface CourseManagementProps {
   course: {
@@ -1764,6 +1766,9 @@ function AssignmentManagementTab({ courseId, course }: { courseId: number; cours
   // 왜: 과제 수정 모달 노출 여부와 수정 대상 데이터를 분리해서 관리합니다.
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingHomework, setEditingHomework] = useState<any | null>(null);
+  // 왜: 과제 상세 보기 모달 상태를 관리합니다.
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedHomework, setSelectedHomework] = useState<any | null>(null);
 const courseIdNum = Number(course?.mappedCourseId ?? courseId);
 const isHaksaCourse =
   course?.sourceType === 'haksa' &&
@@ -2036,7 +2041,11 @@ const isHaksaCourse =
             {homeworks.map((assignment) => (
               <div
                 key={assignment.id}
-                className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                className="p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => {
+                  setSelectedHomework(assignment);
+                  setShowDetailModal(true);
+                }}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -2067,14 +2076,20 @@ const isHaksaCourse =
                   
                   <div className="flex gap-1 ml-4">
                     <button
-                      onClick={() => handleEditHomework(assignment)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditHomework(assignment);
+                      }}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="수정"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => handleDeleteHomework(assignment.id, assignment.title)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteHomework(assignment.id, assignment.title);
+                      }}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       title="삭제"
                     >
@@ -2149,6 +2164,21 @@ const isHaksaCourse =
         showWeekSession={showWeekSession}
         weekCount={weekCount}
         initialData={editingHomework || undefined}
+      />
+
+      {/* 과제 상세 보기 모달 */}
+      <AssignmentDetailModal
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedHomework(null);
+        }}
+        onEdit={() => {
+          if (selectedHomework) {
+            handleEditHomework(selectedHomework);
+          }
+        }}
+        assignment={selectedHomework}
       />
     </>
   );
