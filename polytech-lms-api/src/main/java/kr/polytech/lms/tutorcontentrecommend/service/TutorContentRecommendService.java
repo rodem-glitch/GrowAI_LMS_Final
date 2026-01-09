@@ -1,9 +1,11 @@
 package kr.polytech.lms.tutorcontentrecommend.service;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import kr.polytech.lms.global.vector.service.VectorStoreService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
 import kr.polytech.lms.recocontent.entity.RecoContent;
@@ -40,8 +42,9 @@ public class TutorContentRecommendService {
             filterExpression
         );
 
+        Map<Long, RecoContent> contentById = fetchRecoContentsById(results);
         return results.stream()
-            .map(this::toResponse)
+            .map(r -> toResponse(r, contentById))
             .toList();
     }
 
@@ -72,7 +75,7 @@ public class TutorContentRecommendService {
         sb.append(label).append(": ").append(trimmed).append("\n");
     }
 
-    private TutorContentRecommendResponse toResponse(VectorSearchResult result) {
+    private TutorContentRecommendResponse toResponse(VectorSearchResult result, Map<Long, RecoContent> contentById) {
         Map<String, Object> meta = result.metadata() == null ? new HashMap<>() : new HashMap<>(result.metadata());
 
         String lessonId = toStringValue(meta.get("lesson_id"));
@@ -85,7 +88,8 @@ public class TutorContentRecommendService {
         String keywords = null;
 
         if (recoContentId != null) {
-            RecoContent content = recoContentRepository.findById(recoContentId).orElse(null);
+            // 왜: topK가 커져도 DB 조회가 N번 반복되지 않도록, 미리 한 번에 조회한 Map을 사용합니다.
+            RecoContent content = contentById == null ? null : contentById.get(recoContentId);
             if (content != null) {
                 title = content.getTitle();
                 category = content.getCategoryNm();
@@ -117,6 +121,25 @@ public class TutorContentRecommendService {
         );
     }
 
+    private Map<Long, RecoContent> fetchRecoContentsById(List<VectorSearchResult> results) {
+        if (results == null || results.isEmpty()) return Map.of();
+
+        Set<Long> ids = new HashSet<>();
+        for (VectorSearchResult result : results) {
+            if (result == null || result.metadata() == null) continue;
+            Long id = toLong(result.metadata().get("content_id"));
+            if (id != null) ids.add(id);
+        }
+        if (ids.isEmpty()) return Map.of();
+
+        Map<Long, RecoContent> map = new HashMap<>();
+        for (RecoContent content : recoContentRepository.findAllById(ids)) {
+            if (content == null || content.getId() == null) continue;
+            map.put(content.getId(), content);
+        }
+        return map;
+    }
+
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number n) return n.longValue();
@@ -136,4 +159,3 @@ public class TutorContentRecommendService {
         return s.isBlank() ? null : s;
     }
 }
-

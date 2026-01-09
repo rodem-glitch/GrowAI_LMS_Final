@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import kr.polytech.lms.global.vector.config.VectorSearchConfig;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -16,10 +17,13 @@ import org.springframework.stereotype.Service;
 public class VectorStoreService {
 
     private final VectorStore vectorStore;
+    private final VectorSearchConfig vectorSearchConfig;
 
-    public VectorStoreService(VectorStore vectorStore) {
+    public VectorStoreService(VectorStore vectorStore, VectorSearchConfig vectorSearchConfig) {
         // 왜: Qdrant/임베딩 구현체에 묶이지 않고, Spring AI의 VectorStore 추상화만 의존해 재사용성을 높입니다.
         this.vectorStore = Objects.requireNonNull(vectorStore);
+        // 왜: topK 상한/튜닝값을 코드가 아니라 설정으로 조정할 수 있어야 운영에서 실험이 쉽습니다.
+        this.vectorSearchConfig = Objects.requireNonNull(vectorSearchConfig);
     }
 
     public void upsertText(String text, Map<String, Object> metadata) {
@@ -76,7 +80,8 @@ public class VectorStoreService {
     ) {
         if (query == null || query.isBlank()) return List.of();
 
-        int safeTopK = Math.max(1, Math.min(topK, 50));
+        int maxTopK = vectorSearchConfig.maxTopKOrDefault();
+        int safeTopK = Math.max(1, Math.min(topK, maxTopK));
         double safeThreshold = Math.max(0.0, Math.min(similarityThreshold, 1.0));
 
         SearchRequest.Builder builder = SearchRequest.builder()
