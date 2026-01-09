@@ -1060,6 +1060,20 @@ export const tutorLmsApi = {
     });
   },
 
+  // 왜: 교수 차시관리에서 외부링크(URL)를 직접 입력하여 레슨으로 등록하기 위함입니다.
+  async upsertExternalLinkLesson(payload: { url: string; title: string; totalTime?: number }) {
+    const body = new URLSearchParams();
+    body.set('url', payload.url);
+    body.set('title', payload.title);
+    if (payload.totalTime !== undefined) body.set('total_time', String(payload.totalTime));
+
+    return requestJson<number>(`/tutor_lms/api/external_link_lesson_upsert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
 
   // ----- 강의목차(curriculum_*) -----
   async getCurriculum(params: { courseId: number }) {

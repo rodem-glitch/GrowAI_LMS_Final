@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, Check } from 'lucide-react';
+import { X, Search, Check, Link } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
@@ -47,7 +47,13 @@ export function ContentLibraryModal({
   const hideRecommendTab = true;
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [activeTab, setActiveTab] = useState<'recommend' | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<'recommend' | 'all' | 'external'>('all');
+
+  // 왜: 외부링크 탭을 위한 입력 상태가 필요합니다.
+  const [externalUrl, setExternalUrl] = useState('');
+  const [externalTitle, setExternalTitle] = useState('');
+  const [externalTime, setExternalTime] = useState<number | ''>('');
+  const [externalAdding, setExternalAdding] = useState(false);
 
   const [contents, setContents] = useState<Content[]>([]);
   const [categories, setCategories] = useState<{ key: string; name: string }[]>([]);
@@ -80,6 +86,10 @@ export function ContentLibraryModal({
     setRecommendationsRaw([]);
     setRecommendCacheKey('');
     setSelectedIds(new Set());
+    // 왜: 외부링크 입력 상태도 초기화합니다.
+    setExternalUrl('');
+    setExternalTitle('');
+    setExternalTime('');
   }, [isOpen]);
 
   React.useEffect(() => {
@@ -382,6 +392,58 @@ export function ContentLibraryModal({
     });
   };
 
+  // 왜: 외부링크 URL을 직접 입력하여 레슨으로 추가하기 위함입니다.
+  const handleAddExternalLink = async () => {
+    if (!externalUrl.trim()) {
+      setErrorMessage('URL을 입력해주세요.');
+      return;
+    }
+    if (!externalTitle.trim()) {
+      setErrorMessage('강의명을 입력해주세요.');
+      return;
+    }
+    if (!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://')) {
+      setErrorMessage('URL은 http:// 또는 https://로 시작해야 합니다.');
+      return;
+    }
+
+    try {
+      setExternalAdding(true);
+      setErrorMessage(null);
+
+      const res = await tutorLmsApi.upsertExternalLinkLesson({
+        url: externalUrl.trim(),
+        title: externalTitle.trim(),
+        totalTime: typeof externalTime === 'number' ? externalTime : undefined,
+      });
+
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+      const lessonId = Number(res.rst_data ?? 0);
+      const content: Content = {
+        id: String(lessonId),
+        mediaKey: externalUrl.trim(),
+        title: externalTitle.trim(),
+        description: '',
+        category: '외부링크',
+        thumbnail: '',
+        totalTime: typeof externalTime === 'number' ? externalTime : 0,
+        lessonId,
+      };
+
+      if (onMultiSelect) {
+        onMultiSelect([content]);
+      } else {
+        onSelect(content);
+      }
+      onClose();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : '외부링크 추가 중 오류가 발생했습니다.');
+    } finally {
+      setExternalAdding(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -419,11 +481,22 @@ export function ContentLibraryModal({
               >
                 전체
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('external')}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  activeTab === 'external' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Link className="w-4 h-4" />
+                외부링크
+              </button>
             </div>
 
             <div className="text-sm text-gray-600">총: {displayedTotal}건</div>
           </div>
 
+          {activeTab !== 'external' && (
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -450,7 +523,9 @@ export function ContentLibraryModal({
               </select>
             )}
           </div>
+          )}
 
+          {activeTab !== 'external' && (
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-gray-600">
               총: <span className="text-blue-600 font-medium">{totalCount}</span>건
@@ -470,6 +545,7 @@ export function ContentLibraryModal({
               </button>
             )}
           </div>
+          )}
 
           {errorMessage && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -477,13 +553,70 @@ export function ContentLibraryModal({
             </div>
           )}
 
-          {(loading || recommendLoading) && (
+          {/* 외부링크 탭: 입력 폼 UI */}
+          {activeTab === 'external' && (
+            <div className="border border-gray-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">외부 URL로 콘텐츠 추가</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={externalUrl}
+                    onChange={(e) => setExternalUrl(e.target.value)}
+                    placeholder="https://example.com/video"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">YouTube, Vimeo 등 외부 영상 URL을 입력하세요</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    강의명 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={externalTitle}
+                    onChange={(e) => setExternalTitle(e.target.value)}
+                    placeholder="강의 제목을 입력하세요"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">학습시간 (분)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={externalTime}
+                    onChange={(e) => setExternalTime(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="예: 30"
+                    className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAddExternalLink}
+                    disabled={externalAdding}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    <Link className="w-4 h-4" />
+                    {externalAdding ? '추가 중...' : '외부링크 추가'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 전체/추천 탭: 기존 목록 UI */}
+          {activeTab !== 'external' && (loading || recommendLoading) && (
             <div className="py-12 text-center text-gray-500">
               <p>불러오는 중...</p>
             </div>
           )}
 
-          {!loading && !recommendLoading && (
+          {activeTab !== 'external' && !loading && !recommendLoading && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
