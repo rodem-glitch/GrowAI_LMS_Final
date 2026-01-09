@@ -17,17 +17,22 @@ public record GeminiProperties(
 ) {
     public GeminiProperties {
         baseUrl = normalizeBaseUrl(baseUrl, "https://generativelanguage.googleapis.com/v1beta");
-        model = (model == null || model.isBlank()) ? "gemini-2.0-flash-exp" : model.trim();
+        model = (model == null || model.isBlank()) ? "gemini-2.0-flash" : model.trim();
         temperature = temperature == null ? 0.2d : temperature;
         maxOutputTokens = maxOutputTokens == null ? 2048 : maxOutputTokens;
         httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;
     }
 
     private static String normalizeBaseUrl(String baseUrl, String defaultValue) {
-        if (baseUrl == null || baseUrl.isBlank()) return defaultValue;
-        String trimmed = baseUrl.trim();
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
-        return "https://" + trimmed;
+        String url = (baseUrl == null || baseUrl.isBlank()) ? defaultValue : baseUrl.trim();
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            url = "https://" + url;
+        }
+        // 트레일링 슬래시 제거 (ex: .../v1beta/ -> .../v1beta)
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 }
 

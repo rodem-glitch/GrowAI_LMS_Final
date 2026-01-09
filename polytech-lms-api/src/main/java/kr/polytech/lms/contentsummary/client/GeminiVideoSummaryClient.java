@@ -90,6 +90,7 @@ public class GeminiVideoSummaryClient {
             + ":generateContent?key="
             + urlEncode(apiKey.trim()));
 
+        log.info("Gemini 요약 요청 URI: {}", uri.toString().replace(apiKey, "HIDDEN_KEY"));
         String prompt = buildVideoSummaryPrompt(safeTitle);
 
         Map<String, Object> body = new LinkedHashMap<>();
