@@ -70,100 +70,205 @@ public class StatisticsAiV3Service {
         Map<String, Object> context = request.context() != null ? request.context() : Map.of();
 
         try {
-            // 1. 질문 키워드 분석
-            QueryIntent intent = analyzeIntent(prompt);
+            // 1. LLM에게 필요한 데이터 소스 계획 요청
+            List<PlanItem> plan = planData(prompt, context);
 
-            // 2. 관련 데이터 조회
-            DataBundle data = fetchRelevantData(intent, context);
+            // 2. 계획에 따라 데이터 조회
+            DataBundle data = fetchDataBasedOnPlan(plan);
 
             // 3. LLM에게 데이터와 질문 전달하여 분석 요청
-            String modelPrompt = buildPrompt(prompt, data, intent);
+            String modelPrompt = buildPrompt(prompt, data);
             String modelResponse = geminiClient.generateText(modelPrompt);
 
             // 4. LLM 응답 파싱하여 응답 생성
-            return parseResponse(modelResponse, data, intent);
+            return parseResponse(modelResponse, data);
 
         } catch (Exception e) {
             log.error("AI 통계 v3 처리 실패: prompt={}", safeText(prompt, 100), e);
-            // 왜: 실패해도 빈 화면 대신 기본 데이터라도 보여줌
+            // 실패 시에도 기본 데이터로 차트 그리기 시도
             return buildFallbackWithData(prompt, context);
         }
     }
 
-    // ========== 질문 의도 분석 ==========
+    // ========== 프롬프트 빌드 ==========
 
-    private QueryIntent analyzeIntent(String prompt) {
-        String lower = prompt.toLowerCase(Locale.KOREA);
+    private String buildPrompt(String question, DataBundle data) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("""
+            당신은 한국폴리텍대학의 AI 통계 분석가입니다.
+            
+            [핵심 규칙]
+            - 반드시 JSON만 응답하세요. 설명이나 마크다운 금지.
+            - 절대 되묻지 마세요. 주어진 데이터로 최선의 분석을 하세요.
+            - 숫자를 조작하거나 만들어내지 마세요. 주어진 데이터만 사용하세요.
+            - 사용자에게 친근하고 인사이트 있는 분석을 제공하세요.
+            
+            [출력 JSON 형식]
+            {
+               "summary": "분석 결과 요약 (2-3문장)",
+               "insight": "핵심 인사이트 (1문장)",
+               "chartType": "line 또는 bar",
+               "chartTitle": "차트 제목",
+               "labels": ["라벨1", "라벨2", ...],
+               "datasets": [
+                   {"label": "데이터셋명", "values": [숫자1, 숫자2, ...]}
+               ],
+               "tableHeaders": ["헤더1", "헤더2"],
+               "tableRows": [["값1", "값2"], ...]
+            }
+            
+            """);
+
+        // 데이터 추가
+        sb.append("[현재 보유 데이터]\n");
         
-        boolean wantsEmployment = containsAny(lower, "취업", "취업률", "employment");
-        boolean wantsAdmission = containsAny(lower, "입학", "충원", "충원률", "정원");
-        boolean wantsIndustry = containsAny(lower, "산업", "it", "ict", "종사자", "사업체", "제조", "서비스");
-        boolean wantsPopulation = containsAny(lower, "인구", "연령", "성별", "20대", "30대");
-        boolean wantsCorrelation = containsAny(lower, "상관", "관계", "비교", "vs");
-        boolean wantsTrend = containsAny(lower, "추이", "변화", "트렌드", "추세");
-        boolean wantsTop = containsAny(lower, "top", "순위", "랭킹", "상위");
-        boolean wantsInternal = containsAny(lower, "우리", "학교", "내부", "캠퍼스");
-
-        // 어떤 것도 매칭 안 되면 기본으로 취업률
-        if (!wantsEmployment && !wantsAdmission && !wantsIndustry && !wantsPopulation) {
-            wantsEmployment = true;
-            wantsInternal = true;
+        boolean hasData = false;
+        
+        if (data.employmentTop != null && !data.employmentTop.isEmpty()) {
+            sb.append("- 취업률 Top 10:\n");
+            for (var r : data.employmentTop) {
+                sb.append("  - ").append(r.dept()).append(": ").append(r.rate()).append("%\n");
+            }
+            hasData = true;
         }
 
-        return new QueryIntent(
-                wantsEmployment, wantsAdmission, wantsIndustry, wantsPopulation,
-                wantsCorrelation, wantsTrend, wantsTop, wantsInternal
-        );
+        if (data.employmentSeries != null && !data.employmentSeries.isEmpty()) {
+            sb.append("- 연도별 평균 취업률:\n");
+            for (var entry : data.employmentSeries.entrySet()) {
+                sb.append("  - ").append(entry.getKey()).append("년: ").append(entry.getValue()).append("%\n");
+            }
+            hasData = true;
+        }
+
+        if (data.admissionTop != null && !data.admissionTop.isEmpty()) {
+            sb.append("- 입학충원률 Top 10:\n");
+            for (var r : data.admissionTop) {
+                sb.append("  - ").append(r.dept()).append(": ").append(r.rate()).append("%\n");
+            }
+            hasData = true;
+        }
+
+        if (data.industryData != null && !data.industryData.isEmpty()) {
+            sb.append("- 서울 ICT 종사자 수:\n");
+            for (var entry : data.industryData.entrySet()) {
+                sb.append("  - ").append(entry.getKey()).append("년: ").append(String.format("%,d", entry.getValue())).append("명\n");
+            }
+            hasData = true;
+        }
+        
+        if (!hasData) {
+            sb.append("(관련된 데이터가 없습니다. 일반적인 답변을 해주세요.)\n");
+        }
+
+        sb.append("\n[사용자 질문]\n").append(question).append("\n");
+
+        return sb.toString();
     }
 
-    // ========== 데이터 조회 ==========
+    // ========== 데이터 플래닝 (LLM) ==========
 
-    private DataBundle fetchRelevantData(QueryIntent intent, Map<String, Object> context) {
+    private List<PlanItem> planData(String prompt, Map<String, Object> context) {
+        // 1. 프롬프트 구성: 가용 데이터 소스 설명
+        String planningPrompt = """
+                당신은 통계 데이터 검색 플래너입니다.
+                사용자의 질문을 분석하여, 답변에 필요한 데이터 소스를 결정해서 JSON 배열로 반환하세요.
+                
+                [가용 데이터 소스]
+                1. "EMPLOYMENT_TOP": 학과별 취업률 상위 10개 (파라미터: campus)
+                   - 질문 예: "취업 잘 되는 과", "취업률 순위", "인기 학과"
+                2. "EMPLOYMENT_TREND": 학과/학교 전체 취업률 연도별 추이 4년치 (파라미터: campus)
+                   - 질문 예: "취업률 변화", "취업률 추세", "작년이랑 비교"
+                3. "ADMISSION_TOP": 학과별 입학충원률 상위 10개 (파라미터: campus)
+                   - 질문 예: "충원 잘 되는 곳", "인기 있는 과", "경쟁률"
+                4. "INDUSTRY_ICT": 서울지역 ICT 산업 종사자/사업체 수 추이 (파라미터: 없음)
+                   - 질문 예: "IT 산업 전망", "개발자 수요", "ICT 기업"
+                   
+                [규칙]
+                - 질문이 모호하면, 가장 연관성 높은 데이터를 추측해서 포함하세요. (예: "우리 학교 어때?" -> 취업률, 충원률 모두 포함)
+                - 결과는 반드시 JSON 배열만 출력하세요. 마크다운이나 설명 금지.
+                
+                [출력 형식 예시]
+                [{"type":"EMPLOYMENT_TOP","campus":"서울정수"},{"type":"INDUSTRY_ICT"}]
+                
+                [사용자 질문]
+                """ + prompt;
+
+        try {
+            String response = geminiClient.generateText(planningPrompt);
+            return parsePlan(response, context);
+        } catch (Exception e) {
+            log.warn("데이터 플래닝 실패, 기본값 사용: {}", e.getMessage());
+            // 실패 시 기본 데이터셋 반환
+            return List.of(
+                    new PlanItem("EMPLOYMENT_TOP", "서울정수"),
+                    new PlanItem("EMPLOYMENT_TREND", "서울정수")
+            );
+        }
+    }
+
+    private List<PlanItem> parsePlan(String response, Map<String, Object> context) {
+        List<PlanItem> plans = new ArrayList<>();
+        try {
+            String json = extractJson(response);
+            JsonNode root = objectMapper.readTree(json);
+            if (root.isArray()) {
+                for (JsonNode node : root) {
+                    String type = node.path("type").asText();
+                    String campus = node.path("campus").asText(contextString(context, "campus"));
+                    // 컨텍스트에도 없고 LLM도 안 줬으면 기본값
+                    if (!StringUtils.hasText(campus)) {
+                        campus = "서울정수";
+                    }
+                    plans.add(new PlanItem(type, campus));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("플랜 파싱 오류: {}", e.getMessage());
+        }
+        
+        // 파싱 실패 또는 빈 결과면 기본값
+        if (plans.isEmpty()) {
+            plans.add(new PlanItem("EMPLOYMENT_TOP", "서울정수"));
+            plans.add(new PlanItem("EMPLOYMENT_TREND", "서울정수"));
+        }
+        return plans;
+    }
+
+    // ========== 데이터 조회 (Generic) ==========
+
+    private DataBundle fetchDataBasedOnPlan(List<PlanItem> plans) {
         DataBundle data = new DataBundle();
         int currentYear = Year.now().getValue();
         List<Integer> defaultYears = List.of(currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1);
 
-        String campus = contextString(context, "campus");
-        // 왜: campus가 없으면 기본값으로 "서울정수"를 사용합니다.
-        //     사용자가 별도로 지정하지 않아도 데이터를 보여주기 위함입니다.
-        if (!StringUtils.hasText(campus)) {
-            campus = "서울정수";
-        }
-
-        // 내부 취업률 데이터
-        if (intent.wantsEmployment || intent.wantsInternal) {
+        for (PlanItem item : plans) {
             try {
-                data.employmentTop = internalStatisticsService.getTopEmploymentRates(campus, 10);
-                data.employmentSeries = loadInternalEmploymentSeries(campus, defaultYears);
-            } catch (Exception e) {
-                log.debug("취업률 데이터 조회 실패({}): {}", campus, e.getMessage());
-                // 왜: 첫 캠퍼스가 없으면 다른 캠퍼스 시도
-                try {
-                    data.employmentSeries = loadInternalEmploymentSeries(null, defaultYears);
-                } catch (Exception e2) {
-                    log.debug("전체 취업률 시계열 조회도 실패: {}", e2.getMessage());
+                switch (item.type) {
+                    case "EMPLOYMENT_TOP" -> {
+                        if (data.employmentTop == null) {
+                            data.employmentTop = internalStatisticsService.getTopEmploymentRates(item.campus, 10);
+                        }
+                    }
+                    case "EMPLOYMENT_TREND" -> {
+                        if (data.employmentSeries == null) {
+                            data.employmentSeries = loadInternalEmploymentSeries(item.campus, defaultYears);
+                        }
+                    }
+                    case "ADMISSION_TOP" -> {
+                        if (data.admissionTop == null) {
+                            data.admissionTop = internalStatisticsService.getTopAdmissionFillRates(item.campus, 10);
+                        }
+                    }
+                    case "INDUSTRY_ICT" -> {
+                        if (data.industryData == null) {
+                            data.industryData = loadIndustryData("11", defaultYears); // 서울(11) 고정
+                        }
+                    }
                 }
-            }
-        }
-
-        // 입학충원률 데이터
-        if (intent.wantsAdmission) {
-            try {
-                data.admissionTop = internalStatisticsService.getTopAdmissionFillRates(campus, 10);
             } catch (Exception e) {
-                log.debug("입학충원률 데이터 조회 실패: {}", e.getMessage());
+                log.debug("데이터 로딩 실패 ({}): {}", item.type, e.getMessage());
             }
         }
-
-        // 산업 데이터 (SGIS)
-        if (intent.wantsIndustry || intent.wantsCorrelation) {
-            try {
-                data.industryData = loadIndustryData("11", defaultYears);
-            } catch (Exception e) {
-                log.debug("산업 데이터 조회 실패: {}", e.getMessage());
-            }
-        }
-
         return data;
     }
 
@@ -171,11 +276,9 @@ public class StatisticsAiV3Service {
         Map<Integer, Double> result = new LinkedHashMap<>();
         for (Integer year : years) {
             try {
-                // 왜: InternalStatisticsService.getEmploymentStatsForYear(year)를 사용하여 연도별 취업률 조회
                 List<InternalStatisticsService.EmploymentStat> stats = 
                         internalStatisticsService.getEmploymentStatsForYear(year);
                 if (stats != null && !stats.isEmpty()) {
-                    // 캠퍼스 필터링 (campus가 null이면 전체)
                     var filtered = stats.stream();
                     if (StringUtils.hasText(campus)) {
                         filtered = filtered.filter(s -> campus.equals(s.campus()));
@@ -282,7 +385,7 @@ public class StatisticsAiV3Service {
 
     // ========== 응답 파싱 ==========
 
-    private StatisticsAiQueryResponse parseResponse(String modelResponse, DataBundle data, QueryIntent intent) {
+    private StatisticsAiQueryResponse parseResponse(String modelResponse, DataBundle data) {
         try {
             String json = extractJson(modelResponse);
             JsonNode node = objectMapper.readTree(json);
@@ -306,7 +409,7 @@ public class StatisticsAiV3Service {
 
             // 차트가 비어있으면 기본 데이터로 채움
             if (labels.isEmpty() || datasets.isEmpty()) {
-                return buildChartFromData(data, intent, summary, insight);
+                return buildChartFromData(data, summary, insight);
             }
 
             StatisticsAiQueryResponse.ChartSpec chart = new StatisticsAiQueryResponse.ChartSpec(
@@ -349,13 +452,13 @@ public class StatisticsAiV3Service {
 
         } catch (Exception e) {
             log.warn("LLM 응답 파싱 실패, 기본 차트로 대체: {}", e.getMessage());
-            return buildChartFromData(data, intent, "데이터를 분석했습니다.", null);
+            return buildChartFromData(data, "데이터를 분석했습니다.", null);
         }
     }
 
     // ========== 폴백 및 기본 응답 ==========
 
-    private StatisticsAiQueryResponse buildChartFromData(DataBundle data, QueryIntent intent, String summary, String insight) {
+    private StatisticsAiQueryResponse buildChartFromData(DataBundle data, String summary, String insight) {
         List<StatisticsAiQueryResponse.ChartSpec> charts = new ArrayList<>();
         StatisticsAiQueryResponse.TableSpec table = null;
 
@@ -390,7 +493,7 @@ public class StatisticsAiV3Service {
         }
 
         // 입학충원률 차트
-        if (data.admissionTop != null && !data.admissionTop.isEmpty() && intent.wantsAdmission) {
+        if (data.admissionTop != null && !data.admissionTop.isEmpty()) {
             List<String> labels = data.admissionTop.stream().map(r -> r.dept()).toList();
             List<Double> values = data.admissionTop.stream().map(r -> r.rate()).toList();
             
@@ -402,7 +505,7 @@ public class StatisticsAiV3Service {
         }
 
         // 산업 데이터 차트
-        if (data.industryData != null && !data.industryData.isEmpty() && intent.wantsIndustry) {
+        if (data.industryData != null && !data.industryData.isEmpty()) {
             List<String> labels = data.industryData.keySet().stream().map(String::valueOf).toList();
             List<Double> values = data.industryData.values().stream().map(Long::doubleValue).toList();
             
@@ -442,17 +545,18 @@ public class StatisticsAiV3Service {
     }
 
     private StatisticsAiQueryResponse buildFallbackWithData(String prompt, Map<String, Object> context) {
-        QueryIntent intent = analyzeIntent(prompt);
-        DataBundle data = fetchRelevantData(intent, context);
+        // 폴백 시에도 플래닝 시도 (실패 시 기본값 사용됨)
+        List<PlanItem> plan = planData(prompt, context);
+        DataBundle data = fetchDataBasedOnPlan(plan);
         
         // 왜: 폴백 시에도 데이터 기반으로 구체적인 요약을 생성합니다.
-        String summary = buildAutoSummary(data, intent);
-        String insight = buildAutoInsight(data, intent);
+        String summary = buildAutoSummary(data);
+        String insight = buildAutoInsight(data);
         
-        return buildChartFromData(data, intent, summary, insight);
+        return buildChartFromData(data, summary, insight);
     }
     
-    private String buildAutoSummary(DataBundle data, QueryIntent intent) {
+    private String buildAutoSummary(DataBundle data) {
         StringBuilder sb = new StringBuilder();
         
         if (data.employmentTop != null && !data.employmentTop.isEmpty()) {
@@ -472,7 +576,7 @@ public class StatisticsAiV3Service {
         return sb.toString();
     }
     
-    private String buildAutoInsight(DataBundle data, QueryIntent intent) {
+    private String buildAutoInsight(DataBundle data) {
         if (data.employmentTop != null && data.employmentTop.size() >= 3) {
             long count100 = data.employmentTop.stream().filter(r -> r.rate() >= 100.0).count();
             if (count100 > 0) {
@@ -560,16 +664,7 @@ public class StatisticsAiV3Service {
 
     // ========== 내부 클래스 ==========
 
-    private record QueryIntent(
-            boolean wantsEmployment,
-            boolean wantsAdmission,
-            boolean wantsIndustry,
-            boolean wantsPopulation,
-            boolean wantsCorrelation,
-            boolean wantsTrend,
-            boolean wantsTop,
-            boolean wantsInternal
-    ) {}
+    private record PlanItem(String type, String campus) {}
 
     private static class DataBundle {
         List<InternalStatisticsService.DepartmentRate> employmentTop;
