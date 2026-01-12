@@ -79,7 +79,7 @@ if(!"".equals(qs)) qs = "?" + qs;
 
 if(!isMobile) {
 	response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
-	response.setHeader("Location", request.getContextPath() + "/main/index.jsp" + qs);
+	response.setHeader("Location", request.getContextPath() + "/mypage/new_main/index.jsp" + qs);
 	//response.sendRedirect("main/index.jsp" + qs);
 } else {
 	response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);

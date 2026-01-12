@@ -152,6 +152,9 @@ try {
 			if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
 		} catch(Exception ignore) {}
 
+		KollusMediaDao kollusMedia = new KollusMediaDao();
+		HashMap<String, String> thumbCache = new HashMap<String, String>();
+
 		while(recoRows.next()) {
 			String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
 			if("".equals(lessonId)) continue;
@@ -162,16 +165,30 @@ try {
 			recoVideoList.put("category_nm", recoRows.s("categoryNm"));
 			recoVideoList.put("score", recoRows.s("score"));
 
-			// 왜: 콜러스 외부 영상은 콜러스 플레이어로 재생합니다.
-			String playUrl = kollus.getPlayUrl(lessonId, "");
-			if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
+			// 왜: 학생도 교수자처럼 작은 팝업으로 미리보기 재생이 필요합니다.
+			String playUrl = "/kollus/preview.jsp?key=" + lessonId;
 			recoVideoList.put("play_url", playUrl);
 
 			// 왜: 외부 영상은 시간 정보가 없으므로 빈 값
 			recoVideoList.put("duration_conv", "");
 
-			// 왜: 썸네일은 기본 이미지 사용 (외부 콜러스 썸네일 별도 조회 가능하나 생략)
-			recoVideoList.put("thumbnail", "/html/images/common/noimage_course.gif");
+			// 왜: 교수자 LMS와 동일하게 TB_KOLLUS_MEDIA.snapshot_url을 썸네일로 사용합니다.
+			String thumbnail = thumbCache.get(lessonId);
+			if(thumbnail == null) {
+				String found = "";
+				DataSet minfo = kollusMedia.find(
+					"site_id = " + siteId + " AND media_content_key = ?",
+					new String[] { lessonId }
+				);
+				if(minfo.next()) {
+					found = minfo.s("snapshot_url");
+				}
+
+				if("".equals(found)) found = "/html/images/common/noimage_course.gif";
+				thumbCache.put(lessonId, found);
+				thumbnail = found;
+			}
+			recoVideoList.put("thumbnail", thumbnail);
 		}
 	}
 } catch(Exception ignore) {

@@ -26,6 +26,9 @@ import org.springframework.stereotype.Service;
 public class StudentContentRecommendService {
 
     private static final Pattern TOKEN_SPLIT_PATTERN = Pattern.compile("[\\s\\p{Punct}]+");
+    // 왜: 임시 테스트에서는 lessonId(영상키) 중복이 많아, 중복 제거를 끄고 결과를 더 넓게 보이게 합니다.
+    // - 원복할 때는 true로만 바꾸면 됩니다.
+    private static final boolean ENABLE_RECO_DEDUPE = false;
 
     private final VectorStoreService vectorStoreService;
     private final JdbcTemplate jdbcTemplate;
@@ -234,6 +237,10 @@ public class StudentContentRecommendService {
     }
 
     private List<VectorSearchResult> mergeAndDedupeResults(List<VectorSearchResult> first, List<VectorSearchResult> second) {
+        if (!ENABLE_RECO_DEDUPE) {
+            // 왜: 임시 테스트에서는 중복 제거를 하지 않고 그대로 합쳐 보여줍니다.
+            return concat(first, second);
+        }
         List<VectorSearchResult> out = new ArrayList<>();
         Set<String> seenKeys = new HashSet<>();
 
@@ -412,8 +419,10 @@ public class StudentContentRecommendService {
 
             // 왜: 임시 데이터(lesson_id 없는 문서)도 존재할 수 있으니, 그 경우는 그냥 통과시킵니다.
             if (lessonId != null) {
-                // 왜: 같은 레슨이 중복으로 내려오면 UX가 나빠서, 첫 번째만 남깁니다.
-                if (!seenLessonIds.add(lessonId)) continue;
+                if (ENABLE_RECO_DEDUPE) {
+                    // 왜: 같은 레슨이 중복으로 내려오면 UX가 나빠서, 첫 번째만 남깁니다.
+                    if (!seenLessonIds.add(lessonId)) continue;
+                }
 
                 LessonStudyStatus status = statusByLessonId.get(lessonId);
                 if (excludeEnrolled && status != null && Boolean.TRUE.equals(status.enrolled())) continue;

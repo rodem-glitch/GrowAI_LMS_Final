@@ -85,7 +85,7 @@
 									<tr>
 										<td class="course_image">
 											<!--@if(courses.is_reco_video)-->
-											<a href="{{courses.play_url}}" target="_blank" rel="noopener">
+											<a href="javascript:OpenWindowr('{{courses.play_url}}', 'RECO_VIEWER', 1000, 700);">
 												<img src="{{courses.course_file_url}}" onerror="ImageError(this, '/html/images/common/noimage_course.gif');" alt="{{courses.course_nm}}" />
 											</a>
 											<!--/if(courses.is_reco_video)-->
@@ -99,7 +99,7 @@
 											<div class="info_t">
 												<em>
 													<!--@if(courses.is_reco_video)-->
-													<a href="{{courses.play_url}}" target="_blank" rel="noopener">
+													<a href="javascript:OpenWindowr('{{courses.play_url}}', 'RECO_VIEWER', 1000, 700);">
 														<!--@if(courses.category_nm)--><span class="label gray">{{courses.category_nm}}</span><!--/if(courses.category_nm)-->
 														<span class="label">{{courses.onoff_type_conv}}</span>
 														{{courses.course_nm_conv}}

@@ -39,7 +39,7 @@
 									<tr>
 										<td class="course_image">
 											<!--@if(list.is_reco_video)-->
-											<a href="{{list.play_url}}" target="_blank" rel="noopener">
+											<a href="javascript:OpenWindowr('{{list.play_url}}', 'RECO_VIEWER', 1000, 700);">
 												<img src="{{list.course_file_url}}" onerror="ImageError(this, '/html/images/common/noimage_course.gif');" alt="{{list.course_nm}}" />
 											</a>
 											<!--/if(list.is_reco_video)-->
@@ -53,7 +53,7 @@
 											<div class="info_t">
 												<em>
 													<!--@if(list.is_reco_video)-->
-													<a href="{{list.play_url}}" target="_blank" rel="noopener">
+													<a href="javascript:OpenWindowr('{{list.play_url}}', 'RECO_VIEWER', 1000, 700);">
 														<!--@if(list.category_nm)--><span class="label gray">{{list.category_nm}}</span><!--/if(list.category_nm)-->
 														<span class="label">{{list.onoff_type_conv}}</span>
 														{{list.course_nm_conv}}
