@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 public class ContentSummaryService {
 
     private static final Logger log = LoggerFactory.getLogger(ContentSummaryService.class);
+    private static final int VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES = 2;
 
     private final KollusApiClient kollusApiClient;
     private final KollusMediaDownloader kollusMediaDownloader;
@@ -276,7 +277,19 @@ public class ContentSummaryService {
             String title = safeTitle(transcript.getTitle());
             int targetSummaryLength = computeTargetSummaryLength(downloadInfo.totalTimeSeconds());
             log.info("요약 목표 길이 계산: mediaKey={}, totalTimeSeconds={}, targetSummaryLength={}", mediaKey, downloadInfo.totalTimeSeconds(), targetSummaryLength);
-            RecoContentSummaryDraft draft = geminiVideoSummaryClient.uploadAndSummarize(videoFile, title, targetSummaryLength);
+            RecoContentSummaryDraft draft = summarizeVideoWithRetries(mediaKey, title, videoFile, targetSummaryLength);
+
+            // 왜: JSON 파싱이 깨진 경우 fallback(느슨한 파싱/재정렬)로도 summary가 너무 짧게 나올 수 있습니다.
+            // 이 경우에는 "텍스트 재정렬"이 아니라, 영상을 포함해서 다시 요약해야(비용↑) 길이가 복구될 가능성이 큽니다.
+            // 그래도 2회 재시도 후에도 기준 미달이면 다음 영상으로 넘어가기 위해 "키만 남기는 더미 row"를 저장합니다.
+            if (isSummaryTooShort(draft == null ? null : draft.summary(), targetSummaryLength)) {
+                int attempts = 1 + VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
+                log.warn("요약이 너무 짧아 {}회 시도 후 포기합니다. mediaKey={}, targetSummaryLength={}", attempts, mediaKey, targetSummaryLength);
+                saveEmptyRecoContent(mediaKey, title);
+                transcript.markSummaryDone();
+                transcriptRepository.save(transcript);
+                return true;
+            }
 
             log.info("Gemini 영상 요약 완료: {} - 카테고리={}", mediaKey, draft.categoryNm());
 
@@ -309,6 +322,91 @@ public class ContentSummaryService {
                 safeDeleteDir(workDir);
             }
         }
+    }
+
+    private RecoContentSummaryDraft summarizeVideoWithRetries(
+        String mediaKey,
+        String title,
+        Path videoFile,
+        int targetSummaryLength
+    ) throws Exception {
+        // 왜: uploadAndSummarize()를 그대로 재시도하면 매번 파일 업로드까지 다시 하게 되어 비용/시간이 크게 늘어납니다.
+        // 업로드는 1회만 하고(fileUri 재사용), 요약(generateContent)만 최대 3회(최초 1회 + 재시도 2회) 수행합니다.
+        String mimeType = "video/mp4"; // 현재 다운로드 파일명은 input.mp4로 고정입니다.
+        String fileUri = geminiVideoSummaryClient.uploadVideo(videoFile);
+
+        int maxAdditionalRetries = VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
+        int totalAttempts = 1 + maxAdditionalRetries;
+
+        RecoContentSummaryDraft last = null;
+        for (int attempt = 1; attempt <= totalAttempts; attempt++) {
+            last = geminiVideoSummaryClient.summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
+
+            if (!isSummaryTooShort(last == null ? null : last.summary(), targetSummaryLength)) {
+                if (attempt > 1) {
+                    log.info("요약 재시도 성공: mediaKey={}, attempt={}/{}", mediaKey, attempt, totalAttempts);
+                }
+                return last;
+            }
+
+            int len = codePointLength(last == null ? null : last.summary());
+            int minLen = minAcceptableSummaryLength(targetSummaryLength);
+            if (attempt < totalAttempts) {
+                log.warn("요약이 너무 짧아 재요약합니다. mediaKey={}, attempt={}/{}, summaryLength={}, minAcceptableLength={}, targetSummaryLength={}",
+                    mediaKey, attempt, totalAttempts, len, minLen, targetSummaryLength);
+            } else {
+                log.warn("요약이 너무 짧아 {}회 시도 후에도 기준 미달입니다. mediaKey={}, summaryLength={}, minAcceptableLength={}, targetSummaryLength={}",
+                    totalAttempts, mediaKey, len, minLen, targetSummaryLength);
+            }
+        }
+
+        return last;
+    }
+
+    private RecoContent saveEmptyRecoContent(String mediaKey, String title) {
+        // 왜: 요약이 기준 길이를 못 맞추더라도(너무 짧음), 같은 영상에 대해 무한 재요약을 반복하면 비용이 폭증합니다.
+        // lesson_id만 남겨두면 이후 배치/워커가 해당 영상을 "이미 처리됨"으로 보고 건너뛸 수 있습니다.
+        String safeMediaKey = mediaKey == null ? "" : mediaKey.trim();
+        String safeTitle = safeTitle(title);
+
+        // 왜: 멀티 인스턴스/워커 환경에서 동시에 같은 mediaKey를 처리하면 TB_RECO_CONTENT에 중복 row가 생길 수 있습니다.
+        // 이미 존재하면 새로 만들지 않고 최신 1건을 재사용합니다.
+        if (!safeMediaKey.isBlank() && recoContentRepository.existsByLessonId(safeMediaKey)) {
+            return recoContentRepository.findTopByLessonIdOrderByIdDesc(safeMediaKey)
+                .orElseGet(() -> saveEmptyRecoContentInternal(safeMediaKey, safeTitle));
+        }
+
+        return saveEmptyRecoContentInternal(safeMediaKey, safeTitle);
+    }
+
+    private RecoContent saveEmptyRecoContentInternal(String mediaKey, String title) {
+        // 요구사항: 요약(summary)과 키워드(keywords)는 빈 칸(빈 문자열)로 저장합니다.
+        // DB 스키마에서 NOT NULL일 수 있어 null 대신 ""로 저장합니다.
+        RecoContent content = new RecoContent("기타, 기타", title, "", "");
+        content.setLessonId(mediaKey);
+        return recoContentRepository.save(content);
+    }
+
+    private static boolean isSummaryTooShort(String summary, int targetSummaryLength) {
+        int len = codePointLength(summary);
+        int minLen = minAcceptableSummaryLength(targetSummaryLength);
+        return len < minLen;
+    }
+
+    private static int minAcceptableSummaryLength(int targetSummaryLength) {
+        // 기준(왜 이런 값인가)
+        // - targetSummaryLength는 "대략" 목표 글자수라서 100% 일치할 필요는 없습니다.
+        // - 대신, JSON 깨짐/토큰 잘림으로 summary가 20~50자처럼 "말도 안 되게 짧아지는" 케이스를 잡는 게 목적입니다.
+        // - 실무적으로는 목표의 절반 이상이면 정상 범주로 보고, 절반 미만은 재요약(최대 2회)로 보정합니다.
+        int safeTarget = Math.max(1, targetSummaryLength);
+        return Math.max(120, (int) Math.round(safeTarget * 0.5d));
+    }
+
+    private static int codePointLength(String s) {
+        if (s == null) return 0;
+        String t = s.trim();
+        if (t.isBlank()) return 0;
+        return t.codePointCount(0, t.length());
     }
 
     /**

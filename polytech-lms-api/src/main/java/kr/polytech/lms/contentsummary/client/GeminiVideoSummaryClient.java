@@ -298,12 +298,14 @@ public class GeminiVideoSummaryClient {
         try {
             return parseAndNormalize(raw);
         } catch (RuntimeException first) {
+            RecoContentSummaryDraft fromRaw = parseLoosely(raw);
             // 왜: 멀티모달 요약 결과가 "JSON만 출력"을 지키지 않거나(따옴표/괄호 누락 등) 중간에서 끊기는 케이스가 있습니다.
             // 영상 재분석(비용↑) 대신, 모델 출력 텍스트를 1회만 정리해서 "정상 JSON"으로 다시 받아 파싱합니다.
             log.warn("Gemini 영상 요약 JSON 파싱 실패, 텍스트 재정렬 1회 시도. raw={}", safeSnippet(raw), first);
             String fixed = geminiGenerateClient.generateText(buildRepairPrompt(title, targetSummaryLength, raw));
             try {
-                return parseAndNormalize(fixed);
+                RecoContentSummaryDraft fromFixed = parseAndNormalize(fixed);
+                return RecoContentSummaryDraftSelector.pickBetterDraft(fromRaw, fromFixed, targetSummaryLength);
             } catch (RuntimeException second) {
                 // 왜: 드물게 "재정렬" 요청에서도 JSON이 깨지는 경우가 있습니다.
                 // 이 때는 비용을 더 쓰기보다, 최소한의 정보(category/summary/keywords 일부)라도 뽑아서 저장해
