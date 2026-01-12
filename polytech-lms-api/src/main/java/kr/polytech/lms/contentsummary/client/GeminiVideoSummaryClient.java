@@ -36,11 +36,13 @@ public class GeminiVideoSummaryClient {
 
     private final GeminiProperties properties;
     private final ObjectMapper objectMapper;
+    private final GeminiGenerateClient geminiGenerateClient;
     private final HttpClient httpClient;
 
-    public GeminiVideoSummaryClient(GeminiProperties properties, ObjectMapper objectMapper) {
+    public GeminiVideoSummaryClient(GeminiProperties properties, ObjectMapper objectMapper, GeminiGenerateClient geminiGenerateClient) {
         this.properties = Objects.requireNonNull(properties);
         this.objectMapper = Objects.requireNonNull(objectMapper);
+        this.geminiGenerateClient = Objects.requireNonNull(geminiGenerateClient);
         // 왜: 영상 업로드는 시간이 오래 걸릴 수 있으므로 타임아웃을 넉넉하게 설정합니다.
         this.httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofMinutes(5))
@@ -126,9 +128,9 @@ public class GeminiVideoSummaryClient {
             .build();
 
         String responseBody = send(request);
-        String rawJson = extractCandidateText(responseBody);
+        String raw = extractCandidateText(responseBody);
 
-        return parseAndNormalize(rawJson);
+        return parseAndNormalizeWithRepair(raw, safeTitle, safeTargetLength);
     }
 
     /**
@@ -292,6 +294,183 @@ public class GeminiVideoSummaryClient {
         );
     }
 
+    private RecoContentSummaryDraft parseAndNormalizeWithRepair(String raw, String title, int targetSummaryLength) {
+        try {
+            return parseAndNormalize(raw);
+        } catch (RuntimeException first) {
+            // 왜: 멀티모달 요약 결과가 "JSON만 출력"을 지키지 않거나(따옴표/괄호 누락 등) 중간에서 끊기는 케이스가 있습니다.
+            // 영상 재분석(비용↑) 대신, 모델 출력 텍스트를 1회만 정리해서 "정상 JSON"으로 다시 받아 파싱합니다.
+            log.warn("Gemini 영상 요약 JSON 파싱 실패, 텍스트 재정렬 1회 시도. raw={}", safeSnippet(raw), first);
+            String fixed = geminiGenerateClient.generateText(buildRepairPrompt(title, targetSummaryLength, raw));
+            try {
+                return parseAndNormalize(fixed);
+            } catch (RuntimeException second) {
+                // 왜: 드물게 "재정렬" 요청에서도 JSON이 깨지는 경우가 있습니다.
+                // 이 때는 비용을 더 쓰기보다, 최소한의 정보(category/summary/keywords 일부)라도 뽑아서 저장해
+                // 대량 처리에서 실패율을 낮추는 것이 현실적입니다.
+                log.warn("Gemini 재정렬 결과도 JSON 파싱 실패, 느슨한 파싱으로 fallback 합니다. fixed={}", safeSnippet(fixed), second);
+                return parseAndNormalizeLoosely(raw, fixed);
+            }
+        }
+    }
+
+    private RecoContentSummaryDraft parseAndNormalizeLoosely(String raw, String fixed) {
+        // 왜: JSON이 깨진 상태(끝이 잘림/따옴표 누락)여도, 우리가 필요한 값은 3개(category/summary/keywords)뿐입니다.
+        // "완벽한 JSON"을 강제하다가 전부 실패 처리하는 것보다, 뽑을 수 있는 만큼 뽑아서 저장하는 편이 운영에 유리합니다.
+        RecoContentSummaryDraft fromFixed = parseLoosely(fixed);
+        RecoContentSummaryDraft fromRaw = parseLoosely(raw);
+
+        // 왜: 재정렬 결과가 더 깔끔할 가능성이 높지만, 비어 있으면 원문에서라도 건져옵니다.
+        boolean fixedHasSummary = fromFixed.summary() != null && !fromFixed.summary().isBlank();
+        boolean rawHasSummary = fromRaw.summary() != null && !fromRaw.summary().isBlank();
+
+        if (fixedHasSummary) return fromFixed;
+        if (rawHasSummary) return fromRaw;
+        return fromFixed;
+    }
+
+    private RecoContentSummaryDraft parseLoosely(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return new RecoContentSummaryDraft("기타, 기타", "", List.of());
+        }
+
+        String categoryNm = extractJsonStringValue(raw, "category_nm");
+        String summary = extractJsonStringValue(raw, "summary");
+        List<String> keywords = extractJsonStringArray(raw, "keywords");
+
+        String normalizedCategory = normalizeCategory(categoryNm, keywords);
+        List<String> normalizedKeywords = normalizeKeywords(keywords);
+
+        return new RecoContentSummaryDraft(
+            normalizedCategory,
+            summary == null ? "" : summary.trim().replaceAll("\\s+", " "),
+            normalizedKeywords
+        );
+    }
+
+    private static String extractJsonStringValue(String raw, String fieldName) {
+        if (raw == null || raw.isBlank()) return null;
+        if (fieldName == null || fieldName.isBlank()) return null;
+
+        String s = raw.trim();
+
+        // 1) 정상 JSON 케이스(따옴표 닫힘) 빠른 경로
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+            "\""
+                + java.util.regex.Pattern.quote(fieldName)
+                + "\"\\s*:\\s*\"(?<v>(?:\\\\.|[^\"\\\\])*)\"",
+            java.util.regex.Pattern.DOTALL
+        );
+        java.util.regex.Matcher m = p.matcher(s);
+        if (m.find()) {
+            return unescapeJsonString(m.group("v"));
+        }
+
+        // 2) 깨진 케이스(따옴표 닫힘/괄호 닫힘 누락): "field":" ... <끝>
+        int keyIdx = s.indexOf("\"" + fieldName + "\"");
+        if (keyIdx < 0) return null;
+        int colonIdx = s.indexOf(':', keyIdx);
+        if (colonIdx < 0) return null;
+        int firstQuote = s.indexOf('"', colonIdx + 1);
+        if (firstQuote < 0) return null;
+
+        int i = firstQuote + 1;
+        boolean escaped = false;
+        for (; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+            if (c == '"') {
+                // 정상적으로 닫힌 경우
+                String inside = s.substring(firstQuote + 1, i);
+                return unescapeJsonString(inside);
+            }
+        }
+
+        // 끝까지 갔는데 닫는 따옴표가 없으면, 남은 텍스트를 값으로 취급(최소한이라도 건지기)
+        String tail = s.substring(firstQuote + 1);
+        return unescapeJsonString(tail).trim();
+    }
+
+    private static List<String> extractJsonStringArray(String raw, String fieldName) {
+        if (raw == null || raw.isBlank()) return List.of();
+        if (fieldName == null || fieldName.isBlank()) return List.of();
+
+        String s = raw.trim();
+        int keyIdx = s.indexOf("\"" + fieldName + "\"");
+        if (keyIdx < 0) return List.of();
+        int colonIdx = s.indexOf(':', keyIdx);
+        if (colonIdx < 0) return List.of();
+        int openIdx = s.indexOf('[', colonIdx);
+        if (openIdx < 0) return List.of();
+
+        int closeIdx = s.indexOf(']', openIdx + 1);
+        String inside = closeIdx > openIdx ? s.substring(openIdx + 1, closeIdx) : s.substring(openIdx + 1);
+
+        // "문자열" 토큰만 뽑습니다(중간이 잘려도 가능한 만큼).
+        List<String> out = new ArrayList<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"(?<v>(?:\\\\.|[^\"\\\\])*)\"").matcher(inside);
+        while (m.find()) {
+            String token = unescapeJsonString(m.group("v"));
+            if (token == null) continue;
+            String t = token.trim();
+            if (t.isBlank()) continue;
+            out.add(t);
+            if (out.size() >= 10) break;
+        }
+        return out;
+    }
+
+    private static String unescapeJsonString(String s) {
+        if (s == null) return null;
+        // 왜: 정상 JSON일 때는 ObjectMapper가 해주지만, 느슨한 파싱에서는 최소한의 escape만 복원해 줍니다.
+        // (복잡한 escape 전체를 완벽히 처리하려 하기보다, 실무에서 자주 나오는 케이스만 처리)
+        return s
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\");
+    }
+
+    private static String buildRepairPrompt(String title, int targetSummaryLength, String raw) {
+        String safeTitle = title == null ? "" : title.trim();
+        int safeTarget = Math.max(1, targetSummaryLength);
+        String s = raw == null ? "" : raw.trim();
+
+        // 왜: 깨진 JSON이 너무 길면(불필요한 설명/중복 포함) 입력 토큰을 낭비하므로 적당히 잘라서 보냅니다.
+        int maxLen = 8000;
+        if (s.length() > maxLen) {
+            s = s.substring(0, maxLen);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("아래 텍스트는 JSON만 출력해야 하는데 깨진 출력입니다.\n");
+        sb.append("반드시 JSON만, 아래 스키마대로 완성해서 출력해 주세요(설명/마크다운/코드블록 금지).\n");
+        sb.append("JSON 스키마\n");
+        sb.append("{\n");
+        sb.append("  \"category_nm\": \"기술분야 키워드 2개(쉼표로 구분)\",\n");
+        sb.append("  \"summary\": \"영상 내용 요약 약 ").append(safeTarget).append("자(공백 포함), 1문단\",\n");
+        sb.append("  \"keywords\": [\"키워드\", \"키워드\", \"... 최대 10개\"]\n");
+        sb.append("}\n");
+        sb.append("규칙\n");
+        sb.append("- category_nm은 정확히 2개 키워드만 포함하고, 너무 일반적인 단어는 피하세요.\n");
+        sb.append("- summary는 약 ").append(safeTarget).append("자(공백 포함)로 맞춰주세요.\n");
+        sb.append("- keywords는 중복 없이 최대 10개.\n");
+        if (!safeTitle.isBlank()) {
+            sb.append("\n영상 제목: ").append(safeTitle).append("\n");
+        }
+        sb.append("\n원문 텍스트(이 내용을 기준으로 JSON을 완성):\n");
+        sb.append(s);
+        return sb.toString();
+    }
+
     private JsonNode parseJsonFromText(String raw) {
         String s = raw == null ? "" : raw.trim();
         if (s.startsWith("```")) {
@@ -409,10 +588,23 @@ public class GeminiVideoSummaryClient {
     private String extractCandidateText(String body) {
         try {
             JsonNode root = objectMapper.readTree(body);
+            // 왜: Gemini 응답이 parts 여러 개로 쪼개져 오는 경우가 있어(특히 멀티모달),
+            // parts[0]만 읽으면 JSON이 중간에서 끊겨 파싱에 실패할 수 있습니다.
+            JsonNode parts = root.at("/candidates/0/content/parts");
+            if (parts.isArray()) {
+                StringBuilder sb = new StringBuilder();
+                for (JsonNode part : parts) {
+                    if (part == null || part.isNull()) continue;
+                    JsonNode text = part.get("text");
+                    if (text == null || text.isNull()) continue;
+                    sb.append(text.asText(""));
+                }
+                return sb.toString().trim();
+            }
+
             JsonNode text = root.at("/candidates/0/content/parts/0/text");
             if (text.isMissingNode() || text.isNull()) return "";
-            String v = text.asText("");
-            return v == null ? "" : v.trim();
+            return text.asText("").trim();
         } catch (Exception e) {
             throw new IllegalStateException("Gemini 응답 파싱에 실패했습니다.", e);
         }

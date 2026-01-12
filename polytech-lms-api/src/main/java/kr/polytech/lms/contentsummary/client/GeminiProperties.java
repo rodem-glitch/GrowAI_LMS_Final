@@ -17,7 +17,7 @@ public record GeminiProperties(
 ) {
     public GeminiProperties {
         baseUrl = normalizeBaseUrl(baseUrl, "https://generativelanguage.googleapis.com/v1beta");
-        model = (model == null || model.isBlank()) ? "gemini-3-flash" : model.trim();
+        model = (model == null || model.isBlank()) ? "gemini-3-flash-preview" : model.trim();
         temperature = temperature == null ? 0.2d : temperature;
         maxOutputTokens = maxOutputTokens == null ? 2048 : maxOutputTokens;
         httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;

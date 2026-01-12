@@ -88,10 +88,22 @@ public class GeminiGenerateClient {
     private String extractCandidateText(String body) {
         try {
             JsonNode root = objectMapper.readTree(body);
+            // 왜: parts가 여러 개로 내려오면 parts[0]만 읽을 때 응답이 중간에서 끊길 수 있습니다.
+            JsonNode parts = root.at("/candidates/0/content/parts");
+            if (parts.isArray()) {
+                StringBuilder sb = new StringBuilder();
+                for (JsonNode part : parts) {
+                    if (part == null || part.isNull()) continue;
+                    JsonNode text = part.get("text");
+                    if (text == null || text.isNull()) continue;
+                    sb.append(text.asText(""));
+                }
+                return sb.toString().trim();
+            }
+
             JsonNode text = root.at("/candidates/0/content/parts/0/text");
             if (text.isMissingNode() || text.isNull()) return "";
-            String v = text.asText("");
-            return v == null ? "" : v.trim();
+            return text.asText("").trim();
         } catch (Exception e) {
             throw new IllegalStateException("Gemini 응답 파싱에 실패했습니다.", e);
         }

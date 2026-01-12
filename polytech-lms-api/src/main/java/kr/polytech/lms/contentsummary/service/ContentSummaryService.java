@@ -73,7 +73,7 @@ public class ContentSummaryService {
         String mediaKey = mediaContentKey.trim();
 
         // 왜: 이미 요약이 TB_RECO_CONTENT에 저장되어 있으면, 요약을 다시 할 필요가 없습니다(비용/시간 절감).
-        if (recoContentRepository.findByLessonId(mediaKey).isPresent()) {
+        if (recoContentRepository.existsByLessonId(mediaKey)) {
             return new KollusWebhookIngestResponse(mediaKey, title, "SKIPPED_SUMMARY_EXISTS");
         }
 
@@ -124,7 +124,7 @@ public class ContentSummaryService {
                 if (mediaKey == null || mediaKey.isBlank()) continue;
 
                 // 왜: 이미 요약이 TB_RECO_CONTENT에 있으면, backfill 대상이 아닙니다.
-                if (recoContentRepository.findByLessonId(mediaKey).isPresent()) {
+                if (recoContentRepository.existsByLessonId(mediaKey)) {
                     skippedDone++;
                     continue;
                 }
@@ -255,7 +255,7 @@ public class ContentSummaryService {
         String mediaKey = transcript.getMediaContentKey();
 
         // 왜: 이미 요약이 TB_RECO_CONTENT에 있으면, 다시 비용을 쓰지 않습니다.
-        if (mediaKey != null && recoContentRepository.findByLessonId(mediaKey.trim()).isPresent()) {
+        if (mediaKey != null && recoContentRepository.existsByLessonId(mediaKey.trim())) {
             transcript.markSummaryDone();
             transcriptRepository.save(transcript);
             return true;
@@ -321,8 +321,7 @@ public class ContentSummaryService {
                 throw new IllegalStateException("media_content_key가 비어 있습니다.");
             }
 
-            Optional<RecoContent> existing = recoContentRepository.findByLessonId(mediaKey.trim());
-            if (existing.isPresent()) {
+            if (recoContentRepository.existsByLessonId(mediaKey.trim())) {
                 transcript.markSummaryDone();
                 transcriptRepository.save(transcript);
                 return true;

@@ -54,6 +54,8 @@ dependencies {
     testAnnotationProcessor "org.projectlombok:lombok"
     runtimeOnly "com.mysql:mysql-connector-j"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
+    // 왜: Gradle 9 테스트 실행기에서 JUnit Platform Launcher가 런타임 클래스패스에 없으면 테스트 자체가 시작되지 않습니다.
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 tasks.named("test") {
