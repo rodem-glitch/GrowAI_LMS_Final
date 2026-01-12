@@ -570,7 +570,7 @@ export function ContentLibraryModal({
           {activeTab !== 'external' && (
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-gray-600">
-              총: <span className="text-blue-600 font-medium">{totalCount}</span>건
+              총: <span className="text-blue-600 font-medium">{activeTab === 'all' ? totalCount : displayedTotal}</span>건
             </div>
             {multiSelect && (
               <button
