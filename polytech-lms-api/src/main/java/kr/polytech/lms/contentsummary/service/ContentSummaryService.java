@@ -279,12 +279,29 @@ public class ContentSummaryService {
             log.info("요약 목표 길이 계산: mediaKey={}, totalTimeSeconds={}, targetSummaryLength={}", mediaKey, downloadInfo.totalTimeSeconds(), targetSummaryLength);
             RecoContentSummaryDraft draft = summarizeVideoWithRetries(mediaKey, title, videoFile, targetSummaryLength);
 
-            // 왜: JSON 파싱이 깨진 경우 fallback(느슨한 파싱/재정렬)로도 summary가 너무 짧게 나올 수 있습니다.
-            // 이 경우에는 "텍스트 재정렬"이 아니라, 영상을 포함해서 다시 요약해야(비용↑) 길이가 복구될 가능성이 큽니다.
+            // 왜: JSON 파싱이 깨진 경우 fallback(느슨한 파싱/재정렬)로도 summary/keywords가 부족하게 나올 수 있습니다.
+            // 이 경우에는 "텍스트 재정렬"이 아니라, 영상을 포함해서 다시 요약해야(비용↑) 내용/키워드가 복구될 가능성이 큽니다.
             // 그래도 2회 재시도 후에도 기준 미달이면 다음 영상으로 넘어가기 위해 "키만 남기는 더미 row"를 저장합니다.
-            if (isSummaryTooShort(draft == null ? null : draft.summary(), targetSummaryLength)) {
+            boolean summaryTooShort = isSummaryTooShort(draft == null ? null : draft.summary(), targetSummaryLength);
+            boolean keywordsTooFew = isKeywordsTooFew(draft == null ? null : draft.keywords(), targetSummaryLength);
+            if (summaryTooShort || keywordsTooFew) {
                 int attempts = 1 + VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
-                log.warn("요약이 너무 짧아 {}회 시도 후 포기합니다. mediaKey={}, targetSummaryLength={}", attempts, mediaKey, targetSummaryLength);
+                int summaryLen = codePointLength(draft == null ? null : draft.summary());
+                int minSummaryLen = minAcceptableSummaryLength(targetSummaryLength);
+                int keywordCount = countNonBlankKeywords(draft == null ? null : draft.keywords());
+                int minKeywords = minAcceptableKeywordCount(targetSummaryLength);
+                log.warn(
+                    "요약 결과가 기준 미달이라 {}회 시도 후 포기합니다. mediaKey={}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
+                    attempts,
+                    mediaKey,
+                    summaryTooShort,
+                    keywordsTooFew,
+                    summaryLen,
+                    minSummaryLen,
+                    keywordCount,
+                    minKeywords,
+                    targetSummaryLength
+                );
                 saveEmptyRecoContent(mediaKey, title);
                 transcript.markSummaryDone();
                 transcriptRepository.save(transcript);
@@ -342,21 +359,48 @@ public class ContentSummaryService {
         for (int attempt = 1; attempt <= totalAttempts; attempt++) {
             last = geminiVideoSummaryClient.summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
 
-            if (!isSummaryTooShort(last == null ? null : last.summary(), targetSummaryLength)) {
+            boolean summaryTooShort = isSummaryTooShort(last == null ? null : last.summary(), targetSummaryLength);
+            boolean keywordsTooFew = isKeywordsTooFew(last == null ? null : last.keywords(), targetSummaryLength);
+            if (!summaryTooShort && !keywordsTooFew) {
                 if (attempt > 1) {
-                    log.info("요약 재시도 성공: mediaKey={}, attempt={}/{}", mediaKey, attempt, totalAttempts);
+                    int summaryLen = codePointLength(last == null ? null : last.summary());
+                    int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
+                    log.info("요약 재시도 성공: mediaKey={}, attempt={}/{}, summaryLength={}, keywordsCount={}", mediaKey, attempt, totalAttempts, summaryLen, keywordCount);
                 }
                 return last;
             }
 
-            int len = codePointLength(last == null ? null : last.summary());
-            int minLen = minAcceptableSummaryLength(targetSummaryLength);
+            int summaryLen = codePointLength(last == null ? null : last.summary());
+            int minSummaryLen = minAcceptableSummaryLength(targetSummaryLength);
+            int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
+            int minKeywords = minAcceptableKeywordCount(targetSummaryLength);
             if (attempt < totalAttempts) {
-                log.warn("요약이 너무 짧아 재요약합니다. mediaKey={}, attempt={}/{}, summaryLength={}, minAcceptableLength={}, targetSummaryLength={}",
-                    mediaKey, attempt, totalAttempts, len, minLen, targetSummaryLength);
+                log.warn(
+                    "요약 결과가 기준 미달이라 재요약합니다. mediaKey={}, attempt={}/{}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
+                    mediaKey,
+                    attempt,
+                    totalAttempts,
+                    summaryTooShort,
+                    keywordsTooFew,
+                    summaryLen,
+                    minSummaryLen,
+                    keywordCount,
+                    minKeywords,
+                    targetSummaryLength
+                );
             } else {
-                log.warn("요약이 너무 짧아 {}회 시도 후에도 기준 미달입니다. mediaKey={}, summaryLength={}, minAcceptableLength={}, targetSummaryLength={}",
-                    totalAttempts, mediaKey, len, minLen, targetSummaryLength);
+                log.warn(
+                    "요약 결과가 {}회 시도 후에도 기준 미달입니다. mediaKey={}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
+                    totalAttempts,
+                    mediaKey,
+                    summaryTooShort,
+                    keywordsTooFew,
+                    summaryLen,
+                    minSummaryLen,
+                    keywordCount,
+                    minKeywords,
+                    targetSummaryLength
+                );
             }
         }
 
@@ -393,6 +437,12 @@ public class ContentSummaryService {
         return len < minLen;
     }
 
+    private static boolean isKeywordsTooFew(List<String> keywords, int targetSummaryLength) {
+        int count = countNonBlankKeywords(keywords);
+        int min = minAcceptableKeywordCount(targetSummaryLength);
+        return count < min;
+    }
+
     private static int minAcceptableSummaryLength(int targetSummaryLength) {
         // 기준(왜 이런 값인가)
         // - targetSummaryLength는 "대략" 목표 글자수라서 100% 일치할 필요는 없습니다.
@@ -400,6 +450,26 @@ public class ContentSummaryService {
         // - 실무적으로는 목표의 절반 이상이면 정상 범주로 보고, 절반 미만은 재요약(최대 2회)로 보정합니다.
         int safeTarget = Math.max(1, targetSummaryLength);
         return Math.max(120, (int) Math.round(safeTarget * 0.5d));
+    }
+
+    private static int minAcceptableKeywordCount(int targetSummaryLength) {
+        // 왜: keywords는 프롬프트에서 "최대 10개"까지만 요청합니다.
+        // 너무 긴 영상(목표 글자수가 큰 영상)은 키워드가 조금 더 많아야 검색/추천 품질이 좋아집니다.
+        // 목표 길이에 비례해서 최소 키워드 개수를 4~10 사이로 올립니다(일반적으로 4~7 정도).
+        int safeTarget = Math.max(1, targetSummaryLength);
+        int computed = (safeTarget / 100) + 2; // 예: 250 -> 4, 300 -> 5, 500 -> 7
+        return Math.min(10, Math.max(4, computed));
+    }
+
+    private static int countNonBlankKeywords(List<String> keywords) {
+        if (keywords == null || keywords.isEmpty()) return 0;
+        int count = 0;
+        for (String k : keywords) {
+            if (k == null) continue;
+            if (k.trim().isBlank()) continue;
+            count++;
+        }
+        return count;
     }
 
     private static int codePointLength(String s) {
