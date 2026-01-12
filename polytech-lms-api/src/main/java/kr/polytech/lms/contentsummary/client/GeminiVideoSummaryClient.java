@@ -309,24 +309,21 @@ public class GeminiVideoSummaryClient {
                 // 이 때는 비용을 더 쓰기보다, 최소한의 정보(category/summary/keywords 일부)라도 뽑아서 저장해
                 // 대량 처리에서 실패율을 낮추는 것이 현실적입니다.
                 log.warn("Gemini 재정렬 결과도 JSON 파싱 실패, 느슨한 파싱으로 fallback 합니다. fixed={}", safeSnippet(fixed), second);
-                return parseAndNormalizeLoosely(raw, fixed);
+                return parseAndNormalizeLoosely(raw, fixed, targetSummaryLength);
             }
         }
     }
 
-    private RecoContentSummaryDraft parseAndNormalizeLoosely(String raw, String fixed) {
+    private RecoContentSummaryDraft parseAndNormalizeLoosely(String raw, String fixed, int targetSummaryLength) {
         // 왜: JSON이 깨진 상태(끝이 잘림/따옴표 누락)여도, 우리가 필요한 값은 3개(category/summary/keywords)뿐입니다.
         // "완벽한 JSON"을 강제하다가 전부 실패 처리하는 것보다, 뽑을 수 있는 만큼 뽑아서 저장하는 편이 운영에 유리합니다.
         RecoContentSummaryDraft fromFixed = parseLoosely(fixed);
         RecoContentSummaryDraft fromRaw = parseLoosely(raw);
 
         // 왜: 재정렬 결과가 더 깔끔할 가능성이 높지만, 비어 있으면 원문에서라도 건져옵니다.
-        boolean fixedHasSummary = fromFixed.summary() != null && !fromFixed.summary().isBlank();
-        boolean rawHasSummary = fromRaw.summary() != null && !fromRaw.summary().isBlank();
-
-        if (fixedHasSummary) return fromFixed;
-        if (rawHasSummary) return fromRaw;
-        return fromFixed;
+        // 왜: fixed 출력이 중간에서 잘리면(summary가 몇 글자만 남음) DB에 짧게 저장되는 문제가 생깁니다.
+        // raw/fixed 중 목표 글자수 기준으로 더 안전한 값을 선택합니다.
+        return RecoContentSummaryDraftSelector.pickBetterDraft(fromRaw, fromFixed, targetSummaryLength);
     }
 
     private RecoContentSummaryDraft parseLoosely(String raw) {
