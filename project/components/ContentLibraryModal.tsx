@@ -47,9 +47,17 @@ export function ContentLibraryModal({
 }: ContentLibraryModalProps) {
   // 왜: 콜러스 외부 영상 추천 기능이 완성되어, 추천 탭을 다시 노출합니다.
   const hideRecommendTab = false;
+  // 왜: 사용자가 모달을 열었을 때 "추천"을 먼저 보길 원합니다. (추천 탭이 숨김이면 전체로 폴백)
+  const defaultTab: 'recommend' | 'all' | 'external' = hideRecommendTab ? 'all' : 'recommend';
+
+  // 왜: 추천 탭에서 같은 레슨(lessonId)이 중복으로 내려오는 경우가 있는데,
+  //     운영 상황에 따라 "중복 제거(ON)" 또는 "중복 그대로 표시(OFF)"를 빠르게 바꿔야 할 수 있습니다.
+  // - 지금은 이슈 확인을 위해 중복을 그대로 보이게(OFF) 둡니다.
+  // - 나중에 원복할 때는 아래 값을 true로만 바꾸면 됩니다.
+  const enableRecommendDedupe = false;
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [activeTab, setActiveTab] = useState<'recommend' | 'all' | 'external'>('all');
+  const [activeTab, setActiveTab] = useState<'recommend' | 'all' | 'external'>(defaultTab);
 
   // 왜: 외부링크 탭을 위한 입력 상태가 필요합니다.
   const [externalUrl, setExternalUrl] = useState('');
@@ -100,7 +108,7 @@ export function ContentLibraryModal({
     // 왜: 모달을 다시 열 때는 이전 검색/선택이 남아 있으면 혼란스러워서 기본 상태로 초기화합니다.
     setSearchTerm('');
     setCategoryFilter('');
-    setActiveTab('all');
+    setActiveTab(defaultTab);
     setPage(1);
     setContents([]);
     setTotalCount(0);
@@ -244,23 +252,30 @@ export function ContentLibraryModal({
           if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
           const rows = res.rst_data ?? [];
-          const mapped: Content[] = rows.map((row) => ({
-            id: String(row.lesson_id ?? row.id ?? row.media_content_key),
-            mediaKey: row.media_content_key || String(row.lesson_id ?? ''),
-            title: row.title,
-            description: '',
-            category: (row.category_nm as string) || '카테고리 없음',
-            thumbnail: (row.thumbnail as string) || (row.snapshot_url as string) || '',
-            duration: (row.duration as string) || '-',
-            totalTime: Number((row.total_time as number) ?? 0),
-            contentWidth: Number((row.content_width as number) ?? 0),
-            contentHeight: Number((row.content_height as number) ?? 0),
-            lessonId: row.lesson_id ? String(row.lesson_id) : undefined,
-            originalFileName: (row.original_file_name as string) || '',
-            score: row.score ? Number(row.score) : undefined,
-            summary: row.summary || '',
-            keywords: row.keywords || '',
-          }));
+          const mapped: Content[] = rows.map((row, idx) => {
+            const baseLessonId = String(row.lesson_id ?? row.id ?? row.media_content_key ?? '').trim();
+
+            return {
+              // 왜: 중복을 그대로 보여줄 때는 row의 고유 id가 겹칠 수 있어서, index를 붙여 React key/선택 id 충돌을 막습니다.
+              //     (중복 제거를 다시 켜면 baseLessonId만 써도 안전합니다.)
+              id: enableRecommendDedupe ? (baseLessonId || String(idx)) : (baseLessonId ? `${baseLessonId}__${idx}` : String(idx)),
+              mediaKey: row.media_content_key || baseLessonId,
+              title: row.title,
+              description: '',
+              category: (row.category_nm as string) || '카테고리 없음',
+              thumbnail: (row.thumbnail as string) || (row.snapshot_url as string) || '',
+              duration: (row.duration as string) || '-',
+              totalTime: Number((row.total_time as number) ?? 0),
+              contentWidth: Number((row.content_width as number) ?? 0),
+              contentHeight: Number((row.content_height as number) ?? 0),
+              // 왜: 추천 탭은 "레슨ID(=영상키)" 기준으로 추가/제외/중복 판단을 합니다.
+              lessonId: baseLessonId || undefined,
+              originalFileName: (row.original_file_name as string) || '',
+              score: row.score ? Number(row.score) : undefined,
+              summary: row.summary || '',
+              keywords: row.keywords || '',
+            };
+          });
 
           if (!cancelled) {
             setRecommendationsRaw(mapped);
@@ -303,13 +318,17 @@ export function ContentLibraryModal({
       excludeSet.add(String(v));
     });
 
-    const dedupe = new Set<string>();
+    // 왜: 추천 탭에서 중복 제거를 켜면(원래 동작), 같은 lessonId는 1개만 남깁니다.
+    // const dedupe = new Set<string>();
+
     const filtered = recommendationsRaw
       .filter((c) => {
         if (!c.lessonId) return false;
         if (excludeSet.has(c.lessonId)) return false;
-        if (dedupe.has(c.lessonId)) return false;
-        dedupe.add(c.lessonId);
+        // if (enableRecommendDedupe) {
+        //   if (dedupe.has(c.lessonId)) return false;
+        //   dedupe.add(c.lessonId);
+        // }
         return true;
       })
       .slice(0, 50);
