@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Search, Check, Link } from 'lucide-react';
+import { X, Search, Check, Link, Play } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
 
 interface Content {
@@ -74,6 +74,25 @@ export function ContentLibraryModal({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);  // 왜: 추천 탭에서 요약 아코디언을 위한 확장 상태
   const limit = 20;
+
+  // 왜: 교수자 LMS에서 콘텐츠 선택 전에 영상을 미리 확인할 수 있어야 합니다.
+  const handlePreview = (e: React.MouseEvent, content: Content) => {
+    e.stopPropagation();
+    if (!content.mediaKey) return;
+
+    const previewUrl = `/kollus/preview.jsp?key=${encodeURIComponent(content.mediaKey)}`;
+    const popupWidth = Math.max(Number(content.contentWidth ?? 0), 900);
+    const popupHeight = Math.max(Number(content.contentHeight ?? 0), 506); // 16:9 기본
+
+    const win = window.open(
+      previewUrl,
+      '_blank',
+      `width=${popupWidth},height=${popupHeight},resizable=yes,scrollbars=yes`
+    );
+    if (!win) {
+      setErrorMessage('팝업이 차단되었습니다. 브라우저에서 팝업 허용 후 다시 시도해 주세요.');
+    }
+  };
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -649,6 +668,7 @@ export function ContentLibraryModal({
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">원본파일</th>
                       </>
                     )}
+                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">미리보기</th>
                     {activeTab === 'recommend' && (
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">내용</th>
                     )}
@@ -703,6 +723,18 @@ export function ContentLibraryModal({
                             </td>
                           </>
                         )}
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => handlePreview(e, content)}
+                            disabled={!content.mediaKey}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="영상 미리보기"
+                          >
+                            <Play className="w-3 h-3" />
+                            <span>미리보기</span>
+                          </button>
+                        </td>
                         {activeTab === 'recommend' && (
                           <td className="px-3 py-2 text-center">
                             <button
