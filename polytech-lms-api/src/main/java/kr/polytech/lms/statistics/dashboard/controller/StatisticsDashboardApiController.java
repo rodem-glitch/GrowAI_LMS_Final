@@ -6,6 +6,7 @@ import kr.polytech.lms.statistics.dashboard.service.StatisticsExcelExportService
 import kr.polytech.lms.statistics.dashboard.service.StatisticsMetaService;
 import kr.polytech.lms.statistics.internalstats.InternalStatisticsService;
 import kr.polytech.lms.statistics.mapping.MajorIndustryMappingService;
+import kr.polytech.lms.statistics.student.excel.CampusStudentPopulationExcelService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -30,19 +32,22 @@ public class StatisticsDashboardApiController {
     private final PopulationComparisonService populationComparisonService;
     private final InternalStatisticsService internalStatisticsService;
     private final StatisticsExcelExportService statisticsExcelExportService;
+    private final CampusStudentPopulationExcelService campusStudentPopulationExcelService;
 
     public StatisticsDashboardApiController(
             StatisticsMetaService statisticsMetaService,
             IndustryAnalysisService industryAnalysisService,
             PopulationComparisonService populationComparisonService,
             InternalStatisticsService internalStatisticsService,
-            StatisticsExcelExportService statisticsExcelExportService
+            StatisticsExcelExportService statisticsExcelExportService,
+            CampusStudentPopulationExcelService campusStudentPopulationExcelService
     ) {
         this.statisticsMetaService = statisticsMetaService;
         this.industryAnalysisService = industryAnalysisService;
         this.populationComparisonService = populationComparisonService;
         this.internalStatisticsService = internalStatisticsService;
         this.statisticsExcelExportService = statisticsExcelExportService;
+        this.campusStudentPopulationExcelService = campusStudentPopulationExcelService;
     }
 
     @GetMapping("/meta/campus-groups")
@@ -168,6 +173,158 @@ public class StatisticsDashboardApiController {
         }
     }
 
+    @GetMapping("/rawdata")
+    public ResponseEntity<?> rawData(
+            @RequestParam(name = "category") String category,
+            @RequestParam(name = "campus", required = false) String campus,
+            @RequestParam(name = "year", required = false) Integer year
+    ) {
+        try {
+            return ResponseEntity.ok(buildRawDataResponse(category, campus, year));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/rawdata/export")
+    public ResponseEntity<?> exportRawDataExcel(
+            @RequestParam(name = "category") String category,
+            @RequestParam(name = "campus", required = false) String campus,
+            @RequestParam(name = "year", required = false) Integer year
+    ) {
+        try {
+            RawDataResponse response = buildRawDataResponse(category, campus, year);
+            String campusLabel = (campus == null || campus.isBlank()) ? "전체" : campus.trim();
+            String filename = "로우데이터_%s_%s.xlsx".formatted(
+                    response.categoryLabel(),
+                    "%s_%s".formatted(campusLabel, response.year() == null ? "전체" : response.year())
+            );
+            byte[] bytes = statisticsExcelExportService.exportRawData("로우데이터", response.columns(), response.rows());
+            return toExcelResponse(filename, bytes);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(e.getMessage()));
+        }
+    }
+
+    private RawDataResponse buildRawDataResponse(String category, String campus, Integer year) {
+        RawDataCategory rawCategory = RawDataCategory.from(category);
+        return switch (rawCategory) {
+            case EMPLOYMENT -> buildEmploymentRawData(rawCategory, campus, year);
+            case ADMISSION -> buildAdmissionRawData(rawCategory, campus, year);
+            case POPULATION -> buildPopulationRawData(rawCategory, campus, year);
+        };
+    }
+
+    private RawDataResponse buildEmploymentRawData(RawDataCategory rawCategory, String campus, Integer year) {
+        InternalStatisticsService.EmploymentRawResult result = internalStatisticsService.getEmploymentRawData(campus, year);
+
+        List<List<Object>> rows = new ArrayList<>();
+        for (InternalStatisticsService.EmploymentRow r : result.rows()) {
+            List<Object> row = new ArrayList<>();
+            row.add(r.campus());
+            row.add(r.dept());
+            row.add(r.employed());
+            row.add(r.employTarget());
+            row.add(r.employmentRate());
+            rows.add(row);
+        }
+
+        List<String> columns = List.of("캠퍼스", "학과", "취업자수", "취업대상자수", "취업률(%)");
+        List<Integer> availableYears = internalStatisticsService.getAvailableEmploymentYears();
+        return new RawDataResponse(rawCategory.key, rawCategory.label, result.year(), availableYears, columns, rows);
+    }
+
+    private RawDataResponse buildAdmissionRawData(RawDataCategory rawCategory, String campus, Integer year) {
+        List<Integer> availableYears = internalStatisticsService.getAvailableAdmissionYears();
+        if (year != null && !availableYears.isEmpty() && !availableYears.contains(year)) {
+            throw new IllegalArgumentException("해당 연도의 입학 엑셀 파일을 찾을 수 없습니다. year=" + year);
+        }
+
+        InternalStatisticsService.AdmissionRawResult result = internalStatisticsService.getAdmissionRawData(campus);
+        Integer usedYear = year != null ? year : result.year();
+
+        List<List<Object>> rows = new ArrayList<>();
+        for (InternalStatisticsService.AdmissionRow r : result.rows()) {
+            List<Object> row = new ArrayList<>();
+            row.add(r.campus());
+            row.add(r.dept());
+            row.add(r.quota());
+            row.add(r.recruit());
+            row.add(r.applicants());
+            row.add(r.registered());
+            row.add(resolveAdmissionBasisLabel(r.basis()));
+            row.add(r.usedCount());
+            row.add(r.fillRate());
+            rows.add(row);
+        }
+
+        List<String> columns = List.of(
+                "캠퍼스",
+                "학과",
+                "정원",
+                "모집인원",
+                "지원자수",
+                "등록자수",
+                "산출기준",
+                "기준값",
+                "입학충원률(%)"
+        );
+        return new RawDataResponse(rawCategory.key, rawCategory.label, usedYear, availableYears, columns, rows);
+    }
+
+    private RawDataResponse buildPopulationRawData(RawDataCategory rawCategory, String campus, Integer year) {
+        String yearText = year == null ? null : String.valueOf(year);
+        CampusStudentPopulationExcelService.PopulationRawData data =
+                campusStudentPopulationExcelService.getRawData(campus, yearText, null);
+
+        List<List<Object>> rows = new ArrayList<>();
+        List<String> columns;
+
+        if (data.type() == CampusStudentPopulationExcelService.PopulationRawType.AGGREGATED) {
+            columns = List.of("캠퍼스", "연도", "학기", "연령대", "남성", "여성", "합계");
+            for (CampusStudentPopulationExcelService.PopulationRawRow r : data.rows()) {
+                long male = r.male() == null ? 0L : r.male();
+                long female = r.female() == null ? 0L : r.female();
+                List<Object> row = new ArrayList<>();
+                row.add(r.campus());
+                row.add(r.year());
+                row.add(r.term());
+                row.add(r.ageBand());
+                row.add(r.male());
+                row.add(r.female());
+                row.add(male + female);
+                rows.add(row);
+            }
+        } else {
+            columns = List.of("캠퍼스", "연도", "학기", "출생연도", "성별");
+            for (CampusStudentPopulationExcelService.PopulationRawRow r : data.rows()) {
+                List<Object> row = new ArrayList<>();
+                row.add(r.campus());
+                row.add(r.year());
+                row.add(r.term());
+                row.add(r.birthYear());
+                row.add(r.gender());
+                rows.add(row);
+            }
+        }
+
+        return new RawDataResponse(rawCategory.key, rawCategory.label, year, data.availableYears(), columns, rows);
+    }
+
+    private String resolveAdmissionBasisLabel(InternalStatisticsService.AdmissionBasis basis) {
+        if (basis == null) return "미정";
+        return switch (basis) {
+            case REGISTERED -> "등록";
+            case APPLICANTS -> "지원";
+            case RECRUIT -> "모집";
+            case UNKNOWN -> "미정";
+        };
+    }
+
     private ResponseEntity<byte[]> toExcelResponse(String filename, byte[] bytes) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
@@ -176,5 +333,41 @@ public class StatisticsDashboardApiController {
     }
 
     private record ApiError(String message) {
+    }
+
+    private record RawDataResponse(
+            String category,
+            String categoryLabel,
+            Integer year,
+            List<Integer> availableYears,
+            List<String> columns,
+            List<List<Object>> rows
+    ) {
+    }
+
+    private enum RawDataCategory {
+        EMPLOYMENT("employment", "취업"),
+        ADMISSION("admission", "입학"),
+        POPULATION("population", "재학생인구");
+
+        private final String key;
+        private final String label;
+
+        RawDataCategory(String key, String label) {
+            this.key = key;
+            this.label = label;
+        }
+
+        private static RawDataCategory from(String value) {
+            if (value == null || value.isBlank()) {
+                throw new IllegalArgumentException("category는 필수입니다.");
+            }
+            for (RawDataCategory c : values()) {
+                if (c.key.equalsIgnoreCase(value.trim())) {
+                    return c;
+                }
+            }
+            throw new IllegalArgumentException("지원하지 않는 category입니다. (employment/admission/population)");
+        }
     }
 }

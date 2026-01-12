@@ -72,6 +72,16 @@ public class InternalStatisticsService {
                 .toList();
     }
 
+    public EmploymentRawResult getEmploymentRawData(String campus, Integer year) {
+        // 왜: 로우 데이터 탭은 차트용 집계가 아니라, 엑셀의 행을 가능한 그대로 내려주기 위해 별도 메서드를 둡니다.
+        Path path = resolveEmploymentPathForRawData(year);
+        Integer usedYear = resolveYearFromPath(path);
+
+        List<EmploymentRow> rows = getOrLoadEmploymentRows(path);
+        List<EmploymentRow> filtered = filterEmploymentRows(rows, campus);
+        return new EmploymentRawResult(usedYear, filtered);
+    }
+
     public Optional<Path> resolveEmploymentFilePathForYear(int year) {
         Path base = resolveEmploymentFilePath();
         return Optional.ofNullable(indexEmploymentFiles(base).get(year));
@@ -107,6 +117,22 @@ public class InternalStatisticsService {
         return getAdmissionFillRates(campus).stream()
                 .limit(Math.max(1, top))
                 .toList();
+    }
+
+    public AdmissionRawResult getAdmissionRawData(String campus) {
+        // 왜: 입학 로우 데이터는 현재 단일 엑셀에서 읽기 때문에, 캠퍼스 필터만 적용해 제공합니다.
+        Integer usedYear = resolveAdmissionFileYear();
+        List<AdmissionRow> rows = getOrLoadAdmissionRows();
+        List<AdmissionRow> filtered = filterAdmissionRows(rows, campus);
+        return new AdmissionRawResult(usedYear, filtered);
+    }
+
+    public List<Integer> getAvailableAdmissionYears() {
+        Integer year = resolveAdmissionFileYear();
+        if (year == null) {
+            return List.of();
+        }
+        return List.of(year);
     }
 
     private List<EmploymentRow> getOrLoadEmploymentRows() {
@@ -179,7 +205,7 @@ public class InternalStatisticsService {
                 }
 
                 double rate = (employed / employTarget) * 100.0;
-                rows.add(new EmploymentRow(normalizeCampus(campus), dept.trim(), rate));
+                rows.add(new EmploymentRow(normalizeCampus(campus), dept.trim(), employed, employTarget, rate));
             }
 
             return rows;
@@ -190,6 +216,23 @@ public class InternalStatisticsService {
 
     private Path resolveEmploymentFilePath() {
         return resolveFilePath(properties.getEmploymentFile(), "statistics.data.employment-file");
+    }
+
+    private Path resolveEmploymentPathForRawData(Integer year) {
+        // 왜: 로우 데이터 탭에서 연도를 선택하면 해당 연도 파일을 우선 사용합니다.
+        if (year != null) {
+            Optional<Path> byYear = resolveEmploymentFilePathForYear(year);
+            if (byYear.isEmpty()) {
+                throw new IllegalArgumentException("해당 연도의 취업률 엑셀 파일을 찾을 수 없습니다. year=" + year);
+            }
+            return byYear.get();
+        }
+        return resolveEmploymentFilePath();
+    }
+
+    private Integer resolveYearFromPath(Path path) {
+        if (path == null || path.getFileName() == null) return null;
+        return extractYear(path.getFileName().toString());
     }
 
     private Map<Integer, Path> indexEmploymentFiles(Path baseFile) {
@@ -255,7 +298,7 @@ public class InternalStatisticsService {
     }
 
     private List<AdmissionRow> loadAdmissionRowsFromExcel() {
-        Path path = resolveFilePath(properties.getAdmissionFile(), "statistics.data.admission-file");
+        Path path = resolveAdmissionFilePath();
 
         try (InputStream in = Files.newInputStream(path); Workbook workbook = WorkbookFactory.create(in)) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -303,13 +346,31 @@ public class InternalStatisticsService {
                     //     "충원률" 용어와 혼동되지 않도록 100으로 상한을 둡니다.
                     rate = Math.min(rate, 100.0);
                 }
-                rows.add(new AdmissionRow(normalizeCampus(campus), dept.trim(), rate));
+                rows.add(new AdmissionRow(
+                        normalizeCampus(campus),
+                        dept.trim(),
+                        quota,
+                        recruit,
+                        applicants,
+                        registered,
+                        basis,
+                        usedCount,
+                        rate
+                ));
             }
 
             return rows;
         } catch (Exception e) {
             throw new IllegalStateException("입시 통계 엑셀을 읽지 못했습니다. statistics.data.admission-file 경로를 확인해 주세요.", e);
         }
+    }
+
+    private Path resolveAdmissionFilePath() {
+        return resolveFilePath(properties.getAdmissionFile(), "statistics.data.admission-file");
+    }
+
+    private Integer resolveAdmissionFileYear() {
+        return resolveYearFromPath(resolveAdmissionFilePath());
     }
 
     private Path resolveFilePath(String filePath, String configKeyName) {
@@ -338,6 +399,26 @@ public class InternalStatisticsService {
             return v.substring(0, v.length() - "캠퍼스".length()).trim();
         }
         return v;
+    }
+
+    private List<EmploymentRow> filterEmploymentRows(List<EmploymentRow> rows, String campus) {
+        String resolvedCampus = normalizeCampus(campus);
+        if (!StringUtils.hasText(resolvedCampus)) {
+            return rows;
+        }
+        return rows.stream()
+                .filter(r -> resolvedCampus.equals(r.campus()))
+                .toList();
+    }
+
+    private List<AdmissionRow> filterAdmissionRows(List<AdmissionRow> rows, String campus) {
+        String resolvedCampus = normalizeCampus(campus);
+        if (!StringUtils.hasText(resolvedCampus)) {
+            return rows;
+        }
+        return rows.stream()
+                .filter(r -> resolvedCampus.equals(r.campus()))
+                .toList();
     }
 
     private AdmissionBasis resolveAdmissionBasis(Double registered, Double applicants, Double recruit) {
@@ -390,16 +471,32 @@ public class InternalStatisticsService {
         }
     }
 
-    private record EmploymentRow(String campus, String dept, double employmentRate) {
+    public record EmploymentRow(String campus, String dept, Double employed, Double employTarget, double employmentRate) {
     }
 
     public record EmploymentStat(String campus, String dept, double employmentRate) {
     }
 
-    private record AdmissionRow(String campus, String dept, double fillRate) {
+    public record AdmissionRow(
+            String campus,
+            String dept,
+            Double quota,
+            Double recruit,
+            Double applicants,
+            Double registered,
+            AdmissionBasis basis,
+            Double usedCount,
+            double fillRate
+    ) {
     }
 
     public record DepartmentRate(String dept, double rate) {
+    }
+
+    public record EmploymentRawResult(Integer year, List<EmploymentRow> rows) {
+    }
+
+    public record AdmissionRawResult(Integer year, List<AdmissionRow> rows) {
     }
 
     private record EmploymentFileCache(long lastModifiedMillis, List<EmploymentRow> rows) {
@@ -409,7 +506,7 @@ public class InternalStatisticsService {
         }
     }
 
-    private enum AdmissionBasis {
+    public enum AdmissionBasis {
         REGISTERED,
         APPLICANTS,
         RECRUIT,

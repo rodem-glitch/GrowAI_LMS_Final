@@ -125,6 +125,36 @@ public class StatisticsExcelExportService {
         }
     }
 
+    public byte[] exportRawData(String sheetName, List<String> headers, List<List<Object>> rows) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet(sheetName == null ? "로우데이터" : sheetName);
+
+            int rowIndex = 0;
+            rowIndex = writeHeaderRow(sheet, rowIndex, headers);
+
+            for (List<Object> rowValues : rows) {
+                Row row = sheet.createRow(rowIndex++);
+                for (int i = 0; i < headers.size(); i++) {
+                    Object value = (rowValues != null && i < rowValues.size()) ? rowValues.get(i) : null;
+                    if (value == null) {
+                        row.createCell(i).setCellValue("");
+                        continue;
+                    }
+                    if (value instanceof Number num) {
+                        row.createCell(i).setCellValue(num.doubleValue());
+                        continue;
+                    }
+                    row.createCell(i).setCellValue(String.valueOf(value));
+                }
+            }
+
+            autosizeColumns(sheet, headers == null ? 0 : headers.size());
+            return toBytes(workbook);
+        } catch (Exception e) {
+            throw new IllegalStateException("로우 데이터 엑셀 생성에 실패했습니다.", e);
+        }
+    }
+
     private Map<String, Double> toDeptRateMap(List<DepartmentRate> rows) {
         Map<String, Double> map = new LinkedHashMap<>();
         for (DepartmentRate r : rows) {

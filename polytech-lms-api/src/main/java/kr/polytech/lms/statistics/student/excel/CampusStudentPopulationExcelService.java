@@ -54,6 +54,64 @@ public class CampusStudentPopulationExcelService {
         return loaded.countByAgeBandAndGender(resolvedCampus, year, term, baseYear);
     }
 
+    public PopulationRawData getRawData(String campus, String year, String term) {
+        Cache loaded = getOrLoadCache();
+        String resolvedCampus = normalizeCampus(campus);
+        String resolvedYear = normalizeSimple(year);
+        String resolvedTerm = normalizeSimple(term);
+
+        // 왜: 엑셀 구조가 (학생 로스터) vs (연령대 집계) 두 형태라서, 실제로 있는 형태를 그대로 내려줍니다.
+        if (!loaded.aggregates.isEmpty()) {
+            List<PopulationRawRow> rows = new ArrayList<>();
+            for (AgeAggregateRow row : loaded.aggregates()) {
+                if (StringUtils.hasText(resolvedCampus) && !resolvedCampus.equals(row.campus())) {
+                    continue;
+                }
+                if (StringUtils.hasText(resolvedYear) && StringUtils.hasText(row.year()) && !resolvedYear.equals(row.year())) {
+                    continue;
+                }
+                if (StringUtils.hasText(resolvedTerm) && StringUtils.hasText(row.term()) && !resolvedTerm.equals(row.term())) {
+                    continue;
+                }
+                rows.add(new PopulationRawRow(
+                        row.campus(),
+                        row.year(),
+                        row.term(),
+                        row.ageBand(),
+                        row.male(),
+                        row.female(),
+                        null,
+                        null
+                ));
+            }
+            return new PopulationRawData(PopulationRawType.AGGREGATED, rows, extractYears(rows));
+        }
+
+        List<PopulationRawRow> rows = new ArrayList<>();
+        for (StudentRow row : loaded.students()) {
+            if (StringUtils.hasText(resolvedCampus) && !resolvedCampus.equals(row.campus())) {
+                continue;
+            }
+            if (StringUtils.hasText(resolvedYear) && StringUtils.hasText(row.year()) && !resolvedYear.equals(row.year())) {
+                continue;
+            }
+            if (StringUtils.hasText(resolvedTerm) && StringUtils.hasText(row.term()) && !resolvedTerm.equals(row.term())) {
+                continue;
+            }
+            rows.add(new PopulationRawRow(
+                    row.campus(),
+                    row.year(),
+                    row.term(),
+                    null,
+                    null,
+                    null,
+                    row.birthYear(),
+                    genderToLabel(row.gender())
+            ));
+        }
+        return new PopulationRawData(PopulationRawType.STUDENT, rows, extractYears(rows));
+    }
+
     private Cache getOrLoadCache() {
         Path path = resolveFilePath();
         long lastModified = getLastModifiedMillis(path);
@@ -327,6 +385,24 @@ public class CampusStudentPopulationExcelService {
         return null;
     }
 
+    private List<Integer> extractYears(List<PopulationRawRow> rows) {
+        return rows.stream()
+                .map(PopulationRawRow::year)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .filter(v -> v.matches("^\\d{4}$"))
+                .map(Integer::valueOf)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .toList();
+    }
+
+    private String genderToLabel(Gender gender) {
+        if (gender == Gender.MALE) return "남";
+        if (gender == Gender.FEMALE) return "여";
+        return null;
+    }
+
     private Long parseLong(Cell cell) {
         if (cell == null) {
             return null;
@@ -574,5 +650,25 @@ public class CampusStudentPopulationExcelService {
             }
             return result;
         }
+    }
+
+    public enum PopulationRawType {
+        AGGREGATED,
+        STUDENT
+    }
+
+    public record PopulationRawData(PopulationRawType type, List<PopulationRawRow> rows, List<Integer> availableYears) {
+    }
+
+    public record PopulationRawRow(
+            String campus,
+            String year,
+            String term,
+            String ageBand,
+            Long male,
+            Long female,
+            Integer birthYear,
+            String gender
+    ) {
     }
 }

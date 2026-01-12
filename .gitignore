@@ -25,6 +25,9 @@ var/log/**/*.log
 polytech-lms-api/src/main/resources/application-local.yml
 polytech-lms-api/src/main/resources/application-local.properties
 
+# Spring/IDE 산출물
+polytech-lms-api/bin/
+
 # Web app build / temp
 WEB-INF/classes/
 WEB-INF/tmp/

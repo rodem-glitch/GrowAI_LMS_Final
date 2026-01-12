@@ -43,6 +43,11 @@
         </span>
       </button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-rawdata" data-bs-toggle="tab" data-bs-target="#pane-rawdata" type="button" role="tab">
+        통계 로우 데이터 조회(엑셀)
+      </button>
+    </li>
   </ul>
 
   <div class="tab-content">
@@ -717,6 +722,63 @@
         </div>
       </div>
     </div>
+
+    <!-- 로우 데이터 탭 -->
+    <div class="tab-pane fade" id="pane-rawdata" role="tabpanel" aria-labelledby="tab-rawdata">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+              <div class="fw-semibold">통계 로우 데이터 조회(엑셀)</div>
+              <div class="text-secondary small">엑셀 원본을 직접 보고 필터/정렬로 확인합니다.</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+              <select id="rawDataCategory" class="form-select form-select-sm" style="min-width: 160px;">
+                <option value="employment" selected>취업</option>
+                <option value="admission">입학</option>
+                <option value="population">재학생 인구</option>
+              </select>
+              <select id="rawDataCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
+              <select id="rawDataYear" class="form-select form-select-sm" style="min-width: 110px;"></select>
+            </div>
+          </div>
+
+          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="text-secondary small">분류/캠퍼스/연도 기준으로 엑셀 로우 데이터를 조회합니다.</div>
+            <div class="d-flex gap-2 flex-wrap">
+              <input id="rawDataSearch" type="text" class="form-control form-control-sm" style="min-width: 180px;" placeholder="검색어 입력"/>
+              <select id="rawDataPageSize" class="form-select form-select-sm" style="min-width: 110px;">
+                <option value="20">20행</option>
+                <option value="50" selected>50행</option>
+                <option value="100">100행</option>
+                <option value="200">200행</option>
+              </select>
+              <button id="rawDataDownload" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
+            </div>
+          </div>
+
+          <div id="rawDataStatus" class="text-secondary small mt-3"></div>
+
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-bordered align-middle text-center">
+              <thead class="table-secondary">
+              <tr id="rawDataTableHead"></tr>
+              </thead>
+              <tbody id="rawDataTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div id="rawDataRowCount" class="text-secondary small"></div>
+            <div class="btn-group btn-group-sm" role="group">
+              <button id="rawDataPrev" class="btn btn-outline-secondary" type="button">이전</button>
+              <button id="rawDataNext" class="btn btn-outline-secondary" type="button">다음</button>
+            </div>
+            <div id="rawDataPageInfo" class="text-secondary small"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -735,6 +797,17 @@
   let aiCatalog = null;
   let aiLastPrompt = null;
   let aiContext = {};
+  let rawDataState = {
+    columns: [],
+    rows: [],
+    filteredRows: [],
+    sortIndex: null,
+    sortDirection: "asc",
+    page: 1,
+    pageSize: 50,
+    searchText: ""
+  };
+  let isSyncingRawDataYear = false;
 
   // ==================== AI 통계 기능 ====================
 
@@ -1470,6 +1543,229 @@
     document.getElementById("internalStatus").textContent = text || "";
   }
 
+  function setRawDataStatus(text) {
+    document.getElementById("rawDataStatus").textContent = text || "";
+  }
+
+  function syncRawDataYearOptions(availableYears, selectedYear) {
+    const select = document.getElementById("rawDataYear");
+    isSyncingRawDataYear = true;
+
+    select.innerHTML = "";
+
+    const allOpt = document.createElement("option");
+    allOpt.value = "";
+    allOpt.textContent = (availableYears && availableYears.length > 0) ? "전체" : "연도 없음";
+    select.appendChild(allOpt);
+
+    if (!availableYears || availableYears.length === 0) {
+      select.value = "";
+      select.disabled = true;
+      isSyncingRawDataYear = false;
+      return;
+    }
+
+    select.disabled = false;
+    const sortedYears = [...availableYears].sort((a, b) => Number(b) - Number(a));
+    sortedYears.forEach((y) => {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      select.appendChild(opt);
+    });
+
+    if (selectedYear && sortedYears.includes(Number(selectedYear))) {
+      select.value = String(selectedYear);
+    } else {
+      select.value = "";
+    }
+
+    isSyncingRawDataYear = false;
+  }
+
+  function normalizeRawDataSortValue(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "number") return value;
+    const raw = String(value).trim();
+    if (!raw) return "";
+    const normalized = raw.replaceAll(",", "");
+    if (/^[-+]?\d+(\.\d+)?$/.test(normalized)) {
+      return Number(normalized);
+    }
+    return raw.toLowerCase();
+  }
+
+  function compareRawDataRows(a, b, index, direction) {
+    const v1 = normalizeRawDataSortValue(a?.[index]);
+    const v2 = normalizeRawDataSortValue(b?.[index]);
+    let result = 0;
+
+    if (typeof v1 === "number" && typeof v2 === "number") {
+      result = v1 - v2;
+    } else {
+      result = String(v1).localeCompare(String(v2), "ko");
+    }
+
+    return direction === "desc" ? -result : result;
+  }
+
+  function formatRawDataCell(value, columnName) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "number") {
+      if (Number.isInteger(value)) return String(value);
+      // 왜: 비율(%)이나 소수 값은 비교가 쉽도록 2자리로 맞춥니다.
+      if (String(columnName || "").includes("%") || String(columnName || "").includes("율")) {
+        return value.toFixed(2);
+      }
+      return value.toFixed(2);
+    }
+    return String(value);
+  }
+
+  function updateRawDataPagination() {
+    const total = rawDataState.filteredRows.length;
+    const pageSize = rawDataState.pageSize || 50;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    if (rawDataState.page > totalPages) {
+      rawDataState.page = totalPages;
+    }
+
+    document.getElementById("rawDataRowCount").textContent = `총 ${total}건`;
+    document.getElementById("rawDataPageInfo").textContent = `${rawDataState.page} / ${totalPages} 페이지`;
+    document.getElementById("rawDataPrev").disabled = rawDataState.page <= 1;
+    document.getElementById("rawDataNext").disabled = rawDataState.page >= totalPages;
+  }
+
+  function renderRawDataTable() {
+    const head = document.getElementById("rawDataTableHead");
+    const body = document.getElementById("rawDataTableBody");
+    head.innerHTML = "";
+    body.innerHTML = "";
+
+    const columns = rawDataState.columns || [];
+    if (columns.length === 0) {
+      body.innerHTML = "<tr><td>데이터가 없습니다.</td></tr>";
+      return;
+    }
+
+    columns.forEach((col, idx) => {
+      const th = document.createElement("th");
+      const isSorted = rawDataState.sortIndex === idx;
+      const arrow = isSorted ? (rawDataState.sortDirection === "asc" ? " ▲" : " ▼") : "";
+      th.textContent = `${col}${arrow}`;
+      th.style.cursor = "pointer";
+      th.addEventListener("click", () => {
+        if (rawDataState.sortIndex === idx) {
+          rawDataState.sortDirection = rawDataState.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+          rawDataState.sortIndex = idx;
+          rawDataState.sortDirection = "asc";
+        }
+        applyRawDataFilterAndSort();
+      });
+      head.appendChild(th);
+    });
+
+    const start = (rawDataState.page - 1) * rawDataState.pageSize;
+    const end = start + rawDataState.pageSize;
+    const pageRows = rawDataState.filteredRows.slice(start, end);
+
+    if (pageRows.length === 0) {
+      body.innerHTML = `<tr><td colspan="${columns.length}">데이터가 없습니다.</td></tr>`;
+      return;
+    }
+
+    pageRows.forEach((row) => {
+      const tr = document.createElement("tr");
+      columns.forEach((col, idx) => {
+        const td = document.createElement("td");
+        td.textContent = formatRawDataCell(row?.[idx], col);
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function applyRawDataFilterAndSort() {
+    const keyword = (rawDataState.searchText || "").trim().toLowerCase();
+    let rows = rawDataState.rows || [];
+
+    if (keyword) {
+      rows = rows.filter((row) =>
+        (row || []).some((cell) => String(cell ?? "").toLowerCase().includes(keyword))
+      );
+    }
+
+    if (rawDataState.sortIndex !== null) {
+      rows = [...rows].sort((a, b) =>
+        compareRawDataRows(a, b, rawDataState.sortIndex, rawDataState.sortDirection)
+      );
+    }
+
+    rawDataState.filteredRows = rows;
+    updateRawDataPagination();
+    renderRawDataTable();
+  }
+
+  function buildRawDataQueryParams() {
+    const category = document.getElementById("rawDataCategory").value;
+    const campus = document.getElementById("rawDataCampus").value;
+    const year = document.getElementById("rawDataYear").value;
+
+    const params = new URLSearchParams();
+    params.set("category", category);
+    if (campus) params.set("campus", campus);
+    if (year) params.set("year", year);
+    return params;
+  }
+
+  async function refreshRawData() {
+    const category = document.getElementById("rawDataCategory").value;
+    if (!category) {
+      setRawDataStatus("분류를 선택해 주세요.");
+      return;
+    }
+
+    setRawDataStatus("조회 중...");
+
+    let res;
+    let data;
+    try {
+      res = await fetch(`/statistics/api/rawdata?${buildRawDataQueryParams().toString()}`);
+      data = await res.json();
+    } catch (e) {
+      setRawDataStatus(`로우 데이터 요청 실패: ${e?.message || "요청 실패"}`);
+      return;
+    }
+
+    if (!res.ok) {
+      setRawDataStatus(`로우 데이터 에러: ${data?.message || "요청 실패"}`);
+      return;
+    }
+
+    rawDataState.columns = data.columns || [];
+    rawDataState.rows = data.rows || [];
+    rawDataState.sortIndex = null;
+    rawDataState.sortDirection = "asc";
+    rawDataState.page = 1;
+
+    if (Array.isArray(data.availableYears)) {
+      syncRawDataYearOptions(data.availableYears, data.year);
+    } else {
+      syncRawDataYearOptions([], null);
+    }
+
+    setRawDataStatus(`조회 완료: ${rawDataState.rows.length}건`);
+
+    rawDataState.searchText = document.getElementById("rawDataSearch").value || "";
+    applyRawDataFilterAndSort();
+
+    document.getElementById("rawDataDownload").onclick = () => {
+      window.location.href = `/statistics/api/rawdata/export?${buildRawDataQueryParams().toString()}`;
+    };
+  }
+
   function buildYearOptions(selectId) {
     const select = document.getElementById(selectId);
     select.innerHTML = "";
@@ -1528,7 +1824,8 @@
 
     // 왜: 통계 기준이 "내부 DB 학기"가 아니라 "엑셀/통계청 API"이므로, 화면에서 학기(OPEN_TERM)를 노출하지 않습니다.
     //     탭이 3개(내부/인구/산업)라서, 캠퍼스 선택 박스는 각각 따로 둡니다.
-    const campusSelects = ["populationCampus", "industryCampus", "internalCampus"].map((id) => document.getElementById(id));
+    const campusSelects = ["populationCampus", "industryCampus", "internalCampus", "rawDataCampus"]
+      .map((id) => document.getElementById(id));
     campusSelects.forEach((select) => {
       select.innerHTML = "";
       const allOpt = document.createElement("option");
@@ -1950,6 +2247,45 @@
     ["internalCampus"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshInternal);
     });
+
+    ["rawDataCategory", "rawDataCampus"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", () => {
+        if (id === "rawDataCategory") {
+          document.getElementById("rawDataYear").value = "";
+        }
+        refreshRawData();
+      });
+    });
+    document.getElementById("rawDataYear").addEventListener("change", () => {
+      if (isSyncingRawDataYear) return;
+      refreshRawData();
+    });
+    document.getElementById("rawDataSearch").addEventListener("input", (e) => {
+      rawDataState.searchText = e.target.value || "";
+      rawDataState.page = 1;
+      applyRawDataFilterAndSort();
+    });
+    document.getElementById("rawDataPageSize").addEventListener("change", (e) => {
+      rawDataState.pageSize = Number(e.target.value || 50);
+      rawDataState.page = 1;
+      updateRawDataPagination();
+      renderRawDataTable();
+    });
+    document.getElementById("rawDataPrev").addEventListener("click", () => {
+      if (rawDataState.page > 1) {
+        rawDataState.page -= 1;
+        updateRawDataPagination();
+        renderRawDataTable();
+      }
+    });
+    document.getElementById("rawDataNext").addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(rawDataState.filteredRows.length / rawDataState.pageSize));
+      if (rawDataState.page < totalPages) {
+        rawDataState.page += 1;
+        updateRawDataPagination();
+        renderRawDataTable();
+      }
+    });
   }
 
   async function init() {
@@ -1958,10 +2294,12 @@
     buildYearOptions("industryYear");
     await loadMeta();
     attachEvents();
+    rawDataState.pageSize = Number(document.getElementById("rawDataPageSize").value || 50);
     initAiStatistics(); // AI 통계 기능 초기화
     await refreshInternal();
     await refreshPopulation();
     await refreshIndustry();
+    await refreshRawData();
   }
 
   init();
