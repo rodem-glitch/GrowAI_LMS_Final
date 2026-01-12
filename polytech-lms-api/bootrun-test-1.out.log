@@ -1,0 +1,136 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources
+> Task :classes
+> Task :resolveMainClassName
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-01-09T17:52:26.149+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Starting PolytechLmsApiApplication using Java 21.0.9 with PID 2260 (C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api\build\classes\java\main started by NEWKL1 in C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api)
+2026-01-09T17:52:26.150+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : The following 1 profile is active: "local"
+2026-01-09T17:52:26.185+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-09T17:52:26.185+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-09T17:52:26.874+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-09T17:52:26.979+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 100 ms. Found 2 JPA repository interfaces.
+2026-01-09T17:52:27.533+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-09T17:52:27.547+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-09T17:52:27.549+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-01-09T17:52:27.577+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-09T17:52:27.577+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1391 ms
+2026-01-09T17:52:27.780+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-09T17:52:27.823+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-01-09T17:52:27.847+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-09T17:52:28.018+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-09T17:52:28.037+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-09T17:52:28.141+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@6cd3f383
+2026-01-09T17:52:28.143+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-09T17:52:28.800+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-09T17:52:28.802+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-09T17:52:29.613+09:00  WARN 2260 --- [polytech-lms-api] [  restartedMain] io.qdrant.client.QdrantGrpcClient        : Failed to obtain server version. Unable to check client-server compatibility. Set checkCompatibility=false to skip version check.
+2026-01-09T17:52:29.947+09:00  WARN 2260 --- [polytech-lms-api] [  restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-09T17:52:30.410+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-01-09T17:52:30.417+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-09T17:52:30.466+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-01-09T17:52:30.476+09:00  INFO 2260 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Started PolytechLmsApiApplication in 4.624 seconds (process running for 4.922)
+2026-01-09T17:52:45.951+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-09T17:52:45.951+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-09T17:52:45.953+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-01-09T17:55:23.908+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.service.ContentSummaryService    : 영상 다운로드 완료: fO3AFVeK (C:\Users\NEWKL1\AppData\Local\Temp\polytech-lms-api\contentsummary\site-1\fO3AFVeK\input.mp4)
+2026-01-09T17:55:23.909+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.service.ContentSummaryService    : 요약 목표 길이 계산: mediaKey=fO3AFVeK, totalTimeSeconds=433, targetSummaryLength=272
+2026-01-09T17:55:23.909+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 시작: input.mp4 (88572389bytes, video/mp4)
+2026-01-09T17:55:31.119+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 파일 활성화 대기 중: https://generativelanguage.googleapis.com/v1beta/files/edpssbwz1ag6
+2026-01-09T17:55:31.375+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T17:55:36.635+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T17:55:41.864+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: PROCESSING
+2026-01-09T17:55:47.133+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : 파일 상태: ACTIVE
+2026-01-09T17:55:47.133+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini File API 업로드 및 활성화 완료: https://generativelanguage.googleapis.com/v1beta/files/edpssbwz1ag6
+2026-01-09T17:55:47.134+09:00  INFO 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.client.GeminiVideoSummaryClient  : Gemini 요약 요청 URI: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=HIDDEN_KEY
+2026-01-09T17:56:11.178+09:00 ERROR 2260 --- [polytech-lms-api] [nio-8081-exec-1] k.p.l.c.service.ContentSummaryService    : 영상 요약 처리 실패: fO3AFVeK - 요약 JSON 파싱에 실패했습니다. 원문={   "category_nm": "2차전지, 배터리 기술",   "summary": "이 영상은 2차전지의 기초 이론 중 정의와
+
+java.lang.IllegalStateException: 요약 JSON 파싱에 실패했습니다. 원문={   "category_nm": "2차전지, 배터리 기술",   "summary": "이 영상은 2차전지의 기초 이론 중 정의와
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.parseJsonFromText(GeminiVideoSummaryClient.java:308) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.parseAndNormalize(GeminiVideoSummaryClient.java:280) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.summarizeFromVideo(GeminiVideoSummaryClient.java:131) ~[main/:na]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.uploadAndSummarize(GeminiVideoSummaryClient.java:140) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.doVideoSummarize(ContentSummaryService.java:279) ~[main/:na]
+	at kr.polytech.lms.contentsummary.service.ContentSummaryService.runTranscription(ContentSummaryService.java:229) ~[main/:na]
+	at kr.polytech.lms.contentsummary.controller.ContentSummaryController.runTranscription(ContentSummaryController.java:53) ~[main/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:926) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:831) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.1.6.jar:6.1.6]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.20.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:206) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:109) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.1.6.jar:6.1.6]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:175) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:150) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:115) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:344) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:391) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:896) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1736) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.20.jar:10.1.20]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: com.fasterxml.jackson.core.io.JsonEOFException: Unexpected end-of-input: was expecting closing quote for a string value
+ at [Source: (String)"{
+  "category_nm": "2차전지, 배터리 기술",
+  "summary": "이 영상은 2차전지의 기초 이론 중 정의와"; line: 3, column: 38]
+	at com.fasterxml.jackson.core.base.ParserMinimalBase._reportInvalidEOF(ParserMinimalBase.java:697) ~[jackson-core-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._finishString2(ReaderBasedJsonParser.java:2219) ~[jackson-core-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser._finishString(ReaderBasedJsonParser.java:2206) ~[jackson-core-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.core.json.ReaderBasedJsonParser.getText(ReaderBasedJsonParser.java:323) ~[jackson-core-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.deser.std.BaseNodeDeserializer._deserializeContainerNoRecursion(JsonNodeDeserializer.java:572) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.deser.std.JsonNodeDeserializer.deserialize(JsonNodeDeserializer.java:100) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.deser.std.JsonNodeDeserializer.deserialize(JsonNodeDeserializer.java:25) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.deser.DefaultDeserializationContext.readRootValue(DefaultDeserializationContext.java:323) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.ObjectMapper._readTreeAndClose(ObjectMapper.java:4867) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at com.fasterxml.jackson.databind.ObjectMapper.readTree(ObjectMapper.java:3219) ~[jackson-databind-2.15.4.jar:2.15.4]
+	at kr.polytech.lms.contentsummary.client.GeminiVideoSummaryClient.parseJsonFromText(GeminiVideoSummaryClient.java:306) ~[main/:na]
+	... 58 common frames omitted
+
+
+> Task :bootRun FAILED
+4 actionable tasks: 3 executed, 1 up-to-date
