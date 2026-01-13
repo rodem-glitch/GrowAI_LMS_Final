@@ -26,7 +26,8 @@ public record StudentHomeRecommendRequest(
     }
 
     public double similarityThresholdOrDefault() {
-        double raw = similarityThreshold == null ? 0.2 : similarityThreshold;
+        // 왜: 0.3으로 올리면 관련성 낮은 결과가 제외되어 추천 품질이 올라갑니다.
+        double raw = similarityThreshold == null ? 0.3 : similarityThreshold;
         return Math.max(0.0, Math.min(raw, 1.0));
     }
 

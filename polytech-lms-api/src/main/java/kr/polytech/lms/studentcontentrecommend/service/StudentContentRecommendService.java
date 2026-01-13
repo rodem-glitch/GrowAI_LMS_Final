@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import kr.polytech.lms.global.vector.service.VectorStoreService;
+import kr.polytech.lms.global.vector.service.VectorQueryService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
 import kr.polytech.lms.recocontent.entity.RecoContent;
 import kr.polytech.lms.recocontent.repository.RecoContentRepository;
@@ -31,16 +32,19 @@ public class StudentContentRecommendService {
     private static final boolean ENABLE_RECO_DEDUPE = false;
 
     private final VectorStoreService vectorStoreService;
+    private final VectorQueryService vectorQueryService;
     private final JdbcTemplate jdbcTemplate;
     private final RecoContentRepository recoContentRepository;
 
     public StudentContentRecommendService(
         VectorStoreService vectorStoreService,
+        VectorQueryService vectorQueryService,
         JdbcTemplate jdbcTemplate,
         RecoContentRepository recoContentRepository
     ) {
-        // 왜: 교수자/학생 모두 같은 벡터 DB(Qdrant)를 쓰므로, 검색 코어(VectorStoreService)는 공통으로 재사용합니다.
+        // 왜: 홈 추천은 기존 VectorStoreService를, 검색은 RETRIEVAL_QUERY를 쓰는 VectorQueryService를 사용합니다.
         this.vectorStoreService = Objects.requireNonNull(vectorStoreService);
+        this.vectorQueryService = Objects.requireNonNull(vectorQueryService);
         // 왜: 레거시 LMS DB에서 "수강/시청/완료" 상태를 빠르게 확인해야 해서 JdbcTemplate을 사용합니다.
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
@@ -85,7 +89,8 @@ public class StudentContentRecommendService {
         List<VectorSearchResult> keywordResults = keywordSearchFromDatabase(safe.query(), desiredTopK);
 
         int fetchTopK = computeSearchFetchTopK(desiredTopK);
-        List<VectorSearchResult> vectorResults = vectorStoreService.similaritySearch(
+        // 왜: RETRIEVAL_QUERY task-type으로 검색해야 벡터 공간에서 쿼리-문서 매칭이 최적화됩니다.
+        List<VectorSearchResult> vectorResults = vectorQueryService.similaritySearchWithQueryTaskType(
             query,
             fetchTopK,
             safe.similarityThresholdOrDefault(),
