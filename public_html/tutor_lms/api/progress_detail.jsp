@@ -33,18 +33,27 @@ if(!isAdmin) {
 }
 
 DataSet info = courseUser.query(
+	// 왜: 일부 과정(특히 외부연계/학사 매핑)은 LM_COURSE_LESSON에 차시가 없을 수 있어도
+	//     진도(LM_COURSE_PROGRESS)에는 기록이 남아 있을 수 있습니다.
+	//     그래서 course_lesson은 LEFT JOIN으로 두고, 차시/레슨 정보는 LM_LESSON을 fallback(l2)로 보완합니다.
 	" SELECT cu.id course_user_id, cu.user_id, cu.course_id "
 	+ " , u.login_id, u.user_nm, u.email "
-	+ " , cl.chapter "
-	+ " , l.id lesson_id, l.lesson_nm, l.lesson_type, l.total_time, l.complete_time "
+	+ " , IFNULL(cl.chapter, 0) chapter "
+	+ " , IFNULL(l.id, IFNULL(l2.id, " + lessonId + ")) lesson_id "
+	+ " , IFNULL(l.lesson_nm, IFNULL(l2.lesson_nm, '과목에 등록되지 않은 차시입니다.')) lesson_nm "
+	+ " , IFNULL(l.lesson_type, IFNULL(l2.lesson_type, '')) lesson_type "
+	+ " , IFNULL(l.total_time, IFNULL(l2.total_time, 0)) total_time "
+	+ " , IFNULL(l.complete_time, IFNULL(l2.complete_time, 0)) complete_time "
 	+ " , IFNULL(cp.ratio, 0) ratio, IFNULL(cp.study_time, 0) study_time, IFNULL(cp.curr_time, 0) curr_time, IFNULL(cp.last_time, 0) last_time "
 	+ " , IFNULL(cp.view_cnt, 0) view_cnt, IFNULL(cp.curr_page, '') curr_page, IFNULL(cp.study_page, 0) study_page "
 	+ " , IFNULL(cp.complete_yn, 'N') complete_yn, IFNULL(cp.complete_date, '') complete_date, IFNULL(cp.last_date, '') last_date "
 	+ " FROM " + courseUser.table + " cu "
 	+ " INNER JOIN " + user.table + " u ON u.id = cu.user_id "
-	+ " INNER JOIN " + courseLesson.table + " cl ON cl.course_id = cu.course_id AND cl.lesson_id = " + lessonId + " AND cl.site_id = " + siteId + " AND cl.status = 1 "
-	+ " INNER JOIN " + lesson.table + " l ON l.id = cl.lesson_id AND l.status = 1 "
-	+ " LEFT JOIN " + courseProgress.table + " cp ON cp.course_user_id = cu.id AND cp.lesson_id = cl.lesson_id AND cp.site_id = " + siteId + " AND cp.status = 1 "
+	+ " LEFT JOIN " + courseLesson.table + " cl ON cl.course_id = cu.course_id AND cl.lesson_id = " + lessonId + " AND cl.site_id = " + siteId + " AND cl.status = 1 "
+	+ " LEFT JOIN " + lesson.table + " l ON l.id = cl.lesson_id AND l.status = 1 "
+	// 왜: course_lesson이 없을 때도 레슨 기본정보(이름/타입/시간)는 보여야 상세 모달이 깨지지 않습니다.
+	+ " LEFT JOIN " + lesson.table + " l2 ON l2.id = " + lessonId + " AND l2.status = 1 AND cl.lesson_id IS NULL "
+	+ " LEFT JOIN " + courseProgress.table + " cp ON cp.course_user_id = cu.id AND cp.lesson_id = " + lessonId + " AND cp.site_id = " + siteId + " AND cp.status = 1 "
 	+ " WHERE cu.id = " + courseUserId + " AND cu.course_id = " + courseId + " AND cu.site_id = " + siteId + " AND cu.status NOT IN (-1, -4) "
 );
 
