@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8081
   error:
     # 왜: 에러 응답에 stacktrace가 포함되면 민감정보(키/시크릿/경로)가 노출될 수 있어 차단합니다.
@@ -56,9 +56,9 @@ spring:
 # 그래서 환경변수(.env, Run Configuration)나 application-local.yml로만 주입해 주세요.
 kollus:
   api-base-url: ${KOLLUS_API_BASE_URL:https://api.kr.kollus.com}
-  access-token: ${KOLLUS_ACCESS_TOKEN:}
-  security-key: ${KOLLUS_SECURITY_KEY:}
-  channel-key: ${KOLLUS_CHANNEL_KEY:}
+  access-token: ${KOLLUS_ACCESS_TOKEN:2jr164nizjp8ur0z}
+  security-key: ${KOLLUS_SECURITY_KEY:newkl}
+  channel-key: ${KOLLUS_CHANNEL_KEY:u8p6y0itgnuaemiy}
   client-user-id: ${KOLLUS_CLIENT_USER_ID:contentsummary}
   http-timeout: ${KOLLUS_HTTP_TIMEOUT:PT60S}
   media-token-expire-time: ${KOLLUS_MEDIA_TOKEN_EXPIRE:PT5M}
@@ -95,9 +95,11 @@ gemini:
   # - 키는 절대 Git에 올리지 말고 환경변수로만 주입하세요.
   api-key: ${GEMINI_API_KEY:${GOOGLE_API_KEY:}}
   base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
-  model: ${GEMINI_MODEL:gemini-3.0-flash-preview}
+  model: ${GEMINI_MODEL:gemini-3-flash-preview}
   temperature: ${GEMINI_TEMPERATURE:0.2}
-  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
+  # 왜: 출력 토큰이 부족하면 JSON이 중간에서 끊겨(summary/keywords 따옴표 미완성) 파싱 실패/키워드 누락이 발생할 수 있습니다.
+  # 비용이 증가하더라도 "요약/키워드 품질 + 완전한 JSON 출력"을 우선하기 위해 기본값을 넉넉하게 올립니다.
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:4096}
   http-timeout: ${GEMINI_HTTP_TIMEOUT:PT60S}
 
 contentsummary:
