@@ -49,6 +49,81 @@ spring:
         use-tls: ${QDRANT_USE_TLS:false}
         initialize-schema: ${QDRANT_INIT_SCHEMA:true}
 
+# =========================
+# Kollus 전사(요약 전 단계)
+# =========================
+# 왜: 아래 값들은 운영/로컬 환경마다 다르고, 특히 토큰/키는 Git에 올리면 바로 사고가 납니다.
+# 그래서 환경변수(.env, Run Configuration)나 application-local.yml로만 주입해 주세요.
+kollus:
+  api-base-url: ${KOLLUS_API_BASE_URL:https://api.kr.kollus.com}
+  access-token: ${KOLLUS_ACCESS_TOKEN:}
+  security-key: ${KOLLUS_SECURITY_KEY:}
+  channel-key: ${KOLLUS_CHANNEL_KEY:}
+  client-user-id: ${KOLLUS_CLIENT_USER_ID:contentsummary}
+  http-timeout: ${KOLLUS_HTTP_TIMEOUT:PT60S}
+  media-token-expire-time: ${KOLLUS_MEDIA_TOKEN_EXPIRE:PT5M}
+  player-base-url: ${KOLLUS_PLAYER_BASE_URL:https://v.kr.kollus.com}
+
+stt:
+  provider: ${STT_PROVIDER:google}
+  language: ${STT_LANGUAGE:ko}
+  http-timeout: ${STT_HTTP_TIMEOUT:PT5M}
+  google:
+    # 왜: Speech-to-Text(v2)는 API Key가 아니라 서비스계정(OAuth) 인증을 주로 씁니다.
+    # - 로컬: `GOOGLE_APPLICATION_CREDENTIALS=C:\\path\\service-account.json`
+    # - 권한: Speech-to-Text 사용 + (GCS URI를 쓰면) 버킷 Object 접근 권한 필요
+    project-id: ${GCP_PROJECT_ID:}
+    location: ${GCP_LOCATION:global}
+    # `_`는 "기본(암묵) Recognizer"를 의미합니다(별도 리소스 생성 없이 사용 가능).
+    recognizer-id: ${GCP_SPEECH_RECOGNIZER_ID:_}
+    # 전사용 오디오를 올릴 GCS 버킷
+    gcs-bucket: ${GCP_SPEECH_GCS_BUCKET:}
+    # 버킷 안에 저장할 prefix(폴더처럼 사용)
+    gcs-prefix: ${GCP_SPEECH_GCS_PREFIX:contentsummary/stt}
+    # 전사 완료 후 업로드한 오디오를 남길지 여부(기본 false=삭제)
+    keep-uploaded-files: ${GCP_SPEECH_KEEP_UPLOADED:false}
+    # 문장부호를 자동으로 넣어주면 요약 품질이 좋아지는 편이라 기본 true로 둡니다.
+    enable-automatic-punctuation: ${GCP_SPEECH_ENABLE_PUNCTUATION:true}
+    # 장시간 음성용 모델(필요하면 변경)
+    model: ${GCP_SPEECH_MODEL:latest_long}
+    # 배치 전사(Operation) 폴링 주기/최대 대기시간
+    polling-interval: ${GCP_SPEECH_POLL_INTERVAL:PT2S}
+    polling-timeout: ${GCP_SPEECH_POLL_TIMEOUT:PT2H}
+
+gemini:
+  # 왜: 요약/키워드 생성은 Gemini REST API를 직접 호출합니다.
+  # - 키는 절대 Git에 올리지 말고 환경변수로만 주입하세요.
+  api-key: ${GEMINI_API_KEY:${GOOGLE_API_KEY:}}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+  model: ${GEMINI_MODEL:gemini-3.0-flash-preview}
+  temperature: ${GEMINI_TEMPERATURE:0.2}
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:1024}
+  http-timeout: ${GEMINI_HTTP_TIMEOUT:PT60S}
+
+contentsummary:
+  transcription:
+    # 비워두면 OS 임시폴더 하위(`.../polytech-lms-api/contentsummary`)를 사용합니다.
+    tmp-dir: ${CONTENTSUMMARY_TMP_DIR:}
+    keep-temp-files: ${CONTENTSUMMARY_KEEP_TEMP:false}
+  worker:
+    # 왜: 운영에 올리자마자 자동으로 대량 처리되면 비용/부하가 커질 수 있어서, 기본은 꺼두고 환경변수로 켜게 합니다.
+    enabled: ${CONTENTSUMMARY_WORKER_ENABLED:false}
+    poll-delay-ms: ${CONTENTSUMMARY_WORKER_POLL_DELAY_MS:30000}
+    batch-size: ${CONTENTSUMMARY_WORKER_BATCH_SIZE:3}
+    max-retries: ${CONTENTSUMMARY_WORKER_MAX_RETRIES:5}
+    retry-delay-seconds: ${CONTENTSUMMARY_WORKER_RETRY_DELAY_SECONDS:300}
+    processing-timeout-seconds: ${CONTENTSUMMARY_WORKER_PROCESSING_TIMEOUT_SECONDS:7200}
+
+# 전사 실행 관리자 토큰(선택)
+# - 운영에서 `/contentsummary/admin/transcribe`를 외부에서 호출하려면 아래 환경변수로 보호해 주세요.
+# - 설정하지 않으면 "로컬(127.0.0.1)"에서만 실행되게 막아둡니다.
+#   CONTENTSUMMARY_ADMIN_TOKEN=...
+
+# Kollus Webhook 토큰(선택)
+# - 운영에서 Kollus가 호출할 webhook 엔드포인트: `POST /contentsummary/webhooks/kollus`
+# - 외부 호출이므로 토큰을 강력 권장합니다(없으면 로컬에서만 허용).
+#   KOLLUS_WEBHOOK_TOKEN=...
+
 kosis:
   # 왜: KOSIS(통계청) API 키/시크릿은 Git에 올리지 않고 환경변수로 주입합니다.
   # - Windows(PowerShell) 예) `$env:KOSIS_CONSUMER_KEY="..." ; $env:KOSIS_CONSUMER_SECRET="..."`

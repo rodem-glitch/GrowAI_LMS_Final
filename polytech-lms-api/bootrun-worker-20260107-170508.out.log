@@ -1,0 +1,58 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-01-07T17:05:10.221+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Starting PolytechLmsApiApplication using Java 21.0.9 with PID 22320 (C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api\build\classes\java\main started by NEWKL1 in C:\Users\NEWKL1\Desktop\MalgnLMS\polytech-lms-api)
+2026-01-07T17:05:10.222+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : The following 1 profile is active: "local"
+2026-01-07T17:05:10.255+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-01-07T17:05:10.255+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-01-07T17:05:10.954+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-07T17:05:11.060+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 101 ms. Found 2 JPA repository interfaces.
+2026-01-07T17:05:11.571+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-07T17:05:11.580+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-07T17:05:11.581+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-01-07T17:05:11.618+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-07T17:05:11.622+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1364 ms
+2026-01-07T17:05:11.829+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-07T17:05:11.866+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-01-07T17:05:11.887+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-07T17:05:12.040+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-07T17:05:12.059+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-07T17:05:12.163+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@56ec1f3e
+2026-01-07T17:05:12.164+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-07T17:05:12.776+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-07T17:05:12.779+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-07T17:05:13.598+09:00  WARN 22320 --- [polytech-lms-api] [  restartedMain] io.qdrant.client.QdrantGrpcClient        : Failed to obtain server version. Unable to check client-server compatibility. Set checkCompatibility=false to skip version check.
+2026-01-07T17:05:13.922+09:00  WARN 22320 --- [polytech-lms-api] [  restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-07T17:05:14.390+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2026-01-07T17:05:14.398+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-01-07T17:05:14.801+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-01-07T17:05:14.841+09:00  INFO 22320 --- [polytech-lms-api] [  restartedMain] k.p.lms.PolytechLmsApiApplication        : Started PolytechLmsApiApplication in 4.906 seconds (process running for 5.273)
+2026-01-07T17:05:14.955+09:00  INFO 22320 --- [polytech-lms-api] [nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-07T17:05:14.956+09:00  INFO 22320 --- [polytech-lms-api] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-07T17:05:14.958+09:00  INFO 22320 --- [polytech-lms-api] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-01-07T17:10:01.325+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-5] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.347+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-6] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.352+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-1] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.358+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-2] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.372+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-7] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.379+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-8] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.382+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-3] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.387+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-4] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.392+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-9] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:10:01.396+09:00  WARN 22320 --- [polytech-lms-api] [io-8081-exec-10] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 404 NOT_FOUND "전사 결과를 찾을 수 없습니다."]
+2026-01-07T17:12:54.561+09:00  WARN 22320 --- [polytech-lms-api] [nio-8081-exec-2] .w.s.m.a.ResponseStatusExceptionResolver : Resolved [org.springframework.web.server.ResponseStatusException: 403 FORBIDDEN "관리자 토큰이 올바르지 않습니다."]
+
+> Task :bootRun FAILED
+4 actionable tasks: 2 executed, 2 up-to-date

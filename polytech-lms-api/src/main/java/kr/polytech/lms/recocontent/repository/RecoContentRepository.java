@@ -1,6 +1,7 @@
 package kr.polytech.lms.recocontent.repository;
 
 import java.util.List;
+import java.util.Optional;
 import kr.polytech.lms.recocontent.entity.RecoContent;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,6 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RecoContentRepository extends JpaRepository<RecoContent, Long> {
+    
+    // shkim_contentsummary1 브랜치에서 추가한 메서드들
+    boolean existsByLessonId(String lessonId);
+
+    Optional<RecoContent> findTopByLessonIdOrderByIdDesc(String lessonId);
+
+    // main 브랜치에서 추가한 메서드
     @Query(
         """
         select r

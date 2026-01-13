@@ -44,7 +44,7 @@ public class RecoContent {
 
     public void setLessonId(String lessonId) {
         // 왜: 추천 결과를 실제 레거시 영상(레슨ID)과 연결해야 화면에서 바로 "추가"가 가능합니다.
-        this.lessonId = lessonId;
+        this.lessonId = lessonId == null ? null : String.valueOf(lessonId);
     }
 
     public Long getId() {
@@ -53,6 +53,11 @@ public class RecoContent {
 
     public String getLessonId() {
         return lessonId;
+    }
+
+    public void setLessonId(String lessonId) {
+        // 왜: Kollus 미디어 콘텐츠 키(문자열)를 그대로 저장하기 위한 setter입니다.
+        this.lessonId = lessonId == null ? null : lessonId.trim();
     }
 
     public String getCategoryNm() {

@@ -59,6 +59,19 @@ public class RecoContentVectorIndexService {
         return new IndexRecoContentsResponse(page.getNumberOfElements(), indexed);
     }
 
+    public void upsertOne(RecoContent content) {
+        // 왜: 전사/요약이 자동으로 생성되면 TB_RECO_CONTENT에 행이 계속 추가됩니다.
+        // 추천에서 바로 반영되려면, 새로 저장된 1건만이라도 벡터 DB(Qdrant)에 즉시 upsert해두는 게 안전합니다.
+        if (content == null) return;
+        if (content.getId() == null) return;
+
+        String docId = "reco_content:" + content.getId();
+        Map<String, Object> metadata = buildMetadata(content, 1);
+        String text = buildEmbeddingText(content);
+
+        vectorStoreService.upsertText(docId, text, metadata);
+    }
+
     private Map<String, Object> buildMetadata(RecoContent content, int embeddingVersion) {
         Map<String, Object> meta = new HashMap<>();
         meta.put("source", "tb_reco_content");
