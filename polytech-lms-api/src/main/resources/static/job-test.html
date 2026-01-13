@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>채용 공고 테스트</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8fafc; }
+    .bg-gray-50 { background: #f9fafb; }
+    .bg-gray-100 { background: #f3f4f6; }
+    .border-gray-300 { border-color: #d1d5db !important; }
+    .text-gray-500 { color: #6b7280; }
+    .text-gray-700 { color: #374151; }
+    .text-gray-900 { color: #111827; }
+    .shadow-sm-hover:hover { box-shadow: 0 .125rem .5rem rgba(0,0,0,.08); }
+    .h_45 { height: 45px; }
+    .w_12 { width: 48px; }
+    .h_12 { height: 48px; }
+  </style>
+</head>
+<body>
+  <div class="row border-0 border-bottom border-gray-300">
+    <div class="col-12">
+      <section class="container">
+        <div class="mt-2 container-fluid container-lg">
+          <ul class="nav nav-underline">
+            <li class="nav-item">
+              <button class="pb-3 nav-link" type="button">직업 탐색</button>
+            </li>
+            <li class="nav-item">
+              <button class="pb-3 nav-link" type="button">학과 진로 정보</button>
+            </li>
+            <li class="nav-item">
+              <button class="pb-3 nav-link active" type="button">채용 공고</button>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="row border-0 bg-gray-50">
+    <div class="col-12">
+      <section class="container my-4">
+        <div class="bg-white border-gray-300 rounded-3 border-1 mt-4 p-4">
+          <div class="row g-4">
+            <div class="col-md-4">
+              <label for="jobselect" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야</label>
+              <select id="jobselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
+            </div>
+            <div class="col-md-4">
+              <label for="areaselect" class="form-label text-sm fw-medium text-gray-700 mb-2">근무 지역</label>
+              <select id="areaselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
+            </div>
+            <div class="col-md-4">
+              <label for="jobsearchbtn" class="form-label text-sm fw-medium text-gray-700 mb-2">&nbsp;</label>
+              <button id="jobsearchbtn" class="form-control btn btn-outline-secondary">검색</button>
+            </div>
+          </div>
+        </div>
+
+        <h4 class="fw-bold text-xl mt-4" id="resultCount">채용 공고 (0건)</h4>
+        <div class="row gy-3 worklist"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const jobSelect = document.getElementById("jobselect");
+    const areaSelect = document.getElementById("areaselect");
+    const jobSearchBtn = document.getElementById("jobsearchbtn");
+    const workList = document.querySelector(".worklist");
+    const resultCount = document.getElementById("resultCount");
+
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || response.statusText);
+      }
+      return response.json();
+    }
+
+    async function loadOccupationCodes() {
+      // 왜: 직무 분야 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
+      const data = await fetchJson("/job/occupation-codes?depthType=2");
+      jobSelect.innerHTML = "";
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.code;
+        option.textContent = item.title;
+        jobSelect.appendChild(option);
+      });
+    }
+
+    async function loadRegionCodes() {
+      // 왜: 근무 지역 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
+      const data = await fetchJson("/job/region-codes?depthType=1");
+      areaSelect.innerHTML = "";
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.idx;
+        option.textContent = item.title;
+        areaSelect.appendChild(option);
+      });
+    }
+
+    function buildWorkCard(item) {
+      const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "-") : item.region;
+      const holidayBadge = item.holidayTpNm
+        ? `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-1 text-xs me-2">${item.holidayTpNm}</span>`
+        : "";
+
+      return `
+        <div class="col-12">
+          <div class="card d-flex flex-row bg-white justify-content-between shadow-sm-hover">
+            <div class="d-flex flex-row align-items-start p-4">
+              <div class="w_12 h_12 d-flex align-items-center justify-content-center me-2 rounded-2" style="background:#f6f6f6">
+                <i class="bi bi-buildings"></i>
+              </div>
+              <div class="d-flex flex-column">
+                <div class="text-gray-900">${item.title || "-"}</div>
+                <span class="text-sm">${item.company || "-"} · ${region} · ${item.career || "-"}</span>
+                <div class="d-flex align-items-center my-1">
+                  ${holidayBadge}
+                  <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-1 text-xs me-2">${item.minEdubg || "-"}</span>
+                </div>
+                <div class="d-flex align-items-center text-sm">
+                  <span class="text-green-600 fw-medium">${item.sal || "-"}</span>
+                  <span class="text-gray-500 ms-3">마감: ${item.closeDt || "-"}</span>
+                </div>
+              </div>
+            </div>
+            <div class="text-gray-500 d-flex flex-column align-items-end p-4">
+              <span class="bg-green-100 text-green-800 px-2 py-1 rounded-1 text-xs fw-medium">${item.salTpNm || "-"}</span>
+              <a class="text-blue-600 fw-medium flex-nowrap bg-white" href="${item.wantedInfoUrl || "#"}" target="_blank" rel="noopener" title="지원하기">지원하기</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function searchWorkList() {
+      // 왜: 화면 선택값으로 채용 공고 목록을 다시 조회합니다.
+      const region = areaSelect.value || "";
+      const occupation = jobSelect.value || "";
+      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=1&display=10`;
+      const data = await fetchJson(url);
+
+      const items = (data && data.wanted) ? data.wanted : [];
+      resultCount.textContent = `채용 공고 (${items.length}건)`;
+      workList.innerHTML = items.map(buildWorkCard).join("");
+    }
+
+    jobSearchBtn.addEventListener("click", () => {
+      searchWorkList().catch(err => {
+        resultCount.textContent = "채용 공고 (0건)";
+        workList.innerHTML = `<div class="col-12 text-danger">조회 실패: ${err.message}</div>`;
+      });
+    });
+
+    Promise.all([loadOccupationCodes(), loadRegionCodes()])
+      .then(() => searchWorkList())
+      .catch(err => {
+        resultCount.textContent = "채용 공고 (0건)";
+        workList.innerHTML = `<div class="col-12 text-danger">초기 로딩 실패: ${err.message}</div>`;
+      });
+  </script>
+</body>
+</html>

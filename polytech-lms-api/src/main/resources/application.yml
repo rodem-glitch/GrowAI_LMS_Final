@@ -135,6 +135,14 @@ kosis:
   industry-code-url: ${KOSIS_INDUSTRY_CODE_URL:https://sgisapi.mods.go.kr/OpenAPI3/stats/industrycode.json}
   company-url: ${KOSIS_COMPANY_URL:https://sgisapi.mods.go.kr/OpenAPI3/stats/company.json}
 
+work24:
+  # 왜: 채용 공고는 Work24 OpenAPI로 실시간 조회하고, 필요하면 캐시로 재사용합니다.
+  api-url: ${WORK24_API_URL:https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do}
+  auth-key: ${WORK24_AUTH_KEY:}
+  cache:
+    enabled: ${WORK24_CACHE_ENABLED:true}
+    ttl-minutes: ${WORK24_CACHE_TTL_MINUTES:1440}
+
 statistics:
   mapping:
     # 왜: 전공(학과) ↔ 기술업종 분류 매핑 파일이 있어야 "캠퍼스 학생비율(전공별)"을 산업 분류로 변환해 비교할 수 있습니다.
