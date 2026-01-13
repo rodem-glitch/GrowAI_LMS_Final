@@ -530,7 +530,8 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
           <div className="col-span-8 border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
-              <div className="text-sm text-gray-700">
+              {/* 왜: min-w-0과 truncate를 추가하여 긴 텍스트가 레이아웃을 깨지 않도록 합니다 */}
+              <div className="text-sm text-gray-700 min-w-0 flex-1 truncate">
                 {selectedSessionId === 'overall' ? (
                   <span className="text-purple-700 font-medium">전체 정보 보기</span>
                 ) : selectedHaksaSession ? (
@@ -547,12 +548,13 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* 왜: flex-shrink-0으로 오른쪽 컨트롤이 너무 작아지는 것을 방지합니다 */}
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {selectedHaksaSession && selectedHaksaSession.videoLessons.length > 1 && (
                   <select
                     value={selectedLessonId ?? ''}
                     onChange={(e) => setSelectedLessonId(Number(e.target.value))}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px] truncate"
                   >
                     {selectedHaksaSession.videoLessons.map((video) => (
                       <option key={video.lessonId} value={video.lessonId}>
@@ -592,17 +594,17 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                 <table className="w-full">
                   <thead className="bg-white border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">학번</th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">총 학습시간</th>
-                      <th className="px-4 py-3 text-center text-sm text-gray-700">
+                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">학번</th>
+                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">이름</th>
+                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">총 학습시간</th>
+                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">
                         {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700">
+                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">
                         {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
                       </th>
                       {selectedLessonId !== -1 && (
-                        <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                        <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">상세</th>
                       )}
                     </tr>
                   </thead>
@@ -637,10 +639,10 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                             )}
                           </td>
                           {selectedLessonId !== -1 && (
-                            <td className="px-4 py-3 text-center">
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
                               <button
                                 onClick={() => openDetail(row)}
-                                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
                               >
                                 보기
                               </button>
@@ -740,7 +742,8 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
         <div className="col-span-8 border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
-            <div className="text-sm text-gray-700">
+            {/* 왜: min-w-0과 truncate를 추가하여 긴 텍스트가 레이아웃을 깨지 않도록 합니다 */}
+            <div className="text-sm text-gray-700 min-w-0 flex-1 truncate">
               {selectedLessonId === -1 ? (
                 <span className="text-purple-700 font-medium">전체 정보 보기</span>
               ) : selectedSummary ? (
@@ -776,17 +779,17 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
             <table className="w-full">
               <thead className="bg-white border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">학번</th>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">이름</th>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">총 학습시간</th>
-                  <th className="px-4 py-3 text-center text-sm text-gray-700">
+                  <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">학번</th>
+                  <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">이름</th>
+                  <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">총 학습시간</th>
+                  <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">
                     {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
                   </th>
-                  <th className="px-4 py-3 text-left text-sm text-gray-700">
+                  <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">
                     {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
                   </th>
                   {selectedLessonId !== -1 && (
-                    <th className="px-4 py-3 text-center text-sm text-gray-700">상세</th>
+                    <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">상세</th>
                   )}
                 </tr>
               </thead>
@@ -821,10 +824,10 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                         )}
                       </td>
                       {selectedLessonId !== -1 && (
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-4 py-3 text-center whitespace-nowrap">
                           <button
                             onClick={() => openDetail(row)}
-                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
                           >
                             보기
                           </button>
