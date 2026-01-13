@@ -22,7 +22,8 @@ while(list.next()) {
 	//상태 [progress] (W : 대기, E : 종료, I : 수강중, R : 복습중)
 	boolean isReady = false; //대기
 	boolean isEnd = false; //완료
-	if("1".equals(list.s("apply_type"))) { //시작일
+	boolean isPeriodApply = "1".equals(list.s("apply_type"));
+	if(isPeriodApply) { //기간
 		list.put("start_date_conv", m.time(_message.get("format.datetime.dot"), list.s("start_date")));
 		list.put("end_date_conv", m.time(_message.get("format.datetime.dot"), list.s("end_date")));
 
@@ -47,17 +48,22 @@ while(list.next()) {
 
 	String status = "-";
 	if(list.b("submit_yn")) status = _message.get("classroom.module.status.submit");
-	else if("W".equals(progress) || isReady) status = _message.get("classroom.module.status.waiting");
+	// 왜: 기간형 과제(apply_type=1)는 "과제 기간"이 곧 제출 가능 조건이므로,
+	//     수강상태(progress=W 대기)만으로 제출을 막으면 학사/매핑 과정에서 "항상 대기"가 되는 문제가 생길 수 있습니다.
+	//     따라서 기간형은 isReady(과제 시작 전)만 대기로 처리하고, 차시형(apply_type=2)만 수강 대기(progress=W)를 반영합니다.
+	else if(isReady || ("W".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.waiting");
 	// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 과제는 종료일이 지나기 전까지는 제출을 허용해야 합니다.
 	//     (단, 차시(apply_type=2)형은 학기 종료와 함께 종료로 처리합니다.)
-	else if(isEnd || ("E".equals(progress) && !"1".equals(list.s("apply_type")))) status = _message.get("classroom.module.status.end");
+	else if(isEnd || ("E".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.end");
 	else if("I".equals(progress) && list.i("user_id") != 0) status = _message.get("classroom.module.status.writing");
 	else status = "-";
 	list.put("status_conv", status);
 
 	//list.put("open_block", true);
-	// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 과제는 종료일 전까지는 제출을 허용합니다.
-	boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && "1".equals(list.s("apply_type")));
+	// 왜: 제출 폼 노출은 "과제 기간"을 최우선으로 봐야 합니다.
+	// - 기간형(apply_type=1): 과제 기간 내면 수강 상태와 무관하게 제출 가능(학사/숨김 매핑 과정의 progress 이슈 방지)
+	// - 차시형(apply_type=2): 수강중(I) 또는 복습중(R)일 때만 제출 가능
+	boolean canOpenByProgress = isPeriodApply ? true : ("I".equals(progress) || "R".equals(progress));
 	list.put("open_block", !isReady && !isEnd && canOpenByProgress && "N".equals(list.s("onoff_type")));
 
 	list.put("mod_date_conv", list.b("submit_yn") ? m.time(_message.get("format.date.dot"), list.s("mod_date")) : "-");

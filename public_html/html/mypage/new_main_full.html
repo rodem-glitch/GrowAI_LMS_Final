@@ -913,7 +913,7 @@
 			<div class="nm-grid nm-grid--4">
 				<!--@loop(reco_video_list)-->
 				<div class="nm-card">
-					<a href="{{reco_video_list.play_url}}" target="_blank" rel="noopener" class="nm-card__img-link" style="display:block; position:relative;">
+					<a href="javascript:OpenWindowr('{{reco_video_list.play_url}}', 'RECO_VIEWER', 1000, 700);" class="nm-card__img-link" style="display:block; position:relative;">
 						<img src="{{reco_video_list.thumbnail}}" alt="{{reco_video_list.title}}" class="nm-card__img">
 						<span style="position:absolute; right:10px; bottom:10px; width:34px; height:34px; border-radius:999px; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;">
 							<i class="bi bi-play-fill" style="color:#fff; font-size:18px; margin-left:2px;"></i>
@@ -925,7 +925,7 @@
 						<!--@if(reco_video_list.duration_conv)-->
 						<p class="nm-card__meta" style="font-size:11px; color:#9ca3af;"><i class="bi bi-clock" style="margin-right:4px;"></i>{{reco_video_list.duration_conv}}</p>
 						<!--/if(reco_video_list.duration_conv)-->
-						<a href="{{reco_video_list.play_url}}" target="_blank" rel="noopener" class="nm-continue__btn">미리보기</a>
+						<a href="javascript:OpenWindowr('{{reco_video_list.play_url}}', 'RECO_VIEWER', 1000, 700);" class="nm-continue__btn">미리보기</a>
 					</div>
 				</div>
 				<!--/loop(reco_video_list)-->

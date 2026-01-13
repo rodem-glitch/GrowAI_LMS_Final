@@ -152,50 +152,42 @@ try {
 			if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
 		} catch(Exception ignore) {}
 
-		while(recoRows.next()) {
-			int lid = m.parseInt(recoRows.s("lessonId"));
-			if(lid <= 0) continue;
+		KollusMediaDao kollusMedia = new KollusMediaDao();
+		HashMap<String, String> thumbCache = new HashMap<String, String>();
 
-			// 레슨 기본정보(타이틀/타입/콜러스키 등)
-			DataSet linfo = lesson.find(
-				"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
-				"id, lesson_nm, start_url, total_time, lesson_type"
-			);
-			if(!linfo.next()) continue;
+		while(recoRows.next()) {
+			String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
+			if("".equals(lessonId)) continue;
 
 			recoVideoList.addRow();
-			recoVideoList.put("lesson_id", lid);
-			recoVideoList.put("title", linfo.s("lesson_nm"));
+			recoVideoList.put("lesson_id", lessonId);
+			recoVideoList.put("title", recoRows.s("title"));
 			recoVideoList.put("category_nm", recoRows.s("categoryNm"));
 			recoVideoList.put("score", recoRows.s("score"));
 
-			// 재생 URL(미리보기 용도)
-			// 왜: 레슨 타입에 따라 재생 경로가 다릅니다.
-			// - 05(콜러스)은 토큰 발급이 필요하므로 kollus.getPlayUrl()을 써야 재생됩니다.
-			// - 그 외(자체/외부/문서 등)는 기존 jwplayer.jsp 흐름으로 새 탭 미리보기를 엽니다.
-			String playUrl = "";
-			if("05".equals(linfo.s("lesson_type"))) {
-				playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
-				if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
-			} else {
-				playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
-			}
+			// 왜: 학생도 교수자처럼 작은 팝업으로 미리보기 재생이 필요합니다.
+			String playUrl = "/kollus/preview.jsp?key=" + lessonId;
 			recoVideoList.put("play_url", playUrl);
 
-			// 시간 표시(분 단위)
-			int totalMin = linfo.i("total_time");
-			recoVideoList.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
+			// 왜: 외부 영상은 시간 정보가 없으므로 빈 값
+			recoVideoList.put("duration_conv", "");
 
-			// 썸네일(콜러스는 snapshot_url 사용, 그 외는 기본 이미지)
-			String thumbnail = "/html/images/common/noimage_course.gif";
-			try {
-				if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
-					DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
-					if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) {
-						thumbnail = kinfo.s("snapshot_url");
-					}
+			// 왜: 교수자 LMS와 동일하게 TB_KOLLUS_MEDIA.snapshot_url을 썸네일로 사용합니다.
+			String thumbnail = thumbCache.get(lessonId);
+			if(thumbnail == null) {
+				String found = "";
+				DataSet minfo = kollusMedia.find(
+					"site_id = " + siteId + " AND media_content_key = ?",
+					new String[] { lessonId }
+				);
+				if(minfo.next()) {
+					found = minfo.s("snapshot_url");
 				}
-			} catch(Exception ignore) {}
+
+				if("".equals(found)) found = "/html/images/common/noimage_course.gif";
+				thumbCache.put(lessonId, found);
+				thumbnail = found;
+			}
 			recoVideoList.put("thumbnail", thumbnail);
 		}
 	}

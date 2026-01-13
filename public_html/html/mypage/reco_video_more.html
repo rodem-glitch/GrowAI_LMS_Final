@@ -118,7 +118,7 @@ html { scroll-behavior: smooth; }
 		<div class="nm-grid nm-grid--4">
 			<!--@loop(reco_video_more_list)-->
 			<div class="nm-card">
-				<a href="{{reco_video_more_list.play_url}}" target="_blank" rel="noopener" style="display:block; position:relative;">
+				<a href="javascript:OpenWindowr('{{reco_video_more_list.play_url}}', 'RECO_VIEWER', 1000, 700);" style="display:block; position:relative;">
 					<img src="{{reco_video_more_list.thumbnail}}" alt="{{reco_video_more_list.title}}" class="nm-card__img" onerror="this.src='/html/images/common/noimage_course.gif'">
 					<!-- 재생 버튼 -->
 					<span style="position:absolute; right:10px; bottom:10px; width:36px; height:36px; border-radius:50%; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;">
@@ -147,7 +147,7 @@ html { scroll-behavior: smooth; }
 						<i class="bi bi-calendar3" style="margin-right:4px;"></i>{{reco_video_more_list.last_date_conv}}
 					</p>
 					<!--/if(reco_video_more_list.last_date_conv)-->
-					<a href="{{reco_video_more_list.play_url}}" target="_blank" rel="noopener" class="nm-continue__btn">
+					<a href="javascript:OpenWindowr('{{reco_video_more_list.play_url}}', 'RECO_VIEWER', 1000, 700);" class="nm-continue__btn">
 						<i class="bi bi-play-circle"></i> 영상 시청하기
 					</a>
 				</div>

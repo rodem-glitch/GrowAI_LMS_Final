@@ -1,11 +1,15 @@
 package kr.polytech.lms.tutorcontentrecommend.service;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import kr.polytech.lms.global.vector.service.VectorStoreService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
+import kr.polytech.lms.recocontent.entity.RecoContent;
+import kr.polytech.lms.recocontent.repository.RecoContentRepository;
 import kr.polytech.lms.tutorcontentrecommend.service.dto.TutorContentRecommendRequest;
 import kr.polytech.lms.tutorcontentrecommend.service.dto.TutorContentRecommendResponse;
 import org.springframework.stereotype.Service;
@@ -14,10 +18,15 @@ import org.springframework.stereotype.Service;
 public class TutorContentRecommendService {
 
     private final VectorStoreService vectorStoreService;
+    private final RecoContentRepository recoContentRepository;
 
-    public TutorContentRecommendService(VectorStoreService vectorStoreService) {
+    public TutorContentRecommendService(
+        VectorStoreService vectorStoreService,
+        RecoContentRepository recoContentRepository
+    ) {
         // 왜: 벡터 DB(Qdrant) 검색은 공통 VectorStoreService로 통일해서, 추천 도메인별로 재사용합니다.
         this.vectorStoreService = Objects.requireNonNull(vectorStoreService);
+        this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
     }
 
     public List<TutorContentRecommendResponse> recommendLessons(TutorContentRecommendRequest request) {
@@ -33,8 +42,9 @@ public class TutorContentRecommendService {
             filterExpression
         );
 
+        Map<Long, RecoContent> contentById = fetchRecoContentsById(results);
         return results.stream()
-            .map(this::toResponse)
+            .map(r -> toResponse(r, contentById))
             .toList();
     }
 
@@ -65,23 +75,69 @@ public class TutorContentRecommendService {
         sb.append(label).append(": ").append(trimmed).append("\n");
     }
 
-    private TutorContentRecommendResponse toResponse(VectorSearchResult result) {
+    private TutorContentRecommendResponse toResponse(VectorSearchResult result, Map<Long, RecoContent> contentById) {
         Map<String, Object> meta = result.metadata() == null ? new HashMap<>() : new HashMap<>(result.metadata());
 
-        Long lessonId = toLong(meta.get("lesson_id"));
+        String lessonId = toStringValue(meta.get("lesson_id"));
         Long recoContentId = toLong(meta.get("content_id"));
 
-        String title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
-        String category = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        // 왜: 벡터 메타데이터에는 summary가 없을 수 있으므로, DB에서 직접 조회합니다.
+        String title = null;
+        String category = null;
+        String summary = null;
+        String keywords = null;
+
+        if (recoContentId != null) {
+            // 왜: topK가 커져도 DB 조회가 N번 반복되지 않도록, 미리 한 번에 조회한 Map을 사용합니다.
+            RecoContent content = contentById == null ? null : contentById.get(recoContentId);
+            if (content != null) {
+                title = content.getTitle();
+                category = content.getCategoryNm();
+                summary = content.getSummary();
+                keywords = content.getKeywords();
+                if (lessonId == null) {
+                    lessonId = content.getLessonId();
+                }
+            }
+        }
+
+        // 왜: DB 조회 실패 시 메타데이터에서 fallback
+        if (title == null) {
+            title = meta.get("title") != null ? String.valueOf(meta.get("title")) : null;
+        }
+        if (category == null) {
+            category = meta.get("category_nm") != null ? String.valueOf(meta.get("category_nm")) : null;
+        }
 
         return new TutorContentRecommendResponse(
             lessonId,
             recoContentId,
             title,
             category,
+            summary,
+            keywords,
             result.score(),
             meta
         );
+    }
+
+    private Map<Long, RecoContent> fetchRecoContentsById(List<VectorSearchResult> results) {
+        if (results == null || results.isEmpty()) return Map.of();
+
+        Set<Long> ids = new HashSet<>();
+        for (VectorSearchResult result : results) {
+            if (result == null || result.metadata() == null) continue;
+            Long id = toLong(result.metadata().get("content_id"));
+            if (id != null) ids.add(id);
+        }
+        if (ids.isEmpty()) return Map.of();
+
+        Map<Long, RecoContent> map = new HashMap<>();
+        for (RecoContent content : recoContentRepository.findAllById(ids)) {
+            if (content == null || content.getId() == null) continue;
+            map.put(content.getId(), content);
+        }
+        return map;
     }
 
     private Long toLong(Object value) {
@@ -94,5 +150,12 @@ public class TutorContentRecommendService {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private String toStringValue(Object value) {
+        // 왜: 콜러스 영상 키값은 '5vcd73vW' 같은 문자열이므로, 그대로 String으로 변환합니다.
+        if (value == null) return null;
+        String s = String.valueOf(value).trim();
+        return s.isBlank() ? null : s;
     }
 }

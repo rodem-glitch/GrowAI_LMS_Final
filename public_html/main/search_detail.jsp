@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ include file="init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %><%@ page import="java.io.*" %><%@ page import="java.net.*" %><%@ page import="java.nio.charset.StandardCharsets" %><%@ page import="malgnsoft.json.*" %><%@ include file="init.jsp" %><%
 
 //기본키
 String subject = m.rs("subject");
@@ -39,7 +39,117 @@ String[] subjectList = {"tutor=>강사", "course=>강의", "webtv=>방송", "pos
 ListManager lm = new ListManager();
 DataSet list = new DataSet();
 
-if("post".equals(searchType)) {
+// 왜: 강의(=과정) 상세 '더보기' 화면에서도 벡터검색 결과를 전체로 보고 싶다는 요구가 있어서,
+//     subject=course 이면서 mode=vector면 DB REGEXP 대신 벡터검색 API 결과를 그대로 출력합니다.
+String mode = m.rs("mode").trim();
+
+if("course".equals(searchType) && "vector".equals(mode)) {
+	// ===== 벡터(추천) 검색 - 학생 검색 추천(동영상/강의) 전체 =====
+	// 주의: JSP에는 기본 내장객체로 JspWriter `out`이 이미 있어서, 변수명 충돌을 피해야 합니다.
+	DataSet vectorList = new DataSet();
+	try {
+		String vectorQuery = m.rs("s_keyword").trim();
+		vectorQuery = vectorQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ");
+		vectorQuery = vectorQuery.replaceAll("\\s+", " ").trim();
+		if(vectorQuery.length() > 200) vectorQuery = m.cutString(vectorQuery, 200, "");
+
+		if(!"".equals(vectorQuery)) {
+			String apiBase = System.getenv("POLYTECH_LMS_API_BASE");
+			if(apiBase == null || "".equals(apiBase.trim())) apiBase = "http://localhost:8081";
+			apiBase = apiBase.replaceAll("/+$", "");
+
+			String url = apiBase + "/student/content-recommend/search";
+
+			JSONObject payload = new JSONObject();
+			if(userId > 0) payload.put("userId", userId);
+			payload.put("siteId", siteId);
+			payload.put("query", vectorQuery);
+			payload.put("topK", 200);
+
+			String responseBody = "";
+			int httpCode = 0;
+
+			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+			conn.setRequestMethod("POST");
+			conn.setConnectTimeout(5000);
+			conn.setReadTimeout(20000);
+			conn.setDoOutput(true);
+			conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+			conn.setRequestProperty("Accept", "application/json");
+
+			byte[] bodyBytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+			conn.setFixedLengthStreamingMode(bodyBytes.length);
+			try(OutputStream os = conn.getOutputStream()) {
+				os.write(bodyBytes);
+			}
+
+			httpCode = conn.getResponseCode();
+			InputStream is = (httpCode >= 200 && httpCode < 300) ? conn.getInputStream() : conn.getErrorStream();
+			if(is != null) {
+				try(BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+					StringBuilder sb = new StringBuilder();
+					String line;
+					while((line = br.readLine()) != null) sb.append(line);
+					responseBody = sb.toString();
+				}
+			}
+
+			if(httpCode >= 200 && httpCode < 300) {
+				DataSet recoRows = new DataSet();
+				try {
+					String trimmed = responseBody == null ? "" : responseBody.trim();
+					if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
+				} catch(Exception ignore) {}
+
+				KollusDao kollus = new KollusDao(siteId);
+				KollusMediaDao kollusMedia = new KollusMediaDao();
+				HashMap<String, String> thumbCache = new HashMap<String, String>();
+
+				while(recoRows.next()) {
+					String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
+					if("".equals(lessonId)) continue;
+
+					vectorList.addRow();
+					vectorList.put("is_reco_video", true);
+					vectorList.put("id", lessonId);
+					vectorList.put("course_nm", recoRows.s("title"));
+					vectorList.put("course_nm_conv", m.cutString(recoRows.s("title"), 48));
+					vectorList.put("category_nm", recoRows.s("categoryNm"));
+					vectorList.put("onoff_type_conv", "온라인");
+					vectorList.put("recomm_yn", true);
+
+					// 왜: 외부 콜러스 영상은 학습 상태가 없으므로 빈 값
+					vectorList.put("status_badge", "");
+
+					// 왜: 학생도 교수자처럼 작은 팝업으로 미리보기 재생이 필요합니다.
+					String playUrl = "/kollus/preview.jsp?key=" + lessonId;
+					vectorList.put("play_url", playUrl);
+
+					vectorList.put("duration_conv", "");
+					// 왜: 교수자 LMS와 동일하게 TB_KOLLUS_MEDIA.snapshot_url을 썸네일로 사용합니다.
+					String thumbnail = thumbCache.get(lessonId);
+					if(thumbnail == null) {
+						String found = "";
+						DataSet minfo = kollusMedia.find(
+							"site_id = " + siteId + " AND media_content_key = ?",
+							new String[] { lessonId }
+						);
+						if(minfo.next()) {
+							found = minfo.s("snapshot_url");
+						}
+
+						if("".equals(found)) found = "/html/images/common/noimage_course.gif";
+						thumbCache.put(lessonId, found);
+						thumbnail = found;
+					}
+					vectorList.put("course_file_url", thumbnail);
+				}
+			}
+		}
+	} catch(Exception ignore) {}
+
+	list = vectorList;
+} else if("post".equals(searchType)) {
 	//목록
 	//lm.d(out);
 	lm.setRequest(request);
@@ -196,8 +306,13 @@ p.setVar("subject_query", m.qs("id,subject,page"));
 p.setVar("form_script", f2.getScript());
 
 p.setLoop("list", list);
-p.setVar("pagebar", lm.getPaging());
-p.setVar("search_total", lm.getTotalNum());
+if("course".equals(searchType) && "vector".equals(mode)) {
+	p.setVar("pagebar", "");
+	p.setVar("search_total", list.size());
+} else {
+	p.setVar("pagebar", lm.getPaging());
+	p.setVar("search_total", lm.getTotalNum());
+}
 
 //p.setVar("s_keyword", keyword.replaceAll("\\|", " "));
 p.setVar(searchType + "_block", true);

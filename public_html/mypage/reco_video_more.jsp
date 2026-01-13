@@ -12,8 +12,7 @@
 // 목적: 학생 홈 "추천 동영상" 더보기 페이지
 // -------------------------------------------------------------------
 
-LessonDao lesson = new LessonDao();
-KollusDao kollus = new KollusDao(siteId);
+// 왜: 콜러스 외부 영상은 LMS DB에 없으므로, API 응답(TB_RECO_CONTENT 데이터)을 직접 사용합니다.
 
 int topK = m.ri("topK");
 if(topK <= 0) topK = 50;
@@ -68,60 +67,46 @@ try {
 			if(trimmed.startsWith("[")) recoRows = malgnsoft.util.Json.decode(trimmed);
 		} catch(Exception ignore) {}
 
-		while(recoRows.next()) {
-			int lid = m.parseInt(recoRows.s("lessonId"));
-			if(lid <= 0) continue;
+		KollusDao kollus = new KollusDao(siteId);
 
-			DataSet linfo = lesson.find(
-				"id = " + lid + " AND site_id = " + siteId + " AND status = 1 AND use_yn = 'Y'",
-				"id, lesson_nm, start_url, total_time, lesson_type"
-			);
-			if(!linfo.next()) continue;
+		KollusMediaDao kollusMedia = new KollusMediaDao();
+		HashMap<String, String> thumbCache = new HashMap<String, String>();
+
+		while(recoRows.next()) {
+			String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
+			if("".equals(lessonId)) continue;
 
 			recoVideoMoreList.addRow();
-			recoVideoMoreList.put("lesson_id", lid);
-			recoVideoMoreList.put("title", linfo.s("lesson_nm"));
+			recoVideoMoreList.put("lesson_id", lessonId);
+			recoVideoMoreList.put("title", recoRows.s("title"));
 			recoVideoMoreList.put("category_nm", recoRows.s("categoryNm"));
+			recoVideoMoreList.put("keywords", recoRows.s("keywords"));
 			recoVideoMoreList.put("score", recoRows.s("score"));
 
-			String playUrl = "";
-			if("05".equals(linfo.s("lesson_type"))) {
-				playUrl = kollus.getPlayUrl(linfo.s("start_url"), "");
-				if("https".equals(request.getScheme())) playUrl = playUrl.replace("http://", "https://");
-			} else {
-				playUrl = "/player/jwplayer.jsp?lid=" + lid + "&cuid=0&ek=" + m.encrypt(lid + "|0|" + m.time("yyyyMMdd"));
-			}
+			// 왜: 학생도 교수자처럼 작은 팝업으로 미리보기 재생이 필요합니다.
+			String playUrl = "/kollus/preview.jsp?key=" + lessonId;
 			recoVideoMoreList.put("play_url", playUrl);
 
-			int totalMin = linfo.i("total_time");
-			recoVideoMoreList.put("duration_conv", totalMin > 0 ? (totalMin + "분") : "");
-
-			boolean enrolled = "true".equalsIgnoreCase(recoRows.s("enrolled")) || "1".equals(recoRows.s("enrolled")) || "Y".equalsIgnoreCase(recoRows.s("enrolled"));
-			boolean watched = "true".equalsIgnoreCase(recoRows.s("watched")) || "1".equals(recoRows.s("watched")) || "Y".equalsIgnoreCase(recoRows.s("watched"));
-			boolean completed = "true".equalsIgnoreCase(recoRows.s("completed")) || "1".equals(recoRows.s("completed")) || "Y".equalsIgnoreCase(recoRows.s("completed"));
-
-			String badge = "";
-			if(completed) badge = "완료";
-			else if(watched) badge = "시청중";
-			else if(enrolled) badge = "수강중";
-			recoVideoMoreList.put("status_badge", badge);
-
-			String lastDate = recoRows.s("lastDate");
-			if(lastDate != null && lastDate.length() >= 14) {
-				recoVideoMoreList.put("last_date_conv", m.time(_message.get("format.date.dot"), lastDate));
-			} else {
-				recoVideoMoreList.put("last_date_conv", "");
-			}
-
-			String thumbnail = "/html/images/common/noimage_course.gif";
-			try {
-				if("05".equals(linfo.s("lesson_type")) && !"".equals(linfo.s("start_url"))) {
-					DataSet kinfo = kollus.getContentInfo(linfo.s("start_url"));
-					if(kinfo.next() && !"".equals(kinfo.s("snapshot_url"))) {
-						thumbnail = kinfo.s("snapshot_url");
-					}
+			// 왜: 외부 영상은 학습 상태가 없으므로 빈 값 처리
+			recoVideoMoreList.put("duration_conv", "");
+			recoVideoMoreList.put("status_badge", "");
+			recoVideoMoreList.put("last_date_conv", "");
+			// 왜: 교수자 LMS와 동일하게 TB_KOLLUS_MEDIA.snapshot_url을 썸네일로 사용합니다.
+			String thumbnail = thumbCache.get(lessonId);
+			if(thumbnail == null) {
+				String found = "";
+				DataSet minfo = kollusMedia.find(
+					"site_id = " + siteId + " AND media_content_key = ?",
+					new String[] { lessonId }
+				);
+				if(minfo.next()) {
+					found = minfo.s("snapshot_url");
 				}
-			} catch(Exception ignore) {}
+
+				if("".equals(found)) found = "/html/images/common/noimage_course.gif";
+				thumbCache.put(lessonId, found);
+				thumbnail = found;
+			}
 			recoVideoMoreList.put("thumbnail", thumbnail);
 		}
 	}

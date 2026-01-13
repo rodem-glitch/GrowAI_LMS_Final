@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class PolytechLmsApiApplication {
     public static void main(String[] args) {
-        // 왜: `@ConfigurationProperties`(예: kollus.*)를 패키지 전역에서 자동으로 찾아서 등록하기 위함입니다.
+        // 왜: `@ConfigurationProperties`(예: kollus.*, KOSIS 설정 등)을 패키지 스캔으로 자동 등록하기 위해 사용합니다.
         SpringApplication.run(PolytechLmsApiApplication.class, args);
     }
 }

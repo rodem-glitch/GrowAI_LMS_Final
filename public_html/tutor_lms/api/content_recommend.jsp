@@ -100,49 +100,22 @@ try {
 	// 왜: 추천 서버가 JSON 배열을 돌려주지 못한 경우에도, 교수자 화면이 깨지지 않게 안전하게 실패 처리합니다.
 }
 
-LessonDao lesson = new LessonDao();
-KollusDao kollus = new KollusDao(siteId);
-
+// 왜: 콜러스 외부 영상은 LMS DB에 없으므로, API 응답(TB_RECO_CONTENT 데이터)을 직접 사용합니다.
 DataSet list = new DataSet();
 
 while(recoRows.next()) {
-	String lessonIdStr = recoRows.s("lessonId");
-	if("".equals(lessonIdStr)) continue;
-
-	int lessonId = m.parseInt(lessonIdStr);
-	if(lessonId <= 0) continue;
-
-	DataSet linfo = lesson.find(
-		"id = " + lessonId + " AND site_id = " + siteId + " AND status = 1",
-		"id, lesson_nm, start_url, total_time, content_width, content_height, lesson_type"
-	);
-	if(!linfo.next()) continue;
-
-	String mediaKey = linfo.s("start_url");
+	String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
+	if("".equals(lessonId)) continue;
 
 	list.addRow();
-	list.put("id", String.valueOf(lessonId));            //프론트 선택키
-	list.put("lesson_id", String.valueOf(lessonId));     //실제 레슨ID
-	list.put("media_content_key", mediaKey);             //콜러스 키(있으면)
-	list.put("title", linfo.s("lesson_nm"));
+	list.put("id", lessonId);                              // 프론트 선택키 (콜러스 키값)
+	list.put("lesson_id", lessonId);                       // 콜러스 영상 키값
+	list.put("media_content_key", lessonId);               // 콜러스 재생용 키값
+	list.put("title", recoRows.s("title"));
 	list.put("category_nm", recoRows.s("categoryNm"));
-	list.put("total_time", linfo.s("total_time"));
-	list.put("content_width", linfo.s("content_width"));
-	list.put("content_height", linfo.s("content_height"));
+	list.put("summary", recoRows.s("summary"));
+	list.put("keywords", recoRows.s("keywords"));
 	list.put("score", recoRows.s("score"));
-
-	// 왜: 추천 탭에서도 가능한 한 기존 "전체 탭"과 같은 컬럼(썸네일/원본파일/재생시간)을 보여주면 사용자가 선택하기 쉽습니다.
-	try {
-		if(!"".equals(mediaKey) && "05".equals(linfo.s("lesson_type"))) {
-			DataSet kinfo = kollus.getContentInfo(mediaKey);
-			if(kinfo.next()) {
-				list.put("thumbnail", kinfo.s("snapshot_url"));
-				list.put("snapshot_url", kinfo.s("snapshot_url"));
-				list.put("original_file_name", kinfo.s("original_file_name"));
-				list.put("duration", kinfo.s("duration"));
-			}
-		}
-	} catch(Exception ignore) {}
 }
 
 result.put("rst_code", "0000");

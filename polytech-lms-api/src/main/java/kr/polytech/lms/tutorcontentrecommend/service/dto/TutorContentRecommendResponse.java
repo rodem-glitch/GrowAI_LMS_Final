@@ -3,10 +3,12 @@ package kr.polytech.lms.tutorcontentrecommend.service.dto;
 import java.util.Map;
 
 public record TutorContentRecommendResponse(
-    Long lessonId,
+    String lessonId,
     Long recoContentId,
     String title,
     String categoryNm,
+    String summary,
+    String keywords,
     double score,
     Map<String, Object> metadata
 ) {}

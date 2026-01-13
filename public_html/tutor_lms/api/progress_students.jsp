@@ -6,7 +6,9 @@
 
 int courseId = m.ri("course_id");
 int lessonId = m.ri("lesson_id");
-if(0 == courseId || 0 == lessonId) {
+// 왜: lesson_id가 -1이면 전체 진도율만 조회합니다.
+boolean isOverallView = (lessonId == -1);
+if(0 == courseId || (0 == lessonId && !isOverallView)) {
 	result.put("rst_code", "1001");
 	result.put("rst_message", "course_id와 lesson_id가 필요합니다.");
 	result.print();
@@ -29,17 +31,35 @@ if(!isAdmin) {
 	}
 }
 
-DataSet list = courseUser.query(
-	" SELECT cu.id course_user_id, cu.user_id, cu.course_id "
-	+ " , u.login_id, u.user_nm, u.email "
-	+ " , IFNULL(cp.ratio, 0) ratio, IFNULL(cp.study_time, 0) study_time, IFNULL(cp.view_cnt, 0) view_cnt "
-	+ " , IFNULL(cp.complete_yn, 'N') complete_yn, IFNULL(cp.complete_date, '') complete_date, IFNULL(cp.last_date, '') last_date "
-	+ " FROM " + courseUser.table + " cu "
-	+ " INNER JOIN " + user.table + " u ON u.id = cu.user_id "
-	+ " LEFT JOIN " + courseProgress.table + " cp ON cp.course_user_id = cu.id AND cp.lesson_id = " + lessonId + " AND cp.site_id = " + siteId + " AND cp.status = 1 "
-	+ " WHERE cu.site_id = " + siteId + " AND cu.course_id = " + courseId + " AND cu.status NOT IN (-1, -4) "
-	+ " ORDER BY u.user_nm ASC, cu.id ASC "
-);
+DataSet list;
+if(isOverallView) {
+	// 왜: 전체 보기 모드에서는 차시별 진도가 아닌 과정 전체 진도율만 조회합니다.
+	list = courseUser.query(
+		" SELECT cu.id course_user_id, cu.user_id, cu.course_id "
+		+ " , cu.progress_ratio total_progress_ratio "
+		+ " , u.login_id, u.user_nm, u.email "
+		+ " , IFNULL(cu.progress_ratio, 0) ratio "
+		+ " , (SELECT SUM(IFNULL(cp2.study_time, 0)) FROM LM_COURSE_PROGRESS cp2 WHERE cp2.course_user_id = cu.id AND cp2.site_id = " + siteId + " AND cp2.status = 1) study_time "
+		+ " , cu.complete_yn, cu.complete_date, '' last_date "
+		+ " FROM " + courseUser.table + " cu "
+		+ " INNER JOIN " + user.table + " u ON u.id = cu.user_id "
+		+ " WHERE cu.site_id = " + siteId + " AND cu.course_id = " + courseId + " AND cu.status NOT IN (-1, -4) "
+		+ " ORDER BY u.user_nm ASC, cu.id ASC "
+	);
+} else {
+	list = courseUser.query(
+		" SELECT cu.id course_user_id, cu.user_id, cu.course_id "
+		+ " , cu.progress_ratio total_progress_ratio "
+		+ " , u.login_id, u.user_nm, u.email "
+		+ " , IFNULL(cp.ratio, 0) ratio, IFNULL(cp.study_time, 0) study_time, IFNULL(cp.view_cnt, 0) view_cnt "
+		+ " , IFNULL(cp.complete_yn, 'N') complete_yn, IFNULL(cp.complete_date, '') complete_date, IFNULL(cp.last_date, '') last_date "
+		+ " FROM " + courseUser.table + " cu "
+		+ " INNER JOIN " + user.table + " u ON u.id = cu.user_id "
+		+ " LEFT JOIN " + courseProgress.table + " cp ON cp.course_user_id = cu.id AND cp.lesson_id = " + lessonId + " AND cp.site_id = " + siteId + " AND cp.status = 1 "
+		+ " WHERE cu.site_id = " + siteId + " AND cu.course_id = " + courseId + " AND cu.status NOT IN (-1, -4) "
+		+ " ORDER BY u.user_nm ASC, cu.id ASC "
+	);
+}
 
 while(list.next()) {
 	list.put("student_id", list.s("login_id"));

@@ -345,10 +345,13 @@ export type TutorKollusRow = {
 };
 
 export type TutorContentRecommendRow = TutorKollusRow & {
-  // 왜: 추천 탭에서는 "레슨 ID"가 있어야 바로 강의목차에 추가할 수 있습니다.
-  lesson_id?: number;
+  // 왜: 추천 탭에서는 콜러스 영상 키값(문자열)이 있어야 바로 재생할 수 있습니다.
+  lesson_id?: string;
   // 왜: 추천 점수는 디버깅/정렬/표시(선택)용입니다.
   score?: number;
+  // 왜: TB_RECO_CONTENT의 요약/키워드를 표시하기 위함입니다.
+  summary?: string;
+  keywords?: string;
 };
 
 export type TutorKollusChannelRow = {
@@ -458,6 +461,7 @@ export type TutorProgressStudentRow = {
   name?: string;
   email?: string;
   ratio?: number;
+  total_progress_ratio?: number;
   study_time?: number;
   study_time_conv?: string;
   complete_yn?: 'Y' | 'N';
@@ -1053,6 +1057,20 @@ export const tutorLmsApi = {
     if (payload.contentHeight !== undefined) body.set('content_height', String(payload.contentHeight));
 
     return requestJson<number>(`/tutor_lms/api/kollus_lesson_upsert.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
+  // 왜: 교수 차시관리에서 외부링크(URL)를 직접 입력하여 레슨으로 등록하기 위함입니다.
+  async upsertExternalLinkLesson(payload: { url: string; title: string; totalTime?: number }) {
+    const body = new URLSearchParams();
+    body.set('url', payload.url);
+    body.set('title', payload.title);
+    if (payload.totalTime !== undefined) body.set('total_time', String(payload.totalTime));
+
+    return requestJson<number>(`/tutor_lms/api/external_link_lesson_upsert.jsp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,

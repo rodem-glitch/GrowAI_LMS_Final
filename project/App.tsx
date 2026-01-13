@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus } from 'lucide-react';
+import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus, BarChart3 } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
 import { CourseExplorer } from './components/CourseExplorer';
@@ -9,6 +9,7 @@ import { QuestionCategoryPage } from './components/QuestionCategoryPage';
 import { QuestionBankPage } from './components/QuestionBankPage';
 import { ExamManagementPage } from './components/ExamManagementPage';
 import { CreateSubjectWizard } from './components/CreateSubjectWizard';
+import { StatisticsPage } from './components/StatisticsPage';
 import type { CourseManagementTabId } from './components/CourseManagement';
 
 const MENU_IDS = [
@@ -22,6 +23,7 @@ const MENU_IDS = [
   'exam-questions',
   'exam-management',
   'subject-create',
+  'statistics',
 ] as const;
 
 type MenuId = (typeof MENU_IDS)[number];
@@ -425,6 +427,17 @@ export default function App() {
               <BookPlus className="w-5 h-5" />
               <span>과목개설</span>
             </button>
+            <button
+              onClick={() => applyMenu('statistics')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                activeMenu === 'statistics'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span>통계</span>
+            </button>
           </nav>
         </aside>
 
@@ -473,6 +486,8 @@ export default function App() {
                 initialStep={subjectStep}
                 onStepChange={handleSubjectStepChange}
               />
+            ) : activeMenu === 'statistics' ? (
+              <StatisticsPage key={refreshKey} />
             ) : (
               <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-16 text-center">
                 <div className="text-gray-400">

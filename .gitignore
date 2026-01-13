@@ -27,6 +27,8 @@ polytech-lms-api/src/main/resources/application-local.properties
 
 # Google 서비스계정(로컬 전용, 커밋 금지)
 polytech-lms-api/src/main/java/kr/polytech/lms/contentsummary/gen-lang-client-*.json
+# Spring/IDE 산출물
+polytech-lms-api/bin/
 
 # Web app build / temp
 WEB-INF/classes/
@@ -49,3 +51,7 @@ project/.vite/
 # 설정파일
 config.xml
 resin-web.xml
+
+통계 화면.pptx
+tmp_stats_pptx2
+통계
