@@ -2,41 +2,48 @@ package kr.polytech.lms.global.vector.service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.embedding.EmbeddingRequest;
-import org.springframework.ai.embedding.EmbeddingResponse;
-import org.springframework.ai.google.genai.text.GoogleGenAiTextEmbeddingOptions;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 /**
  * 쿼리용 임베딩을 RETRIEVAL_QUERY task-type으로 생성하는 서비스.
- * 왜: 문서 인덱싱은 RETRIEVAL_DOCUMENT, 검색 쿼리는 RETRIEVAL_QUERY를 사용해야
- *     벡터 공간에서 쿼리-문서 매칭이 최적화됩니다.
+ * 왜: Spring AI EmbeddingModel은 EmbeddingRequest의 옵션을 무시하는 버그가 있어,
+ *     Google REST API를 직접 호출하여 task-type을 확실하게 적용합니다.
  */
 @Service
 public class QueryEmbeddingService {
 
     private static final Logger log = LoggerFactory.getLogger(QueryEmbeddingService.class);
 
-    private final EmbeddingModel embeddingModel;
+    private final RestTemplate restTemplate;
+    private final String apiKey;
+    private final String modelName;
 
-    public QueryEmbeddingService(EmbeddingModel embeddingModel) {
-        // 왜: Spring AI가 자동 설정한 EmbeddingModel을 그대로 주입받되,
-        //     쿼리 시에만 task-type을 오버라이드해서 사용합니다.
-        this.embeddingModel = Objects.requireNonNull(embeddingModel);
-        log.info("[QueryEmbeddingService] 초기화 완료. EmbeddingModel 클래스: {}", embeddingModel.getClass().getName());
+    public QueryEmbeddingService(
+        @Value("${spring.ai.google.genai.embedding.api-key:${GOOGLE_API_KEY:}}") String apiKey,
+        @Value("${spring.ai.google.genai.embedding.text.options.model:text-embedding-004}") String modelName
+    ) {
+        this.restTemplate = new RestTemplate();
+        this.apiKey = apiKey;
+        this.modelName = modelName;
+        log.info("[QueryEmbeddingService] 초기화 완료. 모델: {}, API키 설정: {}", 
+            modelName, (apiKey != null && !apiKey.isBlank()) ? "✅" : "❌");
     }
 
     /**
      * RETRIEVAL_QUERY task-type으로 쿼리 텍스트를 임베딩합니다.
-     * @param query 검색 쿼리 텍스트
-     * @return 임베딩 벡터 (float 배열)
+     * Google REST API를 직접 호출하여 task-type을 확실하게 적용합니다.
      */
     public float[] embedQuery(String query) {
-        log.info("[QueryEmbedding] ========== 쿼리 임베딩 시작 ==========");
+        log.info("[QueryEmbedding] ========== 쿼리 임베딩 시작 (REST API 직접 호출) ==========");
         log.info("[QueryEmbedding] 입력 쿼리: '{}'", query);
 
         if (query == null || query.isBlank()) {
@@ -44,37 +51,54 @@ public class QueryEmbeddingService {
             return new float[0];
         }
 
-        try {
-            // 왜: GoogleGenAiTextEmbeddingOptions로 task-type을 RETRIEVAL_QUERY로 지정합니다.
-            // 기본 설정(RETRIEVAL_DOCUMENT)을 이 요청에서만 오버라이드합니다.
-            GoogleGenAiTextEmbeddingOptions queryOptions = GoogleGenAiTextEmbeddingOptions.builder()
-                .taskType(GoogleGenAiTextEmbeddingOptions.TaskType.RETRIEVAL_QUERY)
-                .build();
-            log.info("[QueryEmbedding] Task-Type 설정: RETRIEVAL_QUERY");
+        if (apiKey == null || apiKey.isBlank()) {
+            log.error("[QueryEmbedding] ❌ GOOGLE_API_KEY가 설정되지 않았습니다!");
+            return new float[0];
+        }
 
-            EmbeddingRequest request = new EmbeddingRequest(
-                List.of(query),
-                queryOptions
+        try {
+            // Google Generative AI Embedding API 직접 호출
+            String url = String.format(
+                "https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s",
+                modelName, apiKey
             );
 
-            log.info("[QueryEmbedding] EmbeddingModel.call() 호출 시작...");
-            EmbeddingResponse response = embeddingModel.call(request);
+            // 요청 바디 구성 - RETRIEVAL_QUERY task-type 명시
+            Map<String, Object> requestBody = Map.of(
+                "model", "models/" + modelName,
+                "content", Map.of("parts", List.of(Map.of("text", query))),
+                "taskType", "RETRIEVAL_QUERY"  // 핵심: task-type 명시!
+            );
 
-            if (response == null) {
-                log.error("[QueryEmbedding] API 응답이 null입니다!");
+            log.info("[QueryEmbedding] Task-Type: RETRIEVAL_QUERY (REST API 직접 호출)");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+
+            if (response.getBody() == null) {
+                log.error("[QueryEmbedding] ❌ API 응답이 null입니다!");
                 return new float[0];
             }
 
-            if (response.getResults() == null || response.getResults().isEmpty()) {
-                log.error("[QueryEmbedding] API 응답에 결과가 없습니다! results={}", response.getResults());
+            // 응답에서 임베딩 추출
+            Map<String, Object> embedding = (Map<String, Object>) response.getBody().get("embedding");
+            if (embedding == null) {
+                log.error("[QueryEmbedding] ❌ 응답에 embedding이 없습니다! 응답: {}", response.getBody());
                 return new float[0];
             }
 
-            float[] vector = response.getResults().get(0).getOutput();
-            
-            if (vector == null || vector.length == 0) {
-                log.error("[QueryEmbedding] 생성된 벡터가 비어있습니다!");
+            List<Number> values = (List<Number>) embedding.get("values");
+            if (values == null || values.isEmpty()) {
+                log.error("[QueryEmbedding] ❌ 임베딩 값이 비어있습니다!");
                 return new float[0];
+            }
+
+            float[] vector = new float[values.size()];
+            for (int i = 0; i < values.size(); i++) {
+                vector[i] = values.get(i).floatValue();
             }
 
             // 벡터 정보 로깅
