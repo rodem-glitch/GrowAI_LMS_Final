@@ -188,9 +188,11 @@ statistics:
     # 왜: 현재 프로젝트는 이미 `GOOGLE_API_KEY` 환경변수를 임베딩에 사용하고 있어, 기본값을 재사용합니다.
     # - 운영에서는 별도 키로 분리하고 싶으면 `STATISTICS_AI_API_KEY`로 오버라이드할 수 있습니다.
     api-key: ${STATISTICS_AI_API_KEY:${GOOGLE_API_KEY:}}
-    model: ${STATISTICS_AI_MODEL:gemini-1.5-flash}
+    model: ${STATISTICS_AI_MODEL:gemini-3-flash-preview}
     # 왜: 개발/검증 단계에서만 LLM이 만든 실행계획을 응답에 포함해 디버깅합니다. (운영 기본값=false)
     debug: ${STATISTICS_AI_DEBUG:false}
+    # 왜: v4에서는 데이터 소스를 YAML 카탈로그로 관리하여 코드 수정 없이 확장할 수 있습니다.
+    catalog-file: ${STATISTICS_AI_CATALOG:classpath:data-catalog.yml}
 
 vector:
   search:

@@ -2,10 +2,8 @@ package kr.polytech.lms.statistics.ai.v2;
 
 import kr.polytech.lms.statistics.ai.StatisticsAiQueryRequest;
 import kr.polytech.lms.statistics.ai.StatisticsAiQueryResponse;
-import kr.polytech.lms.statistics.ai.v3.StatisticsAiV3Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,22 +17,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/statistics/api/ai/v2")
 public class StatisticsAiV2ApiController {
-    // 왜: v3 서비스를 기본으로 사용하고, 설정으로 v2로 롤백 가능하게 함
 
     private static final Logger log = LoggerFactory.getLogger(StatisticsAiV2ApiController.class);
 
     private final StatisticsAiV2Service statisticsAiV2Service;
-    private final StatisticsAiV3Service statisticsAiV3Service;
-    
-    @Value("${statistics.ai.use-v3:true}")
-    private boolean useV3;
 
-    public StatisticsAiV2ApiController(
-            StatisticsAiV2Service statisticsAiV2Service,
-            StatisticsAiV3Service statisticsAiV3Service
-    ) {
+    public StatisticsAiV2ApiController(StatisticsAiV2Service statisticsAiV2Service) {
         this.statisticsAiV2Service = statisticsAiV2Service;
-        this.statisticsAiV3Service = statisticsAiV3Service;
     }
 
     @GetMapping("/catalog")
@@ -45,11 +34,6 @@ public class StatisticsAiV2ApiController {
     @PostMapping("/query")
     public ResponseEntity<?> query(@RequestBody StatisticsAiQueryRequest request) {
         try {
-            // 왜: v3 서비스가 더 심플하고 유연하므로 기본으로 사용
-            //     문제 발생 시 설정(statistics.ai.use-v3=false)으로 v2로 롤백 가능
-            if (useV3) {
-                return ResponseEntity.ok(statisticsAiV3Service.query(request));
-            }
             return ResponseEntity.ok(statisticsAiV2Service.query(request));
         } catch (IllegalArgumentException e) {
             log.warn("AI 통계 v2 요청 검증 실패: prompt={}, contextKeys={}",

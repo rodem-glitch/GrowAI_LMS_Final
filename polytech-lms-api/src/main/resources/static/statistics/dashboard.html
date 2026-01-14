@@ -1329,18 +1329,30 @@
   }
 
   function extractAiInsightFromResponse(data) {
-    // 왜: v2 응답은 insight 필드를 별도로 두지 않고, summary에 "요약/인사이트"를 같이 담습니다.
+    // 왜: v4 응답은 summary에 대화형 설명이 통합되어 있습니다.
+    //     summary가 문자열이면 그대로 인사이트로 표시합니다.
     if (!data) return null;
-    if (typeof data.insight === "string" && data.insight.trim()) return data.insight.trim();
-
+    
+    // v4: summary가 대화형 설명 문자열인 경우 (📊, 💡 등 이모지 포함)
     const summary = data.summary;
-    if (typeof summary === "string") {
+    if (typeof summary === "string" && summary.trim()) {
       const trimmed = summary.trim();
+      // 이모지나 마크다운이 포함되어 있으면 V4 대화형 응답
+      if (trimmed.includes("📊") || trimmed.includes("💡") || trimmed.includes("**")) {
+        return trimmed;
+      }
+      // " / " 구분자가 있으면 뒤쪽 부분 반환 (V2 호환)
       const idx = trimmed.indexOf(" / ");
       if (idx >= 0) return trimmed.substring(idx + 3).trim();
       return trimmed;
     }
+    
+    // insight 필드가 별도로 있는 경우 (V2)
+    if (typeof data.insight === "string" && data.insight.trim()) {
+      return data.insight.trim();
+    }
 
+    // summary가 객체인 경우 (V2 구버전)
     if (summary && typeof summary === "object" && typeof summary["요약"] === "string") {
       return summary["요약"].trim();
     }
