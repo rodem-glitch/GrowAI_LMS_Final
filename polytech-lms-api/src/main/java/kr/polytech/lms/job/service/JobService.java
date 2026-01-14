@@ -2,7 +2,9 @@ package kr.polytech.lms.job.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.polytech.lms.job.client.JobKoreaClient;
 import kr.polytech.lms.job.client.Work24Client;
+import kr.polytech.lms.job.config.JobKoreaProperties;
 import kr.polytech.lms.job.config.Work24Properties;
 import kr.polytech.lms.job.repository.JobRepository;
 import kr.polytech.lms.job.repository.JobRepository.JobOccupationCodeRow;
@@ -34,17 +36,23 @@ public class JobService {
     private final JobRepository jobRepository;
     private final Work24Client work24Client;
     private final Work24Properties work24Properties;
+    private final JobKoreaClient jobKoreaClient;
+    private final JobKoreaProperties jobKoreaProperties;
     private final ObjectMapper objectMapper;
 
     public JobService(
         JobRepository jobRepository,
         Work24Client work24Client,
         Work24Properties work24Properties,
+        JobKoreaClient jobKoreaClient,
+        JobKoreaProperties jobKoreaProperties,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = Objects.requireNonNull(jobRepository);
         this.work24Client = Objects.requireNonNull(work24Client);
         this.work24Properties = Objects.requireNonNull(work24Properties);
+        this.jobKoreaClient = Objects.requireNonNull(jobKoreaClient);
+        this.jobKoreaProperties = Objects.requireNonNull(jobKoreaProperties);
         this.objectMapper = Objects.requireNonNull(objectMapper);
     }
 
@@ -82,18 +90,34 @@ public class JobService {
         Integer display,
         CachePolicy cachePolicy
     ) {
+        return getRecruitments(region, occupation, startPage, display, Provider.WORK24, cachePolicy);
+    }
+
+    public JobRecruitListResponse getRecruitments(
+        String region,
+        String occupation,
+        Integer startPage,
+        Integer display,
+        Provider provider,
+        CachePolicy cachePolicy
+    ) {
+        Provider safeProvider = provider == null ? Provider.WORK24 : provider;
         JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, startPage, display);
         CachePolicy safePolicy = cachePolicy == null ? CachePolicy.PREFER_CACHE : cachePolicy;
 
+        if (safeProvider == Provider.ALL) {
+            return mergeRecruitments(criteria, safePolicy);
+        }
+
         if (safePolicy != CachePolicy.FORCE_LIVE) {
-            Optional<JobRecruitListResponse> cached = findCachedRecruitments(criteria, safePolicy);
+            Optional<JobRecruitListResponse> cached = findCachedRecruitments(criteria, safeProvider, safePolicy);
             if (cached.isPresent()) {
                 return cached.get();
             }
         }
 
-        JobRecruitListResponse live = work24Client.fetchRecruitList(criteria);
-        saveRecruitCache(criteria, live);
+        JobRecruitListResponse live = fetchFromProvider(criteria, safeProvider);
+        saveRecruitCache(criteria, safeProvider, live);
         return live;
     }
 
@@ -110,16 +134,12 @@ public class JobService {
     ) {
         JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, startPage, display);
         JobRecruitListResponse live = work24Client.fetchRecruitList(criteria);
-        saveRecruitCache(criteria, live);
+        saveRecruitCache(criteria, Provider.WORK24, live);
         return live;
     }
 
     @Scheduled(cron = "0 0 6 * * *", zone = "Asia/Seoul")
     public void refreshCachedRecruitmentsAtMorning() {
-        if (!work24Properties.getCache().isEnabled()) {
-            return;
-        }
-
         List<JobRecruitCacheKey> keys = jobRepository.findAllRecruitCacheKeys();
         if (keys.isEmpty()) {
             return;
@@ -142,20 +162,25 @@ public class JobService {
             key.display(),
             "L"
         );
-        JobRecruitListResponse live = work24Client.fetchRecruitList(criteria);
-        saveRecruitCache(criteria, live);
+        Provider provider = Provider.from(key.provider());
+        if (!isCacheEnabled(provider)) {
+            return;
+        }
+        JobRecruitListResponse live = fetchFromProvider(criteria, provider);
+        saveRecruitCache(criteria, provider, live);
     }
 
     private Optional<JobRecruitListResponse> findCachedRecruitments(
         JobRecruitSearchCriteria criteria,
+        Provider provider,
         CachePolicy cachePolicy
     ) {
-        if (!work24Properties.getCache().isEnabled()) {
+        if (!isCacheEnabled(provider)) {
             return Optional.empty();
         }
 
-        String queryKey = buildQueryKey(criteria);
-        Optional<JobRecruitCacheRow> cached = jobRepository.findRecruitCache(queryKey);
+        String queryKey = buildQueryKey(criteria, provider);
+        Optional<JobRecruitCacheRow> cached = jobRepository.findRecruitCache(queryKey, provider.name());
         if (cached.isEmpty()) {
             if (cachePolicy == CachePolicy.CACHE_ONLY) {
                 throw new IllegalStateException("캐시된 채용 정보가 없습니다.");
@@ -164,7 +189,7 @@ public class JobService {
         }
 
         JobRecruitCacheRow row = cached.get();
-        if (!isCacheFresh(row.updatedAt())) {
+        if (!isCacheFresh(provider, row.updatedAt())) {
             if (cachePolicy == CachePolicy.CACHE_ONLY) {
                 return Optional.of(parseCache(row));
             }
@@ -186,8 +211,8 @@ public class JobService {
         }
     }
 
-    private void saveRecruitCache(JobRecruitSearchCriteria criteria, JobRecruitListResponse response) {
-        if (!work24Properties.getCache().isEnabled()) {
+    private void saveRecruitCache(JobRecruitSearchCriteria criteria, Provider provider, JobRecruitListResponse response) {
+        if (!isCacheEnabled(provider)) {
             return;
         }
 
@@ -201,7 +226,8 @@ public class JobService {
                 LocalDateTime.now()
             );
             JobRecruitCacheKey key = new JobRecruitCacheKey(
-                buildQueryKey(criteria),
+                buildQueryKey(criteria, provider),
+                provider.name(),
                 criteria.region(),
                 criteria.occupation(),
                 criteria.startPage(),
@@ -213,8 +239,8 @@ public class JobService {
         }
     }
 
-    private boolean isCacheFresh(LocalDateTime updatedAt) {
-        long ttlMinutes = work24Properties.getCache().getTtlMinutes();
+    private boolean isCacheFresh(Provider provider, LocalDateTime updatedAt) {
+        long ttlMinutes = resolveTtlMinutes(provider);
         if (ttlMinutes <= 0) return false;
         LocalDateTime now = LocalDateTime.now();
         Duration age = Duration.between(updatedAt, now);
@@ -246,8 +272,9 @@ public class JobService {
         return Math.min(value, 100);
     }
 
-    private String buildQueryKey(JobRecruitSearchCriteria criteria) {
-        return "%s|%s|%d|%d".formatted(
+    private String buildQueryKey(JobRecruitSearchCriteria criteria, Provider provider) {
+        return "%s|%s|%s|%d|%d".formatted(
+            provider.name(),
             nullToDash(criteria.region()),
             nullToDash(criteria.occupation()),
             criteria.startPage(),
@@ -263,6 +290,71 @@ public class JobService {
 
     private static String nullToDash(String value) {
         return value == null ? "-" : value;
+    }
+
+    private JobRecruitListResponse mergeRecruitments(JobRecruitSearchCriteria criteria, CachePolicy cachePolicy) {
+        JobRecruitListResponse work24 = getRecruitments(
+            criteria.region(),
+            criteria.occupation(),
+            criteria.startPage(),
+            criteria.display(),
+            Provider.WORK24,
+            cachePolicy
+        );
+        JobRecruitListResponse jobkorea = getRecruitments(
+            criteria.region(),
+            criteria.occupation(),
+            criteria.startPage(),
+            criteria.display(),
+            Provider.JOBKOREA,
+            cachePolicy
+        );
+        List<JobRecruitItem> merged = new java.util.ArrayList<>();
+        if (work24.wanted() != null) merged.addAll(work24.wanted());
+        if (jobkorea.wanted() != null) merged.addAll(jobkorea.wanted());
+        int total = work24.total() + jobkorea.total();
+        return new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), merged);
+    }
+
+    private JobRecruitListResponse fetchFromProvider(JobRecruitSearchCriteria criteria, Provider provider) {
+        return switch (provider) {
+            case WORK24 -> work24Client.fetchRecruitList(criteria);
+            case JOBKOREA -> jobKoreaClient.fetchRecruitList(criteria);
+            case ALL -> throw new IllegalArgumentException("ALL은 개별 호출 없이 병합으로만 처리합니다.");
+        };
+    }
+
+    private boolean isCacheEnabled(Provider provider) {
+        return switch (provider) {
+            case WORK24 -> work24Properties.getCache().isEnabled();
+            case JOBKOREA -> jobKoreaProperties.getCache().isEnabled();
+            case ALL -> false;
+        };
+    }
+
+    private long resolveTtlMinutes(Provider provider) {
+        return switch (provider) {
+            case WORK24 -> work24Properties.getCache().getTtlMinutes();
+            case JOBKOREA -> jobKoreaProperties.getCache().getTtlMinutes();
+            case ALL -> 0L;
+        };
+    }
+
+    public enum Provider {
+        // 왜: Work24 단일/잡코리아 단일/통합 조회를 선택할 수 있게 합니다.
+        WORK24,
+        JOBKOREA,
+        ALL;
+
+        public static Provider from(String raw) {
+            if (raw == null || raw.isBlank()) return WORK24;
+            String value = raw.trim().toUpperCase();
+            return switch (value) {
+                case "JOBKOREA" -> JOBKOREA;
+                case "ALL" -> ALL;
+                default -> WORK24;
+            };
+        }
     }
 
     public enum CachePolicy {

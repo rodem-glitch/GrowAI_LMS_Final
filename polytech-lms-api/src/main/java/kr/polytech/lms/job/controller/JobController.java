@@ -55,11 +55,20 @@ public class JobController {
         @RequestParam(name = "occupation", required = false) String occupation,
         @RequestParam(name = "startPage", required = false) Integer startPage,
         @RequestParam(name = "display", required = false) Integer display,
+        @RequestParam(name = "provider", required = false) String provider,
         @RequestParam(name = "cachePolicy", required = false) String cachePolicy
     ) {
         try {
             CachePolicy policy = CachePolicy.from(cachePolicy);
-            JobRecruitListResponse response = jobService.getRecruitments(region, occupation, startPage, display, policy);
+            JobService.Provider safeProvider = JobService.Provider.from(provider);
+            JobRecruitListResponse response = jobService.getRecruitments(
+                region,
+                occupation,
+                startPage,
+                display,
+                safeProvider,
+                policy
+            );
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));

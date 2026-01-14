@@ -147,6 +147,25 @@ work24:
     enabled: ${WORK24_CACHE_ENABLED:true}
     ttl-minutes: ${WORK24_CACHE_TTL_MINUTES:1440}
 
+jobkorea:
+  # 왜: 잡코리아는 별도 OpenAPI 키와 OEM 코드가 필요하므로 환경변수로 분리합니다.
+  enabled: ${JOBKOREA_ENABLED:true}
+  api-url: ${JOBKOREA_API_URL:}
+  api-key: ${JOBKOREA_API_KEY:}
+  oem-code: ${JOBKOREA_OEM_CODE:}
+  # 왜: 잡코리아 API 파라미터명이 프로젝트마다 달라져 재정의가 필요할 수 있습니다.
+  api-key-param: ${JOBKOREA_API_KEY_PARAM:api}
+  oem-code-param: ${JOBKOREA_OEM_CODE_PARAM:Oem_Code}
+  page-param: ${JOBKOREA_PAGE_PARAM:Page}
+  display-param: ${JOBKOREA_DISPLAY_PARAM:PageSize}
+  region-param: ${JOBKOREA_REGION_PARAM:AreaCode}
+  occupation-param: ${JOBKOREA_OCCUPATION_PARAM:Job_Ctgr_Code}
+  # 왜: 추가 파라미터가 필요한 경우 key/value로 주입할 수 있게 둡니다.
+  params: {}
+  cache:
+    enabled: ${JOBKOREA_CACHE_ENABLED:true}
+    ttl-minutes: ${JOBKOREA_CACHE_TTL_MINUTES:1440}
+
 statistics:
   mapping:
     # 왜: 전공(학과) ↔ 기술업종 분류 매핑 파일이 있어야 "캠퍼스 학생비율(전공별)"을 산업 분류로 변환해 비교할 수 있습니다.

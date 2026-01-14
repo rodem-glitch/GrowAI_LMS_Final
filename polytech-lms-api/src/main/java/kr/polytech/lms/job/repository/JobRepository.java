@@ -80,13 +80,13 @@ public class JobRepository {
         });
     }
 
-    public Optional<JobRecruitCacheRow> findRecruitCache(String queryKey) {
+    public Optional<JobRecruitCacheRow> findRecruitCache(String queryKey, String provider) {
         try {
             List<JobRecruitCacheRow> rows = jdbcTemplate.query("""
                 SELECT total, start_page, `display`, payload_json, updated_at
                 FROM job_recruit_cache
-                WHERE query_key = ?
-                """, new Object[]{queryKey}, (rs, rowNum) -> new JobRecruitCacheRow(
+                WHERE query_key = ? AND provider = ?
+                """, new Object[]{queryKey, normalizeProvider(provider)}, (rs, rowNum) -> new JobRecruitCacheRow(
                 rs.getInt("total"),
                 rs.getInt("start_page"),
                 rs.getInt("display"),
@@ -95,26 +95,56 @@ public class JobRepository {
             ));
             return rows.stream().findFirst();
         } catch (DataAccessException e) {
-            // 왜: 캐시 테이블이 없거나 컬럼 불일치가 있어도 "실시간 호출"로 계속 동작할 수 있어야 합니다.
-            return Optional.empty();
+            // 왜: provider 컬럼이 아직 없으면 기존 테이블을 조회해도 동작해야 합니다.
+            try {
+                List<JobRecruitCacheRow> rows = jdbcTemplate.query("""
+                    SELECT total, start_page, `display`, payload_json, updated_at
+                    FROM job_recruit_cache
+                    WHERE query_key = ?
+                    """, new Object[]{queryKey}, (rs, rowNum) -> new JobRecruitCacheRow(
+                    rs.getInt("total"),
+                    rs.getInt("start_page"),
+                    rs.getInt("display"),
+                    rs.getString("payload_json"),
+                    toLocalDateTime(rs.getTimestamp("updated_at"))
+                ));
+                return rows.stream().findFirst();
+            } catch (DataAccessException ignored) {
+                return Optional.empty();
+            }
         }
     }
 
     public List<JobRecruitCacheKey> findAllRecruitCacheKeys() {
         try {
             return jdbcTemplate.query("""
-                SELECT query_key, region_code, occupation_code, start_page, `display`
+                SELECT query_key, provider, region_code, occupation_code, start_page, `display`
                 FROM job_recruit_cache
                 """, (rs, rowNum) -> new JobRecruitCacheKey(
                 rs.getString("query_key"),
+                rs.getString("provider"),
                 rs.getString("region_code"),
                 rs.getString("occupation_code"),
                 rs.getInt("start_page"),
                 rs.getInt("display")
             ));
         } catch (DataAccessException e) {
-            // 왜: 캐시 테이블이 없으면 스케줄 갱신도 수행할 수 없으므로 빈 목록으로 처리합니다.
-            return List.of();
+            // 왜: provider 컬럼이 없으면 기존 컬럼으로라도 갱신 목록을 구성합니다.
+            try {
+                return jdbcTemplate.query("""
+                    SELECT query_key, region_code, occupation_code, start_page, `display`
+                    FROM job_recruit_cache
+                    """, (rs, rowNum) -> new JobRecruitCacheKey(
+                    rs.getString("query_key"),
+                    "WORK24",
+                    rs.getString("region_code"),
+                    rs.getString("occupation_code"),
+                    rs.getInt("start_page"),
+                    rs.getInt("display")
+                ));
+            } catch (DataAccessException ignored) {
+                return List.of();
+            }
         }
     }
 
@@ -122,10 +152,11 @@ public class JobRepository {
         try {
             jdbcTemplate.update("""
                 INSERT INTO job_recruit_cache
-                    (query_key, region_code, occupation_code, start_page, `display`, total, payload_json, updated_at)
+                    (query_key, provider, region_code, occupation_code, start_page, `display`, total, payload_json, updated_at)
                 VALUES
-                    (?, ?, ?, ?, ?, ?, ?, ?)
+                    (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
+                    provider = VALUES(provider),
                     region_code = VALUES(region_code),
                     occupation_code = VALUES(occupation_code),
                     start_page = VALUES(start_page),
@@ -135,6 +166,7 @@ public class JobRepository {
                     updated_at = VALUES(updated_at)
                 """,
                 key.queryKey(),
+                normalizeProvider(key.provider()),
                 key.regionCode(),
                 key.occupationCode(),
                 key.startPage(),
@@ -144,7 +176,34 @@ public class JobRepository {
                 Timestamp.valueOf(row.updatedAt())
             );
         } catch (DataAccessException e) {
-            // 왜: 캐시 저장 실패가 조회 기능 자체를 막으면 안 됩니다(실시간 조회로라도 응답).
+            // 왜: provider 컬럼이 없는 구버전 테이블도 동작할 수 있어야 합니다.
+            try {
+                jdbcTemplate.update("""
+                    INSERT INTO job_recruit_cache
+                        (query_key, region_code, occupation_code, start_page, `display`, total, payload_json, updated_at)
+                    VALUES
+                        (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        region_code = VALUES(region_code),
+                        occupation_code = VALUES(occupation_code),
+                        start_page = VALUES(start_page),
+                        `display` = VALUES(`display`),
+                        total = VALUES(total),
+                        payload_json = VALUES(payload_json),
+                        updated_at = VALUES(updated_at)
+                    """,
+                    key.queryKey(),
+                    key.regionCode(),
+                    key.occupationCode(),
+                    key.startPage(),
+                    key.display(),
+                    row.total(),
+                    row.payloadJson(),
+                    Timestamp.valueOf(row.updatedAt())
+                );
+            } catch (DataAccessException ignored) {
+                // 왜: 캐시 저장 실패가 조회 기능 자체를 막으면 안 됩니다(실시간 조회로라도 응답).
+            }
         }
     }
 
@@ -182,6 +241,11 @@ public class JobRepository {
         return timestamp.toLocalDateTime();
     }
 
+    private static String normalizeProvider(String provider) {
+        if (provider == null || provider.isBlank()) return "WORK24";
+        return provider.trim().toUpperCase();
+    }
+
     public record JobRegionCodeRow(int idx, String title, String depth1, String depth2, String depth3) {
     }
 
@@ -191,6 +255,13 @@ public class JobRepository {
     public record JobRecruitCacheRow(int total, int startPage, int display, String payloadJson, LocalDateTime updatedAt) {
     }
 
-    public record JobRecruitCacheKey(String queryKey, String regionCode, String occupationCode, int startPage, int display) {
+    public record JobRecruitCacheKey(
+        String queryKey,
+        String provider,
+        String regionCode,
+        String occupationCode,
+        int startPage,
+        int display
+    ) {
     }
 }
