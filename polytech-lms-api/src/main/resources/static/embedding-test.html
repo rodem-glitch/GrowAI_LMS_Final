@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>임베딩 추천 품질 테스트</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --accent-purple: #a855f7;
+            --border-color: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1a2e 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        
+        .summary-bar {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-dark);
+            border-radius: 50px;
+            font-weight: 600;
+        }
+        
+        .summary-item.success { border: 2px solid var(--accent-green); }
+        .summary-item.warning { border: 2px solid var(--accent-yellow); }
+        .summary-item.error { border: 2px solid var(--accent-red); }
+        .summary-item.total { border: 2px solid var(--accent-blue); }
+        
+        .progress-container {
+            margin-top: 1.5rem;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .test-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .test-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+        
+        .test-card.loading {
+            opacity: 0.6;
+        }
+        
+        .test-card.success {
+            border-left: 4px solid var(--accent-green);
+        }
+        
+        .test-card.partial {
+            border-left: 4px solid var(--accent-yellow);
+        }
+        
+        .test-card.fail {
+            border-left: 4px solid var(--accent-red);
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .test-query {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+        
+        .test-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .status-icon.success { background: var(--accent-green); }
+        .status-icon.partial { background: var(--accent-yellow); color: #000; }
+        .status-icon.fail { background: var(--accent-red); }
+        .status-icon.loading { background: var(--accent-blue); animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .expected-keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .keyword-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .keyword-tag.match { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        .keyword-tag.no-match { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .keyword-tag.pending { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        
+        .results-list {
+            margin-top: 1rem;
+        }
+        
+        .result-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            align-items: flex-start;
+        }
+        
+        .result-rank {
+            width: 28px;
+            height: 28px;
+            background: var(--accent-purple);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+        
+        .result-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .result-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        .result-score {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .score-bar {
+            width: 60px;
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .score-fill {
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 0.3s ease;
+        }
+        
+        .empty-results {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .btn-refresh {
+            display: block;
+            margin: 2rem auto;
+            padding: 1rem 2rem;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .btn-refresh:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .api-info {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .api-info code {
+            background: var(--bg-dark);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 임베딩 추천 품질 테스트</h1>
+            <p class="subtitle">순수 벡터 임베딩만으로 검색 (키워드 매칭 제외)</p>
+            
+            <div class="summary-bar" id="summaryBar">
+                <div class="summary-item total">
+                    <span>📊 총 테스트</span>
+                    <span id="totalTests">0</span>
+                </div>
+                <div class="summary-item success">
+                    <span>✅ 성공</span>
+                    <span id="successTests">0</span>
+                </div>
+                <div class="summary-item warning">
+                    <span>⚠️ 부분 성공</span>
+                    <span id="partialTests">0</span>
+                </div>
+                <div class="summary-item error">
+                    <span>❌ 실패</span>
+                    <span id="failTests">0</span>
+                </div>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">테스트 진행 중...</div>
+            </div>
+        </header>
+        
+        <button class="btn-refresh" id="btnRefresh" onclick="runAllTests()">
+            🔄 전체 테스트 다시 실행
+        </button>
+        
+        <div class="test-grid" id="testGrid"></div>
+        
+        <div class="api-info">
+            <p>API 엔드포인트: <code>POST /student/content-recommend/test/embedding-only</code></p>
+            <p style="margin-top: 0.5rem;">테스트 케이스: <code>GET /student/content-recommend/test/cases</code></p>
+        </div>
+    </div>
+    
+    <script>
+        // API 베이스 URL (같은 도메인이면 비워두기)
+        const API_BASE = '';
+        
+        let testCases = [];
+        let testResults = {};
+        
+        // 페이지 로드 시 자동 실행
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadTestCases();
+            await runAllTests();
+        });
+        
+        async function loadTestCases() {
+            try {
+                const response = await fetch(`${API_BASE}/student/content-recommend/test/cases`);
+                testCases = await response.json();
+                renderTestCards();
+            } catch (error) {
+                console.error('테스트 케이스 로드 실패:', error);
+                // 기본 테스트 케이스 사용
+                testCases = [
+                    { query: "프로그래밍", expectedKeywords: ["프로그래밍", "코딩", "개발", "파이썬", "자바"] },
+                    { query: "파이썬 데이터 분석", expectedKeywords: ["파이썬", "데이터", "분석", "판다스"] },
+                    { query: "마케팅 전략", expectedKeywords: ["마케팅", "전략", "광고", "브랜드"] },
+                    { query: "인공지능", expectedKeywords: ["AI", "인공지능", "머신러닝", "딥러닝"] },
+                    { query: "엑셀 활용", expectedKeywords: ["엑셀", "스프레드시트", "오피스", "데이터"] },
+                    { query: "자격증 시험", expectedKeywords: ["자격증", "시험", "정보처리", "자격"] },
+                    { query: "리더십", expectedKeywords: ["리더십", "경영", "조직", "팀"] },
+                    { query: "영어 회화", expectedKeywords: ["영어", "회화", "어학", "비즈니스"] },
+                    { query: "재무회계", expectedKeywords: ["회계", "재무", "세무", "경리"] },
+                    { query: "웹 개발", expectedKeywords: ["웹", "HTML", "JavaScript", "프론트엔드"] },
+                    { query: "자기계발", expectedKeywords: ["자기계발", "습관", "독서", "시간관리"] },
+                    { query: "디자인", expectedKeywords: ["디자인", "UI", "UX", "그래픽"] },
+                    { query: "부동산 투자", expectedKeywords: ["부동산", "투자", "재테크", "갭투자"] },
+                    { query: "건강 관리", expectedKeywords: ["건강", "운동", "다이어트", "헬스"] },
+                    { query: "창업", expectedKeywords: ["창업", "스타트업", "비즈니스", "사업"] }
+                ];
+                renderTestCards();
+            }
+        }
+        
+        function renderTestCards() {
+            const grid = document.getElementById('testGrid');
+            grid.innerHTML = testCases.map((tc, index) => `
+                <div class="test-card loading" id="testCard${index}">
+                    <div class="test-header">
+                        <span class="test-query">"${tc.query}"</span>
+                        <div class="test-status">
+                            <div class="status-icon loading">⏳</div>
+                            <span>대기 중</span>
+                        </div>
+                    </div>
+                    <div class="expected-keywords">
+                        ${tc.expectedKeywords.map(kw => `
+                            <span class="keyword-tag pending" data-keyword="${kw}">${kw}</span>
+                        `).join('')}
+                    </div>
+                    <div class="results-list" id="results${index}">
+                        <div class="empty-results">테스트 대기 중...</div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('totalTests').textContent = testCases.length;
+        }
+        
+        async function runAllTests() {
+            const btn = document.getElementById('btnRefresh');
+            btn.disabled = true;
+            btn.textContent = '⏳ 테스트 실행 중...';
+            
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.style.display = 'block';
+            
+            let successCount = 0;
+            let partialCount = 0;
+            let failCount = 0;
+            
+            for (let i = 0; i < testCases.length; i++) {
+                updateProgress(i, testCases.length);
+                const result = await runTest(i, testCases[i]);
+                
+                if (result.status === 'success') successCount++;
+                else if (result.status === 'partial') partialCount++;
+                else failCount++;
+            }
+            
+            document.getElementById('successTests').textContent = successCount;
+            document.getElementById('partialTests').textContent = partialCount;
+            document.getElementById('failTests').textContent = failCount;
+            
+            updateProgress(testCases.length, testCases.length);
+            document.getElementById('progressText').textContent = '테스트 완료!';
+            
+            btn.disabled = false;
+            btn.textContent = '🔄 전체 테스트 다시 실행';
+        }
+        
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressText').textContent = `테스트 진행 중... (${current}/${total})`;
+        }
+        
+        async function runTest(index, testCase) {
+            const card = document.getElementById(`testCard${index}`);
+            card.className = 'test-card loading';
+            
+            try {
+                const response = await fetch(`${API_BASE}/student/content-recommend/test/embedding-only`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: testCase.query,
+                        topK: 5,
+                        threshold: 0.0
+                    })
+                });
+                
+                const data = await response.json();
+                return updateTestCard(index, testCase, data);
+            } catch (error) {
+                console.error(`테스트 ${index} 실패:`, error);
+                return updateTestCardError(index, testCase, error);
+            }
+        }
+        
+        function updateTestCard(index, testCase, data) {
+            const card = document.getElementById(`testCard${index}`);
+            const resultsContainer = document.getElementById(`results${index}`);
+            
+            // 결과에서 키워드 매칭 확인
+            const allText = data.results.map(r => 
+                `${r.title || ''} ${r.categoryNm || ''} ${r.keywords || ''} ${r.summary || ''}`
+            ).join(' ').toLowerCase();
+            
+            let matchCount = 0;
+            testCase.expectedKeywords.forEach(kw => {
+                const keywordTags = card.querySelectorAll(`[data-keyword="${kw}"]`);
+                const isMatch = allText.includes(kw.toLowerCase());
+                if (isMatch) matchCount++;
+                
+                keywordTags.forEach(tag => {
+                    tag.className = `keyword-tag ${isMatch ? 'match' : 'no-match'}`;
+                });
+            });
+            
+            const matchRatio = matchCount / testCase.expectedKeywords.length;
+            let status, statusIcon, statusText;
+            
+            if (matchRatio >= 0.5) {
+                status = 'success';
+                statusIcon = '✅';
+                statusText = `${matchCount}/${testCase.expectedKeywords.length} 매칭`;
+            } else if (matchRatio > 0) {
+                status = 'partial';
+                statusIcon = '⚠️';
+                statusText = `${matchCount}/${testCase.expectedKeywords.length} 매칭`;
+            } else {
+                status = 'fail';
+                statusIcon = '❌';
+                statusText = '매칭 없음';
+            }
+            
+            card.className = `test-card ${status}`;
+            card.querySelector('.test-status').innerHTML = `
+                <div class="status-icon ${status}">${statusIcon}</div>
+                <span>${statusText}</span>
+            `;
+            
+            // 결과 렌더링
+            if (data.results && data.results.length > 0) {
+                resultsContainer.innerHTML = data.results.map((r, i) => `
+                    <div class="result-item">
+                        <div class="result-rank">${i + 1}</div>
+                        <div class="result-content">
+                            <div class="result-title">${r.title || '(제목 없음)'}</div>
+                            <div class="result-meta">
+                                <span>📁 ${r.categoryNm || '-'}</span>
+                                <span>🏷️ ${r.keywords || '-'}</span>
+                                <div class="result-score">
+                                    <span>점수:</span>
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${Math.round(r.score * 100)}%"></div>
+                                    </div>
+                                    <span>${(r.score * 100).toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                resultsContainer.innerHTML = '<div class="empty-results">검색 결과 없음</div>';
+            }
+            
+            return { status, matchCount };
+        }
+        
+        function updateTestCardError(index, testCase, error) {
+            const card = document.getElementById(`testCard${index}`);
+            const resultsContainer = document.getElementById(`results${index}`);
+            
+            card.className = 'test-card fail';
+            card.querySelector('.test-status').innerHTML = `
+                <div class="status-icon fail">❌</div>
+                <span>API 오류</span>
+            `;
+            
+            resultsContainer.innerHTML = `
+                <div class="empty-results">
+                    <p>API 호출 실패</p>
+                    <p style="font-size: 0.75rem; margin-top: 0.5rem;">${error.message}</p>
+                </div>
+            `;
+            
+            return { status: 'fail', matchCount: 0 };
+        }
+    </script>
+</body>
+</html>
