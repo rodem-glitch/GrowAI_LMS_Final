@@ -29,7 +29,7 @@ public class QueryEmbeddingService {
 
     public QueryEmbeddingService(
         @Value("${spring.ai.google.genai.embedding.api-key:${GOOGLE_API_KEY:}}") String apiKey,
-        @Value("${spring.ai.google.genai.embedding.text.options.model:text-embedding-004}") String modelName
+        @Value("${spring.ai.google.genai.embedding.text.options.model:gemini-embedding-001}") String modelName
     ) {
         this.restTemplate = new RestTemplate();
         this.apiKey = apiKey;

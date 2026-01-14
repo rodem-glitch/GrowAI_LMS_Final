@@ -38,14 +38,18 @@ spring:
           api-key: ${GOOGLE_API_KEY:}
           text:
             options:
-              model: ${GOOGLE_EMBEDDING_MODEL:text-embedding-004}
+              # 왜: text-embedding-004는 한국어 입력에서 임베딩이 붕괴되는 케이스가 있어,
+              #      Gemini 임베딩 모델로 교체합니다.
+              model: ${GOOGLE_EMBEDDING_MODEL:gemini-embedding-001}
               task-type: ${GOOGLE_EMBEDDING_TASK:RETRIEVAL_DOCUMENT}
     vectorstore:
       qdrant:
         host: ${QDRANT_HOST:localhost}
         port: ${QDRANT_GRPC_PORT:6334}
         api-key: ${QDRANT_API_KEY:}
-        collection-name: ${QDRANT_COLLECTION:video_summary_vectors}
+        # 왜: 기존 컬렉션(768차원 text-embedding-004)과 혼용되면 검색이 깨집니다.
+        #      모델 교체 시에는 새 컬렉션으로 재색인하는 편이 안전합니다.
+        collection-name: ${QDRANT_COLLECTION:video_summary_vectors_gemini}
         use-tls: ${QDRANT_USE_TLS:false}
         initialize-schema: ${QDRANT_INIT_SCHEMA:true}
 

@@ -25,7 +25,7 @@ public class RecoContentVectorIndexService {
     public RecoContentVectorIndexService(
         RecoContentRepository recoContentRepository,
         VectorStoreService vectorStoreService,
-        @Value("${spring.ai.google.genai.embedding.text.options.model:text-embedding-004}") String embeddingModelName
+        @Value("${spring.ai.google.genai.embedding.text.options.model:gemini-embedding-001}") String embeddingModelName
     ) {
         // 왜: MySQL(원본)과 Qdrant(검색)을 분리하되, 운영에서 "재색인"을 쉽게 하기 위해 한 서비스로 묶습니다.
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
