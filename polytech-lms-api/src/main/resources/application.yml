@@ -56,9 +56,9 @@ spring:
 # 그래서 환경변수(.env, Run Configuration)나 application-local.yml로만 주입해 주세요.
 kollus:
   api-base-url: ${KOLLUS_API_BASE_URL:https://api.kr.kollus.com}
-  access-token: ${KOLLUS_ACCESS_TOKEN:2jr164nizjp8ur0z}
-  security-key: ${KOLLUS_SECURITY_KEY:newkl}
-  channel-key: ${KOLLUS_CHANNEL_KEY:u8p6y0itgnuaemiy}
+  access-token: ${KOLLUS_ACCESS_TOKEN:}
+  security-key: ${KOLLUS_SECURITY_KEY:}
+  channel-key: ${KOLLUS_CHANNEL_KEY:}
   client-user-id: ${KOLLUS_CLIENT_USER_ID:contentsummary}
   http-timeout: ${KOLLUS_HTTP_TIMEOUT:PT60S}
   media-token-expire-time: ${KOLLUS_MEDIA_TOKEN_EXPIRE:PT5M}
