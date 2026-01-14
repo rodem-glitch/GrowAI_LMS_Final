@@ -54,7 +54,15 @@
               <label for="areaselect" class="form-label text-sm fw-medium text-gray-700 mb-2">근무 지역</label>
               <select id="areaselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
+              <label for="providerselect" class="form-label text-sm fw-medium text-gray-700 mb-2">제공처</label>
+              <select id="providerselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm">
+                <option value="WORK24" selected>Work24</option>
+                <option value="JOBKOREA">잡코리아</option>
+                <option value="ALL">통합</option>
+              </select>
+            </div>
+            <div class="col-md-2">
               <label for="jobsearchbtn" class="form-label text-sm fw-medium text-gray-700 mb-2">&nbsp;</label>
               <button id="jobsearchbtn" class="form-control btn btn-outline-secondary">검색</button>
             </div>
@@ -70,6 +78,7 @@
   <script>
     const jobSelect = document.getElementById("jobselect");
     const areaSelect = document.getElementById("areaselect");
+    const providerSelect = document.getElementById("providerselect");
     const jobSearchBtn = document.getElementById("jobsearchbtn");
     const workList = document.querySelector(".worklist");
     const resultCount = document.getElementById("resultCount");
@@ -87,24 +96,40 @@
       // 왜: 직무 분야 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
       const data = await fetchJson("/job/occupation-codes?depthType=2");
       jobSelect.innerHTML = "";
+      // 왜: 특정 코드가 잘못되었거나 데이터가 비어도 "전체"로 조회할 수 있어야 합니다.
+      const allOption = document.createElement("option");
+      allOption.value = "";
+      allOption.textContent = "전체";
+      jobSelect.appendChild(allOption);
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.code;
         option.textContent = item.title;
         jobSelect.appendChild(option);
       });
+      // 왜: 브라우저가 이전 선택값을 유지하면 0건이 나올 수 있어 기본값을 '전체'로 강제합니다.
+      jobSelect.value = "";
     }
 
     async function loadRegionCodes() {
       // 왜: 근무 지역 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
       const data = await fetchJson("/job/region-codes?depthType=1");
       areaSelect.innerHTML = "";
+      // 왜: 지역을 선택하지 않아도(전체) 공고가 보이게 해서 초기 화면이 비는 문제를 막습니다.
+      const allOption = document.createElement("option");
+      allOption.value = "";
+      allOption.textContent = "전체";
+      areaSelect.appendChild(allOption);
       data.forEach(item => {
         const option = document.createElement("option");
-        option.value = item.idx;
+        // 왜: DB 적재 과정에서 '지역무관'이 0/1 등으로 들어가면 Work24 검색이 0건이 되는 경우가 있어,
+        //      '지역무관'은 Work24 파라미터를 아예 보내지 않도록 빈 값으로 처리합니다.
+        option.value = (item.title === "지역무관") ? "" : item.idx;
         option.textContent = item.title;
         areaSelect.appendChild(option);
       });
+      // 왜: 브라우저가 이전 선택값을 유지하면 0건이 나올 수 있어 기본값을 '전체'로 강제합니다.
+      areaSelect.value = "";
     }
 
     function buildWorkCard(item) {
@@ -146,7 +171,8 @@
       // 왜: 화면 선택값으로 채용 공고 목록을 다시 조회합니다.
       const region = areaSelect.value || "";
       const occupation = jobSelect.value || "";
-      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=1&display=10`;
+      const provider = providerSelect.value || "WORK24";
+      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=1&display=10&provider=${encodeURIComponent(provider)}`;
       const data = await fetchJson(url);
 
       const items = (data && data.wanted) ? data.wanted : [];
