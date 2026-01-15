@@ -79,6 +79,7 @@ interface CourseManagementProps {
   };
   onBack: () => void;
   initialTab?: CourseManagementTabId;
+  initialQnaPostId?: number;
   onTabChange?: (tabId: CourseManagementTabId) => void;
 }
 
@@ -187,7 +188,7 @@ type TabType = CourseManagementTabId;
 const INFO_SUB_TAB_IDS: CourseManagementTabId[] = ['info-basic', 'info-evaluation', 'info-completion'];
 const ASSIGNMENT_SUB_TAB_IDS: CourseManagementTabId[] = ['assignment-management', 'assignment-feedback'];
 
-export function CourseManagement({ course: initialCourse, onBack, initialTab, onTabChange }: CourseManagementProps) {
+export function CourseManagement({ course: initialCourse, onBack, initialTab, initialQnaPostId, onTabChange }: CourseManagementProps) {
   const [course, setCourse] = useState(initialCourse);
 
   const resolveInitialTab = (tab?: CourseManagementTabId): TabType => {
@@ -333,7 +334,7 @@ export function CourseManagement({ course: initialCourse, onBack, initialTab, on
           />
         );
       case 'qna':
-        return <QnaTab courseId={courseIdNum} />;
+        return <QnaTab courseId={courseIdNum} initialPostId={initialQnaPostId} />;
       case 'grades':
         // 왜: 학사 성적은 A/B/C/D/F 판정 UI가 요구되므로, 매핑 여부와 무관하게 학사 전용 화면을 사용합니다.
         return course?.sourceType === 'haksa'
@@ -3125,7 +3126,7 @@ function MaterialsTab({
 }
 
 // Q&A 탭
-function QnaTab({ courseId }: { courseId: number }) {
+function QnaTab({ courseId, initialPostId }: { courseId: number; initialPostId?: number }) {
   const [keyword, setKeyword] = useState('');
   const [qnas, setQnas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -3135,6 +3136,7 @@ function QnaTab({ courseId }: { courseId: number }) {
   const [detail, setDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [answerText, setAnswerText] = useState('');
+  const initialAppliedRef = useRef(false);
 
   const toBool = (value: any) =>
     value === true || value === 1 || value === '1' || value === 'Y' || value === 'true';
@@ -3185,6 +3187,22 @@ function QnaTab({ courseId }: { courseId: number }) {
   useEffect(() => {
     void fetchQnas({ keyword: keyword.trim() ? keyword.trim() : undefined });
   }, [courseId]);
+
+  useEffect(() => {
+    // 왜: 대시보드 "최근 Q&A"에서 들어온 경우, Q&A 탭에서 해당 글 상세로 바로 열어줍니다.
+    //     (주소 파라미터는 선택 후 정리될 수 있어, 최초 1회만 적용합니다.)
+    initialAppliedRef.current = false;
+    setSelectedPostId(null);
+    setDetail(null);
+    setAnswerText('');
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!initialPostId) return;
+    if (initialAppliedRef.current) return;
+    initialAppliedRef.current = true;
+    setSelectedPostId(initialPostId);
+  }, [initialPostId]);
 
   useEffect(() => {
     if (!selectedPostId) return;

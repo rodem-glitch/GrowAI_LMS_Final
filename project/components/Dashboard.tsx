@@ -14,6 +14,10 @@ type DashboardCourseLink = {
   courseId: number;
   courseName?: string;
   targetTab?: CourseManagementTabId;
+  // 왜: 대시보드의 "최근 Q&A"는 글 1건을 눌렀을 때, 해당 과목의 Q&A 탭에서 그 글 상세로 바로 들어가는 게 더 자연스럽습니다.
+  qnaPostId?: number;
+  // 왜: 학사/비정규 탭이 나뉘어 있어, 출처를 넘겨야 해당 탭에서 과목을 찾을 수 있습니다.
+  sourceType?: 'prism' | 'haksa';
 };
 
 export function Dashboard({
@@ -297,7 +301,15 @@ export function Dashboard({
               <button
                 key={qna.post_id}
                 type="button"
-                onClick={() => openCourseFromDashboard({ courseId: qna.course_id, courseName: qna.course_nm, targetTab: 'qna' })}
+                onClick={() =>
+                  openCourseFromDashboard({
+                    courseId: qna.course_id,
+                    courseName: qna.course_nm,
+                    targetTab: 'qna',
+                    qnaPostId: qna.post_id,
+                    sourceType: qna.source_type === 'haksa' ? 'haksa' : 'prism',
+                  })
+                }
                 className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-start justify-between mb-2">

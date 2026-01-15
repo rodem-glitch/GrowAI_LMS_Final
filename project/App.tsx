@@ -142,15 +142,18 @@ export default function App() {
     applyRoute({ menu, params: {} });
   }, [applyRoute]);
 
-  const handleOpenCourseFromDashboard = useCallback((payload: { courseId: number; courseName?: string; targetTab?: CourseManagementTabId }) => {
-    // 왜: 대시보드에서 선택한 과목과 탭을 주소에 담아 바로 이동합니다.
+  const handleOpenCourseFromDashboard = useCallback((payload: { courseId: number; courseName?: string; targetTab?: CourseManagementTabId; qnaPostId?: number; sourceType?: 'prism' | 'haksa' }) => {
+    // 왜: 대시보드에서 선택한 과목/탭(필요 시 Q&A 글)을 주소에 담아 바로 이동합니다.
     const params: Record<string, string> = {
       courseId: String(payload.courseId),
       // 왜: 목록 탭(tab=prism/haksa)과 충돌을 피하기 위해, 관리 탭은 cmTab으로 분리합니다.
       cmTab: payload.targetTab ?? 'attendance',
-      source: 'prism',
+      source: payload.sourceType ?? 'prism',
+      // 왜: 대시보드 딥링크는 목록/페이징을 거치지 않고 바로 과목을 열어야 안정적입니다.
+      direct: '1',
     };
     if (payload.courseName) params.courseName = payload.courseName;
+    if (payload.qnaPostId) params.qnaPostId = String(payload.qnaPostId);
     applyRoute({
       menu: 'courses',
       subPath: 'manage',

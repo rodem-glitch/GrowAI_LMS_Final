@@ -131,6 +131,7 @@ DataSet qnas = post.query(
 	" SELECT p.id post_id, p.course_id, p.subject, p.proc_status, p.reg_date "
 	+ " , u.user_nm, u.login_id "
 	+ " , c.course_nm "
+	+ " , CASE WHEN IFNULL(c.etc2, '') = 'HAKSA_MAPPED' THEN 'haksa' ELSE 'prism' END source_type "
 	+ " FROM " + post.table + " p "
 	+ " INNER JOIN " + board.table + " b ON b.id = p.board_id AND b.site_id = " + siteId + " AND b.status = 1 AND b.code = 'qna' "
 	+ " INNER JOIN " + user.table + " u ON u.id = p.user_id AND u.status != -1 "

@@ -198,6 +198,58 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
     return `H_${courseCode || 'UNKNOWN'}_${bunbanCode || '0'}_${fallback || '0'}`;
   };
 
+  const mapRowToCourse = useCallback((row: any, fallbackSource: TabType): Course => {
+    const sourceType = row?.source_type === 'haksa' || row?.source_type === 'prism' ? row.source_type : fallbackSource;
+    const statusLabel = (row.status_label as Course['status']) ?? '대기';
+    const typeParts = [
+      (row.course_type_conv || '').trim(),
+      (row.onoff_type_conv || '').trim(),
+    ].filter(Boolean);
+    const isHaksa = sourceType === 'haksa';
+    const idValue = isHaksa ? (row.id ? String(row.id) : buildHaksaCourseId(row)) : String(row.id);
+    const mappedCourseId = row.mapped_course_id ? Number(row.mapped_course_id) : undefined;
+
+    return {
+      id: idValue,
+      mappedCourseId: mappedCourseId && Number.isFinite(mappedCourseId) ? mappedCourseId : undefined,
+      sourceType,
+      courseId: row.course_id_conv || row.course_cd || String(row.id),
+      courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
+      subjectName: row.course_nm_conv || row.subject_nm_conv || row.course_nm || '-',
+      programId: Number(row.program_id ?? 0),
+      programName: row.program_nm_conv || '-',
+      period: row.period_conv || '-',
+      students: Number(row.student_cnt ?? 0),
+      status: statusLabel,
+      // ===== 학사 View 25개 필드 =====
+      haksaCategory: row.haksa_category || '',
+      haksaDeptName: row.haksa_dept_name || '',
+      haksaWeek: row.haksa_week || '',
+      haksaOpenTerm: row.haksa_open_term || '',
+      haksaCourseCode: row.haksa_course_code || '',
+      haksaVisible: row.haksa_visible || '',
+      haksaStartdate: row.haksa_startdate || '',
+      haksaBunbanCode: row.haksa_bunban_code || '',
+      haksaGrade: row.haksa_grade || '',
+      haksaGradName: row.haksa_grad_name || '',
+      haksaDayCd: row.haksa_day_cd || '',
+      haksaClassroom: row.haksa_classroom || '',
+      haksaCurriculumCode: row.haksa_curriculum_code || '',
+      haksaCourseEname: row.haksa_course_ename || '',
+      haksaTypeSyllabus: row.haksa_type_syllabus || '',
+      haksaOpenYear: row.haksa_open_year || '',
+      haksaDeptCode: row.haksa_dept_code || '',
+      haksaCourseName: row.haksa_course_name || '',
+      haksaGroupCode: row.haksa_group_code || '',
+      haksaEnddate: row.haksa_enddate || '',
+      haksaEnglish: row.haksa_english || '',
+      haksaHour1: row.haksa_hour1 || '',
+      haksaCurriculumName: row.haksa_curriculum_name || '',
+      haksaGradCode: row.haksa_grad_code || '',
+      haksaIsSyllabus: row.haksa_is_syllabus || '',
+    };
+  }, []);
+
   const getRouteParam = useCallback((keys: string[]) => {
     for (const key of keys) {
       const value = routeParams?.[key];
@@ -376,53 +428,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
 
         const rows = res.rst_data ?? [];
         const serverTotal = Number(res.rst_total_count ?? rows.length);
-        const mapped: Course[] = rows.map((row) => {
-          const statusLabel = (row.status_label as Course['status']) ?? '대기';
-          const typeParts = [
-            (row.course_type_conv || '').trim(),
-            (row.onoff_type_conv || '').trim(),
-          ].filter(Boolean);
-
-          return {
-            id: activeTab === 'haksa' ? buildHaksaCourseId(row) : String(row.id),
-            mappedCourseId: row.mapped_course_id ? Number(row.mapped_course_id) : undefined,
-            sourceType: activeTab,
-            courseId: row.course_id_conv || row.course_cd || String(row.id),
-            courseType: typeParts.length > 0 ? typeParts.join(' / ') : '미지정',
-            subjectName: row.course_nm_conv || row.subject_nm_conv || row.course_nm || '-',
-            programId: Number(row.program_id ?? 0),
-            programName: row.program_nm_conv || '-',
-            period: row.period_conv || '-',
-            students: Number(row.student_cnt ?? 0),
-            status: statusLabel,
-            // ===== 학사 View 25개 필드 =====
-            haksaCategory: row.haksa_category || '',
-            haksaDeptName: row.haksa_dept_name || '',
-            haksaWeek: row.haksa_week || '',
-            haksaOpenTerm: row.haksa_open_term || '',
-            haksaCourseCode: row.haksa_course_code || '',
-            haksaVisible: row.haksa_visible || '',
-            haksaStartdate: row.haksa_startdate || '',
-            haksaBunbanCode: row.haksa_bunban_code || '',
-            haksaGrade: row.haksa_grade || '',
-            haksaGradName: row.haksa_grad_name || '',
-            haksaDayCd: row.haksa_day_cd || '',
-            haksaClassroom: row.haksa_classroom || '',
-            haksaCurriculumCode: row.haksa_curriculum_code || '',
-            haksaCourseEname: row.haksa_course_ename || '',
-            haksaTypeSyllabus: row.haksa_type_syllabus || '',
-            haksaOpenYear: row.haksa_open_year || '',
-            haksaDeptCode: row.haksa_dept_code || '',
-            haksaCourseName: row.haksa_course_name || '',
-            haksaGroupCode: row.haksa_group_code || '',
-            haksaEnddate: row.haksa_enddate || '',
-            haksaEnglish: row.haksa_english || '',
-            haksaHour1: row.haksa_hour1 || '',
-            haksaCurriculumName: row.haksa_curriculum_name || '',
-            haksaGradCode: row.haksa_grad_code || '',
-            haksaIsSyllabus: row.haksa_is_syllabus || '',
-          };
-        });
+        const mapped: Course[] = rows.map((row) => mapRowToCourse(row, activeTab));
 
         if (!cancelled) {
           setCourses(mapped);
@@ -443,7 +449,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
     return () => {
       cancelled = true;
     };
-  }, [year, activeTab, searchKeyword, page, pageSize, haksaCategory, haksaGrad, haksaCurriculum, sortOrder]); // activeTab 의존성 추가
+  }, [year, activeTab, searchKeyword, page, pageSize, haksaCategory, haksaGrad, haksaCurriculum, sortOrder, mapRowToCourse]); // activeTab 의존성 추가
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -569,6 +575,14 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
   // 왜: 주소에서 넘어온 과목 정보를 자동 선택 로직에 맞춰 정리합니다.
   const routeCourseId = getRouteParam(['courseId', 'course_id', 'id']);
   const routeCourseName = getRouteParam(['courseName', 'course_nm', 'courseNameConv', 'name']);
+  const routeDirectParam = getRouteParam(['direct', 'directOpen', 'direct_open']);
+  const isDirectOpen = routeSubPath === 'manage' && routeDirectParam === '1';
+  const routeQnaPostIdRaw = getRouteParam(['qnaPostId', 'qna_post_id', 'postId', 'post_id']);
+  const routeQnaPostId = (() => {
+    // 왜: Q&A 상세 바로가기는 숫자 post_id가 필요합니다(문자열이면 파싱).
+    const parsed = Number(routeQnaPostIdRaw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  })();
   const rawTabParam = getRouteParam(['cmTab', 'cm_tab', 'tab', 'targetTab', 'tab_id']);
   const routeTargetTab =
     COURSE_MANAGEMENT_TAB_SET.has(rawTabParam) ? (rawTabParam as CourseManagementTabId) : undefined;
@@ -588,7 +602,46 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
       : null;
 
   useEffect(() => {
+    if (!isDirectOpen || !routeSelection) return;
+    if (!routeSelection.courseId) return;
+    let cancelled = false;
+
+    const fetchDirectCourse = async () => {
+      try {
+        const courseIdNum = Number(routeSelection.courseId);
+        if (!Number.isFinite(courseIdNum) || courseIdNum <= 0) {
+          throw new Error('과목 ID가 올바르지 않습니다.');
+        }
+        const res = await tutorLmsApi.getCourseResolve({
+          courseId: courseIdNum,
+          sourceType: routeSelection.sourceType,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+        if (!payload) throw new Error('과목 정보를 찾지 못했습니다.');
+
+        const mapped = mapRowToCourse(payload, (routeSelection.sourceType ?? 'prism') as TabType);
+        if (!cancelled) {
+          setSelectedCourseTab(routeSelection.targetTab ?? null);
+          setSelectedCourse(mapped);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setErrorMessage(e instanceof Error ? e.message : '과목 조회 중 오류가 발생했습니다.');
+        }
+      }
+    };
+
+    void fetchDirectCourse();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDirectOpen, mapRowToCourse, routeSelection]);
+
+  useEffect(() => {
     if (!routeSelection) return;
+    if (isDirectOpen) return;
     if (selectedCourse) {
       const selectionId = normalizeText(routeSelection.courseId);
       const selectionName = normalizeText(routeSelection.courseName);
@@ -693,7 +746,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
 
       state.stage = 'done';
     }
-  }, [activeTab, handleSelectCourse, loadedTab, loading, page, pageSize, routeSelection, selectedCourse, totalCount]);
+  }, [activeTab, handleSelectCourse, isDirectOpen, loadedTab, loading, page, pageSize, routeSelection, selectedCourse, totalCount]);
 
   const lastRouteTargetTabRef = useRef<CourseManagementTabId | undefined>(routeTargetTab);
   useEffect(() => {
@@ -740,6 +793,7 @@ export function MyCoursesList({ routeSubPath, routeParams, onRouteChange }: MyCo
       <CourseManagement
         course={selectedCourse}
         initialTab={selectedCourseTab ?? routeTargetTab ?? undefined}
+        initialQnaPostId={routeSubPath === 'manage' ? routeQnaPostId : undefined}
         onTabChange={(tabId) => setSelectedCourseTab(tabId)}
         onBack={() => {
           setSelectedCourse(null);

@@ -667,6 +667,49 @@ export type TutorDashboardQnaRow = {
   answered?: boolean;
   user_nm?: string;
   login_id?: string;
+  source_type?: 'prism' | 'haksa' | string;
+};
+
+export type TutorCourseResolveRow = {
+  id?: number | string;
+  mapped_course_id?: number;
+  source_type?: 'prism' | 'haksa' | string;
+  course_nm?: string;
+  course_nm_conv?: string;
+  course_cd?: string;
+  course_id_conv?: string;
+  course_type_conv?: string;
+  onoff_type_conv?: string;
+  program_nm_conv?: string;
+  period_conv?: string;
+  student_cnt?: number;
+  status_label?: string;
+  // 학사 필드 (있을 때만 내려옵니다)
+  haksa_category?: string;
+  haksa_dept_name?: string;
+  haksa_week?: string;
+  haksa_open_term?: string;
+  haksa_course_code?: string;
+  haksa_visible?: string;
+  haksa_startdate?: string;
+  haksa_bunban_code?: string;
+  haksa_grade?: string;
+  haksa_grad_name?: string;
+  haksa_day_cd?: string;
+  haksa_classroom?: string;
+  haksa_curriculum_code?: string;
+  haksa_course_ename?: string;
+  haksa_type_syllabus?: string;
+  haksa_open_year?: string;
+  haksa_dept_code?: string;
+  haksa_course_name?: string;
+  haksa_group_code?: string;
+  haksa_enddate?: string;
+  haksa_english?: string;
+  haksa_hour1?: string;
+  haksa_curriculum_name?: string;
+  haksa_grad_code?: string;
+  haksa_is_syllabus?: string;
 };
 
 export const tutorLmsApi = {
@@ -682,6 +725,11 @@ export const tutorLmsApi = {
         rst_qna?: TutorDashboardQnaRow[];
       }
     >;
+  },
+
+  async getCourseResolve(params: { courseId: number; sourceType?: 'prism' | 'haksa' }) {
+    const url = `/tutor_lms/api/course_resolve.jsp${buildQuery({ course_id: params.courseId, source_type: params.sourceType })}`;
+    return requestJson<TutorCourseResolveRow>(url);
   },
 
   async getPrograms(params: { keyword?: string } = {}) {
