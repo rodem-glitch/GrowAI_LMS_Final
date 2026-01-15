@@ -67,6 +67,7 @@ stats.next();
 
 DataSet courses = course.query(
 	" SELECT c.id, c.course_cd, c.course_nm, c.study_sdate, c.study_edate "
+	+ " , CASE WHEN IFNULL(c.etc2, '') = 'HAKSA_MAPPED' THEN 'haksa' ELSE 'prism' END source_type "
 	+ " , (SELECT COUNT(*) FROM " + courseUser.table + " cu WHERE cu.site_id = " + siteId + " AND cu.course_id = c.id AND cu.status IN (1,3)) student_cnt "
 	+ " , (SELECT IFNULL(AVG(cu.progress_ratio), 0) FROM " + courseUser.table + " cu WHERE cu.site_id = " + siteId + " AND cu.course_id = c.id AND cu.status IN (1,3)) avg_progress_ratio "
 	+ " , (SELECT COUNT(*) FROM " + homeworkUser.table + " hu "
@@ -104,6 +105,7 @@ while(courses.next()) {
 DataSet submissions = homeworkUser.query(
 	" SELECT hu.course_id, hu.homework_id, hu.course_user_id, hu.reg_date submit_date, hu.confirm_yn "
 	+ " , c.course_nm "
+	+ " , CASE WHEN IFNULL(c.etc2, '') = 'HAKSA_MAPPED' THEN 'haksa' ELSE 'prism' END source_type "
 	+ " , h.homework_nm "
 	+ " , u.user_nm, u.login_id "
 	+ " FROM " + homeworkUser.table + " hu "

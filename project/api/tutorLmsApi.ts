@@ -623,6 +623,201 @@ export type TutorCompletionRow = {
 
 export type TutorDashboardStats = {
   active_course_cnt: number;
+  score?: number;
+};
+
+export type HaksaResolveResult = {
+  mapped_course_id: number;
+  mapped_students?: number;
+  skipped_students?: number;
+  missing_students?: number;
+};
+
+export type TutorProgressSummaryRow = {
+  chapter: number;
+  section_id: number;
+  section_nm?: string;
+  lesson_id: number;
+  lesson_nm?: string;
+  lesson_type?: string;
+  total_time?: number;
+  duration_conv?: string;
+  student_cnt?: number;
+  complete_cnt?: number;
+  complete_rate?: number;
+  avg_ratio?: number;
+  last_date_conv?: string;
+};
+
+export type TutorProgressStudentRow = {
+  course_user_id: number;
+  user_id: number;
+  student_id?: string;
+  name?: string;
+  email?: string;
+  ratio?: number;
+  total_progress_ratio?: number;
+  study_time?: number;
+  study_time_conv?: string;
+  complete_yn?: 'Y' | 'N';
+  complete_date_conv?: string;
+  last_date_conv?: string;
+};
+
+export type TutorProgressDetailRow = {
+  course_user_id: number;
+  user_id: number;
+  student_id?: string;
+  name?: string;
+  email?: string;
+  chapter?: number;
+  lesson_id: number;
+  lesson_nm?: string;
+  lesson_type?: string;
+  total_time?: number;
+  complete_time?: number;
+  ratio?: number;
+  study_time?: number;
+  study_time_conv?: string;
+  curr_time?: number;
+  last_time?: number;
+  view_cnt?: number;
+  curr_page?: string;
+  study_page?: number;
+  complete_yn?: 'Y' | 'N';
+  complete_date_conv?: string;
+  last_date_conv?: string;
+};
+
+// ----- 마감 운영(시험/과제/자료/Q&A/성적/수료/증명서) -----
+export type TutorExamRow = {
+  exam_id: number;
+  exam_nm: string;
+  exam_time?: number;
+  question_cnt?: number;
+  onoff_type?: string;
+  assign_score?: number;
+  start_date?: string;
+  end_date?: string;
+  start_date_conv?: string;
+  end_date_conv?: string;
+  total_cnt?: number;
+  submitted_cnt?: number;
+  confirmed_cnt?: number;
+};
+
+export type TutorExamUserRow = {
+  course_user_id: number;
+  user_id: number;
+  login_id: string;
+  user_nm: string;
+  submitted?: boolean;
+  submitted_at?: string;
+  confirm?: boolean;
+  confirm_at?: string;
+  marking_score?: number;
+  marking_score_conv?: string;
+  score_conv?: string;
+};
+
+export type TutorHomeworkRow = {
+  homework_id: number;
+  homework_nm?: string;
+  module_nm?: string;
+  assign_score?: number;
+  start_date?: string;
+  end_date?: string;
+  start_date_conv?: string;
+  end_date_conv?: string;
+  total_cnt?: number;
+  submitted_cnt?: number;
+  confirmed_cnt?: number;
+};
+
+export type TutorHomeworkUserRow = {
+  course_user_id: number;
+  user_id: number;
+  login_id: string;
+  user_nm: string;
+  submitted?: boolean;
+  submitted_at?: string;
+  confirm?: boolean;
+  confirm_at?: string;
+  marking_score?: number;
+  marking_score_conv?: string;
+  score_conv?: string;
+  feedback?: string;
+  task_cnt?: number;
+};
+
+export type TutorMaterialRow = {
+  library_id: number;
+  library_nm: string;
+  content?: string;
+  library_file?: string;
+  library_link?: string;
+  file_url?: string;
+  file_size_conv?: string;
+  upload_date_conv?: string;
+};
+
+export type TutorQnaRow = {
+  id: number;
+  subject: string;
+  question_conv?: string;
+  user_nm?: string;
+  login_id?: string;
+  reg_date_conv?: string;
+  answered?: boolean;
+  proc_status?: number;
+};
+
+export type TutorQnaDetail = {
+  question_id: number;
+  subject: string;
+  question_content: string;
+  question_user_nm: string;
+  question_login_id: string;
+  question_reg_date_conv?: string;
+  answered?: boolean;
+  answer_id?: number;
+  answer_content?: string;
+  answer_user_nm?: string;
+  answer_login_id?: string;
+  answer_reg_date_conv?: string;
+};
+
+export type TutorGradeRow = {
+  course_user_id: number;
+  user_id: number;
+  login_id: string;
+  user_nm: string;
+  progress_ratio?: number;
+  exam_score?: number;
+  homework_score?: number;
+  etc_score?: number;
+  total_score?: number;
+  status_label?: string;
+};
+
+export type TutorCompletionRow = {
+  course_user_id: number;
+  user_id: number;
+  login_id: string;
+  user_nm: string;
+  progress_ratio?: number;
+  total_score?: number;
+  complete_status?: string;
+  complete_yn?: string;
+  complete_no?: string;
+  complete_date_conv?: string;
+  close_yn?: string;
+  close_date_conv?: string;
+  status_label?: string;
+};
+
+export type TutorDashboardStats = {
+  active_course_cnt: number;
   pending_homework_cnt: number;
   unanswered_qna_cnt: number;
   today?: string;
@@ -639,6 +834,7 @@ export type TutorDashboardCourseRow = {
   avg_progress_ratio_conv?: string;
   pending_homework_cnt?: number;
   unanswered_qna_cnt?: number;
+  source_type?: 'prism' | 'haksa' | string;
 };
 
 export type TutorDashboardSubmissionRow = {
@@ -654,6 +850,7 @@ export type TutorDashboardSubmissionRow = {
   submitted_at?: string;
   confirm_yn?: string;
   confirmed?: boolean;
+  source_type?: 'prism' | 'haksa' | string;
 };
 
 export type TutorHomeworkSubmissionRow = {

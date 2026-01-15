@@ -178,7 +178,12 @@ export function Dashboard({
                   <button
                     key={course.id}
                     type="button"
-                    onClick={() => openCourseFromDashboard({ courseId: course.id, courseName: course.course_nm, targetTab: 'attendance' })}
+                    onClick={() => openCourseFromDashboard({
+                      courseId: course.id,
+                      courseName: course.course_nm,
+                      targetTab: 'attendance',
+                      sourceType: course.source_type === 'haksa' ? 'haksa' : 'prism',
+                    })}
                     className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -256,7 +261,12 @@ export function Dashboard({
                   <button
                     key={`${row.homework_id}-${row.course_user_id}`}
                     type="button"
-                    onClick={() => openCourseFromDashboard({ courseId: row.course_id, courseName: row.course_nm, targetTab: 'assignment-feedback' })}
+                    onClick={() => openCourseFromDashboard({
+                      courseId: row.course_id,
+                      courseName: row.course_nm,
+                      targetTab: 'assignment-feedback',
+                      sourceType: row.source_type === 'haksa' ? 'haksa' : 'prism',
+                    })}
                     className="w-full text-left p-6 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
