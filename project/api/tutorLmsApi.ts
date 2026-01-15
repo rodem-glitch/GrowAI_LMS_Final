@@ -766,20 +766,26 @@ export const tutorLmsApi = {
     return requestJson<TutorProgramRow[]>(url);
   },
 
-  async getHomeworkSubmissions(params: { keyword?: string; page?: number; pageSize?: number } = {}) {
+  async getHomeworkSubmissions(params: { keyword?: string; page?: number; pageSize?: number; startDate?: string; endDate?: string; status?: 'unconfirmed' | 'confirmed' } = {}) {
     const url = `/tutor_lms/api/homework_submissions.jsp${buildQuery({
       s_keyword: params.keyword,
       page: params.page,
       page_size: params.pageSize,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      status: params.status,
     })}`;
     return requestJson<TutorHomeworkSubmissionRow[]>(url);
   },
 
-  async getQnaManageList(params: { keyword?: string; page?: number; pageSize?: number } = {}) {
+  async getQnaManageList(params: { keyword?: string; page?: number; pageSize?: number; startDate?: string; endDate?: string; status?: 'unanswered' | 'answered' } = {}) {
     const url = `/tutor_lms/api/qna_manage_list.jsp${buildQuery({
       s_keyword: params.keyword,
       page: params.page,
       page_size: params.pageSize,
+      start_date: params.startDate,
+      end_date: params.endDate,
+      status: params.status,
     })}`;
     return requestJson<TutorQnaManageRow[]>(url);
   },

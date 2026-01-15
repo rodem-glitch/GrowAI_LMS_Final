@@ -13,6 +13,9 @@ UserDao user = new UserDao();
 
 String keyword = m.rs("s_keyword");
 String safeKeyword = m.replace(keyword, "'", "''");
+String startDate = m.rs("start_date");
+String endDate = m.rs("end_date");
+String status = m.rs("status"); // unconfirmed/confirmed
 int pageNo = m.ri("page", 1);
 int pageSize = m.ri("page_size", 20);
 if(pageNo < 1) pageNo = 1;
@@ -33,6 +36,21 @@ if(!"".equals(safeKeyword)) {
 		+ " OR u.login_id LIKE '%" + safeKeyword + "%') ";
 }
 
+String dateWhere = "";
+if(!"".equals(startDate)) {
+	dateWhere += " AND hu.reg_date >= '" + m.time("yyyyMMdd", startDate) + "000000' ";
+}
+if(!"".equals(endDate)) {
+	dateWhere += " AND hu.reg_date <= '" + m.time("yyyyMMdd", endDate) + "235959' ";
+}
+
+String statusWhere = "";
+if("unconfirmed".equals(status)) {
+	statusWhere = " AND (hu.confirm_yn IS NULL OR hu.confirm_yn != 'Y') ";
+} else if("confirmed".equals(status)) {
+	statusWhere = " AND hu.confirm_yn = 'Y' ";
+}
+
 int totalCount = homeworkUser.getOneInt(
 	" SELECT COUNT(*) "
 	+ " FROM " + homeworkUser.table + " hu "
@@ -43,6 +61,8 @@ int totalCount = homeworkUser.getOneInt(
 	+ " INNER JOIN " + homework.table + " h ON h.id = hu.homework_id AND h.site_id = " + siteId + " AND h.status != -1 "
 	+ " WHERE hu.status = 1 AND hu.submit_yn = 'Y' "
 	+ keywordWhere
+	+ dateWhere
+	+ statusWhere
 );
 
 DataSet list = homeworkUser.query(
@@ -59,7 +79,9 @@ DataSet list = homeworkUser.query(
 	+ " INNER JOIN " + homework.table + " h ON h.id = hu.homework_id AND h.site_id = " + siteId + " AND h.status != -1 "
 	+ " WHERE hu.status = 1 AND hu.submit_yn = 'Y' "
 	+ keywordWhere
-	+ " ORDER BY hu.reg_date DESC "
+	+ dateWhere
+	+ statusWhere
+	+ " ORDER BY (CASE WHEN hu.confirm_yn = 'Y' THEN 1 ELSE 0 END) ASC, hu.reg_date DESC "
 	+ " LIMIT " + offset + ", " + pageSize + " "
 );
 

@@ -12,6 +12,9 @@ UserDao user = new UserDao();
 
 String keyword = m.rs("s_keyword");
 String safeKeyword = m.replace(keyword, "'", "''");
+String startDate = m.rs("start_date");
+String endDate = m.rs("end_date");
+String status = m.rs("status"); // unanswered/answered
 int pageNo = m.ri("page", 1);
 int pageSize = m.ri("page_size", 20);
 if(pageNo < 1) pageNo = 1;
@@ -32,6 +35,21 @@ if(!"".equals(safeKeyword)) {
 		+ " OR u.login_id LIKE '%" + safeKeyword + "%') ";
 }
 
+String dateWhere = "";
+if(!"".equals(startDate)) {
+	dateWhere += " AND p.reg_date >= '" + m.time("yyyyMMdd", startDate) + "000000' ";
+}
+if(!"".equals(endDate)) {
+	dateWhere += " AND p.reg_date <= '" + m.time("yyyyMMdd", endDate) + "235959' ";
+}
+
+String statusWhere = "";
+if("unanswered".equals(status)) {
+	statusWhere = " AND p.proc_status != 1 ";
+} else if("answered".equals(status)) {
+	statusWhere = " AND p.proc_status = 1 ";
+}
+
 int totalCount = post.getOneInt(
 	" SELECT COUNT(*) "
 	+ " FROM " + post.table + " p "
@@ -41,6 +59,8 @@ int totalCount = post.getOneInt(
 	+ joinTutor
 	+ " WHERE p.site_id = " + siteId + " AND p.depth = 'A' AND p.display_yn = 'Y' AND p.status != -1 "
 	+ keywordWhere
+	+ dateWhere
+	+ statusWhere
 );
 
 DataSet list = post.query(
@@ -55,7 +75,9 @@ DataSet list = post.query(
 	+ joinTutor
 	+ " WHERE p.site_id = " + siteId + " AND p.depth = 'A' AND p.display_yn = 'Y' AND p.status != -1 "
 	+ keywordWhere
-	+ " ORDER BY p.reg_date DESC "
+	+ dateWhere
+	+ statusWhere
+	+ " ORDER BY (CASE WHEN p.proc_status = 1 THEN 1 ELSE 0 END) ASC, p.reg_date DESC "
 	+ " LIMIT " + offset + ", " + pageSize + " "
 );
 

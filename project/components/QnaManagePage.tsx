@@ -24,6 +24,9 @@ export function QnaManagePage({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalCount, setTotalCount] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unanswered' | 'answered'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const pageNumbers = useMemo(() => {
@@ -43,6 +46,9 @@ export function QnaManagePage({
           keyword: searchKeyword || undefined,
           page,
           pageSize,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          status: statusFilter === 'all' ? undefined : statusFilter,
         });
         if (res.rst_code !== '0000') throw new Error(res.rst_message);
 
@@ -60,12 +66,17 @@ export function QnaManagePage({
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, searchKeyword]);
+  }, [page, pageSize, searchKeyword, startDate, endDate, statusFilter]);
 
   const handleSearch = () => {
     // 왜: 검색어가 바뀌면 1페이지부터 다시 조회해야 결과가 어긋나지 않습니다.
     setPage(1);
     setSearchKeyword(keyword.trim());
+  };
+
+  const handleFilterApply = () => {
+    // 왜: 기간/상태 필터 변경 시 첫 페이지부터 다시 조회합니다.
+    setPage(1);
   };
 
   const openCourse = (row: TutorQnaManageRow) => {
@@ -86,7 +97,8 @@ export function QnaManagePage({
         <p className="text-gray-600">모든 과목의 Q&A를 한 화면에서 관리합니다.</p>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row gap-3 md:items-center">
+      <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3">
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
         <input
           type="text"
           value={keyword}
@@ -97,7 +109,7 @@ export function QnaManagePage({
             if (e.key === 'Enter') handleSearch();
           }}
         />
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <select
             value={pageSize}
             onChange={(e) => {
@@ -116,6 +128,46 @@ export function QnaManagePage({
           >
             검색
           </button>
+        </div>
+        </div>
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">기간</span>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                setStartDate(e.target.value);
+                handleFilterApply();
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+            <span className="text-sm text-gray-400">~</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                setEndDate(e.target.value);
+                handleFilterApply();
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">상태</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as 'all' | 'unanswered' | 'answered');
+                handleFilterApply();
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="all">전체</option>
+              <option value="unanswered">미답변</option>
+              <option value="answered">답변완료</option>
+            </select>
+          </div>
         </div>
       </div>
 

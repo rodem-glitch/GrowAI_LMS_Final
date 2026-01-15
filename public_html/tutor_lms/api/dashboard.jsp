@@ -113,7 +113,7 @@ DataSet submissions = homeworkUser.query(
 	+ (!isAdmin ? (" INNER JOIN " + courseTutor.table + " ct ON ct.course_id = c.id AND ct.user_id = " + userId + " AND ct.type = 'major' AND ct.site_id = " + siteId + " ") : "")
 	+ " INNER JOIN " + homework.table + " h ON h.id = hu.homework_id AND h.site_id = " + siteId + " AND h.status != -1 "
 	+ " WHERE hu.status = 1 AND hu.submit_yn = 'Y' "
-	+ " ORDER BY hu.reg_date DESC "
+	+ " ORDER BY (CASE WHEN hu.confirm_yn = 'Y' THEN 1 ELSE 0 END) ASC, hu.reg_date DESC "
 	+ " LIMIT 0, 5 "
 );
 
@@ -138,7 +138,7 @@ DataSet qnas = post.query(
 	+ " INNER JOIN " + course.table + " c ON c.id = p.course_id AND c.site_id = " + siteId + " AND c.status != -1 AND c.onoff_type != 'P' "
 	+ (!isAdmin ? (" INNER JOIN " + courseTutor.table + " ct ON ct.course_id = c.id AND ct.user_id = " + userId + " AND ct.type = 'major' AND ct.site_id = " + siteId + " ") : "")
 	+ " WHERE p.site_id = " + siteId + " AND p.depth = 'A' AND p.display_yn = 'Y' AND p.status != -1 "
-	+ " ORDER BY p.reg_date DESC "
+	+ " ORDER BY (CASE WHEN p.proc_status = 1 THEN 1 ELSE 0 END) ASC, p.reg_date DESC "
 	+ " LIMIT 0, 5 "
 );
 
