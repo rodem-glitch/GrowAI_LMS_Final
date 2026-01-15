@@ -3,6 +3,39 @@ import { Download, Info, Plus, Search, Trash2 } from 'lucide-react';
 import { tutorLmsApi, TutorCourseStudentRow, HaksaCourseStudentRow } from '../../api/tutorLmsApi';
 import { downloadCsv } from '../../utils/csv';
 
+function maskName(name?: string) {
+  if (!name) return '-';
+  const trimmed = String(name).trim();
+  if (trimmed.length <= 1) return '*';
+  return `${trimmed[0]}${'*'.repeat(trimmed.length - 1)}`;
+}
+
+function maskStudentId(studentId?: string) {
+  if (!studentId) return '-';
+  const raw = String(studentId).trim();
+  if (raw.length <= 2) return '*'.repeat(raw.length);
+  if (raw.length <= 4) return `${raw[0]}${'*'.repeat(raw.length - 1)}`;
+  return `${raw.slice(0, 2)}${'*'.repeat(raw.length - 4)}${raw.slice(-2)}`;
+}
+
+function maskEmail(email?: string) {
+  if (!email) return '-';
+  const raw = String(email).trim();
+  const [local, domain] = raw.split('@');
+  if (!domain) return maskStudentId(raw);
+  const maskedLocal = local.length <= 1 ? '*' : `${local[0]}${'*'.repeat(Math.min(3, local.length - 1))}`;
+  return `${maskedLocal}@${domain}`;
+}
+
+function maskPhone(phone?: string) {
+  if (!phone) return '-';
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length < 7) return phone;
+  if (digits.length === 10) return `${digits.slice(0, 3)}-***-${digits.slice(6)}`;
+  if (digits.length >= 11) return `${digits.slice(0, 3)}-****-${digits.slice(-4)}`;
+  return phone;
+}
+
 function parseUserIds(raw: string) {
   return raw
     .split(',')
@@ -33,10 +66,17 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [keyword, setKeyword] = useState('');
+  const [isMasked, setIsMasked] = useState(true);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [privacyPurpose, setPrivacyPurpose] = useState('');
+  const [privacyAction, setPrivacyAction] = useState<'view' | 'download' | null>(null);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [privacySaving, setPrivacySaving] = useState(false);
 
   const refresh = async (nextKeyword?: string) => {
     setLoading(true);
     setErrorMessage(null);
+    setIsMasked(true);
     try {
       const res = await tutorLmsApi.getCourseStudents({ courseId: resolvedCourseId, keyword: nextKeyword ?? keyword });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
@@ -82,6 +122,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     }
     setLoading(true);
     setErrorMessage(null);
+    setIsMasked(true);
     try {
       const res = await tutorLmsApi.getHaksaCourseStudents({
         courseCode: course.haksaCourseCode,
@@ -106,6 +147,121 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
   }, [isHaksaCourse, course?.haksaCourseCode, course?.haksaOpenYear, course?.haksaOpenTerm, course?.haksaBunbanCode, course?.haksaGroupCode]);
 
   const totalCount = rows.length;
+
+  const openPrivacyModal = (action: 'view' | 'download') => {
+    setPrivacyAction(action);
+    setPrivacyError(null);
+    setShowPrivacyModal(true);
+  };
+
+  const closePrivacyModal = () => {
+    if (privacySaving) return;
+    setShowPrivacyModal(false);
+    setPrivacyError(null);
+    setPrivacyAction(null);
+  };
+
+  const logPrivacyAccess = async (action: 'view' | 'download') => {
+    const purpose = privacyPurpose.trim();
+    if (!purpose) {
+      setPrivacyError('사유를 입력해 주세요.');
+      return false;
+    }
+
+    const userIds = isHaksaCourse
+      ? []
+      : rows.map((row) => Number(row.user_id)).filter((id) => Number.isFinite(id) && id > 0);
+    const userCnt = isHaksaCourse ? haksaRows.length : rows.length;
+    const pageName = action === 'download' ? '수강생 정보 다운로드' : '수강생 정보 보기';
+
+    try {
+      setPrivacySaving(true);
+      const res = await tutorLmsApi.logPrivacyAccess({
+        logType: action === 'download' ? 'E' : 'V',
+        purpose,
+        pageName,
+        courseId: resolvedCourseId,
+        userIds,
+        userCnt,
+      });
+      if (res.rst_code !== '0000') throw new Error(res.rst_message);
+      return true;
+    } catch (e) {
+      setPrivacyError(e instanceof Error ? e.message : '개인정보 로그 저장 중 오류가 발생했습니다.');
+      return false;
+    } finally {
+      setPrivacySaving(false);
+    }
+  };
+
+  const renderPrivacyModal = (onDownload: () => void) => {
+    if (!showPrivacyModal) return null;
+    const title = privacyAction === 'download' ? '개인 정보 보기' : '가려진 정보 보기';
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-xl">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <button
+              onClick={closePrivacyModal}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="px-6 py-4 space-y-4 text-sm text-gray-700">
+            <div className="bg-gray-100 rounded-lg px-4 py-3 leading-6">
+              개인정보보호를 위하여 개인정보의 입.출력 및 수정사항, 파일별.담당자별 데이터접근내역을 기록합니다.
+            </div>
+
+            <div>
+              <div className="font-semibold mb-1">기록 항목</div>
+              <div>아이디(식별정보), 성명, 조회일시, 조회자아이피, 수행업무, 조회 목적 등</div>
+            </div>
+
+            <div>
+              <div className="font-semibold mb-1">참고</div>
+              <div>
+                개인정보 보호법 제29조(안전조치의무), 동법 시행령 제30조(개인정보의 안전성 확보 조치), 개인정보의
+                안전성 확보조치 기준 고시 제8조(접속기록의 보관 및 점검)
+              </div>
+            </div>
+
+            <div>
+              <div className="font-semibold mb-1">조회 목적</div>
+              <input
+                value={privacyPurpose}
+                onChange={(e) => setPrivacyPurpose(e.target.value)}
+                placeholder="조회 목적을 입력하세요."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {privacyError && <div className="text-sm text-red-600">{privacyError}</div>}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-center">
+            <button
+              onClick={async () => {
+                if (!privacyAction) return;
+                const ok = await logPrivacyAccess(privacyAction);
+                if (!ok) return;
+                if (privacyAction === 'view') setIsMasked(false);
+                if (privacyAction === 'download') {
+                  onDownload();
+                }
+                closePrivacyModal();
+              }}
+              className="px-6 py-2 text-sm text-white bg-amber-500 rounded-lg hover:bg-amber-600 disabled:bg-amber-300"
+              disabled={privacySaving}
+            >
+              {privacySaving ? '저장 중...' : '개인정보 조회 기록 내용을 확인하였습니다.'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const handleAddStudents = async () => {
     // 왜: 백엔드(course_students_add.jsp)는 user_id 숫자 목록을 받습니다.
@@ -149,7 +305,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     return [...rows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [rows]);
 
-  const handleDownloadCsv = () => {
+  const doDownloadCsv = () => {
     // 왜: 운영자가 바로 확인할 수 있도록, 화면에 표시 중인 목록을 그대로 CSV로 내려받습니다.
     const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `course_${resolvedCourseId}_students_${ymd}.csv`;
@@ -171,11 +327,15 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     downloadCsv(filename, headers, body);
   };
 
+  const handleDownloadCsv = () => {
+    openPrivacyModal('download');
+  };
+
   // 왜: 학사 과목은 LMS 수강생을 저장하지 않으므로, 학사 View 조회 결과만 읽기 전용으로 보여줍니다.
   if (isHaksaCourse) {
     const haksaCount = haksaRows.length;
     const haksaSorted = [...haksaRows].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-    const handleHaksaDownloadCsv = () => {
+    const doHaksaDownloadCsv = () => {
       const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const filename = `haksa_course_${course?.haksaCourseCode || 'unknown'}_students_${ymd}.csv`;
       const headers = ['No', '학번', '이름', '이메일', '휴대폰', '상태'];
@@ -190,6 +350,10 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
       downloadCsv(filename, headers, body);
     };
 
+    const handleHaksaDownloadCsv = () => {
+      openPrivacyModal('download');
+    };
+
     return (
       <div className="space-y-4">
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
@@ -199,6 +363,14 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
             수강생 목록은 학사 View를 읽어오는 방식으로 제공됩니다(읽기 전용).
           </div>
         </div>
+        {isMasked && (
+          <div className="bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+            <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              개인정보 보호를 위해 이름/이메일/휴대폰이 가려져 있습니다. 확인이 필요하면 “가려진 정보 보기”를 눌러 주세요.
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-gray-600">총 {haksaCount}명</div>
           <div className="flex items-center gap-2">
@@ -217,6 +389,17 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
             >
               검색
             </button>
+            {isMasked ? (
+              <button
+                onClick={() => openPrivacyModal('view')}
+                disabled={haksaCount === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-amber-300 transition-colors"
+              >
+                <span>가려진 정보 보기</span>
+              </button>
+            ) : (
+              <span className="text-sm text-emerald-600">개인정보 표시중</span>
+            )}
             <button
               onClick={handleHaksaDownloadCsv}
               className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -250,10 +433,18 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
                 return (
                   <tr key={`${student.student_id}-${index}`} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
-                    <td className="px-4 py-4 text-sm text-gray-900">{student.student_id || '-'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-900">{student.name || '-'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{student.email || '-'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{student.mobile || '-'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      {isMasked ? maskStudentId(student.student_id) : student.student_id || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      {isMasked ? maskName(student.name) : student.name || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {isMasked ? maskEmail(student.email) : student.email || '-'}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {isMasked ? maskPhone(student.mobile) : student.mobile || '-'}
+                    </td>
                     <td className="px-4 py-4 text-center text-sm text-gray-900">{visibleLabel}</td>
                   </tr>
                 );
@@ -268,12 +459,19 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
             </tbody>
           </table>
         </div>
+        {renderPrivacyModal(doHaksaDownloadCsv)}
       </div>
     );
   }
 
   return (
     <div>
+      {isMasked && (
+        <div className="mb-4 bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+          <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>개인정보 보호를 위해 이름/이메일이 가려져 있습니다. 확인이 필요하면 “가려진 정보 보기”를 눌러 주세요.</div>
+        </div>
+      )}
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="text-sm text-gray-600">총 {totalCount}명</div>
 
@@ -301,6 +499,18 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
             <Plus className="w-4 h-4" />
             <span>수강생 추가</span>
           </button>
+
+          {isMasked ? (
+            <button
+              onClick={() => openPrivacyModal('view')}
+              disabled={totalCount === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-amber-300 transition-colors"
+            >
+              <span>가려진 정보 보기</span>
+            </button>
+          ) : (
+            <span className="text-sm text-emerald-600">개인정보 표시중</span>
+          )}
 
           <button
             onClick={handleDownloadCsv}
@@ -334,9 +544,15 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
               return (
                 <tr key={student.course_user_id || `${student.user_id}-${index}`} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-4 text-sm text-gray-900">{index + 1}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900">{student.student_id || '-'}</td>
-                  <td className="px-4 py-4 text-sm text-gray-900">{student.name || '-'}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600">{student.email || '-'}</td>
+                  <td className="px-4 py-4 text-sm text-gray-900">
+                    {isMasked ? maskStudentId(student.student_id) : student.student_id || '-'}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-900">
+                    {isMasked ? maskName(student.name) : student.name || '-'}
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-600">
+                    {isMasked ? maskEmail(student.email) : student.email || '-'}
+                  </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -370,6 +586,8 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
           </tbody>
         </table>
       </div>
+      {renderPrivacyModal(doDownloadCsv)}
     </div>
   );
 }
+

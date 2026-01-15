@@ -1500,6 +1500,30 @@ export const tutorLmsApi = {
     return requestJson<HaksaCourseStudentRow[]>(url);
   },
 
+  // ----- 개인정보 로그 -----
+  async logPrivacyAccess(payload: {
+    logType: 'V' | 'E';
+    purpose: string;
+    pageName?: string;
+    courseId?: number;
+    userIds?: number[];
+    userCnt?: number;
+  }) {
+    const body = new URLSearchParams();
+    body.set('log_type', payload.logType);
+    body.set('purpose', payload.purpose);
+    if (payload.pageName) body.set('page_nm', payload.pageName);
+    if (payload.courseId !== undefined) body.set('course_id', String(payload.courseId));
+    if (payload.userIds && payload.userIds.length > 0) body.set('user_ids', payload.userIds.join(','));
+    if (payload.userCnt !== undefined) body.set('user_cnt', String(payload.userCnt));
+
+    return requestJson<number>(`/tutor_lms/api/privacy_log.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
+
   // =========================
   // 학사 과목: 평가/강의목차/시험/성적
   // =========================
