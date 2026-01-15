@@ -9,7 +9,7 @@ import {
 import { tutorLmsApi, type TutorDashboardCourseRow, type TutorDashboardQnaRow, type TutorDashboardStats, type TutorDashboardSubmissionRow } from '../api/tutorLmsApi';
 import type { CourseManagementTabId } from './CourseManagement';
 
-type DashboardMenuId = 'dashboard' | 'explore' | 'courses' | 'create-course' | 'subject-create';
+type DashboardMenuId = 'dashboard' | 'explore' | 'courses' | 'create-course' | 'subject-create' | 'assignment-manage' | 'qna-manage';
 type DashboardCourseLink = {
   courseId: number;
   courseName?: string;
@@ -95,6 +95,14 @@ export function Dashboard({
   const goToMyCourses = () => {
     // 왜: 대시보드의 상세 작업(과제/질문 확인)은 결국 “담당과목”에서 진행됩니다.
     onNavigate?.('courses');
+  };
+  const goToAssignmentManage = () => {
+    // 왜: 과제 전체보기는 통합 관리 화면으로 이동하는 흐름이 더 직관적입니다.
+    onNavigate?.('assignment-manage');
+  };
+  const goToQnaManage = () => {
+    // 왜: Q&A 전체보기는 과목별 이동 대신 통합 관리에서 바로 확인하도록 합니다.
+    onNavigate?.('qna-manage');
   };
 
   const openCourseFromDashboard = (payload: DashboardCourseLink) => {
@@ -228,7 +236,7 @@ export function Dashboard({
                 <ClipboardCheck className="w-5 h-5 text-orange-600" />
                 <h3 className="text-gray-900">과제 목록</h3>
               </div>
-              <button onClick={goToMyCourses} className="text-sm text-blue-600 hover:text-blue-700">
+              <button onClick={goToAssignmentManage} className="text-sm text-blue-600 hover:text-blue-700">
                 전체보기
               </button>
             </div>
@@ -286,7 +294,7 @@ export function Dashboard({
               <MessageSquare className="w-5 h-5 text-purple-600" />
               <h3 className="text-gray-900">최근 Q&A</h3>
             </div>
-            <button onClick={goToMyCourses} className="text-sm text-blue-600 hover:text-blue-700">
+            <button onClick={goToQnaManage} className="text-sm text-blue-600 hover:text-blue-700">
               전체보기
             </button>
           </div>

@@ -656,7 +656,36 @@ export type TutorDashboardSubmissionRow = {
   confirmed?: boolean;
 };
 
+export type TutorHomeworkSubmissionRow = {
+  course_id: number;
+  course_nm: string;
+  homework_id: number;
+  homework_nm: string;
+  course_user_id: number;
+  user_nm?: string;
+  login_id?: string;
+  submit_date?: string;
+  submitted_at?: string;
+  confirm_yn?: string;
+  confirmed?: boolean;
+  source_type?: 'prism' | 'haksa' | string;
+};
+
 export type TutorDashboardQnaRow = {
+  post_id: number;
+  course_id: number;
+  course_nm: string;
+  subject: string;
+  reg_date?: string;
+  reg_date_conv?: string;
+  proc_status?: number;
+  answered?: boolean;
+  user_nm?: string;
+  login_id?: string;
+  source_type?: 'prism' | 'haksa' | string;
+};
+
+export type TutorQnaManageRow = {
   post_id: number;
   course_id: number;
   course_nm: string;
@@ -735,6 +764,24 @@ export const tutorLmsApi = {
   async getPrograms(params: { keyword?: string } = {}) {
     const url = `/tutor_lms/api/program_list.jsp${buildQuery({ s_keyword: params.keyword })}`;
     return requestJson<TutorProgramRow[]>(url);
+  },
+
+  async getHomeworkSubmissions(params: { keyword?: string; page?: number; pageSize?: number } = {}) {
+    const url = `/tutor_lms/api/homework_submissions.jsp${buildQuery({
+      s_keyword: params.keyword,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`;
+    return requestJson<TutorHomeworkSubmissionRow[]>(url);
+  },
+
+  async getQnaManageList(params: { keyword?: string; page?: number; pageSize?: number } = {}) {
+    const url = `/tutor_lms/api/qna_manage_list.jsp${buildQuery({
+      s_keyword: params.keyword,
+      page: params.page,
+      page_size: params.pageSize,
+    })}`;
+    return requestJson<TutorQnaManageRow[]>(url);
   },
 
   async getProgram(id: number) {

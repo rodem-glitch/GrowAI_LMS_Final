@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus, BarChart3 } from 'lucide-react';
+import { GraduationCap, BookOpen, FolderPlus, Compass, Library, ChevronDown, ChevronRight, Heart, RefreshCw, ClipboardList, BookPlus, BarChart3, ClipboardCheck, MessageSquare } from 'lucide-react';
 import { CreateCourseForm } from './components/CreateCourseForm';
 import { MyCoursesList } from './components/MyCoursesList';
 import { CourseExplorer } from './components/CourseExplorer';
@@ -10,12 +10,16 @@ import { QuestionBankPage } from './components/QuestionBankPage';
 import { ExamManagementPage } from './components/ExamManagementPage';
 import { CreateSubjectWizard } from './components/CreateSubjectWizard';
 import { StatisticsPage } from './components/StatisticsPage';
+import { AssignmentManagePage } from './components/AssignmentManagePage';
+import { QnaManagePage } from './components/QnaManagePage';
 import type { CourseManagementTabId } from './components/CourseManagement';
 
 const MENU_IDS = [
   'dashboard',
   'explore',
   'courses',
+  'assignment-manage',
+  'qna-manage',
   'create-course',
   'content-all',
   'content-favorites',
@@ -296,6 +300,28 @@ export default function App() {
               <span>담당과목</span>
             </button>
             <button
+              onClick={() => applyMenu('assignment-manage')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                activeMenu === 'assignment-manage'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <ClipboardCheck className="w-5 h-5" />
+              <span>과제 통합관리</span>
+            </button>
+            <button
+              onClick={() => applyMenu('qna-manage')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                activeMenu === 'qna-manage'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span>Q&A 통합관리</span>
+            </button>
+            <button
               onClick={() => applyMenu('create-course')}
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                 activeMenu === 'create-course'
@@ -465,6 +491,16 @@ export default function App() {
                 routeSubPath={routeState.subPath}
                 routeParams={routeState.params}
                 onRouteChange={handleCoursesRouteChange}
+              />
+            ) : activeMenu === 'assignment-manage' ? (
+              <AssignmentManagePage
+                key={refreshKey}
+                onOpenCourse={handleOpenCourseFromDashboard}
+              />
+            ) : activeMenu === 'qna-manage' ? (
+              <QnaManagePage
+                key={refreshKey}
+                onOpenCourse={handleOpenCourseFromDashboard}
               />
             ) : activeMenu === 'create-course' ? (
               <CreateCourseForm
