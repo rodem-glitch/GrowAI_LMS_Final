@@ -22,6 +22,7 @@ if(0 == courseId || "".equals(userIdsRaw)) {
 CourseTutorDao courseTutor = new CourseTutorDao();
 CourseDao course = new CourseDao();
 CourseUserDao courseUser = new CourseUserDao();
+UserDao user = new UserDao();
 
 //권한: 교수자는 본인 과목(주강사)만, 관리자는 전체
 if(!isAdmin) {
@@ -43,25 +44,60 @@ if(!cinfo.next()) {
 
 int inserted = 0;
 int skipped = 0;
+int notFound = 0;
+java.util.HashSet<Integer> seenUserIds = new java.util.HashSet<Integer>();
+
 String[] parts = m.split(",", userIdsRaw);
 for(int i = 0; i < parts.length; i++) {
-	int targetUserId = m.parseInt(parts[i]);
-	if(targetUserId <= 0) continue;
+	String token = m.replace(parts[i], "\n", "").trim();
+	if("".equals(token)) continue;
 
-	//중복 방지
-	if(0 < courseUser.findCount("course_id = " + courseId + " AND user_id = " + targetUserId + " AND status NOT IN (-1, -4)")) {
+	int targetUserId = 0;
+	boolean isNumeric = token.matches("\\d+");
+
+	// 1) 숫자면 user_id로 먼저 해석
+	if(isNumeric) {
+		targetUserId = m.parseInt(token);
+		if(targetUserId > 0) {
+			int exists = user.findCount("id = " + targetUserId + " AND site_id = " + siteId + " AND status = 1 AND user_kind = 'U'");
+			if(exists <= 0) targetUserId = 0;
+		}
+	}
+
+	// 2) 숫자가 아니거나 user_id가 없으면 login_id로 조회
+	if(targetUserId <= 0) {
+		String safeLoginId = m.replace(token, "'", "''");
+		DataSet loginInfo = user.find("login_id = '" + safeLoginId + "' AND site_id = " + siteId + " AND status = 1 AND user_kind = 'U'");
+		if(loginInfo.next()) targetUserId = loginInfo.i("id");
+	}
+
+	if(targetUserId <= 0) {
+		notFound++;
+		continue;
+	}
+
+	// 입력 중복 방지
+	if(seenUserIds.contains(targetUserId)) {
+		skipped++;
+		continue;
+	}
+	seenUserIds.add(targetUserId);
+
+	// 중복 방지 (이미 수강생)
+	if(0 < courseUser.findCount("course_id = " + courseId + " AND user_id = " + targetUserId + " AND site_id = " + siteId + " AND status NOT IN (-1, -4)")) {
 		skipped++;
 		continue;
 	}
 
 	if(courseUser.addUser(cinfo, targetUserId, 1)) inserted++;
+	else skipped++;
 }
 
 result.put("rst_code", "0000");
 result.put("rst_message", "성공");
 result.put("rst_data", inserted);
 result.put("rst_skipped", skipped);
+result.put("rst_not_found", notFound);
 result.print();
 
 %>
-

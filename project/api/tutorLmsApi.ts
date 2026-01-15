@@ -1645,7 +1645,7 @@ export const tutorLmsApi = {
     });
   },
 
-  async addCourseStudents(payload: { courseId: number; userIds: number[] }) {
+  async addCourseStudents(payload: { courseId: number; userIds: Array<number | string> }) {
     const body = new URLSearchParams();
     body.set('course_id', String(payload.courseId));
     body.set('user_ids', payload.userIds.join(','));

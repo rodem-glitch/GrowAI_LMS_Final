@@ -36,15 +36,6 @@ function maskPhone(phone?: string) {
   return phone;
 }
 
-function parseUserIds(raw: string) {
-  return raw
-    .split(',')
-    .map((v) => v.trim())
-    .filter((v) => /^\d+$/.test(v))
-    .map((v) => Number(v))
-    .filter((v) => v > 0);
-}
-
 type StudentTabCourse = {
   sourceType?: 'haksa' | 'prism';
   mappedCourseId?: number;
@@ -53,6 +44,16 @@ type StudentTabCourse = {
   haksaOpenTerm?: string;
   haksaBunbanCode?: string;
   haksaGroupCode?: string;
+};
+
+type LearnerRow = {
+  id: string;
+  name: string;
+  campus: string;
+  major: string;
+  studentId?: string;
+  email?: string;
+  deptPath?: string;
 };
 
 export function StudentsTab({ courseId, course }: { courseId: number; course?: StudentTabCourse }) {
@@ -72,6 +73,18 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
   const [privacyAction, setPrivacyAction] = useState<'view' | 'download' | null>(null);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [privacySaving, setPrivacySaving] = useState(false);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addSearchTerm, setAddSearchTerm] = useState('');
+  const [addDebouncedSearchTerm, setAddDebouncedSearchTerm] = useState('');
+  const [addCampus, setAddCampus] = useState('전체');
+  const [addMajor, setAddMajor] = useState('전체');
+  const [addLearners, setAddLearners] = useState<LearnerRow[]>([]);
+  const [addPage, setAddPage] = useState(1);
+  const [addTotalCount, setAddTotalCount] = useState(0);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addErrorMessage, setAddErrorMessage] = useState<string | null>(null);
+  const [selectedLearners, setSelectedLearners] = useState<LearnerRow[]>([]);
 
   const refresh = async (nextKeyword?: string) => {
     setLoading(true);
@@ -147,6 +160,66 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
   }, [isHaksaCourse, course?.haksaCourseCode, course?.haksaOpenYear, course?.haksaOpenTerm, course?.haksaBunbanCode, course?.haksaGroupCode]);
 
   const totalCount = rows.length;
+
+  useEffect(() => {
+    // 왜: 이름 검색은 입력 중에는 기다렸다가, 입력이 멈추면 실제 검색을 실행합니다.
+    const timer = setTimeout(() => setAddDebouncedSearchTerm(addSearchTerm), 250);
+    return () => clearTimeout(timer);
+  }, [addSearchTerm]);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    let cancelled = false;
+    const fetchLearners = async () => {
+      setAddLoading(true);
+      setAddErrorMessage(null);
+      try {
+        // 왜: 캠퍼스/전공은 사이트별 DB 구조가 달라, 부서명 포함 검색으로 단순 지원합니다.
+        const deptKeyword = addMajor !== '전체' ? addMajor : (addCampus !== '전체' ? addCampus : undefined);
+
+        const res = await tutorLmsApi.getLearners({
+          keyword: addDebouncedSearchTerm,
+          deptKeyword,
+          page: addPage,
+          limit: 30,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+
+        const rows = res.rst_data ?? [];
+        const mapped: LearnerRow[] = rows.map((row: any) => {
+          const deptPath = String(row.dept_path || '');
+          const parts = deptPath.split(' > ').map((p: string) => p.trim()).filter(Boolean);
+          const campusName = parts[0] || String(row.dept_nm || '-') || '-';
+          const majorName = (parts.length > 0 ? parts[parts.length - 1] : String(row.dept_nm || '-')) || '-';
+
+          return {
+            id: String(row.id),
+            name: String(row.name || row.user_nm || '-'),
+            campus: campusName,
+            major: majorName,
+            studentId: String(row.student_id || ''),
+            email: String(row.email || ''),
+            deptPath,
+          };
+        });
+
+        if (!cancelled) {
+          setAddLearners(mapped);
+          setAddTotalCount(Number(res.rst_total ?? res.rst_count ?? rows.length ?? 0));
+        }
+      } catch (e) {
+        if (!cancelled) setAddErrorMessage(e instanceof Error ? e.message : '조회 중 오류가 발생했습니다.');
+      } finally {
+        if (!cancelled) setAddLoading(false);
+      }
+    };
+
+    void fetchLearners();
+    return () => {
+      cancelled = true;
+    };
+  }, [showAddModal, addDebouncedSearchTerm, addCampus, addMajor, addPage]);
 
   const openPrivacyModal = (action: 'view' | 'download') => {
     setPrivacyAction(action);
@@ -263,13 +336,46 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
     );
   };
 
-  const handleAddStudents = async () => {
-    // 왜: 백엔드(course_students_add.jsp)는 user_id 숫자 목록을 받습니다.
-    const raw = window.prompt('추가할 수강생 user_id를 콤마(,)로 구분해 입력해주세요.\n예) 12,34,56');
-    if (raw === null) return;
-    const userIds = parseUserIds(raw);
+  const openAddModal = () => {
+    setShowAddModal(true);
+    setAddSearchTerm('');
+    setAddDebouncedSearchTerm('');
+    setAddCampus('전체');
+    setAddMajor('전체');
+    setAddPage(1);
+    setSelectedLearners([]);
+  };
+
+  const closeAddModal = () => {
+    if (addLoading) return;
+    setShowAddModal(false);
+  };
+
+  const toggleLearner = (learner: LearnerRow) => {
+    const isSelected = selectedLearners.some((l) => l.id === learner.id);
+    if (isSelected) {
+      setSelectedLearners((prev) => prev.filter((l) => l.id !== learner.id));
+    } else {
+      setSelectedLearners((prev) => [...prev, learner]);
+    }
+  };
+
+  const selectAllLearners = () => {
+    // 왜: 페이징 화면에서는 "현재 페이지에 보이는 목록"만 전체 선택하는 것이 안전합니다.
+    setSelectedLearners([...addLearners]);
+  };
+
+  const deselectAllLearners = () => {
+    setSelectedLearners([]);
+  };
+
+  const handleAddSelectedLearners = async () => {
+    const userIds = selectedLearners
+      .map((learner) => Number(learner.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+
     if (userIds.length === 0) {
-      alert('입력값에서 user_id(숫자)를 찾지 못했습니다.');
+      alert('선택된 수강생이 없습니다.');
       return;
     }
 
@@ -279,8 +385,14 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
 
       const inserted = Number(res.rst_data ?? 0);
       const skipped = Number(res.rst_skipped ?? 0);
-      alert(`추가 완료: ${inserted}명${skipped > 0 ? ` (중복 ${skipped}명 제외)` : ''}`);
+      const notFound = Number((res as any).rst_not_found ?? 0);
+      alert(
+        `추가 완료: ${inserted}명` +
+          `${skipped > 0 ? ` (중복 ${skipped}명 제외)` : ''}` +
+          `${notFound > 0 ? ` (미존재 ${notFound}건)` : ''}`
+      );
 
+      closeAddModal();
       await refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : '수강생 추가 중 오류가 발생했습니다.');
@@ -329,6 +441,189 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
 
   const handleDownloadCsv = () => {
     openPrivacyModal('download');
+  };
+
+  const renderAddModal = () => {
+    if (!showAddModal) return null;
+
+    const campusOptions = ['전체', ...Array.from(new Set(addLearners.map((l) => l.campus).filter(Boolean)))];
+    const majorOptions = ['전체', ...Array.from(new Set(
+      addLearners
+        .filter((l) => addCampus === '전체' || l.campus === addCampus)
+        .map((l) => l.major)
+        .filter(Boolean),
+    ))];
+    const totalPages = Math.max(1, Math.ceil((addTotalCount || 0) / 30));
+    const canPrev = addPage > 1;
+    const canNext = addPage < totalPages;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">학습자 선택</h3>
+            <button
+              onClick={closeAddModal}
+              className="text-gray-400 hover:text-gray-600"
+              aria-label="닫기"
+            >
+              ?
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4 overflow-y-auto">
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">이름 검색</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={addSearchTerm}
+                      onChange={(e) => {
+                        setAddSearchTerm(e.target.value);
+                        setAddPage(1);
+                      }}
+                      placeholder="학습자 이름 검색..."
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">캠퍼스</label>
+                  <select
+                    value={addCampus}
+                    onChange={(e) => {
+                      setAddCampus(e.target.value);
+                      setAddMajor('전체');
+                      setAddPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {campusOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 mb-2">전공</label>
+                  <select
+                    value={addMajor}
+                    onChange={(e) => {
+                      setAddMajor(e.target.value);
+                      setAddPage(1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {majorOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {addErrorMessage && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {addErrorMessage}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex gap-3">
+                  <button
+                    onClick={selectAllLearners}
+                    disabled={addLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    전체 선택
+                  </button>
+                  <button
+                    onClick={deselectAllLearners}
+                    disabled={addLoading}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    현재 목록 전체 해제
+                  </button>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {addLoading ? '불러오는 중...' : `검색 결과: ${addTotalCount}명 / 선택된: ${selectedLearners.length}명`}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {addLearners.map((learner) => {
+                const isSelected = selectedLearners.some((l) => l.id === learner.id);
+                return (
+                  <div
+                    key={learner.id}
+                    onClick={() => toggleLearner(learner)}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      isSelected ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-gray-900">{learner.name}</div>
+                      {isSelected && (
+                        <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white">✓</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">{learner.campus}</div>
+                    <div className="text-sm text-gray-600">{learner.major}</div>
+                  </div>
+                );
+              })}
+              {!addLoading && !addErrorMessage && addLearners.length === 0 && (
+                <div className="col-span-3 text-center text-sm text-gray-500 py-6">
+                  표시할 학습자가 없습니다.
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                disabled={addLoading || !canPrev}
+                onClick={() => setAddPage((prev) => Math.max(1, prev - 1))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                이전
+              </button>
+              <div className="text-sm text-gray-600">
+                {addPage} / {totalPages}
+              </div>
+              <button
+                type="button"
+                disabled={addLoading || !canNext}
+                onClick={() => setAddPage((prev) => Math.min(totalPages, prev + 1))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                다음
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+            <button
+              onClick={closeAddModal}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleAddSelectedLearners}
+              disabled={addLoading || selectedLearners.length === 0}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors"
+            >
+              선택 학습자 추가
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // 왜: 학사 과목은 LMS 수강생을 저장하지 않으므로, 학사 View 조회 결과만 읽기 전용으로 보여줍니다.
@@ -493,7 +788,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
           </button>
 
           <button
-            onClick={handleAddStudents}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -587,6 +882,7 @@ export function StudentsTab({ courseId, course }: { courseId: number; course?: S
         </table>
       </div>
       {renderPrivacyModal(doDownloadCsv)}
+      {renderAddModal()}
     </div>
   );
 }
