@@ -329,11 +329,6 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
         isOpen={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         categories={categories}
-        onUploadComplete={() => {
-          // 왜: 업로드 완료 시 목록을 새로고침합니다.
-          setPage(1);
-          setContents([]);
-        }}
       />
     </div>
   );

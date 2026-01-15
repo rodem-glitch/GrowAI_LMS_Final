@@ -8,8 +8,10 @@
 
 // Kollus API 설정
 String KOLLUS_API_URL = "https://c-api-kr.kollus.com/api/upload/create-url";
-String KOLLUS_ACCESS_TOKEN = "vlfplfvtapzblupz";
-String KOLLUS_CHANNEL_KEY = "u8p6y0itgnuaemiy"; // 업로드 대상 채널
+
+// 왜: 멀티사이트 환경이라 사이트별 access_token을 DB에서 읽어와야 합니다.
+DataSet siteKollus = new SiteDao().find("id = " + siteId, "access_token");
+String KOLLUS_ACCESS_TOKEN = siteKollus.next() ? siteKollus.s("access_token") : "";
 
 try {
     // 파라미터 수집 (m.rs = request string, m.ri = request int)
@@ -18,6 +20,13 @@ try {
     int expireTime = m.ri("expire_time") > 0 ? m.ri("expire_time") : 600;
     int isEncryptionUpload = m.ri("is_encryption_upload");
     int isAudioUpload = m.ri("is_audio_upload");
+
+    if ("".equals(KOLLUS_ACCESS_TOKEN)) {
+        result.put("rst_code", "5003");
+        result.put("rst_message", "Kollus access_token이 설정되어 있지 않습니다. 관리자에게 문의해 주세요.");
+        result.print();
+        return;
+    }
 
     // Kollus API 호출
     URL url = new URL(KOLLUS_API_URL + "?access_token=" + KOLLUS_ACCESS_TOKEN);
@@ -32,7 +41,6 @@ try {
     postData.append("expire_time=").append(expireTime);
     postData.append("&is_encryption_upload=").append(isEncryptionUpload);
     postData.append("&is_audio_upload=").append(isAudioUpload);
-    postData.append("&channel_key=").append(KOLLUS_CHANNEL_KEY); // 채널 지정
     if (!"".equals(title)) {
         postData.append("&title=").append(URLEncoder.encode(title, "UTF-8"));
     }

@@ -13,7 +13,7 @@ interface KollusUploadModalProps {
   categories?: { key: string; name: string }[];
 }
 
-type UploadStatus = 'idle' | 'getting-url' | 'uploading' | 'success' | 'error';
+type UploadStatus = 'idle' | 'getting-url' | 'uploading' | 'linking' | 'success' | 'error';
 
 export function KollusUploadModal({
   isOpen,
@@ -30,6 +30,7 @@ export function KollusUploadModal({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const runIdRef = useRef(0);
 
   // 파일 선택 핸들러
   const handleFileSelect = useCallback((selectedFile: File | undefined) => {
@@ -75,6 +76,10 @@ export function KollusUploadModal({
       return;
     }
 
+    // 왜: 사용자가 모달을 닫거나 업로드를 취소하면, 이전 비동기 작업의 setState가 뒤늦게 실행될 수 있습니다.
+    //     runId를 올려서 "현재 업로드 시도"만 유효하게 만들면 상태 꼬임을 막을 수 있습니다.
+    const runId = ++runIdRef.current;
+
     setUploadStatus('getting-url');
     setProgress(0);
     setErrorMessage('');
@@ -86,22 +91,30 @@ export function KollusUploadModal({
         categoryKey: categoryKey || undefined,
         expireTime: 3600, // 1시간
       });
+      if (runId !== runIdRef.current) return;
 
       // 왜: JSP에서 DataSet을 반환하므로 rst_data가 배열 형태로 옵니다.
       // 첫 번째 요소에서 upload_url을 추출합니다.
       const rstData = urlRes.rst_data;
       let uploadUrl = '';
+      let uploadKey = '';
       
       if (Array.isArray(rstData) && rstData.length > 0) {
         // DataSet이 배열로 직렬화된 경우
         uploadUrl = rstData[0]?.upload_url || '';
+        uploadKey = rstData[0]?.upload_key || '';
       } else if (rstData && typeof rstData === 'object') {
         // 객체로 온 경우 (단일 객체)
         uploadUrl = (rstData as { upload_url?: string }).upload_url || '';
+        uploadKey = (rstData as { upload_key?: string }).upload_key || '';
       }
 
       if (urlRes.rst_code !== '0000' || !uploadUrl) {
         throw new Error(urlRes.rst_message || '업로드 URL 생성 실패');
+      }
+      if (!uploadKey) {
+        // 왜: 업로드 성공 후 채널 attach(연결)를 위해 upload_key가 필요합니다.
+        throw new Error('업로드 키(upload_key)를 받지 못했습니다. 관리자에게 문의해 주세요.');
       }
 
       // 2. Kollus 업로드 URL로 파일 직접 업로드
@@ -141,18 +154,32 @@ export function KollusUploadModal({
         xhr.open('POST', uploadUrl, true);
         xhr.send(formData);
       });
+      if (runId !== runIdRef.current) return;
 
-      // 업로드 성공
-      setUploadStatus('success');
+      // 3. 업로드 결과를 지정 채널에 연결(attach)
+      // 왜: 업로드 직후에는 목록에서 안 보이거나 엉뚱한 위치로 들어가는 경우가 있어,
+      //     서버에서 채널키를 고정해서 attach를 한 번 더 수행합니다.
       setProgress(100);
+      setUploadStatus('linking');
+
+      const attachRes = await tutorLmsApi.attachKollusToChannel({ uploadKey });
+      if (runId !== runIdRef.current) return;
+      if (attachRes.rst_code !== '0000') {
+        throw new Error(attachRes.rst_message || '채널 연결 실패');
+      }
+
+      // 업로드 + 채널 연결 성공
+      setUploadStatus('success');
 
       // 3초 후 모달 닫기 및 콜백 호출
       setTimeout(() => {
+        if (runId !== runIdRef.current) return;
         handleClose();
         onUploadComplete?.();
       }, 2000);
 
     } catch (err) {
+      if (runId !== runIdRef.current) return;
       setUploadStatus('error');
       setErrorMessage(err instanceof Error ? err.message : '업로드 중 오류가 발생했습니다.');
     }
@@ -160,6 +187,8 @@ export function KollusUploadModal({
 
   // 업로드 취소
   const handleCancel = () => {
+    // 왜: 취소 후에는 진행 중이던 비동기 작업이 더 이상 상태를 바꾸지 못하게 막습니다.
+    runIdRef.current += 1;
     if (xhrRef.current) {
       xhrRef.current.abort();
       xhrRef.current = null;
@@ -170,7 +199,8 @@ export function KollusUploadModal({
 
   // 모달 닫기
   const handleClose = () => {
-    if (uploadStatus === 'uploading') {
+    // 왜: 업로드/채널연결 중에 닫으면 중간 상태가 남을 수 있어 한 번 더 확인합니다.
+    if (uploadStatus === 'getting-url' || uploadStatus === 'uploading' || uploadStatus === 'linking') {
       if (!window.confirm('업로드 중입니다. 정말 취소하시겠습니까?')) {
         return;
       }
@@ -196,7 +226,7 @@ export function KollusUploadModal({
 
   if (!isOpen) return null;
 
-  const isUploading = uploadStatus === 'getting-url' || uploadStatus === 'uploading';
+  const isUploading = uploadStatus === 'getting-url' || uploadStatus === 'uploading' || uploadStatus === 'linking';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -311,7 +341,11 @@ export function KollusUploadModal({
               <div className="flex items-center gap-3 mb-3">
                 <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
                 <span className="text-sm font-medium text-blue-800">
-                  {uploadStatus === 'getting-url' ? '업로드 준비 중...' : `업로드 중... ${progress}%`}
+                  {uploadStatus === 'getting-url'
+                    ? '업로드 준비 중...'
+                    : uploadStatus === 'linking'
+                      ? '채널에 등록 중... (잠시만 기다려 주세요)'
+                      : `업로드 중... ${progress}%`}
                 </span>
               </div>
               <div className="w-full bg-blue-200 rounded-full h-2">
@@ -328,7 +362,7 @@ export function KollusUploadModal({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-green-600" />
               <span className="text-sm font-medium text-green-800">
-                업로드가 완료되었습니다! 잠시 후 목록이 새로고침됩니다.
+                업로드가 완료되었습니다. 채널 등록/처리까지 시간이 걸릴 수 있어 잠시 후 목록에서 확인해 주세요.
               </span>
             </div>
           )}

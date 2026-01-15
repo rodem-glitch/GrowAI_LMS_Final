@@ -2351,4 +2351,18 @@ export const tutorLmsApi = {
       }
     );
   },
+
+  // 왜 필요한가:
+  // - 업로드(upload_url로 파일 전송)가 끝났더라도, Kollus 채널에 attach가 되어야 목록에서 안정적으로 보입니다.
+  // - 채널키는 서버에서 고정하고, 프론트에서는 upload_key만 넘겨서 안전하게 처리합니다.
+  async attachKollusToChannel(payload: { uploadKey: string }) {
+    const body = new URLSearchParams();
+    body.set('upload_key', payload.uploadKey);
+
+    return requestJson<unknown>(`/tutor_lms/api/kollus_attach_channel.jsp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+  },
 };

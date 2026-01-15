@@ -442,9 +442,30 @@ public class KollusDao {
 		http.setParam("channel_key", channel);
 		String body = http.send("POST");
 
-		Json json = new Json(body);
-		DataSet data = json.getDataSet("//");
-		return data;
+		// 왜: 환경/에러 상황에 따라 Kollus API 응답이 빈 문자열이거나 JSON이 아닐 수 있습니다.
+		//     이때 Json 파서가 내부에서 NumberFormatException 등을 발생시키며 전체 업로드 흐름을 깨뜨릴 수 있어,
+		//     "파싱 실패"는 안전하게 흡수하고 원문을 돌려 디버깅 가능하게 합니다.
+		if(body == null) body = "";
+		body = body.trim();
+
+		DataSet data = new DataSet();
+		if("".equals(body)) {
+			data.addRow();
+			data.put("raw_body", "");
+			data.put("empty_body", "Y");
+			return data;
+		}
+
+		try {
+			Json json = new Json(body);
+			return json.getDataSet("//");
+		}
+		catch(Exception e) {
+			data.addRow();
+			data.put("raw_body", body);
+			data.put("parse_error", e.getMessage());
+			return data;
+		}
 	}
 
 }
