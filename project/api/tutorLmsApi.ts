@@ -2328,4 +2328,27 @@ export const tutorLmsApi = {
       body,
     });
   },
+
+  // 왜 필요한가:
+  // - Kollus에 동영상을 업로드하려면 먼저 업로드 URL을 생성해야 합니다.
+  // - 서버 프록시를 통해 API 토큰을 안전하게 관리합니다.
+  async getKollusUploadUrl(payload: {
+    title?: string;
+    categoryKey?: string;
+    expireTime?: number;
+  }) {
+    const body = new URLSearchParams();
+    if (payload.title) body.set('title', payload.title);
+    if (payload.categoryKey) body.set('category_key', payload.categoryKey);
+    if (payload.expireTime) body.set('expire_time', String(payload.expireTime));
+
+    return requestJson<{ upload_url: string; upload_key?: string; expired_at?: number }>(
+      `/tutor_lms/api/kollus_upload_url.jsp`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+      }
+    );
+  },
 };

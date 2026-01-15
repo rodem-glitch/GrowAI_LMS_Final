@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Heart, Play } from 'lucide-react';
+import { Search, BookOpen, Heart, Play, Upload } from 'lucide-react';
 import { tutorLmsApi } from '../api/tutorLmsApi';
+import { KollusUploadModal } from './KollusUploadModal';
 
 interface Content {
   id: string;
@@ -34,6 +35,7 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const limit = 30;
 
@@ -210,6 +212,16 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
           <div className="text-sm text-gray-600">
             총 <span className="text-blue-600">{totalCount}</span>개의 콘텐츠
           </div>
+          {/* 업로드 버튼 - 전체 콘텐츠 탭에서만 표시 */}
+          {activeTab === 'all' && (
+            <button
+              onClick={() => setUploadModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              <span>영상 업로드</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -311,6 +323,18 @@ export function ContentLibraryPage({ activeTab }: ContentLibraryPageProps) {
           </button>
         </div>
       )}
+
+      {/* Kollus 업로드 모달 */}
+      <KollusUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        categories={categories}
+        onUploadComplete={() => {
+          // 왜: 업로드 완료 시 목록을 새로고침합니다.
+          setPage(1);
+          setContents([]);
+        }}
+      />
     </div>
   );
 }
