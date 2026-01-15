@@ -64,17 +64,78 @@ public class GeminiVideoSummaryClient {
 
         log.info("Gemini File API 업로드 시작: {} ({}bytes, {})", displayName, fileSize, mimeType);
 
-        // Step 1: Initiate resumable upload
-        String uploadUrl = initiateResumableUpload(apiKey, fileSize, mimeType, displayName);
+        String fileUri = null;
+        try {
+            // Step 1: Initiate resumable upload
+            String uploadUrl = initiateResumableUpload(apiKey, fileSize, mimeType, displayName);
 
-        // Step 2: Upload file content
-        String fileUri = uploadFileContent(uploadUrl, videoFile, fileSize);
+            // Step 2: Upload file content
+            fileUri = uploadFileContent(uploadUrl, videoFile, fileSize);
 
-        // Step 3: Wait for file to become ACTIVE
-        waitForFileActive(fileUri, apiKey);
+            // Step 3: Wait for file to become ACTIVE
+            waitForFileActive(fileUri, apiKey);
 
-        log.info("Gemini File API 업로드 및 활성화 완료: {}", fileUri);
-        return fileUri;
+            log.info("Gemini File API 업로드 및 활성화 완료: {}", fileUri);
+            return fileUri;
+        } catch (IOException | InterruptedException e) {
+            // 왜: 업로드는 성공했는데(=fileUri가 생김) 이후 단계에서 실패하면,
+            // Gemini File API 저장소에 파일이 남아 file_storage_bytes 쿼터를 갉아먹습니다.
+            // 다음 업로드가 429로 막히지 않도록 best-effort로 정리합니다.
+            deleteUploadedFileBestEffort(fileUri, apiKey);
+            throw e;
+        } catch (RuntimeException e) {
+            deleteUploadedFileBestEffort(fileUri, apiKey);
+            throw e;
+        }
+    }
+
+    /**
+     * Gemini File API에 업로드된 파일을 삭제합니다(best-effort).
+     * 왜: 업로드 파일을 삭제하지 않으면 file_storage_bytes 쿼터가 누적되어 이후 업로드가 429로 막힐 수 있습니다.
+     */
+    public void deleteUploadedFileBestEffort(String fileUri) {
+        String apiKey;
+        try {
+            apiKey = requireApiKey();
+        } catch (Exception e) {
+            // 요약/업로드가 이미 apiKey를 필요로 하므로 일반적으로 여기까지 오지 않지만,
+            // 혹시라도 키가 없으면 삭제도 할 수 없으니 조용히 스킵합니다.
+            return;
+        }
+        deleteUploadedFileBestEffort(fileUri, apiKey);
+    }
+
+    private void deleteUploadedFileBestEffort(String fileUri, String apiKey) {
+        if (fileUri == null || fileUri.isBlank()) return;
+        if (apiKey == null || apiKey.isBlank()) return;
+
+        try {
+            String trimmedUri = fileUri.trim();
+            String separator = trimmedUri.contains("?") ? "&" : "?";
+            URI uri = URI.create(trimmedUri + separator + "key=" + urlEncode(apiKey.trim()));
+
+            HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(30))
+                .DELETE()
+                .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            int status = response.statusCode();
+
+            // 200/204: 정상 삭제, 404: 이미 없으면 "정리 완료"로 봅니다.
+            if ((status >= 200 && status < 300) || status == 404) {
+                log.info("Gemini File API 파일 삭제 완료: {} (HTTP {})", trimmedUri, status);
+                return;
+            }
+
+            log.warn("Gemini File API 파일 삭제 실패: {} (HTTP {}): {}", trimmedUri, status, safeSnippet(response.body()));
+        } catch (InterruptedException e) {
+            // 왜: 삭제는 best-effort지만, 인터럽트는 호출자/스케줄러의 의도를 존중해야 합니다.
+            Thread.currentThread().interrupt();
+            log.warn("Gemini File API 파일 삭제가 인터럽트로 중단되었습니다: {} - {}", fileUri, e.getMessage());
+        } catch (Exception e) {
+            log.warn("Gemini File API 파일 삭제 중 예외가 발생했습니다: {} - {}", fileUri, e.getMessage());
+        }
     }
 
     /**
@@ -139,7 +200,13 @@ public class GeminiVideoSummaryClient {
     public RecoContentSummaryDraft uploadAndSummarize(Path videoFile, String title, int targetSummaryLength) throws IOException, InterruptedException {
         String mimeType = detectMimeType(videoFile);
         String fileUri = uploadVideo(videoFile);
-        return summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
+        try {
+            return summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
+        } finally {
+            // 왜: 편의 메서드를 쓰는 호출자도 업로드 파일을 남기면 쿼터가 금방 꽉 찹니다.
+            //      요약이 끝나면 업로드된 파일은 best-effort로 바로 삭제합니다.
+            deleteUploadedFileBestEffort(fileUri);
+        }
     }
 
     /**

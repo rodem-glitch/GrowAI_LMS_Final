@@ -352,59 +352,66 @@ public class ContentSummaryService {
         String mimeType = "video/mp4"; // 현재 다운로드 파일명은 input.mp4로 고정입니다.
         String fileUri = geminiVideoSummaryClient.uploadVideo(videoFile);
 
-        int maxAdditionalRetries = VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
-        int totalAttempts = 1 + maxAdditionalRetries;
+        try {
+            int maxAdditionalRetries = VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
+            int totalAttempts = 1 + maxAdditionalRetries;
 
-        RecoContentSummaryDraft last = null;
-        for (int attempt = 1; attempt <= totalAttempts; attempt++) {
-            last = geminiVideoSummaryClient.summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
+            RecoContentSummaryDraft last = null;
+            for (int attempt = 1; attempt <= totalAttempts; attempt++) {
+                last = geminiVideoSummaryClient.summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
 
-            boolean summaryTooShort = isSummaryTooShort(last == null ? null : last.summary(), targetSummaryLength);
-            boolean keywordsTooFew = isKeywordsTooFew(last == null ? null : last.keywords(), targetSummaryLength);
-            if (!summaryTooShort && !keywordsTooFew) {
-                if (attempt > 1) {
-                    int summaryLen = codePointLength(last == null ? null : last.summary());
-                    int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
-                    log.info("요약 재시도 성공: mediaKey={}, attempt={}/{}, summaryLength={}, keywordsCount={}", mediaKey, attempt, totalAttempts, summaryLen, keywordCount);
+                boolean summaryTooShort = isSummaryTooShort(last == null ? null : last.summary(), targetSummaryLength);
+                boolean keywordsTooFew = isKeywordsTooFew(last == null ? null : last.keywords(), targetSummaryLength);
+                if (!summaryTooShort && !keywordsTooFew) {
+                    if (attempt > 1) {
+                        int summaryLen = codePointLength(last == null ? null : last.summary());
+                        int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
+                        log.info("요약 재시도 성공: mediaKey={}, attempt={}/{}, summaryLength={}, keywordsCount={}", mediaKey, attempt, totalAttempts, summaryLen, keywordCount);
+                    }
+                    return last;
                 }
-                return last;
+
+                int summaryLen = codePointLength(last == null ? null : last.summary());
+                int minSummaryLen = minAcceptableSummaryLength(targetSummaryLength);
+                int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
+                int minKeywords = minAcceptableKeywordCount(targetSummaryLength);
+                if (attempt < totalAttempts) {
+                    log.warn(
+                        "요약 결과가 기준 미달이라 재요약합니다. mediaKey={}, attempt={}/{}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
+                        mediaKey,
+                        attempt,
+                        totalAttempts,
+                        summaryTooShort,
+                        keywordsTooFew,
+                        summaryLen,
+                        minSummaryLen,
+                        keywordCount,
+                        minKeywords,
+                        targetSummaryLength
+                    );
+                } else {
+                    log.warn(
+                        "요약 결과가 {}회 시도 후에도 기준 미달입니다. mediaKey={}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
+                        totalAttempts,
+                        mediaKey,
+                        summaryTooShort,
+                        keywordsTooFew,
+                        summaryLen,
+                        minSummaryLen,
+                        keywordCount,
+                        minKeywords,
+                        targetSummaryLength
+                    );
+                }
             }
 
-            int summaryLen = codePointLength(last == null ? null : last.summary());
-            int minSummaryLen = minAcceptableSummaryLength(targetSummaryLength);
-            int keywordCount = countNonBlankKeywords(last == null ? null : last.keywords());
-            int minKeywords = minAcceptableKeywordCount(targetSummaryLength);
-            if (attempt < totalAttempts) {
-                log.warn(
-                    "요약 결과가 기준 미달이라 재요약합니다. mediaKey={}, attempt={}/{}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
-                    mediaKey,
-                    attempt,
-                    totalAttempts,
-                    summaryTooShort,
-                    keywordsTooFew,
-                    summaryLen,
-                    minSummaryLen,
-                    keywordCount,
-                    minKeywords,
-                    targetSummaryLength
-                );
-            } else {
-                log.warn(
-                    "요약 결과가 {}회 시도 후에도 기준 미달입니다. mediaKey={}, summaryTooShort={}, keywordsTooFew={}, summaryLength={}, minAcceptableSummaryLength={}, keywordsCount={}, minAcceptableKeywords={}, targetSummaryLength={}",
-                    totalAttempts,
-                    mediaKey,
-                    summaryTooShort,
-                    keywordsTooFew,
-                    summaryLen,
-                    minSummaryLen,
-                    keywordCount,
-                    minKeywords,
-                    targetSummaryLength
-                );
-            }
+            return last;
+        } finally {
+            // 왜: Gemini File API는 업로드 파일을 서버 쪽에 보관합니다.
+            //      삭제하지 않으면 file_storage_bytes 쿼터가 누적되어(20GB 한도) 이후 작업이 429로 막힙니다.
+            //      요약 결과는 DB에 저장되므로, 요약이 끝나면 업로드 파일은 바로 삭제해도 안전합니다.
+            geminiVideoSummaryClient.deleteUploadedFileBestEffort(fileUri);
         }
-
-        return last;
     }
 
     private RecoContent saveEmptyRecoContent(String mediaKey, String title) {
