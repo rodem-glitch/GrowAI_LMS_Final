@@ -318,6 +318,25 @@ try {
 				if(-1 < retAlias2) aliasSaved++;
 			}
 		}
+
+		//2-2.3) LMS 회원(로그인ID) ↔ 학사 member_key 추가 매핑
+		// 왜: TB_USER.login_id가 학번/교번과 다르면, 학사 member_key로 조인이 깨질 수 있습니다.
+		//     그래서 "학번/교번(예: etc3) → login_id"가 있는 경우 별칭 테이블에 추가해
+		//     강의실/교수자 탭/수강현황에서 동일한 member_key로 매핑되게 합니다.
+		try {
+			// 기본 가정: TB_USER.etc3에 학번/교번이 들어옵니다. (운영에서 다르면 여기만 바꾸면 됩니다)
+			int retAliasUser = polyMemberKey.execute(
+				" REPLACE INTO " + polyMemberKey.table
+				+ " (alias_key, member_key, sync_date, reg_date, mod_date) "
+				+ " SELECT u.login_id, pm.member_key, '" + syncDate + "', '" + syncDate + "', '" + syncDate + "' "
+				+ " FROM TB_USER u "
+				+ " INNER JOIN " + polyMember.table + " pm ON pm.member_key = u.etc3 "
+				+ " WHERE u.site_id = " + siteId + " AND u.status = 1 "
+				+ " AND u.login_id IS NOT NULL AND u.login_id <> '' "
+				+ " AND u.etc3 IS NOT NULL AND u.etc3 <> '' "
+			);
+			if(-1 < retAliasUser) aliasSaved += retAliasUser;
+		} catch(Exception ignore) {}
 	}
 
 	//2-2.5) 교수자 뷰 미러 + 과목-교수 매핑
