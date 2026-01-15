@@ -366,10 +366,15 @@ function MyCoursesListContent({ routeSubPath, routeParams, onRouteChange }: MyCo
   // ============================================================================
   useEffect(() => {
     if (routeSubPath === 'manage') return;
-    if (!selectedCourse) return;
+    // 왜: selectedCourse를 의존성에서 제거해야 합니다.
+    // - 이 Effect의 목적은 "routeSubPath가 'manage'가 아닐 때 상세 화면 닫기" 입니다.
+    // - selectedCourse가 의존성에 있으면, 버튼 클릭 시 selectedCourse가 설정되는 순간
+    //   아직 routeSubPath가 'manage'로 변경되기 전에 Effect가 실행되어
+    //   selectedCourse가 즉시 null로 리셋됩니다 (경쟁 상태).
     setSelectedCourse(null);
     setSelectedCourseTab(null);
-  }, [routeSubPath, selectedCourse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeSubPath]);
 
   // ============================================================================
   // Effect 6: 직접 링크(direct=1) 처리
