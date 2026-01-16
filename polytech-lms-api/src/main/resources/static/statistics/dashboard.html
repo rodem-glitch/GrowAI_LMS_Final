@@ -2724,7 +2724,7 @@
       ...ds,
       backgroundColor: ds.backgroundColor || (idx === 0 ? chartColors.primaryLight : (idx === 1 ? chartColors.successLight : chartColors.warningLight)),
       borderColor: ds.borderColor || (idx === 0 ? chartColors.primary : (idx === 1 ? chartColors.success : chartColors.warning)),
-      borderWidth: 2,
+      borderWidth: 0,
       borderRadius: 6,
       borderSkipped: false,
       hoverBackgroundColor: ds.hoverBackgroundColor || (idx === 0 ? chartColors.primary : (idx === 1 ? chartColors.success : chartColors.warning))
@@ -2799,7 +2799,7 @@
       ...ds,
       backgroundColor: ds.backgroundColor || (idx === 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 114, 182, 0.7)'),
       borderColor: ds.borderColor || (idx === 0 ? 'rgba(59, 130, 246, 1)' : 'rgba(244, 114, 182, 1)'),
-      borderWidth: 2,
+      borderWidth: 0,
       borderRadius: 4,
       hoverBackgroundColor: idx === 0 ? 'rgba(59, 130, 246, 1)' : 'rgba(244, 114, 182, 1)'
     }));
