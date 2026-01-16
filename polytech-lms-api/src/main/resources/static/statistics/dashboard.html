@@ -5,159 +5,700 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>통계 대시보드</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"/>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       통계 대시보드 프리미엄 UI 스타일 (tutor_lms 디자인 시스템)
+       UI Skills + Vercel 가이드라인 준수
+       ═══════════════════════════════════════════════════════════ */
+    
+    :root {
+      /* 브랜드 컬러 */
+      --color-primary: #0f69af;
+      --color-primary-light: #e8f0f7;
+      --color-primary-dark: #0a3a73;
+      
+      /* 통계 카드 아이콘 배경 */
+      --color-stat-blue: #dbeafe;
+      --color-stat-blue-icon: #3b82f6;
+      --color-stat-amber: #fef3c7;
+      --color-stat-amber-icon: #f59e0b;
+      --color-stat-purple: #ede9fe;
+      --color-stat-purple-icon: #8b5cf6;
+      --color-stat-green: #d1fae5;
+      --color-stat-green-icon: #10b981;
+      
+      /* 배경 & 표면 */
+      --color-bg: #f8fafc;
+      --color-card: #ffffff;
+      --color-border: #e2e8f0;
+      
+      /* 텍스트 */
+      --color-text: #1e293b;
+      --color-text-secondary: #64748b;
+      --color-text-muted: #94a3b8;
+      
+      /* 그림자 */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      
+      /* 둥글기 */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      
+      /* 트랜지션 (200ms 이하) */
+      --transition-fast: 150ms ease-out;
+      --transition-normal: 200ms ease-out;
+    }
+    
+    /* 기본 스타일 */
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* 제목 스타일 */
+    h1, h2, h3, h4, h5, h6 {
+      text-wrap: balance;
+      font-weight: 600;
+    }
+    
+    /* 숫자 고정폭 */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       헤더 영역
+       ───────────────────────────────────────────────────────────── */
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .page-header .subtitle {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       탭 네비게이션 (필 스타일)
+       ───────────────────────────────────────────────────────────── */
+    .nav-tabs-premium {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0;
+      margin: 0 0 1.5rem 0;
+      list-style: none;
+      background: var(--color-card);
+      border-radius: var(--radius-lg);
+      padding: 0.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+    
+    .nav-tabs-premium .nav-item {
+      flex-shrink: 0;
+    }
+    
+    .nav-tabs-premium .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    
+    .nav-tabs-premium .nav-link:hover {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+    }
+    
+    .nav-tabs-premium .nav-link.active {
+      background: var(--color-primary);
+      color: #ffffff;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .nav-tabs-premium .nav-link i {
+      font-size: 1rem;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       통계 요약 카드 그리드
+       ───────────────────────────────────────────────────────────── */
+    .stat-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+      background: var(--color-card);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .stat-card .icon-wrapper {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .stat-card .icon-wrapper.blue { background: var(--color-stat-blue); color: var(--color-stat-blue-icon); }
+    .stat-card .icon-wrapper.amber { background: var(--color-stat-amber); color: var(--color-stat-amber-icon); }
+    .stat-card .icon-wrapper.purple { background: var(--color-stat-purple); color: var(--color-stat-purple-icon); }
+    .stat-card .icon-wrapper.green { background: var(--color-stat-green); color: var(--color-stat-green-icon); }
+    
+    .stat-card .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--color-text);
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .stat-card .stat-label {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      margin-top: 0.25rem;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       카드 컴포넌트 (개선)
+       ───────────────────────────────────────────────────────────── */
+    .card-premium {
+      background: var(--color-card);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+    
+    .card-premium .card-header-premium {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .card-premium .card-header-premium h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+    
+    .card-premium .card-header-premium h3 i {
+      color: var(--color-primary);
+    }
+    
+    .card-premium .card-body-premium {
+      padding: 1.25rem;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       필터 영역
+       ───────────────────────────────────────────────────────────── */
+    .filter-section {
+      background: var(--color-card);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+    
+    .filter-section .filter-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 0.75rem;
+    }
+    
+    .filter-section .filter-title i {
+      color: var(--color-primary);
+    }
+    
+    .filter-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    
+    .filter-controls .form-select {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      background-color: var(--color-bg);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    
+    .filter-controls .form-select:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       버튼 스타일
+       ───────────────────────────────────────────────────────────── */
+    .btn-premium {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      transition: all var(--transition-fast);
+      cursor: pointer;
+      border: none;
+    }
+    
+    .btn-premium.btn-primary {
+      background: var(--color-primary);
+      color: #ffffff;
+    }
+    
+    .btn-premium.btn-primary:hover {
+      background: var(--color-primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-premium.btn-secondary {
+      background: var(--color-bg);
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    
+    .btn-premium.btn-secondary:hover {
+      background: var(--color-border);
+      color: var(--color-text);
+    }
+    
+    .btn-premium.btn-success {
+      background: var(--color-stat-green);
+      color: var(--color-stat-green-icon);
+    }
+    
+    .btn-premium.btn-success:hover {
+      background: #a7f3d0;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       데이터 카드 (다운로드 영역)
+       ───────────────────────────────────────────────────────────── */
+    .data-download-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: linear-gradient(135deg, var(--color-primary-light) 0%, #f0f9ff 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid #bfdbfe;
+      margin-bottom: 1rem;
+    }
+    
+    .data-download-card .info h4 {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0 0 0.25rem 0;
+    }
+    
+    .data-download-card .info p {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      margin: 0;
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       차트 영역
+       ───────────────────────────────────────────────────────────── */
+    .chart-section {
+      margin-top: 1.5rem;
+    }
+    
+    .chart-section .chart-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    
+    .chart-section .chart-title h4 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin: 0;
+    }
+    
+    .chart-section .chart-title h4 i {
+      color: var(--color-primary);
+    }
+    
+    .chart-container {
+      position: relative;
+      padding: 1rem;
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       스켈레톤 로딩
+       ───────────────────────────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s ease-in-out infinite;
+      border-radius: var(--radius-sm);
+    }
+    
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .skeleton-bar {
+      height: 20px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .skeleton-chart {
+      height: 200px;
+      border-radius: var(--radius-md);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       테이블 스타일
+       ───────────────────────────────────────────────────────────── */
+    .table-premium {
+      font-size: 0.875rem;
+    }
+    
+    .table-premium thead th {
+      background: var(--color-bg);
+      font-weight: 600;
+      color: var(--color-text);
+      border-color: var(--color-border);
+      padding: 0.75rem 1rem;
+    }
+    
+    .table-premium tbody td {
+      padding: 0.75rem 1rem;
+      border-color: var(--color-border);
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .table-premium tbody tr:hover {
+      background: var(--color-primary-light);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       상태 메시지
+       ───────────────────────────────────────────────────────────── */
+    .status-message {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      margin-top: 1rem;
+    }
+    
+    .status-message i {
+      color: var(--color-primary);
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       모션 감소 설정 지원
+       ───────────────────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    /* ─────────────────────────────────────────────────────────────
+       반응형 조정
+       ───────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .stat-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .data-download-card {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .nav-tabs-premium {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 0.75rem;
+      }
+    }
+  </style>
 </head>
 <body class="bg-light">
 <main class="container py-4">
-  <div class="mb-3">
-    <h1 class="h3 fw-bold mb-1">통계 대시보드</h1>
-    <div class="text-secondary small">
-      정적 HTML 화면이며, 데이터는 `/statistics/api/*`에서 받아서 렌더링합니다.
-    </div>
+  <!-- 헤더 영역 -->
+  <div class="page-header">
+    <h1><i class="bi bi-bar-chart-line-fill" style="color: var(--color-primary);"></i> 통계 대시보드</h1>
+    <p class="subtitle">교수자 활동 현황을 한눈에 확인하세요</p>
   </div>
 
-  <ul class="nav nav-tabs mb-3" role="tablist">
+  <!-- 탭 네비게이션 -->
+  <ul class="nav-tabs-premium" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="tab-internal" data-bs-toggle="tab" data-bs-target="#pane-internal" type="button" role="tab">
-        입학 양성 취업 통계
+      <button class="nav-link active" id="tab-internal" data-bs-toggle="tab" data-bs-target="#pane-internal" type="button" role="tab" aria-label="입학 양성 취업 통계">
+        <i class="bi bi-mortarboard"></i> 입학·양성·취업
       </button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="tab-population" data-bs-toggle="tab" data-bs-target="#pane-population" type="button" role="tab">
-        인구별 통계
+      <button class="nav-link" id="tab-population" data-bs-toggle="tab" data-bs-target="#pane-population" type="button" role="tab" aria-label="인구별 통계">
+        <i class="bi bi-people"></i> 인구별 통계
       </button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="tab-industry" data-bs-toggle="tab" data-bs-target="#pane-industry" type="button" role="tab">
-        산업별 통계
+      <button class="nav-link" id="tab-industry" data-bs-toggle="tab" data-bs-target="#pane-industry" type="button" role="tab" aria-label="산업별 통계">
+        <i class="bi bi-building"></i> 산업별 통계
       </button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="tab-ai" data-bs-toggle="tab" data-bs-target="#pane-ai" type="button" role="tab">
-        <span class="d-flex align-items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/>
-            <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/>
-          </svg>
-          AI 통계
-        </span>
+      <button class="nav-link" id="tab-ai" data-bs-toggle="tab" data-bs-target="#pane-ai" type="button" role="tab" aria-label="AI 통계">
+        <i class="bi bi-robot"></i> AI 통계
       </button>
     </li>
     <li class="nav-item" role="presentation">
-      <button class="nav-link" id="tab-rawdata" data-bs-toggle="tab" data-bs-target="#pane-rawdata" type="button" role="tab">
-        통계 로우 데이터 조회(엑셀)
+      <button class="nav-link" id="tab-rawdata" data-bs-toggle="tab" data-bs-target="#pane-rawdata" type="button" role="tab" aria-label="로우 데이터 조회">
+        <i class="bi bi-file-earmark-spreadsheet"></i> 로우 데이터
       </button>
     </li>
   </ul>
 
+
   <div class="tab-content">
     <div class="tab-pane fade show active" id="pane-internal" role="tabpanel" aria-labelledby="tab-internal">
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <div>
-              <div class="fw-semibold">입학 양성 취업 통계</div>
-              <div class="text-secondary small">내부(입시/졸업/취업) 통계는 엑셀/DB 원천을 확정한 뒤 단계적으로 고도화합니다.</div>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-              <select id="internalCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-            </div>
-          </div>
 
-          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between">
-            <div>
-              <div class="fw-semibold">입학 양성 취업 통합 데이터</div>
-              <div class="text-secondary small">입학, 양성, 취업 관련 모든 상세 데이터를 필터/캠퍼스/연도로 조회하고 다운로드할 수 있습니다.</div>
-            </div>
-            <button id="downloadInternalCsv" class="btn btn-primary btn-sm" type="button">전체 데이터 다운로드</button>
-          </div>
+      <!-- 필터 영역 -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+        <div class="filter-controls">
+          <select id="internalCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+        </div>
+      </div>
 
-          <div id="internalStatus" class="text-secondary small mt-3"></div>
+      <!-- 데이터 다운로드 카드 -->
+      <div class="data-download-card">
+        <div class="info">
+          <h4><i class="bi bi-download me-1"></i>입학 양성 취업 통합 데이터</h4>
+          <p>입학, 양성, 취업 관련 모든 상세 데이터를 필터/캠퍼스/연도로 조회하고 다운로드할 수 있습니다.</p>
+        </div>
+        <button id="downloadInternalCsv" class="btn-premium btn-primary" type="button" aria-label="전체 데이터 다운로드">
+          <i class="bi bi-file-earmark-arrow-down"></i> 전체 다운로드
+        </button>
+      </div>
 
-          <div class="fw-semibold mt-4">학과별 취업률</div>
-          <div class="mt-3" style="height: 280px;">
+      <!-- 상태 메시지 -->
+      <div id="internalStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+
+      <!-- 차트 카드: 학과별 취업률 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-bar-chart"></i> 학과별 취업률</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 280px;">
             <canvas id="internalEmploymentChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">학과별 입학충원률</div>
-          <div class="mt-3" style="height: 280px;">
+      <!-- 차트 카드: 학과별 입학충원률 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-person-plus"></i> 학과별 입학충원률</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 280px;">
             <canvas id="internalAdmissionChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">연도별 취업률 추이</div>
-          <div class="mt-3" style="height: 260px;">
+      <!-- 차트 카드: 연도별 취업률 추이 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-graph-up"></i> 연도별 취업률 추이</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 260px;">
             <canvas id="internalTrendChart"></canvas>
           </div>
         </div>
       </div>
     </div>
 
+
     <div class="tab-pane fade" id="pane-population" role="tabpanel" aria-labelledby="tab-population">
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <div>
-              <div class="fw-semibold">인구별 통계</div>
-              <div class="text-secondary small">행정구역 인구 분포와 캠퍼스 학생 분포(가능한 경우)를 같은 기준으로 비교합니다.</div>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-              <select id="populationCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="populationAdmCd" class="form-select form-select-sm" style="min-width: 180px;">
-                <option value="11" selected>서울특별시</option>
-                <option value="26">부산광역시</option>
-                <option value="27">대구광역시</option>
-                <option value="28">인천광역시</option>
-                <option value="29">광주광역시</option>
-                <option value="30">대전광역시</option>
-                <option value="31">울산광역시</option>
-                <option value="41">경기도</option>
-                <option value="42">강원도</option>
-                <option value="43">충청북도</option>
-                <option value="44">충청남도</option>
-                <option value="45">전라북도</option>
-                <option value="46">전라남도</option>
-                <option value="47">경상북도</option>
-                <option value="48">경상남도</option>
-                <option value="50">제주특별자치도</option>
-              </select>
-              <select id="populationYear" class="form-select form-select-sm" style="min-width: 110px;"></select>
-            </div>
-          </div>
-
-          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between">
-            <div>
-              <div class="fw-semibold">지역 인구 통합 데이터</div>
-              <div class="text-secondary small">현재 선택한 조건(캠퍼스/학기/행정구역/연도)으로 인구 비교 데이터를 엑셀로 다운로드합니다.</div>
-            </div>
-            <button id="downloadPopulationCsvTop" class="btn btn-primary btn-sm" type="button">엑셀 다운로드</button>
-          </div>
-
-          <div id="populationStatus" class="text-secondary small mt-3"></div>
+      <!-- 필터 영역 -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+        <div class="filter-controls">
+          <select id="populationCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+          <select id="populationAdmCd" class="form-select" style="min-width: 180px;" aria-label="행정구역 선택">
+            <option value="11" selected>서울특별시</option>
+            <option value="26">부산광역시</option>
+            <option value="27">대구광역시</option>
+            <option value="28">인천광역시</option>
+            <option value="29">광주광역시</option>
+            <option value="30">대전광역시</option>
+            <option value="31">울산광역시</option>
+            <option value="41">경기도</option>
+            <option value="42">강원도</option>
+            <option value="43">충청북도</option>
+            <option value="44">충청남도</option>
+            <option value="45">전라북도</option>
+            <option value="46">전라남도</option>
+            <option value="47">경상북도</option>
+            <option value="48">경상남도</option>
+            <option value="50">제주특별자치도</option>
+          </select>
+          <select id="populationYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
         </div>
       </div>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-semibold">연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</div>
-            <button id="downloadPopulationCsv" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
-          </div>
-          <div class="mt-3" style="height: 320px;">
+      <!-- 데이터 다운로드 카드 -->
+      <div class="data-download-card">
+        <div class="info">
+          <h4><i class="bi bi-download me-1"></i>지역 인구 통합 데이터</h4>
+          <p>현재 선택한 조건(캠퍼스/학기/행정구역/연도)으로 인구 비교 데이터를 엑셀로 다운로드합니다.</p>
+        </div>
+        <button id="downloadPopulationCsvTop" class="btn-premium btn-primary" type="button" aria-label="엑셀 다운로드">
+          <i class="bi bi-file-earmark-arrow-down"></i> 엑셀 다운로드
+        </button>
+      </div>
+
+      <!-- 상태 메시지 -->
+      <div id="populationStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+
+      <!-- 차트 카드: 연령대별 인구비율 비교 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-pie-chart"></i> 연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</h3>
+          <button id="downloadPopulationCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
+            <i class="bi bi-file-earmark-excel"></i> 엑셀
+          </button>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 320px;">
             <canvas id="populationChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">연령대별 캠퍼스-행정구역 비율 GAP</div>
-          <div class="mt-3" style="height: 260px;">
+      <!-- 차트 카드: 비율 GAP -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-arrow-left-right"></i> 연령대별 캠퍼스-행정구역 비율 GAP</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 260px;">
             <canvas id="populationGapChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">연령대별 남녀 성비: 행정구역 vs 캠퍼스</div>
-          <div class="mt-3" style="height: 320px;">
+      <!-- 차트 카드: 남녀 성비 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-gender-ambiguous"></i> 연령대별 남녀 성비: 행정구역 vs 캠퍼스</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 320px;">
             <canvas id="populationGenderChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">연령대별 남녀 성비 GAP(캠퍼스-행정구역)</div>
-          <div class="mt-3" style="height: 260px;">
+      <!-- 차트 카드: 성비 GAP -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-arrow-left-right"></i> 연령대별 남녀 성비 GAP(캠퍼스-행정구역)</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 260px;">
             <canvas id="populationGenderGapChart"></canvas>
           </div>
         </div>
@@ -165,60 +706,60 @@
     </div>
 
     <div class="tab-pane fade" id="pane-industry" role="tabpanel" aria-labelledby="tab-industry">
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <div>
-              <div class="fw-semibold">산업별 통계</div>
-              <div class="text-secondary small">지역 산업 비율(종사자)과 캠퍼스 학생 비율을 같은 분류(7개)로 비교합니다.</div>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-              <select id="industryCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="industryAdmCd" class="form-select form-select-sm" style="min-width: 180px;">
-                <option value="11" selected>서울특별시</option>
-                <option value="26">부산광역시</option>
-                <option value="27">대구광역시</option>
-                <option value="28">인천광역시</option>
-                <option value="29">광주광역시</option>
-                <option value="30">대전광역시</option>
-                <option value="31">울산광역시</option>
-                <option value="36">세종특별자치시</option>
-                <option value="41">경기도</option>
-                <option value="42">강원특별자치도</option>
-                <option value="43">충청북도</option>
-                <option value="44">충청남도</option>
-                <option value="45">전라북도</option>
-                <option value="46">전라남도</option>
-                <option value="47">경상북도</option>
-                <option value="48">경상남도</option>
-                <option value="50">제주특별자치도</option>
-              </select>
-              <select id="industryYear" class="form-select form-select-sm" style="min-width: 110px;"></select>
-            </div>
-          </div>
-
-          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between">
-            <div>
-              <div class="fw-semibold">산업분포 통합 데이터</div>
-              <div class="text-secondary small">현재 선택한 조건(캠퍼스/학기/행정구역/연도)으로 산업 비교 데이터를 엑셀로 다운로드합니다.</div>
-            </div>
-            <button id="downloadIndustryCsvTop" class="btn btn-primary btn-sm" type="button">엑셀 다운로드</button>
-          </div>
-
-          <div id="industryStatus" class="text-secondary small mt-3"></div>
+      <!-- 필터 영역 -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+        <div class="filter-controls">
+          <select id="industryCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+          <select id="industryAdmCd" class="form-select" style="min-width: 180px;" aria-label="행정구역 선택">
+            <option value="11" selected>서울특별시</option>
+            <option value="26">부산광역시</option>
+            <option value="27">대구광역시</option>
+            <option value="28">인천광역시</option>
+            <option value="29">광주광역시</option>
+            <option value="30">대전광역시</option>
+            <option value="31">울산광역시</option>
+            <option value="36">세종특별자치시</option>
+            <option value="41">경기도</option>
+            <option value="42">강원특별자치도</option>
+            <option value="43">충청북도</option>
+            <option value="44">충청남도</option>
+            <option value="45">전라북도</option>
+            <option value="46">전라남도</option>
+            <option value="47">경상북도</option>
+            <option value="48">경상남도</option>
+            <option value="50">제주특별자치도</option>
+          </select>
+          <select id="industryYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
         </div>
       </div>
 
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="fw-semibold">산업분포 분석</div>
-            <button id="downloadIndustryCsv" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
-          </div>
+      <!-- 데이터 다운로드 카드 -->
+      <div class="data-download-card">
+        <div class="info">
+          <h4><i class="bi bi-download me-1"></i>산업분포 통합 데이터</h4>
+          <p>현재 선택한 조건(캠퍼스/학기/행정구역/연도)으로 산업 비교 데이터를 엑셀로 다운로드합니다.</p>
+        </div>
+        <button id="downloadIndustryCsvTop" class="btn-premium btn-primary" type="button" aria-label="엑셀 다운로드">
+          <i class="bi bi-file-earmark-arrow-down"></i> 엑셀 다운로드
+        </button>
+      </div>
 
-          <div class="table-responsive mt-3">
-            <table class="table table-sm table-bordered align-middle text-center">
-              <thead class="table-secondary">
+      <!-- 상태 메시지 -->
+      <div id="industryStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+
+      <!-- 테이블 카드: 산업분포 분석 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-table"></i> 산업분포 분석</h3>
+          <button id="downloadIndustryCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
+            <i class="bi bi-file-earmark-excel"></i> 엑셀
+          </button>
+        </div>
+        <div class="card-body-premium p-0">
+          <div class="table-responsive">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
+              <thead>
               <tr>
                 <th style="min-width: 160px;">분야</th>
                 <th>행정구역 종사자 비율</th>
@@ -229,19 +770,34 @@
               <tbody id="industryTableBody"></tbody>
             </table>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">기술업종별 종사자 비율 vs 캠퍼스 학생 비율</div>
-          <div class="mt-3" style="height: 320px;">
+      <!-- 차트 카드: 종사자 비율 비교 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-bar-chart"></i> 기술업종별 종사자 비율 vs 캠퍼스 학생 비율</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 320px;">
             <canvas id="industryChart"></canvas>
           </div>
+        </div>
+      </div>
 
-          <div class="fw-semibold mt-4">기술업종별 종사자 캠퍼스-행정구역 비율 GAP</div>
-          <div class="mt-3" style="height: 260px;">
+      <!-- 차트 카드: 비율 GAP -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-arrow-left-right"></i> 기술업종별 종사자 캠퍼스-행정구역 비율 GAP</h3>
+        </div>
+        <div class="card-body-premium">
+          <div class="chart-container" style="height: 260px;">
             <canvas id="industryGapChart"></canvas>
           </div>
         </div>
       </div>
     </div>
+
 
     <!-- AI 통계 탭 -->
     <div class="tab-pane fade" id="pane-ai" role="tabpanel" aria-labelledby="tab-ai">
@@ -725,65 +1281,256 @@
 
     <!-- 로우 데이터 탭 -->
     <div class="tab-pane fade" id="pane-rawdata" role="tabpanel" aria-labelledby="tab-rawdata">
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <div>
-              <div class="fw-semibold">통계 로우 데이터 조회(엑셀)</div>
-              <div class="text-secondary small">엑셀 원본을 직접 보고 필터/정렬로 확인합니다.</div>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-              <select id="rawDataCategory" class="form-select form-select-sm" style="min-width: 160px;">
-                <option value="employment" selected>취업</option>
-                <option value="admission">입학</option>
-                <option value="population">재학생 인구</option>
-              </select>
-              <select id="rawDataCampus" class="form-select form-select-sm" style="min-width: 180px;"></select>
-              <select id="rawDataYear" class="form-select form-select-sm" style="min-width: 110px;"></select>
-            </div>
+      <!-- 필터 영역 -->
+      <div class="filter-section">
+        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+        <div class="filter-controls">
+          <select id="rawDataCategory" class="form-select" style="min-width: 160px;" aria-label="분류 선택">
+            <option value="employment" selected>취업</option>
+            <option value="admission">입학</option>
+            <option value="population">재학생 인구</option>
+          </select>
+          <select id="rawDataCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+          <select id="rawDataYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
+        </div>
+      </div>
+
+      <!-- 검색 및 다운로드 영역 -->
+      <div class="data-download-card">
+        <div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">
+          <input id="rawDataSearch" type="text" class="form-control" style="max-width: 250px;" placeholder="검색어 입력" aria-label="검색어 입력"/>
+          <select id="rawDataPageSize" class="form-select" style="max-width: 110px;" aria-label="표시 행 수">
+            <option value="20">20행</option>
+            <option value="50" selected>50행</option>
+            <option value="100">100행</option>
+            <option value="200">200행</option>
+          </select>
+        </div>
+        <button id="rawDataDownload" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
+          <i class="bi bi-file-earmark-excel"></i> 엑셀 다운로드
+        </button>
+      </div>
+
+      <!-- 상태 메시지 -->
+      <div id="rawDataStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+
+      <!-- 테이블 카드 -->
+      <div class="card-premium">
+        <div class="card-header-premium">
+          <h3><i class="bi bi-table"></i> 로우 데이터</h3>
+          <div class="d-flex align-items-center gap-3">
+            <span id="rawDataRowCount" class="text-secondary" style="font-size: 0.8125rem;"></span>
+            <span id="rawDataPageInfo" class="text-secondary tabular-nums" style="font-size: 0.8125rem;"></span>
           </div>
-
-          <div class="mt-3 p-3 border rounded bg-white d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <div class="text-secondary small">분류/캠퍼스/연도 기준으로 엑셀 로우 데이터를 조회합니다.</div>
-            <div class="d-flex gap-2 flex-wrap">
-              <input id="rawDataSearch" type="text" class="form-control form-control-sm" style="min-width: 180px;" placeholder="검색어 입력"/>
-              <select id="rawDataPageSize" class="form-select form-select-sm" style="min-width: 110px;">
-                <option value="20">20행</option>
-                <option value="50" selected>50행</option>
-                <option value="100">100행</option>
-                <option value="200">200행</option>
-              </select>
-              <button id="rawDataDownload" class="btn btn-outline-success btn-sm" type="button">엑셀 다운로드</button>
-            </div>
-          </div>
-
-          <div id="rawDataStatus" class="text-secondary small mt-3"></div>
-
-          <div class="table-responsive mt-3">
-            <table class="table table-sm table-bordered align-middle text-center">
-              <thead class="table-secondary">
+        </div>
+        <div class="card-body-premium p-0">
+          <div class="table-responsive">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
+              <thead>
               <tr id="rawDataTableHead"></tr>
               </thead>
               <tbody id="rawDataTableBody"></tbody>
             </table>
           </div>
-
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div id="rawDataRowCount" class="text-secondary small"></div>
-            <div class="btn-group btn-group-sm" role="group">
-              <button id="rawDataPrev" class="btn btn-outline-secondary" type="button">이전</button>
-              <button id="rawDataNext" class="btn btn-outline-secondary" type="button">다음</button>
-            </div>
-            <div id="rawDataPageInfo" class="text-secondary small"></div>
-          </div>
         </div>
+      </div>
+
+      <!-- 페이지네이션 -->
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <button id="rawDataPrev" class="btn-premium btn-secondary" type="button" aria-label="이전 페이지">
+          <i class="bi bi-chevron-left"></i> 이전
+        </button>
+        <button id="rawDataNext" class="btn-premium btn-secondary" type="button" aria-label="다음 페이지">
+          다음 <i class="bi bi-chevron-right"></i>
+        </button>
       </div>
     </div>
   </div>
+
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // ==================== Chart.js 프리미엄 테마 설정 ====================
+  // 왜: 차트를 더 현대적이고 매력적으로 보이게 하기 위해 전역 기본값을 설정합니다.
+  
+  // 프리미엄 컬러 팔레트
+  const chartColors = {
+    primary: 'rgba(15, 105, 175, 1)',        // #0f69af
+    primaryLight: 'rgba(15, 105, 175, 0.7)',
+    secondary: 'rgba(99, 102, 241, 1)',      // 인디고
+    secondaryLight: 'rgba(99, 102, 241, 0.7)',
+    success: 'rgba(16, 185, 129, 1)',        // 에메랄드
+    successLight: 'rgba(16, 185, 129, 0.7)',
+    warning: 'rgba(245, 158, 11, 1)',        // 앰버
+    warningLight: 'rgba(245, 158, 11, 0.7)',
+    danger: 'rgba(239, 68, 68, 1)',          // 레드
+    dangerLight: 'rgba(239, 68, 68, 0.7)',
+    purple: 'rgba(139, 92, 246, 1)',         // 보라
+    purpleLight: 'rgba(139, 92, 246, 0.7)',
+    gray: 'rgba(100, 116, 139, 0.5)',
+    gridColor: 'rgba(226, 232, 240, 0.8)',
+    textColor: 'rgba(30, 41, 59, 1)',
+    textMuted: 'rgba(100, 116, 139, 1)'
+  };
+
+  // 그라데이션 생성 함수
+  function createGradient(ctx, color1, color2) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    return gradient;
+  }
+
+  // Chart.js 전역 기본값 설정
+  Chart.defaults.font.family = "'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = chartColors.textMuted;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+  Chart.defaults.plugins.legend.labels.padding = 20;
+  Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(30, 41, 59, 0.95)';
+  Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+  Chart.defaults.plugins.tooltip.bodyColor = '#e2e8f0';
+  Chart.defaults.plugins.tooltip.borderColor = 'rgba(255, 255, 255, 0.1)';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.padding = 12;
+  Chart.defaults.plugins.tooltip.displayColors = true;
+  Chart.defaults.plugins.tooltip.boxPadding = 4;
+  Chart.defaults.elements.bar.borderRadius = 6;
+  Chart.defaults.elements.bar.borderSkipped = false;
+  Chart.defaults.elements.line.tension = 0.4;
+  Chart.defaults.elements.point.radius = 4;
+  Chart.defaults.elements.point.hoverRadius = 6;
+  Chart.defaults.animation.duration = 800;
+  Chart.defaults.animation.easing = 'easeOutQuart';
+  Chart.defaults.responsive = true;
+  Chart.defaults.maintainAspectRatio = false;
+
+  // 개선된 차트 옵션 생성 함수
+  function getPremiumChartOptions(title, yAxisLabel) {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: !!title,
+          text: title,
+          font: { size: 14, weight: '600' },
+          color: chartColors.textColor,
+          padding: { bottom: 16 }
+        },
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            font: { size: 11 },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            padding: 16
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              let label = context.dataset.label || '';
+              if (label) label += ': ';
+              if (context.parsed.y !== null) {
+                label += new Intl.NumberFormat('ko-KR').format(context.parsed.y);
+                if (yAxisLabel && yAxisLabel.includes('%')) label += '%';
+              }
+              return label;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: { size: 11 },
+            color: chartColors.textMuted,
+            maxRotation: 45,
+            minRotation: 0
+          }
+        },
+        y: {
+          grid: {
+            color: chartColors.gridColor,
+            drawBorder: false
+          },
+          ticks: {
+            font: { size: 11 },
+            color: chartColors.textMuted,
+            padding: 8
+          },
+          title: {
+            display: !!yAxisLabel,
+            text: yAxisLabel,
+            font: { size: 11, weight: '500' },
+            color: chartColors.textMuted
+          }
+        }
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      }
+    };
+  }
+
+  // 프리미엄 바 차트 데이터셋 생성
+  function getPremiumBarDataset(label, data, colorIndex = 0) {
+    const colors = [
+      { bg: chartColors.primaryLight, border: chartColors.primary },
+      { bg: chartColors.successLight, border: chartColors.success },
+      { bg: chartColors.warningLight, border: chartColors.warning },
+      { bg: chartColors.purpleLight, border: chartColors.purple },
+      { bg: chartColors.secondaryLight, border: chartColors.secondary }
+    ];
+    const color = colors[colorIndex % colors.length];
+    return {
+      label: label,
+      data: data,
+      backgroundColor: color.bg,
+      borderColor: color.border,
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
+      hoverBackgroundColor: color.border
+    };
+  }
+
+  // 프리미엄 라인 차트 데이터셋 생성
+  function getPremiumLineDataset(label, data, colorIndex = 0) {
+    const colors = [
+      { main: chartColors.primary, light: 'rgba(15, 105, 175, 0.1)' },
+      { main: chartColors.success, light: 'rgba(16, 185, 129, 0.1)' },
+      { main: chartColors.warning, light: 'rgba(245, 158, 11, 0.1)' },
+      { main: chartColors.purple, light: 'rgba(139, 92, 246, 0.1)' }
+    ];
+    const color = colors[colorIndex % colors.length];
+    return {
+      label: label,
+      data: data,
+      borderColor: color.main,
+      backgroundColor: color.light,
+      borderWidth: 3,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#ffffff',
+      pointBorderColor: color.main,
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      pointHoverBackgroundColor: color.main,
+      pointHoverBorderColor: '#ffffff'
+    };
+  }
+
   let populationChartInstance = null;
   let populationGapChartInstance = null;
   let populationGenderChartInstance = null;
@@ -808,6 +1555,7 @@
     searchText: ""
   };
   let isSyncingRawDataYear = false;
+
 
   // ==================== AI 통계 기능 ====================
 
@@ -1265,12 +2013,13 @@
     
     document.getElementById('aiChartTitle').textContent = chartConfig.title || '분석 결과';
 
+    // 프리미엄 컬러 팔레트
     const palette = [
-      { bg: 'rgba(99, 102, 241, 0.8)', border: 'rgba(99, 102, 241, 1)' },
-      { bg: 'rgba(251, 191, 36, 0.8)', border: 'rgba(251, 191, 36, 1)' },
-      { bg: 'rgba(239, 68, 68, 0.8)', border: 'rgba(239, 68, 68, 1)' },
-      { bg: 'rgba(34, 197, 94, 0.8)', border: 'rgba(34, 197, 94, 1)' },
-      { bg: 'rgba(14, 165, 233, 0.8)', border: 'rgba(14, 165, 233, 1)' }
+      { bg: 'rgba(15, 105, 175, 0.75)', border: 'rgba(15, 105, 175, 1)', hover: 'rgba(15, 105, 175, 0.9)' },
+      { bg: 'rgba(16, 185, 129, 0.75)', border: 'rgba(16, 185, 129, 1)', hover: 'rgba(16, 185, 129, 0.9)' },
+      { bg: 'rgba(245, 158, 11, 0.75)', border: 'rgba(245, 158, 11, 1)', hover: 'rgba(245, 158, 11, 0.9)' },
+      { bg: 'rgba(139, 92, 246, 0.75)', border: 'rgba(139, 92, 246, 1)', hover: 'rgba(139, 92, 246, 0.9)' },
+      { bg: 'rgba(239, 68, 68, 0.75)', border: 'rgba(239, 68, 68, 1)', hover: 'rgba(239, 68, 68, 0.9)' }
     ];
 
     const rawType = chartConfig.type || 'bar';
@@ -1281,9 +2030,12 @@
     const datasets = (chartConfig?.data?.datasets || []).map((ds, idx) => {
       const p = palette[idx % palette.length];
       const base = {
-        borderWidth: 1,
+        borderWidth: 2,
         backgroundColor: p.bg,
-        borderColor: p.border
+        borderColor: p.border,
+        hoverBackgroundColor: p.hover,
+        borderRadius: chartType === 'bar' ? 6 : 0,
+        borderSkipped: false
       };
       const merged = Object.assign({}, base, ds || {});
       // 왜: 백엔드(v2)는 Dataset.stack에 축 힌트(y1/y2)를 담고, 화면은 Chart.js의 yAxisID로 변환합니다.
@@ -1292,7 +2044,12 @@
       }
       if (chartType === 'line') {
         merged.fill = merged.fill ?? true;
-        merged.tension = merged.tension ?? 0.3;
+        merged.tension = merged.tension ?? 0.4;
+        merged.pointBackgroundColor = '#ffffff';
+        merged.pointBorderColor = p.border;
+        merged.pointBorderWidth = 2;
+        merged.pointRadius = 4;
+        merged.pointHoverRadius = 6;
       }
       return merged;
     });
@@ -1310,23 +2067,79 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            position: 'top'
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 16,
+              font: { size: 11 }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(30, 41, 59, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            cornerRadius: 8,
+            padding: 12,
+            displayColors: true,
+            boxPadding: 4
           }
         },
         scales: isDualAxis
           ? {
-              y1: { type: 'linear', position: 'left', beginAtZero: false },
-              y2: { type: 'linear', position: 'right', beginAtZero: false, grid: { drawOnChartArea: false } }
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted }
+              },
+              y1: { 
+                type: 'linear', 
+                position: 'left', 
+                beginAtZero: false,
+                grid: { color: chartColors.gridColor, drawBorder: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted }
+              },
+              y2: { 
+                type: 'linear', 
+                position: 'right', 
+                beginAtZero: false, 
+                grid: { drawOnChartArea: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted }
+              }
             }
           : chartType === 'line'
-          ? { y: { beginAtZero: false } }
+          ? { 
+              x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted }
+              },
+              y: { 
+                beginAtZero: false,
+                grid: { color: chartColors.gridColor, drawBorder: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted }
+              } 
+            }
           : {
-            x: { stacked: isStacked },
-            y: { beginAtZero: true, stacked: isStacked }
-          }
+              x: { 
+                stacked: isStacked,
+                grid: { display: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted, maxRotation: 45 }
+              },
+              y: { 
+                beginAtZero: true, 
+                stacked: isStacked,
+                grid: { color: chartColors.gridColor, drawBorder: false },
+                ticks: { font: { size: 11 }, color: chartColors.textMuted, padding: 8 }
+              }
+            },
+        interaction: {
+          mode: 'index',
+          intersect: false
+        }
       }
     });
   }
+
 
   function extractAiInsightFromResponse(data) {
     // 왜: v4 응답은 summary에 대화형 설명이 통합되어 있습니다.
@@ -1905,57 +2718,154 @@
 
   function renderBarChart(canvasId, labels, datasets) {
     const ctx = document.getElementById(canvasId).getContext("2d");
+    
+    // 프리미엄 스타일 적용
+    const styledDatasets = datasets.map((ds, idx) => ({
+      ...ds,
+      backgroundColor: ds.backgroundColor || (idx === 0 ? chartColors.primaryLight : (idx === 1 ? chartColors.successLight : chartColors.warningLight)),
+      borderColor: ds.borderColor || (idx === 0 ? chartColors.primary : (idx === 1 ? chartColors.success : chartColors.warning)),
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
+      hoverBackgroundColor: ds.hoverBackgroundColor || (idx === 0 ? chartColors.primary : (idx === 1 ? chartColors.success : chartColors.warning))
+    }));
+    
     return new Chart(ctx, {
       type: "bar",
-      data: { labels, datasets },
+      data: { labels, datasets: styledDatasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { callback: (v) => `${Number(v).toFixed(0)}` }
-          }
-        },
         plugins: {
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 16,
+              font: { size: 11 }
+            }
+          },
           tooltip: {
+            backgroundColor: 'rgba(30, 41, 59, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            cornerRadius: 8,
+            padding: 12,
             callbacks: {
               label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)}%`
             }
           }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { size: 11 },
+              color: chartColors.textMuted,
+              maxRotation: 45
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: chartColors.gridColor,
+              drawBorder: false
+            },
+            ticks: {
+              font: { size: 11 },
+              color: chartColors.textMuted,
+              padding: 8,
+              callback: (v) => `${Number(v).toFixed(0)}`
+            }
+          }
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false
         }
       }
     });
   }
 
+
   function renderStackedPercentChart(canvasId, labels, datasets) {
     // 왜: "남녀 성비"는 (남+여=100%) 형태가 직관적이라서, 스택 바 차트로 표시합니다.
     const ctx = document.getElementById(canvasId).getContext("2d");
+    
+    // 프리미엄 스타일 적용
+    const styledDatasets = datasets.map((ds, idx) => ({
+      ...ds,
+      backgroundColor: ds.backgroundColor || (idx === 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(244, 114, 182, 0.7)'),
+      borderColor: ds.borderColor || (idx === 0 ? 'rgba(59, 130, 246, 1)' : 'rgba(244, 114, 182, 1)'),
+      borderWidth: 2,
+      borderRadius: 4,
+      hoverBackgroundColor: idx === 0 ? 'rgba(59, 130, 246, 1)' : 'rgba(244, 114, 182, 1)'
+    }));
+    
     return new Chart(ctx, {
       type: "bar",
-      data: { labels, datasets },
+      data: { labels, datasets: styledDatasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          x: { stacked: true },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            max: 100,
-            ticks: { callback: (v) => `${Number(v).toFixed(0)}` }
-          }
-        },
         plugins: {
+          legend: {
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 16,
+              font: { size: 11 }
+            }
+          },
           tooltip: {
+            backgroundColor: 'rgba(30, 41, 59, 0.95)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            cornerRadius: 8,
+            padding: 12,
             callbacks: {
               label: (ctx) => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(2)}%`
             }
           }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: {
+              font: { size: 11 },
+              color: chartColors.textMuted,
+              maxRotation: 45
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: 100,
+            grid: {
+              color: chartColors.gridColor,
+              drawBorder: false
+            },
+            ticks: {
+              font: { size: 11 },
+              color: chartColors.textMuted,
+              padding: 8,
+              callback: (v) => `${Number(v).toFixed(0)}`
+            }
+          }
+        },
+        interaction: {
+          mode: 'index',
+          intersect: false
         }
       }
     });
   }
+
 
   function updateChart(instance, labels, datasets) {
     instance.data.labels = labels;
