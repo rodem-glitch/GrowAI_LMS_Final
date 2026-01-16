@@ -3,96 +3,806 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>채용 공고 테스트</title>
+  <meta name="description" content="채용 공고 검색 - 다양한 직무 분야의 채용 정보를 찾아보세요">
+  <meta name="theme-color" content="#2563eb">
+  <title>채용 공고 | PLISM</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { background: #f8fafc; }
-    .bg-gray-50 { background: #f9fafb; }
-    .bg-gray-100 { background: #f3f4f6; }
-    .border-gray-300 { border-color: #d1d5db !important; }
-    .text-gray-500 { color: #6b7280; }
-    .text-gray-700 { color: #374151; }
-    .text-gray-900 { color: #111827; }
-    .shadow-sm-hover:hover { box-shadow: 0 .125rem .5rem rgba(0,0,0,.08); }
-    .h_45 { height: 45px; }
-    .w_12 { width: 48px; }
-    .h_12 { height: 48px; }
+    /* ============================================
+       CSS 커스텀 디자인 시스템
+       - UI Skills 가이드라인 준수
+       - Vercel 웹 디자인 가이드라인 적용
+       ============================================ */
+    
+    :root {
+      /* 컬러 팔레트 */
+      --color-primary: #2563eb;
+      --color-primary-dark: #1d4ed8;
+      --color-primary-light: #3b82f6;
+      --color-primary-50: #eff6ff;
+      --color-primary-100: #dbeafe;
+      
+      --color-success: #059669;
+      --color-success-light: #d1fae5;
+      
+      --color-warning: #d97706;
+      --color-warning-light: #fef3c7;
+      
+      --color-danger: #dc2626;
+      --color-danger-light: #fee2e2;
+      
+      --color-gray-50: #f9fafb;
+      --color-gray-100: #f3f4f6;
+      --color-gray-200: #e5e7eb;
+      --color-gray-300: #d1d5db;
+      --color-gray-400: #9ca3af;
+      --color-gray-500: #6b7280;
+      --color-gray-600: #4b5563;
+      --color-gray-700: #374151;
+      --color-gray-800: #1f2937;
+      --color-gray-900: #111827;
+      
+      /* 타이포그래피 */
+      --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      
+      /* 간격 */
+      --spacing-xs: 0.25rem;
+      --spacing-sm: 0.5rem;
+      --spacing-md: 1rem;
+      --spacing-lg: 1.5rem;
+      --spacing-xl: 2rem;
+      
+      /* 둥글기 */
+      --radius-sm: 0.375rem;
+      --radius-md: 0.5rem;
+      --radius-lg: 0.75rem;
+      --radius-xl: 1rem;
+      
+      /* 그림자 - UI Skills: 기본 shadow scale 사용 */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      
+      /* 트랜지션 - UI Skills: 200ms 이하 */
+      --transition-fast: 150ms ease-out;
+      --transition-normal: 200ms ease-out;
+      
+      /* z-index 스케일 - UI Skills: 고정 스케일 사용 */
+      --z-dropdown: 100;
+      --z-sticky: 200;
+      --z-modal: 300;
+    }
+    
+    /* 다크 모드 지원 */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-gray-50: #1f2937;
+        --color-gray-100: #374151;
+        --color-gray-200: #4b5563;
+        --color-gray-800: #f3f4f6;
+        --color-gray-900: #f9fafb;
+      }
+    }
+    
+    /* 모션 감소 설정 존중 - UI Skills */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--font-family);
+      background: var(--color-gray-50);
+      color: var(--color-gray-900);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* ============================================
+       네비게이션 탭
+       ============================================ */
+    .nav-tabs-custom {
+      border: none;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-md) 0;
+    }
+    
+    .nav-tabs-custom .nav-link {
+      border: none;
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      color: var(--color-gray-600);
+      font-weight: 500;
+      font-size: 0.9375rem;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+    
+    .nav-tabs-custom .nav-link:hover {
+      color: var(--color-primary);
+      background: var(--color-primary-50);
+    }
+    
+    .nav-tabs-custom .nav-link.active {
+      color: #fff;
+      background: var(--color-primary);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* ============================================
+       필터 섹션
+       ============================================ */
+    .filter-section {
+      background: #fff;
+      border-radius: var(--radius-xl);
+      padding: var(--spacing-xl);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-gray-200);
+    }
+    
+    .filter-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--color-gray-700);
+      margin-bottom: var(--spacing-sm);
+      display: block;
+    }
+    
+    .filter-select {
+      width: 100%;
+      padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-md);
+      background-color: #fff;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1rem;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    
+    .filter-select:hover {
+      border-color: var(--color-gray-400);
+    }
+    
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-100);
+    }
+    
+    .btn-search {
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0.625rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    
+    .btn-search:hover {
+      background: var(--color-primary-dark);
+    }
+    
+    .btn-search:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-reset {
+      background: var(--color-gray-100);
+      color: var(--color-gray-700);
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-md);
+      padding: 0.625rem 1rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    
+    .btn-reset:hover {
+      background: var(--color-gray-200);
+    }
+    
+    /* 선택된 필터 태그 */
+    .active-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
+    
+    .filter-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      background: var(--color-primary-50);
+      color: var(--color-primary);
+      padding: 0.25rem 0.625rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .filter-tag-remove {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      color: var(--color-primary);
+      opacity: 0.7;
+      transition: opacity var(--transition-fast);
+    }
+    
+    .filter-tag-remove:hover {
+      opacity: 1;
+    }
+    
+    /* ============================================
+       결과 헤더
+       ============================================ */
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: var(--spacing-xl) 0 var(--spacing-lg);
+    }
+    
+    .results-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-gray-900);
+      /* UI Skills: text-balance for headings */
+      text-wrap: balance;
+      margin: 0;
+    }
+    
+    .results-count {
+      color: var(--color-primary);
+      /* UI Skills: tabular-nums for data */
+      font-variant-numeric: tabular-nums;
+    }
+    
+    /* ============================================
+       채용 공고 카드
+       ============================================ */
+    .job-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-gray-200);
+      padding: var(--spacing-lg);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+      /* UI Skills: transform, opacity만 애니메이션 */
+      will-change: auto; /* 애니메이션 중에만 적용 */
+    }
+    
+    .job-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .job-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .job-company {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+    
+    .job-company-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: var(--color-gray-100);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-gray-500);
+      font-size: 1.125rem;
+    }
+    
+    .job-company-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--color-gray-600);
+    }
+    
+    .job-bookmark {
+      background: none;
+      border: none;
+      padding: var(--spacing-sm);
+      cursor: pointer;
+      color: var(--color-gray-400);
+      border-radius: var(--radius-sm);
+      transition: color var(--transition-fast), background var(--transition-fast);
+    }
+    
+    .job-bookmark:hover {
+      color: var(--color-primary);
+      background: var(--color-primary-50);
+    }
+    
+    .job-bookmark.active {
+      color: var(--color-primary);
+    }
+    
+    .job-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-gray-900);
+      margin-bottom: var(--spacing-sm);
+      line-height: 1.4;
+      /* UI Skills: text-balance */
+      text-wrap: balance;
+    }
+    
+    .job-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      font-size: 0.8125rem;
+      color: var(--color-gray-600);
+    }
+    
+    .job-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .job-meta-item i {
+      color: var(--color-gray-400);
+      font-size: 0.875rem;
+    }
+    
+    .job-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .job-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .job-badge-primary {
+      background: var(--color-primary-50);
+      color: var(--color-primary);
+    }
+    
+    .job-badge-success {
+      background: var(--color-success-light);
+      color: var(--color-success);
+    }
+    
+    .job-badge-warning {
+      background: var(--color-warning-light);
+      color: var(--color-warning);
+    }
+    
+    .job-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--color-gray-100);
+    }
+    
+    .job-salary {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .job-salary-label {
+      font-size: 0.75rem;
+      color: var(--color-gray-500);
+    }
+    
+    .job-salary-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-success);
+      /* UI Skills: tabular-nums */
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .job-deadline {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      font-size: 0.8125rem;
+      color: var(--color-gray-500);
+      /* UI Skills: tabular-nums */
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .job-deadline.urgent {
+      color: var(--color-danger);
+      font-weight: 600;
+    }
+    
+    .job-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
+    
+    .btn-apply {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+    }
+    
+    .btn-apply:hover {
+      background: var(--color-primary-dark);
+      color: #fff;
+    }
+    
+    .btn-apply:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-detail {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-gray-100);
+      color: var(--color-gray-700);
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+    
+    .btn-detail:hover {
+      background: var(--color-gray-200);
+      color: var(--color-gray-700);
+    }
+    
+    /* ============================================
+       스켈레톤 로딩 - UI Skills: structural skeletons
+       ============================================ */
+    .skeleton {
+      background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s ease-in-out infinite;
+      border-radius: var(--radius-sm);
+    }
+    
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .skeleton-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-gray-200);
+      padding: var(--spacing-lg);
+    }
+    
+    .skeleton-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .skeleton-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+    
+    .skeleton-text {
+      height: 1rem;
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .skeleton-text-sm {
+      height: 0.75rem;
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .skeleton-title {
+      height: 1.25rem;
+      width: 70%;
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .skeleton-badge {
+      display: inline-block;
+      width: 4rem;
+      height: 1.5rem;
+      margin-right: var(--spacing-sm);
+    }
+    
+    /* ============================================
+       빈 상태
+       ============================================ */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: #fff;
+      border-radius: var(--radius-xl);
+      border: 1px dashed var(--color-gray-300);
+    }
+    
+    .empty-state-icon {
+      width: 5rem;
+      height: 5rem;
+      margin: 0 auto var(--spacing-lg);
+      background: var(--color-gray-100);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-gray-400);
+      font-size: 2rem;
+    }
+    
+    .empty-state-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--color-gray-700);
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .empty-state-description {
+      font-size: 0.875rem;
+      color: var(--color-gray-500);
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    /* ============================================
+       에러 상태
+       ============================================ */
+    .error-state {
+      text-align: center;
+      padding: 2rem;
+      background: var(--color-danger-light);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-danger);
+    }
+    
+    .error-state-icon {
+      color: var(--color-danger);
+      font-size: 2rem;
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .error-state-message {
+      color: var(--color-danger);
+      font-weight: 500;
+    }
+    
+    /* ============================================
+       반응형 그리드
+       ============================================ */
+    .job-grid {
+      display: grid;
+      gap: var(--spacing-lg);
+      grid-template-columns: 1fr;
+    }
+    
+    @media (min-width: 768px) {
+      .job-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (min-width: 1200px) {
+      .job-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    /* ============================================
+       페이지네이션
+       ============================================ */
+    .pagination-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: var(--spacing-xl);
+    }
+    
+    .pagination {
+      display: flex;
+      gap: var(--spacing-xs);
+    }
+    
+    .page-btn {
+      min-width: 2.5rem;
+      height: 2.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-md);
+      color: var(--color-gray-700);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      /* UI Skills: tabular-nums */
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+    
+    .page-btn.active {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      color: #fff;
+    }
+    
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* ============================================
+       컨테이너
+       ============================================ */
+    .page-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-lg);
+    }
+    
+    .section-header {
+      background: #fff;
+      border-bottom: 1px solid var(--color-gray-200);
+      position: sticky;
+      top: 0;
+      z-index: var(--z-sticky);
+    }
   </style>
 </head>
 <body>
-  <div class="row border-0 border-bottom border-gray-300">
-    <div class="col-12">
-      <section class="container">
-        <div class="mt-2 container-fluid container-lg">
-          <ul class="nav nav-underline">
-            <li class="nav-item">
-              <button class="pb-3 nav-link" type="button">직업 탐색</button>
-            </li>
-            <li class="nav-item">
-              <button class="pb-3 nav-link" type="button">학과 진로 정보</button>
-            </li>
-            <li class="nav-item">
-              <button class="pb-3 nav-link active" type="button">채용 공고</button>
-            </li>
-          </ul>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <div class="row border-0 bg-gray-50">
-    <div class="col-12">
-      <section class="container my-4">
-        <div class="bg-white border-gray-300 rounded-3 border-1 mt-4 p-4">
-          <div class="row g-4">
-            <div class="col-md-4">
-              <label for="jobselectLarge" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(대분류)</label>
-              <select id="jobselectLarge" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
-            </div>
-            <div class="col-md-4">
-              <label for="jobselectMiddle" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(중분류)</label>
-              <select id="jobselectMiddle" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
-            </div>
-            <div class="col-md-4">
-              <label for="jobselectSmall" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(소분류)</label>
-              <select id="jobselectSmall" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
-            </div>
-            <div class="col-md-4">
-              <label for="areaselect" class="form-label text-sm fw-medium text-gray-700 mb-2">근무 지역</label>
-              <select id="areaselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
-            </div>
-            <div class="col-md-2">
-              <label for="providerselect" class="form-label text-sm fw-medium text-gray-700 mb-2">제공처</label>
-              <select id="providerselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm">
-                <option value="WORK24" selected>Work24</option>
-                <option value="JOBKOREA">잡코리아</option>
-                <option value="ALL">통합</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label for="jobsearchbtn" class="form-label text-sm fw-medium text-gray-700 mb-2">&nbsp;</label>
-              <button id="jobsearchbtn" class="form-control btn btn-outline-secondary">검색</button>
+  <!-- 메인 컨텐츠 -->
+  <main class="py-4">
+    <div class="page-container">
+      <!-- 필터 섹션 -->
+      <section class="filter-section" aria-label="채용 공고 필터">
+        <div class="row g-3">
+          <div class="col-md-4 col-lg-3">
+            <label for="jobselectLarge" class="filter-label">직무 분야 (대분류)</label>
+            <select id="jobselectLarge" class="filter-select" aria-label="직무 대분류 선택"></select>
+          </div>
+          <div class="col-md-4 col-lg-3">
+            <label for="jobselectMiddle" class="filter-label">직무 분야 (중분류)</label>
+            <select id="jobselectMiddle" class="filter-select" aria-label="직무 중분류 선택"></select>
+          </div>
+          <div class="col-md-4 col-lg-3">
+            <label for="jobselectSmall" class="filter-label">직무 분야 (소분류)</label>
+            <select id="jobselectSmall" class="filter-select" aria-label="직무 소분류 선택"></select>
+          </div>
+          <div class="col-md-4 col-lg-3">
+            <label for="areaselect" class="filter-label">근무 지역</label>
+            <select id="areaselect" class="filter-select" aria-label="근무 지역 선택"></select>
+          </div>
+          <div class="col-md-4 col-lg-2">
+            <label for="providerselect" class="filter-label">제공처</label>
+            <select id="providerselect" class="filter-select" aria-label="제공처 선택">
+              <option value="WORK24" selected>Work24</option>
+              <option value="JOBKOREA">잡코리아</option>
+              <option value="ALL">통합</option>
+            </select>
+          </div>
+          <div class="col-md-4 col-lg-4">
+            <label class="filter-label">&nbsp;</label>
+            <div class="d-flex gap-2">
+              <button id="jobsearchbtn" class="btn-search" type="button" aria-label="검색">
+                <i class="bi bi-search"></i> 검색
+              </button>
+              <button id="jobresetbtn" class="btn-reset" type="button" aria-label="필터 초기화">
+                <i class="bi bi-arrow-counterclockwise"></i> 초기화
+              </button>
             </div>
           </div>
         </div>
-
-        <h4 class="fw-bold text-xl mt-4" id="resultCount">채용 공고 (0건)</h4>
-        <div class="row gy-3 worklist"></div>
+        
+        <!-- 선택된 필터 태그 -->
+        <div id="activeFilters" class="active-filters" aria-live="polite"></div>
       </section>
+
+      <!-- 결과 헤더 -->
+      <div class="results-header">
+        <h1 class="results-title">
+          채용 공고 <span class="results-count" id="resultCount">(0건)</span>
+        </h1>
+      </div>
+
+      <!-- 채용 공고 목록 -->
+      <div id="worklist" class="job-grid" role="list" aria-label="채용 공고 목록">
+        <!-- 카드들이 여기에 동적으로 추가됨 -->
+      </div>
+      
+      <!-- 페이지네이션 -->
+      <div id="paginationWrapper" class="pagination-wrapper" style="display:none;">
+        <div id="pagination" class="pagination" role="navigation" aria-label="페이지 네비게이션"></div>
+      </div>
     </div>
-  </div>
+  </main>
 
   <script>
+    // ==========================================
+    // DOM 요소 참조
+    // ==========================================
     const jobLargeSelect = document.getElementById("jobselectLarge");
     const jobMiddleSelect = document.getElementById("jobselectMiddle");
     const jobSmallSelect = document.getElementById("jobselectSmall");
     const areaSelect = document.getElementById("areaselect");
     const providerSelect = document.getElementById("providerselect");
     const jobSearchBtn = document.getElementById("jobsearchbtn");
-    const workList = document.querySelector(".worklist");
+    const jobResetBtn = document.getElementById("jobresetbtn");
+    const workList = document.getElementById("worklist");
     const resultCount = document.getElementById("resultCount");
+    const activeFiltersEl = document.getElementById("activeFilters");
+    const paginationWrapper = document.getElementById("paginationWrapper");
+    const paginationEl = document.getElementById("pagination");
 
+    // 상태 관리
+    let currentPage = 1;
+    const itemsPerPage = 10;
+    let totalItems = 0;
+
+    // ==========================================
+    // 유틸리티 함수
+    // ==========================================
     async function fetchJson(url, options = {}) {
       const response = await fetch(url, options);
       if (!response.ok) {
@@ -111,8 +821,299 @@
       select.value = "";
     }
 
+    // D-Day 계산
+    function calculateDday(closeDt) {
+      if (!closeDt || closeDt === "-") return null;
+      
+      // 날짜 포맷 파싱 (YYYY-MM-DD 또는 YY-MM-DD)
+      const dateStr = closeDt.replace(/\./g, '-');
+      const closeDate = new Date(dateStr);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      closeDate.setHours(0, 0, 0, 0);
+      
+      const diffTime = closeDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 0) return { text: "마감", urgent: true };
+      if (diffDays === 0) return { text: "D-Day", urgent: true };
+      if (diffDays <= 7) return { text: `D-${diffDays}`, urgent: true };
+      return { text: `D-${diffDays}`, urgent: false };
+    }
+
+    // ==========================================
+    // 스켈레톤 로딩 UI
+    // ==========================================
+    function renderSkeletons(count = 6) {
+      return Array(count).fill(0).map(() => `
+        <div class="skeleton-card" role="listitem" aria-label="로딩 중">
+          <div class="skeleton-header">
+            <div class="d-flex align-items-center gap-2">
+              <div class="skeleton skeleton-icon"></div>
+              <div class="skeleton skeleton-text" style="width: 100px"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-title"></div>
+          <div class="d-flex gap-2 mb-3">
+            <div class="skeleton skeleton-text-sm" style="width: 60px"></div>
+            <div class="skeleton skeleton-text-sm" style="width: 80px"></div>
+            <div class="skeleton skeleton-text-sm" style="width: 50px"></div>
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-badge"></div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center pt-3" style="border-top: 1px solid var(--color-gray-100)">
+            <div class="skeleton skeleton-text" style="width: 120px"></div>
+            <div class="skeleton skeleton-text" style="width: 80px"></div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // ==========================================
+    // 빈 상태 UI
+    // ==========================================
+    function renderEmptyState() {
+      return `
+        <div class="empty-state" style="grid-column: 1 / -1;">
+          <div class="empty-state-icon">
+            <i class="bi bi-briefcase"></i>
+          </div>
+          <h2 class="empty-state-title">검색 결과가 없습니다</h2>
+          <p class="empty-state-description">
+            다른 검색 조건으로 다시 시도해 보세요.<br>
+            필터를 줄이면 더 많은 결과를 볼 수 있습니다.
+          </p>
+          <button class="btn-search" onclick="resetFilters()" aria-label="필터 초기화">
+            <i class="bi bi-arrow-counterclockwise"></i> 필터 초기화
+          </button>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // 에러 상태 UI
+    // ==========================================
+    function renderErrorState(message) {
+      return `
+        <div class="error-state" style="grid-column: 1 / -1;">
+          <div class="error-state-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <p class="error-state-message">${message}</p>
+          <button class="btn-search mt-3" onclick="searchWorkList()" aria-label="다시 시도">
+            <i class="bi bi-arrow-clockwise"></i> 다시 시도
+          </button>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // 채용 카드 렌더링
+    // ==========================================
+    function buildWorkCard(item) {
+      const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "-") : item.region;
+      const dday = calculateDday(item.closeDt);
+      const ddayClass = dday?.urgent ? "urgent" : "";
+      
+      // 뱃지 생성
+      const badges = [];
+      if (item.empTpCd || item.holidayTpNm) {
+        badges.push(`<span class="job-badge job-badge-primary">${item.holidayTpNm || "정규직"}</span>`);
+      }
+      if (item.minEdubg && item.minEdubg !== "-") {
+        badges.push(`<span class="job-badge job-badge-primary">${item.minEdubg}</span>`);
+      }
+      if (item.salTpNm) {
+        badges.push(`<span class="job-badge job-badge-success">${item.salTpNm}</span>`);
+      }
+
+      return `
+        <article class="job-card" role="listitem" aria-label="${item.title || '채용 공고'}">
+          <div class="job-card-header">
+            <div class="job-company">
+              <div class="job-company-icon" aria-hidden="true">
+                <i class="bi bi-building"></i>
+              </div>
+              <span class="job-company-name">${item.company || "-"}</span>
+            </div>
+            <button class="job-bookmark" aria-label="저장하기" title="저장하기">
+              <i class="bi bi-bookmark"></i>
+            </button>
+          </div>
+          
+          <h2 class="job-title">${item.title || "-"}</h2>
+          
+          <div class="job-meta">
+            <span class="job-meta-item">
+              <i class="bi bi-geo-alt" aria-hidden="true"></i>
+              ${region}
+            </span>
+            <span class="job-meta-item">
+              <i class="bi bi-person" aria-hidden="true"></i>
+              ${item.career || "경력무관"}
+            </span>
+            ${item.indTpNm ? `
+              <span class="job-meta-item">
+                <i class="bi bi-tag" aria-hidden="true"></i>
+                ${item.indTpNm}
+              </span>
+            ` : ""}
+          </div>
+          
+          <div class="job-badges">
+            ${badges.join("")}
+          </div>
+          
+          <div class="job-footer">
+            <div class="job-salary">
+              <span class="job-salary-label">급여</span>
+              <span class="job-salary-value">${item.sal || "-"}</span>
+            </div>
+            <div class="job-deadline ${ddayClass}">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+              ${dday ? dday.text : (item.closeDt || "-")}
+            </div>
+          </div>
+          
+          <div class="job-actions">
+            <a href="${item.wantedInfoUrl || '#'}" target="_blank" rel="noopener noreferrer" 
+               class="btn-apply" aria-label="${item.title}에 지원하기">
+              <i class="bi bi-send" aria-hidden="true"></i> 지원하기
+            </a>
+            <a href="${item.wantedInfoUrl || '#'}" target="_blank" rel="noopener noreferrer"
+               class="btn-detail" aria-label="${item.title} 상세보기">
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        </article>
+      `;
+    }
+
+    // ==========================================
+    // 선택된 필터 태그 표시
+    // ==========================================
+    function updateActiveFilters() {
+      const filters = [];
+      
+      if (jobLargeSelect.value) {
+        const text = jobLargeSelect.options[jobLargeSelect.selectedIndex].text;
+        if (text !== "전체") filters.push({ type: "job", text });
+      }
+      if (jobMiddleSelect.value) {
+        const text = jobMiddleSelect.options[jobMiddleSelect.selectedIndex].text;
+        if (text !== "전체") filters.push({ type: "job", text });
+      }
+      if (jobSmallSelect.value) {
+        const text = jobSmallSelect.options[jobSmallSelect.selectedIndex].text;
+        if (text !== "전체") filters.push({ type: "job", text });
+      }
+      if (areaSelect.value) {
+        const text = areaSelect.options[areaSelect.selectedIndex].text;
+        if (text !== "전체") filters.push({ type: "area", text });
+      }
+      
+      if (filters.length === 0) {
+        activeFiltersEl.innerHTML = "";
+        return;
+      }
+      
+      activeFiltersEl.innerHTML = filters.map(f => `
+        <span class="filter-tag">
+          ${f.text}
+        </span>
+      `).join("");
+    }
+
+    // ==========================================
+    // 페이지네이션 렌더링
+    // ==========================================
+    function renderPagination() {
+      const totalPages = Math.ceil(totalItems / itemsPerPage);
+      
+      if (totalPages <= 1) {
+        paginationWrapper.style.display = "none";
+        return;
+      }
+      
+      paginationWrapper.style.display = "flex";
+      
+      let html = "";
+      
+      // 이전 버튼
+      html += `
+        <button class="page-btn" ${currentPage === 1 ? "disabled" : ""} 
+                onclick="goToPage(${currentPage - 1})" aria-label="이전 페이지">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+      `;
+      
+      // 페이지 번호
+      const maxVisible = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      
+      if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+      
+      if (startPage > 1) {
+        html += `<button class="page-btn" onclick="goToPage(1)">1</button>`;
+        if (startPage > 2) html += `<span class="page-btn" style="border:none;">...</span>`;
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        html += `
+          <button class="page-btn ${i === currentPage ? "active" : ""}" 
+                  onclick="goToPage(${i})" aria-label="${i} 페이지">
+            ${i}
+          </button>
+        `;
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += `<span class="page-btn" style="border:none;">...</span>`;
+        html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+      }
+      
+      // 다음 버튼
+      html += `
+        <button class="page-btn" ${currentPage === totalPages ? "disabled" : ""} 
+                onclick="goToPage(${currentPage + 1})" aria-label="다음 페이지">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      `;
+      
+      paginationEl.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      searchWorkList();
+      // 스크롤을 결과 상단으로
+      workList.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // ==========================================
+    // 필터 초기화
+    // ==========================================
+    function resetFilters() {
+      resetSelect(jobLargeSelect, "전체");
+      resetSelect(jobMiddleSelect, "전체");
+      resetSelect(jobSmallSelect, "전체");
+      areaSelect.value = "";
+      providerSelect.value = "WORK24";
+      currentPage = 1;
+      updateActiveFilters();
+      loadOccupationDepth1().then(() => searchWorkList());
+    }
+
+    // ==========================================
+    // API 호출 함수들
+    // ==========================================
     async function loadOccupationDepth1() {
-      // 왜: 대분류부터 순서대로 선택해야 중/소분류가 정확하게 좁혀집니다.
       const data = await fetchJson("/job/occupation-codes?depthType=1");
       resetSelect(jobLargeSelect, "전체");
       data.forEach(item => {
@@ -159,98 +1160,105 @@
     }
 
     async function loadRegionCodes() {
-      // 왜: 근무 지역 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
       const data = await fetchJson("/job/region-codes?depthType=1");
       areaSelect.innerHTML = "";
-      // 왜: 지역을 선택하지 않아도(전체) 공고가 보이게 해서 초기 화면이 비는 문제를 막습니다.
+      
       const allOption = document.createElement("option");
       allOption.value = "";
       allOption.textContent = "전체";
       areaSelect.appendChild(allOption);
+      
       data.forEach(item => {
         const option = document.createElement("option");
-        // 왜: DB 적재 과정에서 '지역무관'이 0/1 등으로 들어가면 Work24 검색이 0건이 되는 경우가 있어,
-        //      '지역무관'은 Work24 파라미터를 아예 보내지 않도록 빈 값으로 처리합니다.
         option.value = (item.title === "지역무관") ? "" : item.idx;
         option.textContent = item.title;
         areaSelect.appendChild(option);
       });
-      // 왜: 브라우저가 이전 선택값을 유지하면 0건이 나올 수 있어 기본값을 '전체'로 강제합니다.
       areaSelect.value = "";
     }
 
-    function buildWorkCard(item) {
-      const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "-") : item.region;
-      const holidayBadge = item.holidayTpNm
-        ? `<span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-1 text-xs me-2">${item.holidayTpNm}</span>`
-        : "";
-
-      return `
-        <div class="col-12">
-          <div class="card d-flex flex-row bg-white justify-content-between shadow-sm-hover">
-            <div class="d-flex flex-row align-items-start p-4">
-              <div class="w_12 h_12 d-flex align-items-center justify-content-center me-2 rounded-2" style="background:#f6f6f6">
-                <i class="bi bi-buildings"></i>
-              </div>
-              <div class="d-flex flex-column">
-                <div class="text-gray-900">${item.title || "-"}</div>
-                <span class="text-sm">${item.company || "-"} · ${region} · ${item.career || "-"}</span>
-                <div class="d-flex align-items-center my-1">
-                  ${holidayBadge}
-                  <span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-1 text-xs me-2">${item.minEdubg || "-"}</span>
-                </div>
-                <div class="d-flex align-items-center text-sm">
-                  <span class="text-green-600 fw-medium">${item.sal || "-"}</span>
-                  <span class="text-gray-500 ms-3">마감: ${item.closeDt || "-"}</span>
-                </div>
-              </div>
-            </div>
-            <div class="text-gray-500 d-flex flex-column align-items-end p-4">
-              <span class="bg-green-100 text-green-800 px-2 py-1 rounded-1 text-xs fw-medium">${item.salTpNm || "-"}</span>
-              <a class="text-blue-600 fw-medium flex-nowrap bg-white" href="${item.wantedInfoUrl || "#"}" target="_blank" rel="noopener" title="지원하기">지원하기</a>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
     async function searchWorkList() {
-      // 왜: 화면 선택값으로 채용 공고 목록을 다시 조회합니다.
+      // 로딩 상태 표시
+      workList.innerHTML = renderSkeletons(6);
+      paginationWrapper.style.display = "none";
+      updateActiveFilters();
+      
       const region = areaSelect.value || "";
       const occupation = jobSmallSelect.value || jobMiddleSelect.value || jobLargeSelect.value || "";
       const provider = providerSelect.value || "WORK24";
-      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=1&display=10&provider=${encodeURIComponent(provider)}`;
-      const data = await fetchJson(url);
-
-      const items = (data && data.wanted) ? data.wanted : [];
-      resultCount.textContent = `채용 공고 (${items.length}건)`;
-      workList.innerHTML = items.map(buildWorkCard).join("");
+      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=${currentPage}&display=${itemsPerPage}&provider=${encodeURIComponent(provider)}`;
+      
+      try {
+        const data = await fetchJson(url);
+        const items = (data && data.wanted) ? data.wanted : [];
+        totalItems = data.total || items.length;
+        
+        resultCount.textContent = `(${totalItems.toLocaleString()}건)`;
+        
+        if (items.length === 0) {
+          workList.innerHTML = renderEmptyState();
+        } else {
+          workList.innerHTML = items.map(buildWorkCard).join("");
+          renderPagination();
+        }
+      } catch (err) {
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(`조회 실패: ${err.message}`);
+      }
     }
 
+    // ==========================================
+    // 이벤트 리스너
+    // ==========================================
     jobSearchBtn.addEventListener("click", () => {
-      searchWorkList().catch(err => {
-        resultCount.textContent = "채용 공고 (0건)";
-        workList.innerHTML = `<div class="col-12 text-danger">조회 실패: ${err.message}</div>`;
-      });
+      currentPage = 1;
+      searchWorkList();
     });
+
+    jobResetBtn.addEventListener("click", resetFilters);
 
     jobLargeSelect.addEventListener("change", () => {
       loadOccupationDepth2().catch(err => {
-        workList.innerHTML = `<div class="col-12 text-danger">직무 대분류 로딩 실패: ${err.message}</div>`;
+        console.error("직무 대분류 로딩 실패:", err);
       });
+      updateActiveFilters();
     });
 
     jobMiddleSelect.addEventListener("change", () => {
       loadOccupationDepth3().catch(err => {
-        workList.innerHTML = `<div class="col-12 text-danger">직무 중분류 로딩 실패: ${err.message}</div>`;
+        console.error("직무 중분류 로딩 실패:", err);
       });
+      updateActiveFilters();
     });
 
+    jobSmallSelect.addEventListener("change", updateActiveFilters);
+    areaSelect.addEventListener("change", updateActiveFilters);
+
+    // 북마크 버튼 이벤트 위임
+    workList.addEventListener("click", (e) => {
+      const bookmarkBtn = e.target.closest(".job-bookmark");
+      if (bookmarkBtn) {
+        e.preventDefault();
+        bookmarkBtn.classList.toggle("active");
+        const icon = bookmarkBtn.querySelector("i");
+        if (bookmarkBtn.classList.contains("active")) {
+          icon.classList.remove("bi-bookmark");
+          icon.classList.add("bi-bookmark-fill");
+        } else {
+          icon.classList.remove("bi-bookmark-fill");
+          icon.classList.add("bi-bookmark");
+        }
+      }
+    });
+
+    // ==========================================
+    // 초기 로딩
+    // ==========================================
     Promise.all([loadOccupationDepth1(), loadRegionCodes()])
       .then(() => searchWorkList())
       .catch(err => {
-        resultCount.textContent = "채용 공고 (0건)";
-        workList.innerHTML = `<div class="col-12 text-danger">초기 로딩 실패: ${err.message}</div>`;
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(`초기 로딩 실패: ${err.message}`);
       });
   </script>
 </body>
