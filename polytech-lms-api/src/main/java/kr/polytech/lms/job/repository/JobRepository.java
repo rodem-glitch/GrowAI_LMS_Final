@@ -242,8 +242,15 @@ public class JobRepository {
     private static void appendDepthFilter(StringBuilder sql, List<Object> params, String depthType) {
         switch (depthType) {
             // 왜: 코드 테이블이 NULL로 들어간 경우가 있어 NULL도 함께 걸러야 정상적으로 목록이 나옵니다.
-            case "1" -> sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
-            case "2" -> sql.append(" AND depth2 IS NOT NULL AND depth2 <> ''");
+            case "1" -> {
+                sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
+                sql.append(" AND (depth2 IS NULL OR depth2 = '')");
+                sql.append(" AND (depth3 IS NULL OR depth3 = '')");
+            }
+            case "2" -> {
+                sql.append(" AND depth2 IS NOT NULL AND depth2 <> ''");
+                sql.append(" AND (depth3 IS NULL OR depth3 = '')");
+            }
             case "3" -> sql.append(" AND depth3 IS NOT NULL AND depth3 <> ''");
             default -> {
                 sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");

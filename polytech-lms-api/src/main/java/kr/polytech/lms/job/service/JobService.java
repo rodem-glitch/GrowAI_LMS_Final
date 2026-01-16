@@ -107,9 +107,25 @@ public class JobService {
         }
 
         if (refreshRegion) {
-            // 왜: 현재 화면에서는 직종 코드가 우선이라, 지역 코드는 추후 소스(코드표)가 정해지면 연결합니다.
-            //      (공통코드 OpenAPI 권한이 없는 환경에서도 동작해야 하므로 지금은 스킵합니다.)
-            log.warn("Work24 지역 코드는 현재 스킵합니다(target=REGION).");
+            // 왜: 근무지역 셀렉트는 regioncode 테이블을 그대로 보므로, 여기서 최신 코드를 적재해야 합니다.
+            List<Work24CodeClient.RegionCodeItem> items = work24CodeClient.fetchRegionCodes();
+            List<RegionCodeInsertRow> rows = new ArrayList<>();
+            for (Work24CodeClient.RegionCodeItem item : items) {
+                Integer idx = parseRegionCode(item.code());
+                if (idx == null) {
+                    // 왜: 지역 코드는 숫자여야 API 파라미터로 사용 가능합니다.
+                    log.warn("Work24 지역 코드가 숫자가 아닙니다. code={}", item.code());
+                    continue;
+                }
+                rows.add(new RegionCodeInsertRow(
+                    idx,
+                    safe(item.depth1()),
+                    safe(item.depth2()),
+                    safe(item.depth3())
+                ));
+            }
+            jobRepository.replaceRegionCodes(rows);
+            regionCount = rows.size();
         }
 
         if (refreshOccupation) {
