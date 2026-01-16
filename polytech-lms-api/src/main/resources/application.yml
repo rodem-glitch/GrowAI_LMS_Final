@@ -145,6 +145,10 @@ work24:
   # 왜: 채용 공고는 Work24 OpenAPI로 실시간 조회하고, 필요하면 캐시로 재사용합니다.
   api-url: ${WORK24_API_URL:https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do}
   auth-key: ${WORK24_AUTH_KEY:}
+  # 왜: 공통코드(지역/직종) 호출은 별도 OpenAPI로 분리되어 있습니다.
+  code-api-url: ${WORK24_CODE_API_URL:https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo21L01.do}
+  # 왜: 공통코드 OpenAPI 권한이 없을 때도 CSV로 직종코드를 적재할 수 있게 둡니다.
+  occupation-csv-path: ${WORK24_OCCUPATION_CSV_PATH:../한국고용정보원_직종코드_20230825.csv}
   cache:
     enabled: ${WORK24_CACHE_ENABLED:true}
     ttl-minutes: ${WORK24_CACHE_TTL_MINUTES:1440}

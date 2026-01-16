@@ -50,22 +50,54 @@ public class JobRepository {
         });
     }
 
-    public List<JobOccupationCodeRow> findOccupationCodes(String depthType, String depth1) {
+    public List<JobOccupationCodeRow> findOccupationCodes(String depthType, String depth1, String depth2) {
         String safeDepthType = normalizeDepthType(depthType, "2");
+        String safeDepth1 = trimToNull(depth1);
+        String safeDepth2 = trimToNull(depth2);
         List<Object> params = new ArrayList<>();
 
         StringBuilder sql = new StringBuilder("""
-            SELECT idx, code, depth1, depth2, depth3
+            SELECT idx, code, parent_code, depth1, depth2, depth3
             FROM occupationcode
             WHERE 1=1
             """);
 
-        appendDepthFilter(sql, params, safeDepthType);
-
-        if (depth1 != null && !depth1.isBlank()) {
-            sql.append(" AND depth1 = ?");
-            params.add(depth1.trim());
+        switch (safeDepthType) {
+            case "1" -> {
+                // 왜: 대분류는 parent_code가 비어 있어야 합니다.
+                sql.append(" AND (parent_code IS NULL OR parent_code = '')");
+                sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
+                sql.append(" AND (depth2 IS NULL OR depth2 = '')");
+                sql.append(" AND (depth3 IS NULL OR depth3 = '')");
+            }
+            case "2" -> {
+                // 왜: 중분류는 선택한 대분류(code)를 parent_code로 가지고 있습니다.
+                if (safeDepth1 != null) {
+                    sql.append(" AND parent_code = ?");
+                    params.add(safeDepth1);
+                } else {
+                    // 왜: 기존 화면(단일 셀렉트) 호환을 위해 대분류 미지정 시 "전체 중분류"를 내려줍니다.
+                    sql.append(" AND parent_code IS NOT NULL AND parent_code <> ''");
+                }
+                sql.append(" AND depth2 IS NOT NULL AND depth2 <> ''");
+                sql.append(" AND (depth3 IS NULL OR depth3 = '')");
+            }
+            case "3" -> {
+                // 왜: 소분류는 선택한 중분류(code)를 parent_code로 가지고 있습니다.
+                if (safeDepth2 == null) return List.of();
+                sql.append(" AND parent_code = ?");
+                params.add(safeDepth2);
+                sql.append(" AND depth3 IS NOT NULL AND depth3 <> ''");
+            }
+            default -> {
+                sql.append(" AND (parent_code IS NULL OR parent_code = '')");
+                sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
+                sql.append(" AND (depth2 IS NULL OR depth2 = '')");
+                sql.append(" AND (depth3 IS NULL OR depth3 = '')");
+            }
         }
+
+        sql.append(" ORDER BY code");
 
         return jdbcTemplate.query(sql.toString(), params.toArray(), (rs, rowNum) -> {
             String title = resolveDepthTitle(safeDepthType, rs.getString("depth1"), rs.getString("depth2"), rs.getString("depth3"));
@@ -209,13 +241,55 @@ public class JobRepository {
 
     private static void appendDepthFilter(StringBuilder sql, List<Object> params, String depthType) {
         switch (depthType) {
-            case "1" -> sql.append(" AND depth1 <> ''");
-            case "2" -> sql.append(" AND depth2 <> ''");
-            case "3" -> sql.append(" AND depth3 <> ''");
+            // 왜: 코드 테이블이 NULL로 들어간 경우가 있어 NULL도 함께 걸러야 정상적으로 목록이 나옵니다.
+            case "1" -> sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
+            case "2" -> sql.append(" AND depth2 IS NOT NULL AND depth2 <> ''");
+            case "3" -> sql.append(" AND depth3 IS NOT NULL AND depth3 <> ''");
             default -> {
-                sql.append(" AND depth1 <> ''");
+                sql.append(" AND depth1 IS NOT NULL AND depth1 <> ''");
             }
         }
+    }
+
+    public void replaceRegionCodes(List<RegionCodeInsertRow> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        jdbcTemplate.update("DELETE FROM regioncode");
+
+        jdbcTemplate.batchUpdate(
+            "INSERT INTO regioncode (idx, depth1, depth2, depth3) VALUES (?, ?, ?, ?)",
+            rows,
+            rows.size(),
+            (ps, row) -> {
+                ps.setObject(1, row.idx());
+                ps.setString(2, row.depth1());
+                ps.setString(3, row.depth2());
+                ps.setString(4, row.depth3());
+            }
+        );
+    }
+
+    public void replaceOccupationCodes(List<OccupationCodeInsertRow> rows) {
+        if (rows == null || rows.isEmpty()) return;
+        jdbcTemplate.update("DELETE FROM occupationcode");
+
+        jdbcTemplate.batchUpdate(
+            "INSERT INTO occupationcode (code, parent_code, depth1, depth2, depth3) VALUES (?, ?, ?, ?, ?)",
+            rows,
+            rows.size(),
+            (ps, row) -> {
+                ps.setString(1, row.code());
+                ps.setString(2, row.parentCode());
+                ps.setString(3, row.depth1());
+                ps.setString(4, row.depth2());
+                ps.setString(5, row.depth3());
+            }
+        );
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 
     private static String resolveDepthTitle(String depthType, String depth1, String depth2, String depth3) {
@@ -263,5 +337,11 @@ public class JobRepository {
         int startPage,
         int display
     ) {
+    }
+
+    public record RegionCodeInsertRow(Integer idx, String depth1, String depth2, String depth3) {
+    }
+
+    public record OccupationCodeInsertRow(String code, String parentCode, String depth1, String depth2, String depth3) {
     }
 }

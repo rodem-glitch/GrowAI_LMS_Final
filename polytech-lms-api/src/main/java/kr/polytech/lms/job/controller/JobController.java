@@ -3,6 +3,7 @@ package kr.polytech.lms.job.controller;
 import kr.polytech.lms.job.service.JobService;
 import kr.polytech.lms.job.service.JobService.CachePolicy;
 import kr.polytech.lms.job.service.dto.JobOccupationCodeResponse;
+import kr.polytech.lms.job.service.dto.JobCodeSyncResponse;
 import kr.polytech.lms.job.service.dto.JobRecruitListResponse;
 import kr.polytech.lms.job.service.dto.JobRegionCodeResponse;
 import org.springframework.http.HttpStatus;
@@ -43,10 +44,11 @@ public class JobController {
     public List<JobOccupationCodeResponse> occupationCodes(
         @RequestParam(name = "depthType", required = false) String depthType,
         @RequestParam(name = "depthtype", required = false) String depthTypeLegacy,
-        @RequestParam(name = "depth1", required = false) String depth1
+        @RequestParam(name = "depth1", required = false) String depth1,
+        @RequestParam(name = "depth2", required = false) String depth2
     ) {
         String resolvedDepthType = depthType != null ? depthType : depthTypeLegacy;
-        return jobService.getOccupationCodes(resolvedDepthType, depth1);
+        return jobService.getOccupationCodes(resolvedDepthType, depth1, depth2);
     }
 
     @GetMapping("/recruits")
@@ -109,6 +111,27 @@ public class JobController {
         ensureAdminAccess(adminToken);
         try {
             JobRecruitListResponse response = jobService.refreshRecruitments(region, occupation, startPage, display);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(e.getMessage()));
+        } catch (DataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(mostSpecificMessage(e)));
+        }
+    }
+
+    @PostMapping("/codes/refresh")
+    public ResponseEntity<?> refreshCodeTables(
+        @RequestHeader(name = "X-Job-Admin-Token", required = false) String adminToken,
+        @RequestParam(name = "target", required = false) String target
+    ) {
+        ensureAdminAccess(adminToken);
+        try {
+            String safeTarget = (target == null || target.isBlank()) ? "ALL" : target.trim().toUpperCase();
+            boolean refreshRegion = "ALL".equals(safeTarget) || "REGION".equals(safeTarget);
+            boolean refreshOccupation = "ALL".equals(safeTarget) || "OCCUPATION".equals(safeTarget);
+            JobCodeSyncResponse response = jobService.refreshWork24Codes(refreshRegion, refreshOccupation);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));

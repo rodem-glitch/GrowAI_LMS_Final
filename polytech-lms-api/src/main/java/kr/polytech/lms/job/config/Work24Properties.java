@@ -8,6 +8,10 @@ public class Work24Properties {
 
     private String apiUrl;
     private String authKey;
+    // 왜: 공통코드(지역/직종 등) 전용 API는 엔드포인트가 달라서 분리합니다.
+    private String codeApiUrl;
+    // 왜: 공통코드 API가 막힌 환경에서도 코드표(파일)로 DB를 재적재할 수 있어야 합니다.
+    private String occupationCsvPath;
     private Cache cache = new Cache();
 
     public String getApiUrl() {
@@ -24,6 +28,22 @@ public class Work24Properties {
 
     public void setAuthKey(String authKey) {
         this.authKey = authKey;
+    }
+
+    public String getCodeApiUrl() {
+        return codeApiUrl;
+    }
+
+    public void setCodeApiUrl(String codeApiUrl) {
+        this.codeApiUrl = codeApiUrl;
+    }
+
+    public String getOccupationCsvPath() {
+        return occupationCsvPath;
+    }
+
+    public void setOccupationCsvPath(String occupationCsvPath) {
+        this.occupationCsvPath = occupationCsvPath;
     }
 
     public Cache getCache() {

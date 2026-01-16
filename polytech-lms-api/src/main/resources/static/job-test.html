@@ -47,8 +47,16 @@
         <div class="bg-white border-gray-300 rounded-3 border-1 mt-4 p-4">
           <div class="row g-4">
             <div class="col-md-4">
-              <label for="jobselect" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야</label>
-              <select id="jobselect" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
+              <label for="jobselectLarge" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(대분류)</label>
+              <select id="jobselectLarge" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
+            </div>
+            <div class="col-md-4">
+              <label for="jobselectMiddle" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(중분류)</label>
+              <select id="jobselectMiddle" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
+            </div>
+            <div class="col-md-4">
+              <label for="jobselectSmall" class="form-label text-sm fw-medium text-gray-700 mb-2">직무 분야(소분류)</label>
+              <select id="jobselectSmall" class="form-select text-sm border-gray-300 rounded-2 px-3 py-2 text-sm"></select>
             </div>
             <div class="col-md-4">
               <label for="areaselect" class="form-label text-sm fw-medium text-gray-700 mb-2">근무 지역</label>
@@ -76,7 +84,9 @@
   </div>
 
   <script>
-    const jobSelect = document.getElementById("jobselect");
+    const jobLargeSelect = document.getElementById("jobselectLarge");
+    const jobMiddleSelect = document.getElementById("jobselectMiddle");
+    const jobSmallSelect = document.getElementById("jobselectSmall");
     const areaSelect = document.getElementById("areaselect");
     const providerSelect = document.getElementById("providerselect");
     const jobSearchBtn = document.getElementById("jobsearchbtn");
@@ -92,23 +102,60 @@
       return response.json();
     }
 
-    async function loadOccupationCodes() {
-      // 왜: 직무 분야 셀렉트 박스를 채우기 위해 코드 목록을 조회합니다.
-      const data = await fetchJson("/job/occupation-codes?depthType=2");
-      jobSelect.innerHTML = "";
-      // 왜: 특정 코드가 잘못되었거나 데이터가 비어도 "전체"로 조회할 수 있어야 합니다.
-      const allOption = document.createElement("option");
-      allOption.value = "";
-      allOption.textContent = "전체";
-      jobSelect.appendChild(allOption);
+    function resetSelect(select, label) {
+      select.innerHTML = "";
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = label;
+      select.appendChild(option);
+      select.value = "";
+    }
+
+    async function loadOccupationDepth1() {
+      // 왜: 대분류부터 순서대로 선택해야 중/소분류가 정확하게 좁혀집니다.
+      const data = await fetchJson("/job/occupation-codes?depthType=1");
+      resetSelect(jobLargeSelect, "전체");
       data.forEach(item => {
         const option = document.createElement("option");
-        option.value = item.code;
+        option.value = item.code || "";
         option.textContent = item.title;
-        jobSelect.appendChild(option);
+        jobLargeSelect.appendChild(option);
       });
-      // 왜: 브라우저가 이전 선택값을 유지하면 0건이 나올 수 있어 기본값을 '전체'로 강제합니다.
-      jobSelect.value = "";
+      jobLargeSelect.value = "";
+      resetSelect(jobMiddleSelect, "전체");
+      resetSelect(jobSmallSelect, "전체");
+    }
+
+    async function loadOccupationDepth2() {
+      const depth1Code = jobLargeSelect.value || "";
+      resetSelect(jobMiddleSelect, "전체");
+      resetSelect(jobSmallSelect, "전체");
+      if (!depth1Code) return;
+
+      const data = await fetchJson(`/job/occupation-codes?depthType=2&depth1=${encodeURIComponent(depth1Code)}`);
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.code || "";
+        option.textContent = item.title;
+        jobMiddleSelect.appendChild(option);
+      });
+      jobMiddleSelect.value = "";
+    }
+
+    async function loadOccupationDepth3() {
+      const depth1Code = jobLargeSelect.value || "";
+      const depth2Code = jobMiddleSelect.value || "";
+      resetSelect(jobSmallSelect, "전체");
+      if (!depth1Code || !depth2Code) return;
+
+      const data = await fetchJson(`/job/occupation-codes?depthType=3&depth1=${encodeURIComponent(depth1Code)}&depth2=${encodeURIComponent(depth2Code)}`);
+      data.forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.code || "";
+        option.textContent = item.title;
+        jobSmallSelect.appendChild(option);
+      });
+      jobSmallSelect.value = "";
     }
 
     async function loadRegionCodes() {
@@ -170,7 +217,7 @@
     async function searchWorkList() {
       // 왜: 화면 선택값으로 채용 공고 목록을 다시 조회합니다.
       const region = areaSelect.value || "";
-      const occupation = jobSelect.value || "";
+      const occupation = jobSmallSelect.value || jobMiddleSelect.value || jobLargeSelect.value || "";
       const provider = providerSelect.value || "WORK24";
       const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=1&display=10&provider=${encodeURIComponent(provider)}`;
       const data = await fetchJson(url);
@@ -187,7 +234,19 @@
       });
     });
 
-    Promise.all([loadOccupationCodes(), loadRegionCodes()])
+    jobLargeSelect.addEventListener("change", () => {
+      loadOccupationDepth2().catch(err => {
+        workList.innerHTML = `<div class="col-12 text-danger">직무 대분류 로딩 실패: ${err.message}</div>`;
+      });
+    });
+
+    jobMiddleSelect.addEventListener("change", () => {
+      loadOccupationDepth3().catch(err => {
+        workList.innerHTML = `<div class="col-12 text-danger">직무 중분류 로딩 실패: ${err.message}</div>`;
+      });
+    });
+
+    Promise.all([loadOccupationDepth1(), loadRegionCodes()])
       .then(() => searchWorkList())
       .catch(err => {
         resultCount.textContent = "채용 공고 (0건)";
