@@ -411,6 +411,31 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
     setEditingSessionId(null);
   };
 
+  // 인정시간 수정 (동영상 콘텐츠 전용)
+  // 왜: 비정규 쪽 CurriculumEditor.tsx의 updateLessonCompleteTime과 동일한 역할
+  const updateContentCompleteTime = (weekNumber: number, sessionId: string, contentId: string, time: number) => {
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === sessionId
+                ? {
+                    ...s,
+                    contents: s.contents.map(c =>
+                      c.id === contentId ? { ...c, completeTime: time } : c
+                    ),
+                  }
+                : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
+  };
+
   // 아이콘/뱃지 헬퍼
   const getContentIcon = (type: ContentType) => {
     switch (type) {
@@ -622,6 +647,27 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
                                       <span className="text-sm text-gray-500 flex-shrink-0">
                                         {content.duration}
                                       </span>
+                                    )}
+                                    {/* 인정시간 입력 칸 (동영상 콘텐츠 전용) */}
+                                    {content.type === 'video' && (
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <span className="text-xs text-gray-500">인정시간</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={content.completeTime || ''}
+                                          onChange={(e) => updateContentCompleteTime(
+                                            week.weekNumber,
+                                            session.sessionId,
+                                            content.id,
+                                            Number(e.target.value)
+                                          )}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="w-16 px-2 py-1 text-sm border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                          placeholder="분"
+                                        />
+                                        <span className="text-xs text-gray-500">분</span>
+                                      </div>
                                     )}
                                     <button
                                       onClick={() => openEditModal(content, session.sessionId)}

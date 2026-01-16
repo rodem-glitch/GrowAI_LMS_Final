@@ -12,6 +12,7 @@ export interface WeekContentItem {
   title: string;
   description?: string;
   duration?: string;
+  completeTime?: number; // 인정시간(분 단위) - 동영상 콘텐츠에서 사용
   createdAt: string;
   // 콘텐츠 라이브러리에서 선택한 영상 정보
   mediaKey?: string;
@@ -106,6 +107,7 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
     lessonId?: number;
     title: string;
     duration?: string;
+    totalTime?: number; // 인정시간 기본값 설정용
   } | null>(null);
 
   // 시험 선택 상태
@@ -161,6 +163,8 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
         title: videoTitle.trim() || selectedVideo.title,
         description: videoDescription.trim() || undefined,
         duration: selectedVideo.duration,
+        // 왜: 비정규 쪽 CurriculumEditor.tsx처럼 totalTime을 인정시간 기본값으로 설정
+        completeTime: selectedVideo.totalTime || 0,
         mediaKey: selectedVideo.mediaKey,
         lessonId: selectedVideo.lessonId,
         originalVideoTitle: selectedVideo.title,
@@ -255,6 +259,7 @@ export function WeeklyContentModal({ isOpen, onClose, weekNumber, onAdd }: Weekl
       lessonId: content.lessonId,
       title: content.title,
       duration: content.duration || (content.totalTime ? `${content.totalTime}분` : undefined),
+      totalTime: content.totalTime || 0, // 왜: 인정시간 기본값 설정을 위해 totalTime 저장
     });
     setShowLibrary(false);
   };
