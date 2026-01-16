@@ -2929,7 +2929,7 @@
     const empRates = (employmentData || []).map((r) => Number(r.rate || 0));
 
     const empDatasets = [
-      { label: "취업률(%)", data: empRates, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+      { label: "취업률(%)", data: empRates, backgroundColor: "rgba(107, 114, 128, 0.85)" }
     ];
 
     if (!internalEmploymentChartInstance) {
@@ -2942,7 +2942,7 @@
     const admRates = (admissionData || []).map((r) => Number(r.rate || 0));
 
     const admDatasets = [
-      { label: "입학충원률(%)", data: admRates, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+      { label: "입학충원률(%)", data: admRates, backgroundColor: "rgba(107, 114, 128, 0.85)" }
     ];
 
     if (!internalAdmissionChartInstance) {
@@ -2966,8 +2966,8 @@
           datasets: [{
             label: "취업률(%)",
             data: trendValues,
-            borderColor: "rgba(255, 193, 7, 0.9)",
-            backgroundColor: "rgba(255, 193, 7, 0.25)",
+            borderColor: "rgba(107, 114, 128, 0.9)",
+            backgroundColor: "rgba(107, 114, 128, 0.25)",
             fill: true,
             tension: 0.25
           }]
@@ -3028,12 +3028,12 @@
     const campusFemaleRatios = popRows.map((r) => Number(r.campusCount || 0) > 0 ? 100 - Number(r.campusMaleRatio || 0) : 0);
 
     const popDatasets = [
-      { label: "행정구역 인구비율", data: regionRatios, backgroundColor: "rgba(255, 193, 7, 0.85)" },
-      { label: "캠퍼스 학생비율", data: campusRatios, backgroundColor: "rgba(255, 87, 34, 0.85)" }
+      { label: "행정구역 인구비율", data: regionRatios, backgroundColor: "rgba(107, 114, 128, 0.85)" },
+      { label: "캠퍼스 학생비율", data: campusRatios, backgroundColor: "rgba(59, 130, 246, 0.85)" }
     ];
 
     const popGapDatasets = [
-      { label: "GAP(%p)", data: popGaps, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+      { label: "GAP(%p)", data: popGaps, backgroundColor: "rgba(107, 114, 128, 0.85)" }
     ];
 
     if (!populationChartInstance) {
@@ -3049,14 +3049,14 @@
     }
 
     const genderDatasets = [
-      { label: "행정구역 남성", stack: "region", data: regionMaleRatios, backgroundColor: "rgba(255, 193, 7, 0.85)" },
-      { label: "행정구역 여성", stack: "region", data: regionFemaleRatios, backgroundColor: "rgba(255, 193, 7, 0.35)" },
-      { label: "캠퍼스 남성", stack: "campus", data: campusMaleRatios, backgroundColor: "rgba(255, 87, 34, 0.85)" },
-      { label: "캠퍼스 여성", stack: "campus", data: campusFemaleRatios, backgroundColor: "rgba(255, 87, 34, 0.35)" }
+      { label: "행정구역 남성", stack: "region", data: regionMaleRatios, backgroundColor: "rgba(107, 114, 128, 0.85)" },
+      { label: "행정구역 여성", stack: "region", data: regionFemaleRatios, backgroundColor: "rgba(107, 114, 128, 0.35)" },
+      { label: "캠퍼스 남성", stack: "campus", data: campusMaleRatios, backgroundColor: "rgba(59, 130, 246, 0.85)" },
+      { label: "캠퍼스 여성", stack: "campus", data: campusFemaleRatios, backgroundColor: "rgba(59, 130, 246, 0.35)" }
     ];
 
     const genderGapDatasets = [
-      { label: "남성비율 GAP(%p)", data: maleGaps, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+      { label: "남성비율 GAP(%p)", data: maleGaps, backgroundColor: "rgba(107, 114, 128, 0.85)" }
     ];
 
     if (!populationGenderChartInstance) {
@@ -3130,11 +3130,11 @@
     const indGap = industryRows.map((r) => Number(r.gap || 0));
 
     const indDatasets = [
-      { label: "행정구역 종사자 비율", data: indRegion, backgroundColor: "rgba(255, 193, 7, 0.85)" },
-      { label: "캠퍼스 학생 비율", data: indCampus, backgroundColor: "rgba(255, 87, 34, 0.85)" }
+      { label: "행정구역 종사자 비율", data: indRegion, backgroundColor: "rgba(107, 114, 128, 0.85)" },
+      { label: "캠퍼스 학생 비율", data: indCampus, backgroundColor: "rgba(59, 130, 246, 0.85)" }
     ];
     const indGapDatasets = [
-      { label: "GAP(%p)", data: indGap, backgroundColor: "rgba(255, 193, 7, 0.85)" }
+      { label: "GAP(%p)", data: indGap, backgroundColor: "rgba(107, 114, 128, 0.85)" }
     ];
 
     if (!industryChartInstance) {
