@@ -146,4 +146,5 @@ p.setVar("SYS_TODAY", sysToday);
 p.setVar("SYS_NOW", sysNow);
 p.setVar("SYS_VIEWER_VERSION", sysViewerVersion);
 
+MenuDao Menu = new MenuDao(p, siteId, "default");
 %>

@@ -228,13 +228,17 @@ while(messages.next()) {
 }
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.index");
 p.setVar("p_title", "나의 강의실");
 p.setVar("query", m.qs());
 p.setVar("list_query", m.qs("id"));
 p.setVar("form_script", f.getScript());
 
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
 p.setVar("user", uinfo);
 p.setLoop("courses_haksa", coursesHaksa);
 p.setLoop("courses_prism", coursesPrism);

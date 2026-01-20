@@ -343,12 +343,16 @@ uinfo.put("birthday_conv", m.time(_message.get("format.date.local"), uinfo.s("bi
 if(!"".equals(uinfo.s("user_file"))) uinfo.put("user_file_url", m.getUploadUrl(uinfo.s("user_file")));
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.modify");
 p.setVar("p_title", "회원정보수정");
 p.setVar("query", m.qs());
 p.setVar("form_script", f.getScript());
 
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
 p.setVar("view_block", isSSO);
 p.setVar(uinfo);
 

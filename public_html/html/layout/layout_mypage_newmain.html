@@ -1,12 +1,23 @@
 <!--@include(layout/header.html)-->
 <body class="nm-shell">
 	<style>
+		.nm-shell {
+			background: #f9fafb;
+			color: #101828;
+			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		}
+		*:focus-visible {
+			outline: 2px solid #2b58e6;
+			outline-offset: 2px;
+		}
+
 		/* ==========================================================================
-		   NUCLEAR OPTION 2.0: DIRECT INJECTION (LAYOUT_COURSE)
+		   NUCLEAR OPTION 2.0: DIRECT INJECTION
 		   User Request: "Widen horizontal widths please"
 		   ========================================================================== */
 		
-		/* 1. INPUT FIX */
+		/* 1. INPUT FIX: Force 100% Width on ALL Inputs */
+		/* Using ID selectors to beat specificity: #wrap input */
 		#wrap input[type="text"],
 		#wrap input[type="password"],
 		#wrap input[type="email"],
@@ -18,7 +29,8 @@
 			box-sizing: border-box !important;
 		}
 		
-		/* 2. LAYOUT FIX */
+		/* 2. LAYOUT FIX: Remove Constrictions */
+		/* Force content area to fill remaining space */
 		#wrap #contet_area, 
 		#container .content_body {
 			width: auto !important;
@@ -31,21 +43,24 @@
 
 		/* 3. WIDE SCREEN FLEX LAYOUT */
 		@media screen and (min-width: 1200px) {
+			/* Make the wrapper a flex container */
 			.main_wrap, #wrap .main_wrap, #container_wrap, .layout_container {
 				display: flex !important;
 				flex-direction: row !important;
 				justify-content: center !important;
 				gap: 30px !important;
-				max-width: 1600px !important;
+				max-width: 1600px !important; /* Cap only at very wide */
 				margin: 0 auto !important;
 			}
+			/* Sidebar fixed width */
 			.left_area {
 				width: 270px !important;
 				min-width: 270px !important;
 				margin: 0 !important;
 			}
+			/* Content takes all rest */
 			#contet_area {
-				width: auto !important;
+				width: auto !important; /* Reset legacy width */
 				flex: 1 !important;
 			}
 		}
@@ -55,42 +70,18 @@
 			width: 100% !important;
 			max-width: 100% !important;
 			display: block !important;
-			overflow: visible !important;
+			overflow: visible !important; /* Try to show full content */
 		}
 		.nm-table, table {
 			width: 100% !important;
 			min-width: 100% !important;
+			table-layout: auto !important; /* Allow columns to stretch */
 		}
-	</style>
-	<style>
-		.nm-shell {
-			background: #f9fafb;
-			color: #101828;
-			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		}
-		*:focus-visible {
-			outline: 2px solid #2b58e6;
-			outline-offset: 2px;
+		/* Remove legacy large margins/paddings if any */
+		.type_write th, .type_write td {
+			padding: 15px !important; /* More space */
 		}
 		
-		/* --- Design System: Filter Buttons --- */
-		.nm-filter-btn {
-			display: inline-flex;
-			padding: 8px 16px;
-			background-color: #f2f4f7;
-			border: 1px solid #e5e7eb;
-			border-radius: 999px;
-			font-size: 13px;
-			cursor: pointer;
-			transition: all 0.2s;
-			color: #374151;
-		}
-		.nm-filter-btn:hover, .nm-filter-btn.active {
-			background-color: #2b58e6;
-			color: #fff;
-			border-color: #2b58e6;
-		}
-
 		/* --- Design System: Empty State --- */
 		.nm-empty-state {
 			text-align: center;
@@ -694,8 +685,7 @@
 			transition: all 0.2s;
 			z-index: 1000;
 		}
-			transform: translateY(0);
-		}
+
 		.nm-header__user:hover .nm-header__user-menu,
 		.nm-header__user-menu:focus-within {
 			opacity: 1;
@@ -722,22 +712,6 @@
 		.nm-header__user-menu-item--danger:hover {
 			background: #fef2f2;
 			color: #dc2626;
-		}
-		.nm-header__login-btn {
-			padding: 8px 16px;
-			background: #2b58e6;
-			color: #fff;
-			border: none;
-			border-radius: 8px;
-			font-size: 14px;
-			font-weight: 500;
-			font-weight: 500;
-			cursor: pointer;
-		}
-		.nm-header__login-btn:focus-visible {
-			outline: 2px solid #2b58e6;
-			outline-offset: 2px;
-			box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.3);
 		}
 		.nm-header__mobile-btn {
 			display: none;
@@ -855,7 +829,7 @@
 
 			<nav class="nm-header__nav">
 				<a href="/" class="nm-header__nav-item">홈</a>
-				<a href="/mypage/index.jsp" class="nm-header__nav-item">나의강의실</a>
+				<a href="/mypage/index.jsp" class="nm-header__nav-item active">나의강의실</a>
 				<div class="nm-header__dropdown">
 					<span class="nm-header__dropdown-toggle">이러닝 <i class="bi bi-chevron-down"></i></span>
 					<div class="nm-header__dropdown-menu">
@@ -879,9 +853,8 @@
 				<button type="button" class="nm-header__icon-btn" onclick="alert('알림 기능 연결 예정')" title="알림" aria-label="알림">
 					<i class="bi bi-bell"></i>
 				</button>
-				<!--@if(login_block)-->
 				<div class="nm-header__user">
-					<div class="nm-header__user-avatar" data-name="{{SYS_USERNAME}}"></div>
+					<div class="nm-header__user-avatar">{{SYS_USERNAME_INITIAL}}</div>
 					<span>{{SYS_USERNAME}}</span>
 					<i class="bi bi-chevron-down" style="font-size:10px; margin-left:2px;"></i>
 					<div class="nm-header__user-menu">
@@ -892,15 +865,11 @@
 							<i class="bi bi-gear"></i> 정보수정
 						</a>
 						<hr style="margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;">
-						<a href="/member/logout.jsp?return_url=/course/course_list.jsp?cid=133" class="nm-header__user-menu-item nm-header__user-menu-item--danger">
+						<a href="/member/logout.jsp?return_url=/mypage/index.jsp" class="nm-header__user-menu-item nm-header__user-menu-item--danger">
 							<i class="bi bi-box-arrow-right"></i> 로그아웃
 						</a>
 					</div>
 				</div>
-				<!--/if(login_block)-->
-				<!--@nif(login_block)-->
-				<button type="button" class="nm-header__login-btn" onclick="location.href='/member/login.jsp'">로그인</button>
-				<!--/nif(login_block)-->
 				<button type="button" class="nm-header__mobile-btn" onclick="alert('모바일 메뉴 연결 예정')" aria-label="모바일 메뉴">
 					<i class="bi bi-list"></i>
 				</button>
@@ -908,31 +877,10 @@
 		</header>
 
 		<div id="container" class="nm-shell__layout">
-			<aside class="left_area lnb03 nm-shell__aside">
+			<aside class="left_area lnb05 nm-shell__aside">
 				<h3 class="hide">lnb영역</h3>
-				<h3 class="lnb_title"><a href="/course/course_list.jsp?cid=133" target="_self">폴리텍 콘텐츠</a></h3>
-				<ul id="lnb" class="lnb_list" data-code="course">
-					<li id="lnb_M1"><a href="/course/course_list.jsp?cid=158" target="_self">기계(6)</a></li>
-					<li id="lnb_M2"><a href="/course/course_list.jsp?cid=159" target="_self">기계설계(3)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=160" target="_self">금형(0)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=161" target="_self">전기(8)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=162" target="_self">전자(10)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=141" target="_self">정보통신 IT(13)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=164" target="_self">자동화(4)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=165" target="_self">자동차(4)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=166" target="_self">신소재(1)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=163" target="_self">산업설비(7)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=167" target="_self">미디어(5)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=143" target="_self">디자인(6)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=142" target="_self">바이오(5)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=168" target="_self">섬유패션(4)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=169" target="_self">개별특성화(3)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=140" target="_self">교양(8)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=170" target="_self">반도체(6)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=171" target="_self">로봇(0)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=172" target="_self">항공(0)</a></li>
-					<li id="lnb_M3"><a href="/course/course_list.jsp?cid=144" target="_self">기타(2)</a></li>
-				</ul>
+				<h3 class="lnb_title"><a href="/mypage/index.jsp">나의 강의실</a></h3>
+				<!--@execute(/inc/left_v5.jsp?pcode=mypage)-->
 			</aside>
 			<div class="nm-shell__content">
 				<!--@include(BODY)-->
@@ -961,24 +909,5 @@
 			</div>
 		</footer>
 	</div>
-	<script>
-	(function() {
-		var el = document.querySelector('.nm-header__user-avatar');
-		if(!el) return;
-		var name = el.getAttribute('data-name') || '';
-		el.textContent = name ? name.substring(0, 1) : '?';
-	})();
-	</script>
-<script>
-$(document).ready(function() {
-	if("{{subject}}") {
-		$("#lnb > li").removeClass("on");
-		$('#lnb_{{subject}}').addClass('on');
-	} else {
-		$("#lnb > li").removeClass("on");
-		$('#lnb_').addClass('on');
-	}
-});
-</script>
 </body>
 </html>

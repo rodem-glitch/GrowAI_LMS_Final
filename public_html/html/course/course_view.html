@@ -2,34 +2,83 @@
 #container.ct_top .left_area .lnb_title {margin-bottom:0px !important;}
 #container.ct_top .left_area .lnb_list {display:none !important;}
 #container.ct_top .content_title {display:block !important;}
+	.nm-page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+	.nm-page-breadcrumb {
+		font-size: 12px;
+		color: #6b7280;
+		margin: 0 0 6px 0;
+	}
+	.nm-page-title {
+		font-size: 24px;
+		font-weight: 700;
+		margin: 0 0 6px 0;
+		text-wrap: balance;
+	}
+	.nm-page-subtitle {
+		font-size: 14px;
+		color: #4b5563;
+		margin: 0;
+		text-wrap: pretty;
+	}
+	*:focus-visible {
+		outline: 2px solid #2b58e6;
+		outline-offset: 2px;
+	}
+	.nm-card {
+		background: #fff;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		padding: 16px;
+		box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+		margin-bottom: 16px;
+	}
+	.course_infomation {
+		display: grid;
+		grid-template-columns: 240px minmax(0, 1fr);
+		gap: 24px;
+	}
+	.course_infomation .info_img img {
+		width: 100%;
+		border-radius: 12px;
+	}
+	.course_infomation .info_img img {
+		width: 100%;
+		border-radius: 12px;
+	}
+	/* Phase 2: 로컬 버튼/테이블 스타일 제거 -> 공통 nm-* 스타일 사용 */
+	.path, .con_top { display: none; }
+	@media (max-width: 992px) {
+		.course_infomation {
+			grid-template-columns: 1fr;
+		}
+	}
 </style>
 				<div id="contet_area">
 					<h3 class="hide">컨텐츠 내용</h3>
-
-					<div class="con_top">
-						<h4 class="content_title content_title_course"><em class="ddd"></em>{{course_nm}}</h4>
-						<div class="path">
-							<ol class="path_list">
-								<!-- <li>{{grade_title}}</li> -->
-								<li>{{p_title}}</li>
-							</ol>
-						</div>		
+					<div class="nm-page-header">
+						<div>
+							<p class="nm-page-breadcrumb">이러닝 · {{p_title}}</p>
+							<h4 class="nm-page-title">{{course_nm}}</h4>
+							<p class="nm-page-subtitle">과정 정보를 확인하고 수강 신청하세요.</p>
+						</div>
 					</div>
-					
-					
-					
-					
 					<div class="content_body">
-						<ul class="course_infomation">
+						<ul class="course_infomation nm-card">
 							<li class="info_img"><img src="{{course_file_url}}" alt="과정 이미지" />
-							<!--@if(sl_start_url)--><a href="javascript:OpenWindow('sample_lesson.jsp?cid={{id}}', '_YU001', {{sl_content_width}}, {{sl_content_height}});" class="button long white">맛보기</a>
+							<!--@if(sl_start_url)--><a href="javascript:OpenWindow('sample_lesson.jsp?cid={{id}}', '_YU001', {{sl_content_width}}, {{sl_content_height}});" class="nm-btn nm-btn--secondary" aria-label="{{course_nm}} 맛보기">맛보기</a>
 							<!--/if(sl_start_url)-->
 							</li>
 							<li class="info_text">
 								
 								<form name="form1" method="post">
 								<div class="tb_box type_table type_inner">
-									<table summary="{{course_nm}}과정의 신청기간및 교육시간을 나타냅니다.">
+									<table class="nm-table" summary="{{course_nm}}과정의 신청기간및 교육시간을 나타냅니다.">
 										<caption>{{course_nm}} 과정정보</caption>
 										<colgroup>
 											<col style="width:80px" />
@@ -155,22 +204,22 @@
 									<!--@if(request_block)-->
 									<ul class="info_btn">
 										<!--@nif(course_user_block)-->
-										<li><a href="javascript:goCart('D');" class="button large black btn_buy">수강신청하기</a></li>
-										<!-- <li><a href="javascript:goCart('G');" class="button large white btn_cart">장바구니담기</a></li> -->
+										<li><a href="javascript:goCart('D');" class="nm-btn nm-btn--primary nm-btn--lg btn_buy">수강신청하기</a></li>
+										<!-- <li><a href="javascript:goCart('G');" class="nm-btn nm-btn--secondary nm-btn--lg btn_cart">장바구니담기</a></li> -->
 										<!--/nif(course_user_block)-->
 										<!--@if(course_user_block)-->
-										<li><a href="../classroom/index.jsp?cuid={{course_user_id}}" class="button large black btn_buy">학습하기</a></li>
+										<li><a href="../classroom/index.jsp?cuid={{course_user_id}}" class="nm-btn nm-btn--primary nm-btn--lg btn_buy">학습하기</a></li>
 										<!--/if(course_user_block)-->
 									</ul>
 									<!--/if(request_block)-->
 									<!--@nif(request_block)-->
 									<ul class="info_btn">
 										<!--@if(ready_block)-->
-										<li><a href="javascript:void(0);" class="button large gray btn_buy btn_stay">신청대기</a></li>
+										<li><a href="javascript:void(0);" class="nm-btn nm-btn--secondary nm-btn--lg btn_buy btn_stay">신청대기</a></li>
 										<!--/if(ready_block)-->
 										<!--@nif(ready_block)-->
 										<!--@nif(packages)-->
-										<li><a href="javascript:void(0);" class="button large black btn_buy btn_end">신청마감</a></li>
+										<li><a href="javascript:void(0);" class="nm-btn nm-btn--secondary nm-btn--lg btn_buy btn_end">신청마감</a></li>
 										<!--/nif(packages)-->
 										<!--@if(packages)-->
 										<li class="notice">이 과정은 패키지과정으로 수강하실 수 있습니다.<br />하단 패키지 목록을 참고하세요.</li>
@@ -203,7 +252,7 @@
 										<!--@if(packages)-->
 										<h6 class="page_title">이 과정이 포함된 패키지</h6>
 										<div class="tb_box tb_cv tb_course_package">
-											<table summary="해당 과정이 포함된 패키지 목록을 나타냅니다.">
+											<table class="nm-table" summary="해당 과정이 포함된 패키지 목록을 나타냅니다.">
 												<caption>패키지목록</caption>
 												<colgroup>
 													<col style="width:50px" />

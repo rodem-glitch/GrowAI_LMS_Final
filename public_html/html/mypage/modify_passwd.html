@@ -1,19 +1,128 @@
+				<style>
+					.nm-page-header {
+						display: flex;
+						justify-content: space-between;
+						align-items: flex-end;
+						gap: 16px;
+						margin-bottom: 24px;
+					}
+					.nm-page-breadcrumb {
+						font-size: 12px;
+						color: #6b7280;
+						margin: 0 0 6px 0;
+					}
+					.nm-page-title {
+						font-size: 24px;
+						font-weight: 700;
+						margin: 0 0 6px 0;
+						text-wrap: balance;
+					}
+					.nm-page-subtitle {
+						font-size: 14px;
+						color: #4b5563;
+						margin: 0;
+						text-wrap: pretty;
+					}
+					.nm-card {
+						background: #fff;
+						border: 1px solid #e5e7eb;
+						border-radius: 16px;
+						padding: 20px;
+						box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+					}
+					.nm-table {
+						width: 100%;
+						border-collapse: collapse;
+						font-size: 13px;
+					}
+					.nm-table th {
+						text-align: left;
+						font-weight: 600;
+						color: #475467;
+						padding: 12px;
+						border-bottom: 1px solid #e5e7eb;
+						background: #f9fafb;
+					}
+					.nm-table td {
+						padding: 12px;
+						border-bottom: 1px solid #f2f4f7;
+						color: #101828;
+					}
+					.nm-card input[type="text"],
+					.nm-card input[type="password"] {
+						border: 1px solid #d0d5dd;
+						border-radius: 8px;
+						padding: 8px 10px;
+						font-size: 13px;
+						height: 36px;
+					}
+					.nm-card .button {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						gap: 6px;
+						padding: 8px 14px;
+						border-radius: 10px;
+						font-size: 13px;
+						font-weight: 600;
+						text-decoration: none;
+						border: 1px solid transparent;
+						cursor: pointer;
+						transition: background-color 200ms ease-out,
+						            border-color 200ms ease-out;
+					}
+					.nm-card .button:focus-visible,
+					*:focus-visible {
+						outline: 2px solid #2b58e6;
+						outline-offset: 2px;
+					}
+					.nm-card .button.blue {
+						background: #2b58e6;
+						border-color: #2b58e6;
+						color: #fff;
+					}
+					.nm-card .button.gray {
+						background: #fff;
+						border-color: #d0d5dd;
+						color: #344054;
+					}
+					.tab_wrap2 .tab_tt {
+						display: flex;
+						gap: 8px;
+						margin: 0 0 16px 0;
+						padding: 0;
+						list-style: none;
+					}
+					.tab_wrap2 .tab_tt .tab_title a {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						padding: 8px 14px;
+						border-radius: 999px;
+						border: 1px solid #e5e7eb;
+						font-size: 13px;
+						color: #667085;
+						text-decoration: none;
+					}
+					.tab_wrap2 .tab_tt .tab_title.on a {
+						background: #2b58e6;
+						border-color: #2b58e6;
+						color: #fff;
+					}
+					.path, .content_title { display: none; }
+				</style>
 				<div id="contet_area">
 					<h3 class="hide">컨텐츠 내용</h3>
-					<div class="path">
-						<ol class="path_list">
-							<li>마이페이지</li>
-							
-							<li>
+					<div class="nm-page-header">
+						<div>
+							<p class="nm-page-breadcrumb">나의 강의실 · 비밀번호변경</p>
+							<h4 class="nm-page-title">
 								<!--@nif(expired_block)-->비밀번호변경<!--/nif(expired_block)-->
 								<!--@if(expired_block)-->비밀번호 변경안내<!--/if(expired_block)-->
-							</li>
-						</ol>
+							</h4>
+							<p class="nm-page-subtitle">보안을 위해 주기적으로 비밀번호를 변경하세요.</p>
+						</div>
 					</div>
-					<h4 class="content_title">
-						<!--@nif(expired_block)-->비밀번호변경<!--/nif(expired_block)-->
-						<!--@if(expired_block)-->비밀번호 변경안내<!--/if(expired_block)-->
-					</h4>
 					<div class="content_body">
 						<!--@nif(expired_block)-->
 						<style type="text/css">
@@ -31,7 +140,7 @@
 						</div>
 						<form name="form1" method="post" target="sysfrm" onsubmit="return goSubmit(this);">
 						<input type="hidden" name="returl" value="{{returl}}">
-						<div class="tb_box type_write">
+						<div class="tb_box type_write nm-card">
 							<!--@if(expired_block)-->
 							<div class="passwd_box top">
 								<div class="box_sub">
@@ -47,7 +156,7 @@
 							</div>
 							<!--/if(expired_block)-->
 
-							<table summary="비밀번호 변경이 필요합니다. 내용을 입력해주세요" class="join nobg">
+							<table summary="비밀번호 변경이 필요합니다. 내용을 입력해주세요" class="join nobg nm-table">
 								<caption>비밀번호변경 양식</caption>
 								<colgroup>
 									<col style="width: 14%" />

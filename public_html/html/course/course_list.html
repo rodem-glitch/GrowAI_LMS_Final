@@ -1,39 +1,200 @@
 <style>
-    .tag_filters {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-    .tag_button {
-        padding: 10px 20px;
-        background-color: #e0e0e0;
-        border: none;
-        border-radius: 15px;
-        font-size: 14px;
-        cursor: pointer;
-        transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;
-    }
-    .tag_button:hover {
-        background-color: #00B2FFFF;
-        color: white;
-    }
-    .tag_button.active {
-        background-color: #00B2FFFF;
-        color: white;
-    }
+	.nm-page-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-end;
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+	.nm-page-breadcrumb {
+		font-size: 12px;
+		color: #6b7280;
+		margin: 0 0 6px 0;
+	}
+	.nm-page-title {
+		font-size: 24px;
+		font-weight: 700;
+		margin: 0 0 6px 0;
+		text-wrap: balance;
+	}
+	.nm-page-subtitle {
+		font-size: 14px;
+		color: #4b5563;
+		margin: 0;
+		text-wrap: pretty;
+	}
+	.nm-card {
+		background: #fff;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		padding: 16px;
+		box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+		margin-bottom: 16px;
+	}
+	/* Phase 2: 로컬 테이블/버튼 스타일 제거 -> 공통 사용 */
+	@media (max-width: 768px) {
+		.nm-table-responsive td:nth-of-type(1)::before { content: "과정명"; }
+		.nm-table-responsive td:nth-of-type(2)::before { content: "맛보기"; }
+		.nm-table-responsive td:nth-of-type(3)::before { content: "신청기간"; }
+		.nm-table-responsive td:nth-of-type(4)::before { content: "가격"; }
+		
+		.nm-table-responsive td {
+			display: flex;
+			justify-content: space-between;
+			text-align: right;
+		}
+	}
+
+	/* ========================================
+	   프리미엄 갤러리 카드 스타일 (폴리텍 스타일)
+	   ======================================== */
+	ul.course_gallery {
+		display: grid !important;
+		grid-template-columns: repeat(3, 1fr) !important;
+		gap: 20px !important;
+		padding: 0 !important;
+		margin: 0 !important;
+		list-style: none !important;
+	}
+	ul.course_gallery > li {
+		background: #fff !important;
+		border: 1px solid #e5e7eb !important;
+		border-radius: 12px !important;
+		overflow: hidden !important;
+		box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06) !important;
+		transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+		display: flex !important;
+		flex-direction: column !important;
+		width: auto !important;
+		float: none !important;
+		margin: 0 !important;
+	}
+	ul.course_gallery > li:hover {
+		transform: translateY(-4px) !important;
+		box-shadow: 0 12px 24px rgba(16, 24, 40, 0.12) !important;
+	}
+	ul.course_gallery .cimg {
+		position: relative !important;
+		width: 100% !important;
+		height: 160px !important;
+		overflow: hidden !important;
+		background: #f3f4f6 !important;
+		padding: 0 !important;
+		margin: 0 !important;
+	}
+	ul.course_gallery .cimg a {
+		display: block !important;
+		width: 100% !important;
+		height: 100% !important;
+	}
+	ul.course_gallery .cimg img {
+		width: 100% !important;
+		height: 100% !important;
+		object-fit: cover !important;
+		transition: transform 0.3s ease !important;
+		border-radius: 0 !important;
+	}
+	ul.course_gallery > li:hover .cimg img {
+		transform: scale(1.05) !important;
+	}
+	ul.course_gallery .ccont {
+		padding: 16px !important;
+		display: flex !important;
+		flex-direction: column !important;
+		flex: 1 !important;
+		background: #fff !important;
+	}
+	ul.course_gallery .ccont a {
+		text-decoration: none !important;
+		color: inherit !important;
+	}
+	ul.course_gallery .clabel {
+		margin-bottom: 10px !important;
+	}
+	ul.course_gallery .clabel .label {
+		display: inline-block !important;
+		padding: 4px 10px !important;
+		border-radius: 6px !important;
+		font-size: 12px !important;
+		font-weight: 600 !important;
+		background: #eff6ff !important;
+		color: #2563eb !important;
+	}
+	ul.course_gallery .clabel .label.blue {
+		background: #dbeafe !important;
+		color: #1d4ed8 !important;
+	}
+	ul.course_gallery .ctitle {
+		font-size: 16px !important;
+		font-weight: 700 !important;
+		color: #111827 !important;
+		line-height: 1.4 !important;
+		margin-bottom: 6px !important;
+		display: -webkit-box !important;
+		-webkit-line-clamp: 2 !important;
+		-webkit-box-orient: vertical !important;
+		overflow: hidden !important;
+	}
+	ul.course_gallery .ctext {
+		font-size: 13px !important;
+		color: #6b7280 !important;
+		line-height: 1.5 !important;
+		margin-bottom: 12px !important;
+		display: -webkit-box !important;
+		-webkit-line-clamp: 2 !important;
+		-webkit-box-orient: vertical !important;
+		overflow: hidden !important;
+	}
+	ul.course_gallery .cif,
+	ul.course_gallery .cday {
+		font-size: 13px !important;
+		color: #6b7280 !important;
+		margin-bottom: 4px !important;
+	}
+	ul.course_gallery .cif em,
+	ul.course_gallery .cday em {
+		color: #9ca3af !important;
+		font-style: normal !important;
+	}
+	ul.course_gallery .cprice,
+	ul.course_gallery .cbtn {
+		display: none !important;
+	}
+	ul.course_gallery .nodata {
+		grid-column: 1 / -1 !important;
+		text-align: center !important;
+		padding: 60px 20px !important;
+		color: #9ca3af !important;
+		font-size: 15px !important;
+	}
+	@media (max-width: 1200px) {
+		ul.course_gallery {
+			grid-template-columns: repeat(3, 1fr) !important;
+		}
+	}
+	@media (max-width: 900px) {
+		ul.course_gallery {
+			grid-template-columns: repeat(2, 1fr) !important;
+		}
+	}
+	@media (max-width: 600px) {
+		ul.course_gallery {
+			grid-template-columns: 1fr !important;
+		}
+		ul.course_gallery .cimg {
+			height: 140px !important;
+		}
+	}
 </style>
+
 				<div id="contet_area">
 					<h3 class="hide">컨텐츠 내용</h3>
-					<div class="con_top">
-						<h4 class="content_title"><em class="ddd"></em>{{p_title}}</h4>
-						<div class="path">
-							<ol class="path_list">
-								<!-- <li>{{grade_title}}</li> -->
-								<li>{{p_title}}</li>
-							</ol>
-						</div>					
+					<div class="nm-page-header">
+						<div>
+							<p class="nm-page-breadcrumb">이러닝 · {{p_title}}</p>
+							<h4 class="nm-page-title">{{p_title}}</h4>
+							<p class="nm-page-subtitle">관심 있는 과정을 찾아 수강해보세요.</p>
+						</div>
 					</div>
 					<div class="content_body">
 						<form name="form1" method="get" >
@@ -57,9 +218,9 @@
 							<div class="search_form_wrap1">
 								<!--@if(category.id:133)-->
 								<div class="tag_filters">
-									<span class="tag_button" data-tag-id="" onclick="setTag('')">전체</span>
+									<span class="nm-filter-btn" data-tag-id="" onclick="setTag('')">전체</span>
 									<!--@loop(tags)-->
-									<span class="tag_button" data-tag-id='{{tags.id}}' onclick="setTag('{{tags.id}}')">{{tags.tag_nm}}</span>
+									<span class="nm-filter-btn" data-tag-id='{{tags.id}}' onclick="setTag('{{tags.id}}')">{{tags.tag_nm}}</span>
 									<!--/loop(tags)-->
 								</div>
 								<!--/if(category.id:133)-->
@@ -71,7 +232,7 @@
 											<option value="a.content1">과정내용</option>
 										</select></span>
 										<span><input type="text" name="s_keyword" class="search_input"  placeholder="검색어를 입력해주세요."/></span>
-										<span><input type="submit" class="button black small " value="검색" /></span>
+										<span><input type="submit" class="nm-btn nm-btn--primary nm-btn--sm" value="검색" /></span>
 									</div>
 									<div class="btn_sort">
 										<a href="javascript:;" onclick="setSort('gallery')" id="btn_gallery" class="back_icon btn_gallery skin_hide skin_show_2_ib" title="갤러리형"></a>
@@ -85,8 +246,8 @@
 						{{form_script}}
 
 						<!--@if(list_type)-->
-						<div class="tb_box type_list">
-							<table class="">
+						<div class="tb_box type_list nm-card">
+							<table class="nm-table nm-table-responsive">
 								<caption>과정 목록</caption>
 								<colgroup>
 									<!-- <col style="width:30px"> -->
@@ -117,7 +278,7 @@
 										</td>
 										<td class="tac">
 											<!--@if(list.start_url)-->
-											<a href="javascript:OpenWindow('sample_lesson.jsp?cid={{list.id}}', '_YU001', {{list.content_width}}, {{list.content_height}});" title="맛보기 페이지로 이동" class="button white small">맛보기</a>
+											<a href="javascript:OpenWindow('../course/sample_lesson.jsp?cid={{list.id}}', '_YU001', {{list.sl_content_width}}, {{list.sl_content_height}});" class="nm-btn nm-btn--secondary nm-btn--sm" aria-label="{{list.course_nm_conv}} 맛보기">맛보기</a>
 											<!--/if(list.start_url)-->
 										</td>
 										<td class="tac"><span class="days">{{list.request_date}}</span></td>
@@ -141,7 +302,7 @@
 						</div>
 						<!--/if(list_type)-->
 						<!--@if(webzine_type)-->
-						<div class="type_chart course_chart">
+						<div class="type_chart course_chart nm-card">
 							<table class="list_li">
 								<caption>현재 수강 가능한 목록 </caption>
 								<colgroup>
@@ -235,7 +396,12 @@
 									<!--/loop(list)-->
 									<!--@nif(list)-->
 									<tr>
-										<td colspan="3" class="top_td bot_td nodata">해당 과정이 없습니다.</td>
+										<td colspan="4" style="padding:0; border:none;">
+											<div class="nm-empty-state">
+												<span class="nm-empty-state__icon">📭</span>
+												<div class="nm-empty-state__text">개설된 과정이 없습니다.</div>
+											</div>
+										</td>
 									</tr>
 									<!--/nif(list)-->
 								</tbody>
@@ -243,7 +409,7 @@
 						</div>
 						<!--/if(webzine_type)-->
 						<!--@if(gallery_type)-->
-						<div class="type_chart" style="border:none;">
+						<div class="type_chart nm-card" style="border:none;">
 							<ul class="list_li course_gallery">
 								<!--@loop(list)-->
 								<li>

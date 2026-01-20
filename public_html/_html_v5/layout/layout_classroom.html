@@ -1,4 +1,100 @@
 <!--@include(layout/header.html)-->
+<style>
+/* 강의실 레이아웃 가로 너비 확대 (정규/비정규 공통) */
+#wrap_classroom, 
+#container.classroom, 
+.main_wrap_classroom { 
+	width: 100% !important; 
+	max-width: 1300px !important; 
+	margin: 0 auto !important; 
+}
+#contet_area { 
+	width: calc(100% - 300px) !important; 
+	max-width: none !important; 
+	float: left !important; 
+	box-sizing: border-box !important;
+}
+.content_body {
+	width: 100% !important;
+	max-width: none !important;
+}
+/* 정규(학사) 과정 주차별 리스트 너비 확보 */
+.curriculum_week_wrap,
+.week_accordion_list {
+	width: 100% !important;
+}
+
+/* 
+  SIDEBAR REDESIGN (New Main Style) 
+  Reference: /mypage/new_main/index.jsp
+*/
+
+/* 1. 기본 배경 및 테두리 정리 */
+.left_area_classroom {
+	background: transparent !important; /* 기존 배경 제거 */
+	border: none !important;
+}
+.left_area_classroom .lnb_title {
+	/* 타이틀 스타일 개선 */
+	font-size: 18px !important;
+	font-weight: 700 !important;
+	color: #111 !important;
+	padding: 20px 0 15px 0 !important;
+	border-bottom: 2px solid #2B58E6 !important; /* 포인트 컬러 밑줄 */
+	margin-bottom: 12px !important;
+	background: none !important; /* 기존 배경이미지 제거 */
+    text-indent: 0 !important; /* 기존 text-indent 제거 */
+}
+
+/* 2. 메뉴 리스트 스타일 초기화 */
+.left_area_classroom .lnb_list {
+	background: none !important;
+	padding: 0 !important;
+    border: none !important;
+}
+.left_area_classroom .lnb_list li {
+	background: none !important; /* 기존 아이콘/배경 제거 */
+	border: none !important; /* 기존 구분선 제거 */
+	padding: 0 !important;
+	margin-bottom: 4px !important; /* 항목 간 간격 */
+}
+
+/* 3. 메뉴 아이템 (링크) 스타일 - Pill Shape */
+.left_area_classroom .lnb_list li a {
+	display: block !important;
+	padding: 12px 18px !important;
+	font-size: 14px !important;
+	font-weight: 500 !important;
+	color: #4B5563 !important; /* 기본 회색 text-gray-600 */
+	text-decoration: none !important;
+	border-radius: 8px !important; /* 라운드 처리 */
+	transition: all 0.2s ease-in-out !important;
+}
+
+/* 4. 호버 효과 */
+.left_area_classroom .lnb_list li a:hover {
+	background-color: #F3F4F6 !important; /* 연한 회색 bg-gray-100 */
+	color: #111827 !important; /* 진한 회색 text-gray-900 */
+    font-weight: 600 !important;
+}
+
+/* 5. 활성 상태 (Active) - 현재 페이지 추정 */
+/* 주의: 기존 로직에서 id="LNB_..." 등을 사용. js로 'on' 클래스가 붙거나 인라인 스타일이 들어갈 수 있음 */
+/* 여기서는 특정 클래스가 붙었다고 가정하거나, 포인트 컬러를 강제하는 스타일을 정의 */
+
+.left_area_classroom .lnb_list li.on a,
+.left_area_classroom .lnb_list li.active a,
+.left_area_classroom .lnb_list li a.active {
+	background-color: #EFF6FF !important; /* 연한 블루 bg-blue-50 */
+	color: #2B58E6 !important; /* 포인트 블루 text-blue-600 */
+	font-weight: 700 !important;
+}
+
+/* 기존 아이콘 숨김 (필요시 SVG로 교체 권장하지만 우선 제거) */
+.left_area_classroom .lnb_list li {
+    background-image: none !important;
+}
+</style>
 <body>
 	<div class="skip_nav">
 		<a href="#gnb">메인메뉴로 이동</a>

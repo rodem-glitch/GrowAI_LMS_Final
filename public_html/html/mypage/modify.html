@@ -2,15 +2,164 @@
 				<link href="/common/fine-uploader/fine-uploader-gallery-memberjoin.css" rel="stylesheet">
 				<script src="/common/fine-uploader/fine-uploader-memberjoin.js"></script>
 				<!--/if(SITE_CONFIG.modify_userfile_yn)-->
+				<style>
+					.nm-page-header {
+						display: flex;
+						justify-content: space-between;
+						align-items: flex-end;
+						gap: 16px;
+						margin-bottom: 24px;
+					}
+					.nm-page-breadcrumb {
+						font-size: 12px;
+						color: #6b7280;
+						margin: 0 0 6px 0;
+					}
+					.nm-page-title {
+						font-size: 24px;
+						font-weight: 700;
+						margin: 0 0 6px 0;
+						text-wrap: balance;
+					}
+					.nm-page-subtitle {
+						font-size: 14px;
+						color: #4b5563;
+						margin: 0;
+						text-wrap: pretty;
+					}
+					.nm-card {
+						background: #fff;
+						border: 1px solid #e5e7eb;
+						border-radius: 16px;
+						padding: 20px;
+						box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+					}
+					.nm-table {
+						width: 100%;
+						border-collapse: collapse;
+						font-size: 13px;
+					}
+					.nm-table th {
+						text-align: left;
+						font-weight: 600;
+						color: #475467;
+						padding: 12px;
+						border-bottom: 1px solid #e5e7eb;
+						background: #f9fafb;
+					}
+					.nm-table td {
+						padding: 12px;
+						border-bottom: 1px solid #f2f4f7;
+						color: #101828;
+					}
+					.nm-card input[type="text"],
+					.nm-card input[type="password"],
+					.nm-card select {
+						border: 1px solid #d0d5dd;
+						border-radius: 8px;
+						padding: 8px 10px;
+						font-size: 13px;
+						height: 36px;
+					}
+					.nm-card .button {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						gap: 6px;
+						padding: 8px 14px;
+						border-radius: 10px;
+						font-size: 13px;
+						font-weight: 600;
+						text-decoration: none;
+						border: 1px solid transparent;
+						cursor: pointer;
+						transition: background-color 200ms ease-out,
+						            border-color 200ms ease-out;
+					}
+					.nm-card .button:focus-visible {
+						outline: 2px solid #2b58e6;
+						outline-offset: 2px;
+						box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.3);
+					}
+					*:focus-visible {
+						outline: 2px solid #2b58e6;
+						outline-offset: 2px;
+					}
+					.nm-card .button.blue {
+						background: #2b58e6;
+						border-color: #2b58e6;
+						color: #fff;
+					}
+					.nm-card .button.white {
+						background: #fff;
+						border-color: #d0d5dd;
+						color: #344054;
+					}
+					.nm-card .button.white:hover {
+						border-color: #2b58e6;
+						color: #2b58e6;
+					}
+					.tab_wrap2 .tab_tt {
+						display: flex;
+						gap: 8px;
+						margin: 0 0 16px 0;
+						padding: 0;
+						list-style: none;
+					}
+					.tab_wrap2 .tab_tt .tab_title a {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						padding: 8px 14px;
+						border-radius: 999px;
+						border: 1px solid #e5e7eb;
+						font-size: 13px;
+						color: #667085;
+						text-decoration: none;
+					}
+					.tab_wrap2 .tab_tt .tab_title.on a {
+						background: #2b58e6;
+						border-color: #2b58e6;
+						color: #fff;
+					}
+					.path, .content_title { display: none; }
+					
+					/* --- Form Layout Fixes --- */
+					.nm-input-group {
+						display: flex;
+						align-items: center;
+						gap: 8px;
+						flex-wrap: wrap;
+					}
+					#wrap .nm-input-group input[type="text"].w100 { width: 140px !important; display: inline-block !important; }
+					#wrap .nm-input-group input[type="text"].w40 { width: 70px !important; display: inline-block !important; }
+					#wrap .nm-input-group input[type="text"].w60 { width: 90px !important; display: inline-block !important; }
+					#wrap .nm-input-group select { width: auto !important; min-width: 100px; }
+					
+					.nm-card label {
+						display: inline-flex;
+						align-items: center;
+						gap: 6px;
+						margin-right: 16px;
+						font-weight: 500;
+						color: #374151;
+					}
+					.nm-card input[type="radio"] {
+						margin: 0;
+						accent-color: #2b58e6;
+						width: 16px !important;
+						height: 16px !important;
+					}
+				</style>
 				<div id="contet_area">
 					<h3 class="hide">컨텐츠 내용</h3>
-					<div class="path">
-						<ol class="path_list">
-							<li>마이페이지</li>
-							<li>개인정보수정</li>
-						</ol>
+					<div class="nm-page-header">
+						<div>
+							<p class="nm-page-breadcrumb">나의 강의실 · 개인정보수정</p>
+							<h4 class="nm-page-title">개인정보수정</h4>
+							<p class="nm-page-subtitle">계정 정보와 기본 정보를 최신 상태로 유지하세요.</p>
+						</div>
 					</div>
-					<h4 class="content_title"><em class="ddd"></em>개인정보수정</h4>
 					<div class="content_body">
 						<!--@include(/mypage/modify_tab.html)-->
 						<div class="tb_top">
@@ -22,8 +171,8 @@
 						<!-- <input type="hidden" name="etc3" value="{{etc3}}"> -->
 						<input type="hidden" name="etc4" value="{{etc4}}">
 						<input type="hidden" name="etc5" value="{{etc5}}">
-						<div class="tb_box type_write">
-							<table summary="회원정보수정에 필요한 내용을 입력해주세요" class="join nobg">
+						<div class="tb_box type_write nm-card">
+							<table summary="회원정보수정에 필요한 내용을 입력해주세요" class="join nobg nm-table">
 								<caption>회원정보수정 양식</caption>
 								<colgroup>
 									<col style="width: 20%" />
@@ -107,20 +256,24 @@
 									<tr>
 										<th class="tb_th"><label for="gender" <!--@if(SITE_CONFIG.join_gender_status:2)-->class="join_required"<!--/if(SITE_CONFIG.join_gender_status:2)-->>성별</label></th>
 										<td>
-											<!--@nif(is_auth)-->
-											<label><input type="radio" name="gender" id="gender" value="1" /> 남성 </label> &nbsp;
-											<label><input type="radio" name="gender" id="" value="2" /> 여성 </label>
-											<!--/nif(is_auth)-->
-											<!--@if(is_auth)-->{{gender_conv}}<!--/if(is_auth)-->
+											<div class="nm-input-group">
+												<!--@nif(is_auth)-->
+												<label><input type="radio" name="gender" id="gender" value="1" /> 남성 </label>
+												<label><input type="radio" name="gender" id="" value="2" /> 여성 </label>
+												<!--/nif(is_auth)-->
+												<!--@if(is_auth)-->{{gender_conv}}<!--/if(is_auth)-->
+											</div>
 										</td>
 									</tr>
 									<!--/nif(SITE_CONFIG.join_gender_status:-1)-->
 									<tr>
 										<th class="tb_th"><label for="email"  class="join_required">이메일</label></th>
 										<td>
-											<div style="float:left;">
-												<input type="text" name="email1" id="email1" class="w100"/> @ <input type="text" name="email2" id="email2" class="w100" />
-												<select id="email3" onchange="document.forms['form1']['email2'].value = this.value;if(!this.value) document.forms['form1']['email2'].focus();" style="vertical-align: bottom;">
+											<div class="nm-input-group">
+												<input type="text" name="email1" id="email1" class="w100"/>
+												<span style="color:#6b7280">@</span>
+												<input type="text" name="email2" id="email2" class="w100" />
+												<select id="email3" onchange="document.forms['form1']['email2'].value = this.value;if(!this.value) document.forms['form1']['email2'].focus();">
 													<option value=""> - 직접입력 - </option>
 													<option value="naver.com">naver.com</option>
 													<option value="nate.com">nate.com</option>
@@ -152,18 +305,23 @@
 									<tr>
 										<th class="tb_th"><label for="mobile" <!--@if(SITE_CONFIG.join_mobile_status:2)-->class="join_required"<!--/if(SITE_CONFIG.join_mobile_status:2)-->>휴대폰</label></th>
 										<td>
-											<!--@nif(is_auth)-->
-											<select name="mobile1">
-												<option value="010">010</option>
-												<option value="011">011</option>
-												<option value="016">016</option>
-												<option value="017">017</option>
-												<option value="018">018</option>
-												<option value="019">019</option>
-											</select>
-											- <input type="text" name="mobile2" id="mobile2" maxlength="4" class="w40" /> - <input type="text" name="mobile3" id="mobile3" maxlength="4" class="w40" /> &nbsp;
-											<!--/nif(is_auth)-->
-											<!--@if(is_auth)-->{{mobile_conv}}<!--/if(is_auth)-->
+											<div class="nm-input-group">
+												<!--@nif(is_auth)-->
+												<select name="mobile1">
+													<option value="010">010</option>
+													<option value="011">011</option>
+													<option value="016">016</option>
+													<option value="017">017</option>
+													<option value="018">018</option>
+													<option value="019">019</option>
+												</select>
+												<span style="color:#6b7280">-</span>
+												<input type="text" name="mobile2" id="mobile2" maxlength="4" class="w40" />
+												<span style="color:#6b7280">-</span>
+												<input type="text" name="mobile3" id="mobile3" maxlength="4" class="w40" />
+												<!--/nif(is_auth)-->
+												<!--@if(is_auth)-->{{mobile_conv}}<!--/if(is_auth)-->
+											</div>
 										</td>
 									</tr>
 									<!--/nif(SITE_CONFIG.modify_mobile_status:-1)-->
@@ -214,9 +372,11 @@
 									<tr>
 										<th class="tb_th"><label for="email_yn">이메일 수신</label></th>
 										<td>
-											<!--@loop(receive_yn)-->
-											<label><input type="radio" name="email_yn" value="{{receive_yn.id}}" /> {{receive_yn.name}} </label> &nbsp;
-											<!--/loop(receive_yn)-->
+											<div class="nm-input-group">
+												<!--@loop(receive_yn)-->
+												<label><input type="radio" name="email_yn" value="{{receive_yn.id}}" /> {{receive_yn.name}} </label>
+												<!--/loop(receive_yn)-->
+											</div>
 										</td>
 									</tr>
 									<!--<tr>
@@ -230,10 +390,12 @@
                                     <tr>
 										<th class="tb_th"><label for="sms_yn">개인정보 수집 및 이용</label></th>
 										<td>
-											<!--@loop(receive_yn)-->
-											<label><input type="radio" name="sms_yn" value="{{receive_yn.id}}" /> {{receive_yn.name}} </label> &nbsp;
-											<!--/loop(receive_yn)-->
-                                            <span><a href="https://www.kopo.ac.kr/content.do?menu=1684" target="_blank" style="border: 1px solid #ddd; padding: 2px 5px; background-color: #ddd;">개인정보 처리방침 바로가기</a></span>
+											<div class="nm-input-group">
+												<!--@loop(receive_yn)-->
+												<label><input type="radio" name="sms_yn" value="{{receive_yn.id}}" /> {{receive_yn.name}} </label>
+												<!--/loop(receive_yn)-->
+												<span><a href="https://www.kopo.ac.kr/content.do?menu=1684" target="_blank" class="nm-btn nm-btn--sm nm-btn--secondary">개인정보 처리방침 바로가기</a></span>
+											</div>
 										</td>
 									</tr>
 									<!--/nif(view_block)-->

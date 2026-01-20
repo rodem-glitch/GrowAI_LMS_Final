@@ -1,12 +1,94 @@
+				<style>
+					.nm-page-header {
+						display: flex;
+						justify-content: space-between;
+						align-items: flex-end;
+						gap: 16px;
+						margin-bottom: 24px;
+					}
+					.nm-page-breadcrumb {
+						font-size: 12px;
+						color: #6b7280;
+						margin: 0 0 6px 0;
+					}
+					.nm-page-title {
+						font-size: 24px;
+						font-weight: 700;
+						margin: 0 0 6px 0;
+						text-wrap: balance;
+					}
+					.nm-page-subtitle {
+						font-size: 14px;
+						color: #4b5563;
+						margin: 0;
+						text-wrap: pretty;
+					}
+					.nm-card {
+						background: #fff;
+						border: 1px solid #e5e7eb;
+						border-radius: 16px;
+						padding: 16px;
+						box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+						margin-bottom: 16px;
+					}
+					.nm-table {
+						width: 100%;
+						border-collapse: collapse;
+						font-size: 13px;
+					}
+					.nm-table th {
+						text-align: left;
+						font-weight: 600;
+						color: #475467;
+						padding: 12px;
+						border-bottom: 1px solid #e5e7eb;
+						background: #f9fafb;
+					}
+					.nm-table td {
+						padding: 12px;
+						border-bottom: 1px solid #f2f4f7;
+						color: #101828;
+					}
+					.nm-card .button {
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						gap: 6px;
+						padding: 6px 12px;
+						border-radius: 10px;
+						font-size: 12px;
+						font-weight: 600;
+						text-decoration: none;
+						border: 1px solid transparent;
+						cursor: pointer;
+						transition: background-color 200ms ease-out,
+						            border-color 200ms ease-out;
+					}
+					.nm-card .button:focus-visible {
+						outline: 2px solid #2b58e6;
+						outline-offset: 2px;
+						box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.3);
+					}
+					*:focus-visible {
+						outline: 2px solid #2b58e6;
+						outline-offset: 2px;
+					}
+					.nm-card .button.green {
+						background: #2b58e6;
+						border-color: #2b58e6;
+						color: #fff;
+					}
+					.path, .content_title { display: none; }
+				</style>
 				<div id="contet_area">
 					<h3 class="hide">컨텐츠 내용</h3>
-					<div class="path">
-						<ol class="path_list">
-							<li>나의 강의실</li>
-							<li>증명서발급</li>
-						</ol>
+					<div class="nm-page-header">
+						<div>
+							<p class="nm-page-breadcrumb">나의 강의실 · 증명서발급</p>
+							<h4 class="nm-page-title">증명서발급</h4>
+							<p class="nm-page-subtitle">수강 확인서와 이수증을 발급할 수 있습니다.</p>
+						</div>
 					</div>
-					<h4 class="content_title"><em class="ddd"></em>증명서발급</h4>
 					<div class="content_body">
 <style type="text/css">
 .calendar01 { }
@@ -35,8 +117,8 @@
 						</div -->
 						<!-- <div class="tb_top">
 						</div> -->
-						<div class="tb_box type_list certificate_list">
-							<table summary="완료된 과명과  증명서 발급여부를 나타냅니다.">
+						<div class="tb_box type_list certificate_list nm-card">
+							<table summary="완료된 과명과  증명서 발급여부를 나타냅니다." class="nm-table">
 								<caption>이수증발급</caption>
 								<colgroup>
 									<col style="width: 8%" />

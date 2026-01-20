@@ -196,11 +196,15 @@ while(list2.next()) {
 }
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.course_list");
 p.setVar("p_title", "수강현황");
 p.setVar("form_script", f.getScript());
 
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
 // 정규(학사) 과정과 비정규(LMS) 과정을 별도 리스트로 전달
 p.setLoop("list1_haksa", list1_haksa);
 p.setLoop("list1_prism", list1_prism);

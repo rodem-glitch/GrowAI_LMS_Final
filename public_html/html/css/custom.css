@@ -1581,5 +1581,253 @@ li:hover #sub_menu {display: block;}
 }
 
 
+/* ==========================================================================
+   PREMIUM LINEAR STYLE (GLOBAL OVERRIDE) - Added by AI Assistant
+   Targeting ALL tables including .type_list (Legacy) and .nm-table (New)
+   ========================================================================== */
+
+/* 1. Global Table Layout & Scroll Fix */
+.nm-table-container, .tb_box, .box_type1, .board_list {
+    width: 100%;
+    display: block;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 24px;
+}
+
+/* 2. Table Reset & Base Style */
+.nm-table, .type_list, table.list_table {
+    width: 100%;
+    border-collapse: collapse !important;
+    font-size: 14px;
+    color: #0f172a; /* Slate 900 */
+    table-layout: auto !important; /* Allow columns to shrink/grow */
+    border: none !important;
+    white-space: normal !important; /* Allow wrapping by default */
+}
+
+/* 3. Header Styling (Linear Style) */
+.nm-table thead th, .type_list thead th, .type_list td.bg, table.list_table thead th {
+    background-color: transparent !important;
+    color: #64748b !important; /* Slate 500 */
+    font-weight: 500 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    padding: 12px 20px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    text-align: left !important;
+    white-space: nowrap !important; /* Keep headers single line */
+}
+
+/* 4. Body Cell Styling (Clean, No Vertical Borders) */
+.nm-table tbody td, .type_list tbody td, table.list_table tbody td {
+    padding: 16px 20px !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #f1f5f9 !important; /* Very lighter border */
+    border-top: none !important;
+    border-left: none !important; /* KEY: Remove vertical border */
+    border-right: none !important; /* KEY: Remove vertical border */
+    color: #334155 !important;
+    background-color: transparent !important;
+    font-size: 14px !important;
+    transition: background-color 0.15s ease;
+    height: auto !important;
+}
+
+/* 5. Hover Effect */
+.nm-table tbody tr:hover td, .type_list tbody tr:hover td, table.list_table tbody tr:hover td {
+    background-color: #f8fafc !important; /* Slate 50 */
+    cursor: pointer;
+}
+
+/* 6. Typography & Links */
+.nm-table td a, .type_list td a, table.list_table td a {
+    text-decoration: none !important;
+    color: #0f172a;
+    transition: color 0.15s;
+}
+.nm-table td a:hover, .type_list td a:hover {
+    color: #2563eb !important; /* Primary Blue */
+}
+
+/* 7. Column Specfics */
+/* Subject/Title Column - Allow wrapping but max width */
+.nm-table td.subject, .type_list td.subject {
+    white-space: normal !important;
+    min-width: 200px;
+    max-width: 500px;
+}
+/* Date/Status/Hit Columns - Keep single line */
+.nm-table td.date, .nm-table td.status, .nm-table td.hit,
+.type_list td.date, .type_list td.hit {
+    white-space: nowrap !important;
+    text-align: center !important;
+    color: #64748b !important;
+}
+
+/* 8. Responsive Mobile Adjustments */
+@media all and (max-width: 768px) {
+    .nm-table thead, .type_list thead { display: none; }
+    .nm-table tbody tr, .type_list tbody tr {
+        display: block;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 15px 0;
+    }
+    .nm-table tbody td, .type_list tbody td {
+        display: block;
+        border: none !important;
+        padding: 5px 10px !important;
+        text-align: left !important;
+    }
+    .nm-table td:before, .type_list td:before {
+        /* Optional: Add data-label if needed */
+        content: attr(data-label);
+        font-weight: 600;
+        margin-right: 10px;
+    }
+}
+
+/* 9. Final Safety Net for Board Tables */
+#container table td, .board_list td {
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+}
+#container table th, .board_list th {
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    background-color: transparent !important;
+}
+
+/* ==========================================================================
+   WIDE SCREEN / PREMIUM LAYOUT OPTIMIZATION (1920px+)
+   Added by AI Assistant to fix "Left Aligned / Empty" issue
+   ========================================================================== */
+@media screen and (min-width: 1400px) {
+    /* 1. Center the Main Wrapper */
+    /* Target common main wrappers found in layout files */
+    .main_wrap, #wrap, #container_wrap, .layout_container {
+        max-width: 1600px !important; /* Increase constraints for big screens */
+        margin-left: auto !important;
+        margin-right: auto !important;
+        float: none !important;
+        position: relative;
+    }
+
+    /* 2. Adjust Content Area to fill the centered wrapper */
+    #wrap #contet_area, .content_body {
+        /* Ensure it takes remaining space after left menu (270px + margins) */
+        width: calc(100% - 310px) !important; 
+        float: right !important;
+        padding-right: 0px !important;
+    }
+
+    /* 3. Left Menu Positioning - Stick to Left of Centered Container */
+    #wrap .main_wrap .left_area {
+        float: left !important;
+        margin-left: 0 !important;
+        margin-right: 30px !important;
+    }
+
+    /* 4. Header & Footer Centering to match */
+    .header-newkl .inner, .foot_cont {
+        max-width: 1600px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        width: 100% !important;
+    }
+    
+    /* 5. Background Extension */
+    /* Ensure backgrounds stretch full width even if content is centered */
+    .header-newkl, .footer {
+        width: 100% !important;
+    }
+}
+
+/* ==========================================================================
+   INPUT & TABLE WIDTH FIX (User Feedback "Widen horizontal widths please")
+   Added by AI Assistant
+   ========================================================================== */
+
+/* ==========================================================================
+   INPUT & TABLE WIDTH FIX (FINAL STRONG OVERRIDE)
+   User Feedback "Widen horizontal widths please" - Priority: HIGHEST
+   ========================================================================== */
+
+/* 1. Force Wider Inputs (Overpowering .type_write .w200) */
+/* Selector Specificity Boost: .nm-shell .type_write input.w200 */
+body .type_write .w200,
+body .type_write input.w200,
+.nm-shell .custom_box input,
+#wrap input[type="text"].w200,
+#wrap input[type="password"].w200 {
+    width: 100% !important;
+    max-width: 100% !important; /* Remove 600px cap for now to satisfy "Widen" request */
+    box-sizing: border-box !important;
+}
+
+/* 2. Fix Layout Constriction (The 583px Bottleneck) */
+/* Remove legacy calc width that shrinks content */
+#wrap #contet_area, 
+#container .content_body,
+.nm-shell__content #contet_area {
+    width: auto !important; /* Allow expansion */
+    float: none !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    /* Determine if we need to account for sidebar */
+    margin-left: 0 !important; 
+    flex: 1 1 auto !important;
+}
+
+/* If wide screen, use Flexbox for main wrapper to handle sidebar + content naturally */
+@media screen and (min-width: 1200px) {
+    .main_wrap, #wrap, #container_wrap, .layout_container {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 30px !important;
+    }
+    
+    /* Left Sidebar */
+    .left_area, #lnb {
+        width: 270px !important;
+        min-width: 270px !important;
+        flex: 0 0 270px !important;
+        margin: 0 !important;
+    }
+
+    /* Main Content - GROW to fill space */
+    #contet_area, .content_body {
+        width: auto !important;
+        flex: 1 !important; /* Take remaining space */
+        max-width: calc(100% - 300px) !important; /* Safety constraint */
+    }
+}
+
+/* 3. Table Full Width Force */
+.tb_box, .table_container, .nm-table-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    display: block !important;
+}
+.nm-table, .type_list, .course_user_list {
+    width: 100% !important;
+    table-layout: fixed !important; /* Or auto, but fixed ensures columns distribute */
+}
+
+/* 4. Fix specific columns preventing stretch */
+.type_list col, .nm-table col {
+    width: auto !important; /* Reset fixed column widths */
+}
+
+
+
 
 

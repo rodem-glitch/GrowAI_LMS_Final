@@ -28,9 +28,16 @@ if(m.isPost() && f.validate()) {
 }
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.modify_verify");
 p.setVar("form_script", f.getScript());
+
+// 헤더용 변수 설정
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
+
 p.display();
 
 %>

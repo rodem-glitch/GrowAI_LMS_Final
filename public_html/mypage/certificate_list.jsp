@@ -52,13 +52,17 @@ while(list.next()) {
 
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.certificate_list");
 p.setVar("p_title", "증명서발급");
 p.setVar("query", m.qs());
 p.setVar("list_query", m.qs("id"));
 p.setVar("form_script", f.getScript());
 
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
 p.setLoop("list", list);
 p.setVar("pagebar", lm.getPaging());
 

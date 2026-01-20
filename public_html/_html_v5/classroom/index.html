@@ -1,4 +1,30 @@
 			<div id="contet_area">
+				<style>
+				/* 공지사항/Q&A 가로 확대 */
+				.my_cr_bbs {
+					display: grid !important;
+					grid-template-columns: 1fr 1fr !important;
+					gap: 24px !important;
+				}
+				.my_bbs {
+					width: 100% !important;
+					min-width: 0 !important;
+				}
+				.my_bbs_right {
+					width: 100% !important;
+				}
+				.my_bbs_in {
+					min-height: 120px;
+				}
+				
+				/* 학습하기 버튼 너비 확대 (텍스트 잘림 방지) */
+				.button.small.btn_study,
+				.button.small.blue.btn_study {
+					min-width: 75px !important;
+					white-space: nowrap !important;
+					padding: 6px 12px !important;
+				}
+				</style>
 				<div class="path">
 					<ol class="path_list">
 						<li>강의실</li>

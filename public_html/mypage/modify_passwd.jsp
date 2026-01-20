@@ -69,12 +69,16 @@ if(m.isPost() && f.validate()) {
 }
 
 //출력
-p.setLayout(ch);
+p.setLayout("mypage_newmain");
 p.setBody("mypage.modify_passwd");
 p.setVar("p_title", "비밀번호변경");
 p.setVar("form_script", f.getScript());
 p.setVar("query", m.qs());
 
+p.setVar("login_block", true);
+p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+String userNameForHeader = uinfo.s("user_nm");
+p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
 p.setVar("expired_block", "expired".equals(mode));
 p.display();
 
