@@ -1,167 +1,42 @@
 <!--@include(layout/header.html)-->
-<body class="nm-shell">
+<body>
 	<style>
-		.nm-shell {
+		html {
+			scroll-behavior: smooth;
+		}
+		*, *::before, *::after {
+			box-sizing: border-box;
+		}
+		body {
+			margin: 0;
+			min-width: 0;
+		}
+		.new-main-fullscreen {
 			background: #f9fafb;
 			color: #101828;
 			font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			width: 100%;
+			max-width: none;
+			margin: 0;
+			padding: 0;
+			overflow-x: hidden;
+			text-align: left;
+		}
+		.nm-page-body {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 24px 20px 60px;
+			box-sizing: border-box;
+		}
+		@media (max-width: 576px) {
+			.nm-page-body { padding: 20px 16px 50px; }
 		}
 		*:focus-visible {
 			outline: 2px solid #2b58e6;
 			outline-offset: 2px;
 		}
-		
-		/* --- Design System: Buttons --- */
-		.nm-btn {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			gap: 6px;
-			padding: 8px 16px;
-			border-radius: 8px;
-			font-size: 14px;
-			font-weight: 600;
-			text-decoration: none;
-			border: 1px solid transparent;
-			cursor: pointer;
-			transition: background-color 200ms ease-out, border-color 200ms ease-out, color 200ms ease-out, transform 100ms ease-out;
-			line-height: 1.5;
-		}
-		.nm-btn:active { transform: translateY(1px); }
-		.nm-btn--primary {
-			background-color: #2b58e6;
-			color: #ffffff;
-			border-color: #2b58e6;
-		}
-		.nm-btn--primary:hover {
-			background-color: #1a42b0;
-			border-color: #1a42b0;
-		}
-		.nm-btn--secondary {
-			background-color: #ffffff;
-			color: #344054;
-			border-color: #d0d5dd;
-		}
-		.nm-btn--secondary:hover {
-			background-color: #f9fafb;
-			border-color: #b2b8c2;
-			color: #1d2939;
-		}
-		.nm-btn--text {
-			background-color: transparent;
-			color: #4b5563;
-		}
-		.nm-btn--text:hover {
-			background-color: #f3f4f6;
-			color: #111827;
-		}
-		.nm-btn--sm { padding: 6px 12px; font-size: 13px; }
-		.nm-btn--lg { padding: 10px 20px; font-size: 16px; }
 
-		/* --- Design System: Tables --- */
-		.nm-table {
-			width: 100%;
-			border-collapse: collapse;
-			font-size: 14px;
-			text-align: left;
-		}
-		.nm-table th {
-			background-color: #f9fafb;
-			color: #475467;
-			font-weight: 600;
-			padding: 12px 16px;
-			border-bottom: 1px solid #eaecf0;
-		}
-		.nm-table td {
-			padding: 12px 16px;
-			border-bottom: 1px solid #eaecf0;
-			color: #101828;
-		}
-		.nm-table tr:hover td { background-color: #fcfcfd; }
-
-		/* --- Design System: Badges --- */
-		.nm-badge {
-			display: inline-flex;
-			align-items: center;
-			padding: 2px 8px;
-			border-radius: 16px;
-			font-size: 12px;
-			font-weight: 500;
-			line-height: 1.5;
-		}
-		.nm-badge--primary { background-color: #eff4ff; color: #2b58e6; }
-		.nm-badge--success { background-color: #ecfdf5; color: #027a48; }
-		.nm-badge--warning { background-color: #fffaeb; color: #b54708; }
-		.nm-badge--gray { background-color: #f2f4f7; color: #344054; }
-
-		/* --- Design System: Responsive Tables --- */
-		@media (max-width: 768px) {
-			.nm-table-responsive thead { display: none; }
-			.nm-table-responsive tr {
-				display: block;
-				margin-bottom: 16px;
-				border: 1px solid #eaecf0;
-				border-radius: 12px;
-				padding: 12px;
-				background: #fff;
-			}
-			.nm-table-responsive td {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				border-bottom: none;
-				padding: 6px 0;
-				font-size: 14px;
-			}
-			.nm-table-responsive td::before {
-				content: attr(data-label);
-				font-weight: 600;
-				color: #475467;
-				margin-right: 12px;
-			}
-		}
-
-		.nm-shell__wrap {
-			min-height: 100vh;
-			display: flex;
-			flex-direction: column;
-		}
-		.nm-shell__layout {
-			width: 100%;
-			max-width: 1200px;
-			margin: 0 auto;
-			padding: 28px 24px 40px;
-			display: flex;
-			gap: 24px;
-			box-sizing: border-box;
-		}
-		.nm-shell__aside {
-			width: 240px;
-			background: #fff;
-			border: 1px solid #e5e7eb;
-			border-radius: 16px;
-			padding: 18px;
-			box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
-		}
-		.nm-shell__aside .lnb_title {
-			font-size: 16px;
-			font-weight: 700;
-			margin: 0 0 14px 0;
-		}
-		.nm-shell__content {
-			flex: 1;
-			min-width: 0;
-		}
-		@media (max-width: 992px) {
-			.nm-shell__layout {
-				flex-direction: column;
-				padding: 20px;
-			}
-			.nm-shell__aside {
-				width: 100%;
-			}
-		}
-
+		/* ========== 뉴메인 헤더/푸터 공통 ========== */
 		.nm-header {
 			display: flex;
 			align-items: center;
@@ -181,9 +56,7 @@
 			text-decoration: none;
 			z-index: 1;
 		}
-		.nm-header__logo img {
-			height: 36px;
-		}
+		.nm-header__logo img { height: 36px; }
 		.nm-header__logo-text {
 			font-size: 18px;
 			font-weight: 700;
@@ -196,6 +69,7 @@
 			display: flex;
 			align-items: center;
 			gap: 8px;
+			white-space: nowrap;
 		}
 		.nm-header__nav-item {
 			padding: 10px 16px;
@@ -206,6 +80,7 @@
 			border-radius: 8px;
 			transition: all 0.2s;
 			cursor: pointer;
+			white-space: nowrap;
 		}
 		.nm-header__nav-item:hover {
 			background: #f3f4f6;
@@ -215,9 +90,7 @@
 			color: #2b58e6;
 			font-weight: 600;
 		}
-		.nm-header__dropdown {
-			position: relative;
-		}
+		.nm-header__dropdown { position: relative; }
 		.nm-header__dropdown-toggle {
 			padding: 10px 16px;
 			font-size: 14px;
@@ -230,6 +103,7 @@
 			display: flex;
 			align-items: center;
 			gap: 4px;
+			white-space: nowrap;
 		}
 		.nm-header__dropdown-toggle:hover {
 			background: #f3f4f6;
@@ -256,11 +130,6 @@
 			transform: translateY(10px);
 			transition: all 0.2s;
 			z-index: 1000;
-		}
-		.nm-header__dropdown-menu a:focus-visible,
-		.nm-header__user-menu a:focus-visible {
-			outline: 2px solid #2b58e6;
-			outline-offset: -2px;
 		}
 		.nm-header__dropdown:hover .nm-header__dropdown-menu,
 		.nm-header__dropdown-menu:focus-within {
@@ -303,11 +172,6 @@
 			background: #f3f4f6;
 			color: #2b58e6;
 		}
-		.nm-header__icon-btn:focus-visible {
-			outline: 2px solid #2b58e6;
-			outline-offset: 2px;
-			background: #f3f4f6;
-		}
 		.nm-header__user {
 			position: relative;
 			display: flex;
@@ -319,18 +183,6 @@
 			font-size: 14px;
 			color: #344054;
 			cursor: pointer;
-		}
-		.nm-header__user-avatar {
-			width: 28px;
-			height: 28px;
-			background: linear-gradient(135deg, #2b58e6, #8e44ad);
-			border-radius: 50%;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			color: #fff;
-			font-size: 12px;
-			font-weight: 600;
 		}
 		.nm-header__user-menu {
 			position: absolute;
@@ -347,8 +199,6 @@
 			transform: translateY(10px);
 			transition: all 0.2s;
 			z-index: 1000;
-		}
-			transform: translateY(0);
 		}
 		.nm-header__user:hover .nm-header__user-menu,
 		.nm-header__user-menu:focus-within {
@@ -377,21 +227,32 @@
 			background: #fef2f2;
 			color: #dc2626;
 		}
+		.nm-header__user-avatar {
+			width: 28px;
+			height: 28px;
+			background: linear-gradient(135deg, #2b58e6, #8e44ad);
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #fff;
+			font-size: 12px;
+			font-weight: 600;
+		}
 		.nm-header__login-btn {
 			padding: 8px 16px;
-			background: #2b58e6;
+			background: linear-gradient(135deg, #2b58e6, #8e44ad);
 			color: #fff;
 			border: none;
 			border-radius: 8px;
 			font-size: 14px;
 			font-weight: 500;
-			font-weight: 500;
 			cursor: pointer;
+			transition: all 0.2s;
 		}
-		.nm-header__login-btn:focus-visible {
-			outline: 2px solid #2b58e6;
-			outline-offset: 2px;
-			box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.3);
+		.nm-header__login-btn:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 4px 12px rgba(43, 88, 230, 0.3);
 		}
 		.nm-header__mobile-btn {
 			display: none;
@@ -407,43 +268,35 @@
 			color: #344054;
 		}
 		@media (max-width: 992px) {
-			.nm-header__nav {
-				display: none;
-			}
-			.nm-header__mobile-btn {
-				display: flex;
-			}
+			.nm-header__nav { display: none; }
+			.nm-header__mobile-btn { display: flex; }
 		}
 
 		.nm-footer {
 			background: #1e293b;
 			color: #94a3b8;
 			padding: 48px 0 0;
+			margin-top: auto;
+			width: 100%;
 		}
 		.nm-footer__container {
 			max-width: 1200px;
 			margin: 0 auto;
 			padding: 0 24px;
 		}
-		.nm-footer__main {
-			padding-bottom: 32px;
-		}
+		.nm-footer__main { padding-bottom: 32px; }
 		.nm-footer__title {
 			font-size: 20px;
 			font-weight: 700;
 			color: #fff;
 			margin-bottom: 16px;
-			text-wrap: balance;
 		}
 		.nm-footer__desc {
 			font-size: 14px;
 			line-height: 1.7;
 			max-width: 500px;
-			text-wrap: pretty;
 		}
-		.nm-footer__desc-highlight {
-			color: #a78bfa;
-		}
+		.nm-footer__desc-highlight { color: #a78bfa; }
 		.nm-footer__social {
 			display: flex;
 			gap: 16px;
@@ -457,14 +310,9 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			justify-content: center;
 			color: #94a3b8;
 			text-decoration: none;
-			transition: background-color 200ms ease-out, color 200ms ease-out;
-		}
-		.nm-footer__social a:focus-visible {
-			outline: 2px solid #a78bfa;
-			outline-offset: 2px;
+			transition: all 0.2s;
 		}
 		.nm-footer__social a:hover {
 			background: #4f46e5;
@@ -479,9 +327,7 @@
 			flex-wrap: wrap;
 			gap: 16px;
 		}
-		.nm-footer__copyright {
-			font-size: 13px;
-		}
+		.nm-footer__copyright { font-size: 13px; }
 		.nm-footer__links {
 			display: flex;
 			gap: 24px;
@@ -492,27 +338,149 @@
 			text-decoration: none;
 			transition: color 0.2s;
 		}
-		.nm-footer__links a:hover {
+		.nm-footer__links a:hover { color: #fff; }
+
+		/* 로그인 모달 */
+		.nm-modal-overlay {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.5);
+			backdrop-filter: blur(4px);
+			z-index: 9999;
+			align-items: center;
+			justify-content: center;
+		}
+		.nm-modal-overlay.active { display: flex; }
+		.nm-login-modal {
+			width: 100%;
+			max-width: 420px;
+			background: #fff;
+			border-radius: 24px;
+			box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+			overflow: hidden;
+			animation: modalSlideIn 0.3s ease;
+		}
+		@keyframes modalSlideIn {
+			from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+			to { opacity: 1; transform: translateY(0) scale(1); }
+		}
+		.nm-login-modal__header {
+			background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+			padding: 32px 32px 28px;
+			text-align: center;
 			color: #fff;
+		}
+		.nm-login-modal__logo {
+			font-size: 28px;
+			font-weight: 800;
+			margin-bottom: 8px;
+		}
+		.nm-login-modal__subtitle { font-size: 14px; opacity: 0.9; }
+		.nm-login-modal__body { padding: 32px; }
+		.nm-login-modal__field { margin-bottom: 20px; }
+		.nm-login-modal__label {
+			display: block;
+			font-size: 14px;
+			font-weight: 600;
+			color: #344054;
+			margin-bottom: 8px;
+		}
+		.nm-login-modal__input {
+			width: 100%;
+			padding: 14px 16px;
+			border: 2px solid #e5e7eb !important;
+			border-radius: 12px;
+			font-size: 16px;
+			background: #f9fafb !important;
+			transition: all 0.2s;
+			outline: none;
+			height: auto !important;
+			margin: 0 !important;
+		}
+		.nm-login-modal__input:focus {
+			border-color: #4f46e5 !important;
+			background: #fff !important;
+			box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+		}
+		.nm-login-modal__submit {
+			width: 100%;
+			padding: 16px;
+			background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+			color: #fff;
+			border: none;
+			border-radius: 12px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+			margin-top: 8px;
+		}
+		.nm-login-modal__submit:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+		}
+		.nm-login-modal__close {
+			position: absolute;
+			top: 16px;
+			right: 16px;
+			width: 36px;
+			height: 36px;
+			background: rgba(255, 255, 255, 0.2);
+			border: none;
+			border-radius: 50%;
+			color: #fff;
+			font-size: 20px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s;
+		}
+		.nm-login-modal__close:hover { background: rgba(255, 255, 255, 0.3); }
+		.nm-login-modal__footer {
+			text-align: center;
+			padding: 20px 32px 28px;
+			border-top: 1px solid #e5e7eb;
+			background: #f9fafb;
+		}
+		.nm-login-modal__footer a {
+			color: #6b7280;
+			font-size: 14px;
+			text-decoration: none;
+			margin: 0 12px;
+		}
+		.nm-login-modal__footer a:hover { color: #4f46e5; }
+		.nm-login-modal__error {
+			background: #fef2f2;
+			color: #dc2626;
+			padding: 12px 16px;
+			border-radius: 8px;
+			font-size: 14px;
+			margin-bottom: 16px;
+			display: none;
 		}
 	</style>
 
-	<div id="wrap" class="nm-shell__wrap">
+	<div class="new-main-fullscreen">
 		<header class="nm-header">
-			<a href="/" class="nm-header__logo">
+			<a href="/mypage/new_main/" class="nm-header__logo">
 				<img src="/html/images/demo/logo_plism.png" alt="PLISM" onerror="this.style.display='none'">
 				<span class="nm-header__logo-text">PLISM</span>
 			</a>
 
 			<nav class="nm-header__nav">
-				<a href="/" class="nm-header__nav-item">홈</a>
+				<a href="/mypage/new_main/" class="nm-header__nav-item">홈</a>
 				<a href="/mypage/index.jsp" class="nm-header__nav-item">나의강의실</a>
 				<div class="nm-header__dropdown">
 					<span class="nm-header__dropdown-toggle">이러닝 <i class="bi bi-chevron-down"></i></span>
 					<div class="nm-header__dropdown-menu">
 						<a href="/course/course_list.jsp?cid=133" class="nm-header__dropdown-item">폴리텍 콘텐츠</a>
 						<a href="javascript:void(0)" class="nm-header__dropdown-item" onclick="alert('메뉴 연결 예정')">개설과목</a>
-						<a href="/course/course_list.jsp?cid=173&ch=course173" class="nm-header__dropdown-item">프리클래스</a>
+						<a href="javascript:void(0)" class="nm-header__dropdown-item" onclick="alert('메뉴 연결 예정')">프리클래스</a>
 					</div>
 				</div>
 				<div class="nm-header__dropdown">
@@ -528,12 +496,12 @@
 			</nav>
 
 			<div class="nm-header__actions">
-				<button type="button" class="nm-header__icon-btn" onclick="alert('알림 기능 연결 예정')" title="알림" aria-label="알림">
+				<button type="button" class="nm-header__icon-btn" onclick="alert('알림 기능 연결 예정')" title="알림">
 					<i class="bi bi-bell"></i>
 				</button>
 				<!--@if(login_block)-->
 				<div class="nm-header__user">
-					<div class="nm-header__user-avatar" data-name="{{SYS_USERNAME}}"></div>
+					<div class="nm-header__user-avatar">{{SYS_USERNAME_INITIAL}}</div>
 					<span>{{SYS_USERNAME}}</span>
 					<i class="bi bi-chevron-down" style="font-size:10px; margin-left:2px;"></i>
 					<div class="nm-header__user-menu">
@@ -544,29 +512,23 @@
 							<i class="bi bi-gear"></i> 정보수정
 						</a>
 						<hr style="margin: 6px 0; border: none; border-top: 1px solid #e5e7eb;">
-						<a href="/member/logout.jsp?return_url=/course/course_list.jsp?cid=173&ch=course173" class="nm-header__user-menu-item nm-header__user-menu-item--danger">
+						<a href="/member/logout.jsp?return_url=/mypage/new_main/" class="nm-header__user-menu-item nm-header__user-menu-item--danger">
 							<i class="bi bi-box-arrow-right"></i> 로그아웃
 						</a>
 					</div>
 				</div>
 				<!--/if(login_block)-->
 				<!--@nif(login_block)-->
-				<button type="button" class="nm-header__login-btn" onclick="location.href='/member/login.jsp'">로그인</button>
+				<button type="button" class="nm-header__login-btn" onclick="openLoginModal()">로그인</button>
 				<!--/nif(login_block)-->
-				<button type="button" class="nm-header__mobile-btn" onclick="alert('모바일 메뉴 연결 예정')" aria-label="모바일 메뉴">
+				<button type="button" class="nm-header__mobile-btn" onclick="alert('모바일 메뉴 연결 예정')">
 					<i class="bi bi-list"></i>
 				</button>
 			</div>
 		</header>
 
-		<div id="container" class="nm-shell__layout">
-			<aside class="left_area lnb03 nm-shell__aside">
-				<h3 class="hide">lnb영역</h3>
-				<h3 class="lnb_title c_title"><a href="/course/course_list.jsp?cid=173&ch=course173" target="_self">프리클래스</a></h3>
-			</aside>
-			<div class="nm-shell__content">
-				<!--@include(BODY)-->
-			</div>
+		<div class="nm-page-body">
+			<!--@include(BODY)-->
 		</div>
 
 		<footer class="nm-footer">
@@ -578,7 +540,7 @@
 						<span class="nm-footer__desc-highlight">새로운 길을 열어갑니다</span>.
 					</p>
 					<div class="nm-footer__social">
-						<a href="https://www.youtube.com/channel/UCDlUa248Pg7_e4V-vwT5V8A" target="_blank" title="YouTube" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+						<a href="https://www.youtube.com/channel/UCDlUa248Pg7_e4V-vwT5V8A" target="_blank" title="YouTube"><i class="bi bi-youtube"></i></a>
 					</div>
 				</div>
 				<div class="nm-footer__bottom">
@@ -591,24 +553,76 @@
 			</div>
 		</footer>
 	</div>
+
+	<!-- 로그인 모달 -->
+	<div class="nm-modal-overlay" id="loginModal" onclick="closeLoginModal(event)">
+		<div class="nm-login-modal" onclick="event.stopPropagation()" style="position: relative;">
+			<div class="nm-login-modal__header">
+				<button type="button" class="nm-login-modal__close" onclick="closeLoginModal()">&times;</button>
+				<div class="nm-login-modal__logo">PLISM</div>
+				<div class="nm-login-modal__subtitle">미래형 직업교육 플랫폼에 오신 것을 환영합니다</div>
+			</div>
+			<form id="loginForm" method="post" action="/member/login.jsp" target="loginFrame" onsubmit="return submitLogin()">
+				<input type="hidden" name="returl" value="/mypage/new_main/">
+				<div class="nm-login-modal__body">
+					<div id="loginError" class="nm-login-modal__error"></div>
+					<div class="nm-login-modal__field">
+						<label class="nm-login-modal__label" for="login_id">아이디</label>
+						<input type="text" id="login_id" name="id" class="nm-login-modal__input" placeholder="아이디를 입력하세요" required>
+					</div>
+					<div class="nm-login-modal__field">
+						<label class="nm-login-modal__label" for="login_passwd">비밀번호</label>
+						<input type="password" id="login_passwd" name="passwd" class="nm-login-modal__input" placeholder="비밀번호를 입력하세요" required>
+					</div>
+					<button type="submit" class="nm-login-modal__submit">로그인</button>
+				</div>
+			</form>
+			<div class="nm-login-modal__footer">
+				<a href="/member/find_id.jsp">아이디 찾기</a>
+				<a href="/member/find_passwd.jsp">비밀번호 찾기</a>
+				<a href="/member/regist.jsp">회원가입</a>
+			</div>
+		</div>
+	</div>
+	<iframe name="loginFrame" id="loginFrame" style="display:none;"></iframe>
+
 	<script>
-	(function() {
-		var el = document.querySelector('.nm-header__user-avatar');
-		if(!el) return;
-		var name = el.getAttribute('data-name') || '';
-		el.textContent = name ? name.substring(0, 1) : '?';
-	})();
-	</script>
-	<script>
-		$(document).ready(function() {
-			if("{{subject}}") {
-				$("#lnb > li").removeClass("on");
-				$('#lnb_{{subject}}').addClass('on');
-			} else {
-				$("#lnb > li").removeClass("on");
-				$('#lnb_').addClass('on');
-			}
-		});
+	function openLoginModal() {
+		document.getElementById('loginModal').classList.add('active');
+		document.getElementById('login_id').focus();
+		document.body.style.overflow = 'hidden';
+	}
+	function closeLoginModal(event) {
+		if (event && event.target !== document.getElementById('loginModal')) return;
+		document.getElementById('loginModal').classList.remove('active');
+		document.body.style.overflow = '';
+		document.getElementById('loginForm').reset();
+		document.getElementById('loginError').style.display = 'none';
+	}
+	function submitLogin() {
+		var id = document.getElementById('login_id').value.trim();
+		var passwd = document.getElementById('login_passwd').value;
+		if (!id || !passwd) {
+			showLoginError('아이디와 비밀번호를 입력해주세요.');
+			return false;
+		}
+		setTimeout(function() { location.reload(); }, 500);
+		return true;
+	}
+	function showLoginError(message) {
+		var errorDiv = document.getElementById('loginError');
+		errorDiv.textContent = message;
+		errorDiv.style.display = 'block';
+	}
+	function resetPassword() {
+		document.getElementById('login_passwd').value = '';
+		document.getElementById('login_passwd').focus();
+	}
+	document.addEventListener('keydown', function(e) {
+		if (e.key === 'Escape' && document.getElementById('loginModal').classList.contains('active')) {
+			closeLoginModal();
+		}
+	});
 	</script>
 </body>
 </html>

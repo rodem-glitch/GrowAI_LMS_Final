@@ -15,7 +15,12 @@ vectorQuery = vectorQuery.replaceAll("[^가-힣a-zA-Z0-9\\s]", " ");
 vectorQuery = vectorQuery.replaceAll("\\s+", " ").trim();
 if(vectorQuery.length() > 200) vectorQuery = m.cutString(vectorQuery, 200, "");
 
+// 왜: 신규 메인에서 검색한 경우 동일한 헤더/푸터를 쓰기 위해 분기합니다.
+String chParam = m.rs("ch");
+boolean isNewMain = "new_main".equals(chParam);
+
 //객체
+UserDao user = new UserDao();
 CourseDao course = new CourseDao();
 PostDao post = new PostDao();
 ClPostDao clPost = new ClPostDao();
@@ -28,6 +33,13 @@ WebtvTargetDao webtvTarget = new WebtvTargetDao();
 LmCategoryDao category = new LmCategoryDao();
 LmCategoryTargetDao categoryTarget = new LmCategoryTargetDao();
 SearchLogDao searchLog = new SearchLogDao(request);
+
+// 사용자 정보 (헤더 표시용)
+DataSet uinfo = null;
+if(userId > 0) {
+	uinfo = user.find("id = " + userId + " AND status = 1");
+	if(!uinfo.next()) uinfo = null;
+}
 
 //로그
 if(!searchLog.addLog(siteId, userId, m.rs("s_keyword"))) { }
@@ -353,13 +365,25 @@ int mergedCourseTotal = courseTotal + recoLessonTotal;
 int searchTotal = tutorTotal + mergedCourseTotal + webtvTotal + postTotal;
 
 //출력
-p.setLayout("search");
+// 왜: 신규 메인에서 들어온 검색은 새 레이아웃을 씁니다.
+p.setLayout(isNewMain ? "new_main" : "search");
 p.setBody("main.search");
 p.setVar("p_title", "통합");
 p.setVar("query", m.qs());
 p.setVar("list_query", m.qs("id"));
 p.setVar("subject_query", m.qs("id,subject"));
 p.setVar("form_script", f2.getScript());
+
+// 헤더용 사용자 정보
+p.setVar("login_block", userId > 0 && uinfo != null);
+if(userId > 0 && uinfo != null) {
+	p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+	String userNameForHeader = uinfo.s("user_nm");
+	p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
+} else {
+	p.setVar("SYS_USERNAME", "");
+	p.setVar("SYS_USERNAME_INITIAL", "");
+}
 
 p.setLoop("tutors", tutors);
 p.setLoop("courses", coursesMerged);

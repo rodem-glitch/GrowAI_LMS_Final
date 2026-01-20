@@ -18,6 +18,14 @@ int topK = m.ri("topK");
 if(topK <= 0) topK = 50;
 if(topK > 200) topK = 200;
 
+// 사용자 정보 (헤더 표시용)
+UserDao user = new UserDao();
+DataSet uinfo = null;
+if(userId > 0) {
+	uinfo = user.find("id = " + userId + " AND status = 1");
+	if(!uinfo.next()) uinfo = null;
+}
+
 DataSet recoVideoMoreList = new DataSet();
 
 try {
@@ -112,11 +120,21 @@ try {
 	}
 } catch(Exception ignore) {}
 
-p.setLayout("blank");
+// 왜: 메인 "더보기"에서도 동일한 헤더/푸터를 쓰기 위해 신규 레이아웃을 사용합니다.
+p.setLayout("new_main");
 p.setBody("mypage.reco_video_more");
 p.setVar("p_title", "추천 동영상 더보기");
 p.setLoop("reco_video_more_list", recoVideoMoreList);
 p.setVar("total_count", recoVideoMoreList.size());
+p.setVar("login_block", userId > 0 && uinfo != null);
+if(userId > 0 && uinfo != null) {
+	p.setVar("SYS_USERNAME", uinfo.s("user_nm"));
+	String userNameForHeader = uinfo.s("user_nm");
+	p.setVar("SYS_USERNAME_INITIAL", userNameForHeader.length() > 0 ? userNameForHeader.substring(0, 1) : "?");
+} else {
+	p.setVar("SYS_USERNAME", "");
+	p.setVar("SYS_USERNAME_INITIAL", "");
+}
 p.display();
 
 %>
