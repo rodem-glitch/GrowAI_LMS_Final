@@ -2716,7 +2716,7 @@
     return el?.selectedOptions?.[0]?.textContent || "";
   }
 
-  function renderBarChart(canvasId, labels, datasets) {
+  function renderBarChart(canvasId, labels, datasets, yAxisLabel) {
     const ctx = document.getElementById(canvasId).getContext("2d");
     
     // 프리미엄 스타일 적용
@@ -2778,6 +2778,14 @@
               color: chartColors.textMuted,
               padding: 8,
               callback: (v) => `${Number(v).toFixed(0)}`
+            },
+            title: {
+              display: !!yAxisLabel,
+              text: yAxisLabel,
+              align: 'start',
+              color: chartColors.textMuted,
+              font: { size: 11 },
+              rotation: 0
             }
           }
         },
@@ -2790,7 +2798,7 @@
   }
 
 
-  function renderStackedPercentChart(canvasId, labels, datasets) {
+  function renderStackedPercentChart(canvasId, labels, datasets, yAxisLabel) {
     // 왜: "남녀 성비"는 (남+여=100%) 형태가 직관적이라서, 스택 바 차트로 표시합니다.
     const ctx = document.getElementById(canvasId).getContext("2d");
     
@@ -2855,6 +2863,14 @@
               color: chartColors.textMuted,
               padding: 8,
               callback: (v) => `${Number(v).toFixed(0)}`
+            },
+            title: {
+              display: !!yAxisLabel,
+              text: yAxisLabel,
+              align: 'start',
+              color: chartColors.textMuted,
+              font: { size: 11 },
+              rotation: 0
             }
           }
         },
@@ -2933,7 +2949,7 @@
     ];
 
     if (!internalEmploymentChartInstance) {
-      internalEmploymentChartInstance = renderBarChart("internalEmploymentChart", empLabels, empDatasets);
+      internalEmploymentChartInstance = renderBarChart("internalEmploymentChart", empLabels, empDatasets, "(단위: %)");
     } else {
       updateChart(internalEmploymentChartInstance, empLabels, empDatasets);
     }
@@ -2946,7 +2962,7 @@
     ];
 
     if (!internalAdmissionChartInstance) {
-      internalAdmissionChartInstance = renderBarChart("internalAdmissionChart", admLabels, admDatasets);
+      internalAdmissionChartInstance = renderBarChart("internalAdmissionChart", admLabels, admDatasets, "(단위: %)");
     } else {
       updateChart(internalAdmissionChartInstance, admLabels, admDatasets);
     }
@@ -2975,7 +2991,19 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true } }
+          scales: { 
+            y: { 
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "(단위: %)",
+                align: 'start',
+                color: chartColors.textMuted,
+                font: { size: 11 },
+                rotation: 0
+              }
+            } 
+          }
         }
       });
     } else {
@@ -3037,13 +3065,13 @@
     ];
 
     if (!populationChartInstance) {
-      populationChartInstance = renderBarChart("populationChart", popLabels, popDatasets);
+      populationChartInstance = renderBarChart("populationChart", popLabels, popDatasets, "(%)");
     } else {
       updateChart(populationChartInstance, popLabels, popDatasets);
     }
 
     if (!populationGapChartInstance) {
-      populationGapChartInstance = renderBarChart("populationGapChart", popLabels, popGapDatasets);
+      populationGapChartInstance = renderBarChart("populationGapChart", popLabels, popGapDatasets, "(%P)");
     } else {
       updateChart(populationGapChartInstance, popLabels, popGapDatasets);
     }
@@ -3060,13 +3088,13 @@
     ];
 
     if (!populationGenderChartInstance) {
-      populationGenderChartInstance = renderStackedPercentChart("populationGenderChart", popLabels, genderDatasets);
+      populationGenderChartInstance = renderStackedPercentChart("populationGenderChart", popLabels, genderDatasets, "(%)");
     } else {
       updateChart(populationGenderChartInstance, popLabels, genderDatasets);
     }
 
     if (!populationGenderGapChartInstance) {
-      populationGenderGapChartInstance = renderBarChart("populationGenderGapChart", popLabels, genderGapDatasets);
+      populationGenderGapChartInstance = renderBarChart("populationGenderGapChart", popLabels, genderGapDatasets, "(%P)");
     } else {
       updateChart(populationGenderGapChartInstance, popLabels, genderGapDatasets);
     }
@@ -3138,13 +3166,13 @@
     ];
 
     if (!industryChartInstance) {
-      industryChartInstance = renderBarChart("industryChart", indLabels, indDatasets);
+      industryChartInstance = renderBarChart("industryChart", indLabels, indDatasets, "(%)");
     } else {
       updateChart(industryChartInstance, indLabels, indDatasets);
     }
 
     if (!industryGapChartInstance) {
-      industryGapChartInstance = renderBarChart("industryGapChart", indLabels, indGapDatasets);
+      industryGapChartInstance = renderBarChart("industryGapChart", indLabels, indGapDatasets, "(%P)");
     } else {
       updateChart(industryGapChartInstance, indLabels, indGapDatasets);
     }
