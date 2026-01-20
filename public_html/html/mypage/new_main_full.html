@@ -373,6 +373,121 @@
 			color: #101828;
 			margin: 0;
 		}
+		.nm-section__title-row {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.nm-reco-config-btn {
+			width: 28px;
+			height: 28px;
+			border-radius: 8px;
+			border: 1px solid #e5e7eb;
+			background: #fff;
+			color: #667085;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.nm-reco-config-btn:hover {
+			color: #2b58e6;
+			border-color: #c7d7ff;
+			background: #f4f7ff;
+		}
+
+		/* 추천 프롬프트 모달 */
+		.nm-reco-modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0,0,0,0.45);
+			display: none;
+			align-items: center;
+			justify-content: center;
+			z-index: 2000;
+		}
+		.nm-reco-modal.active { display: flex; }
+		.nm-reco-modal__card {
+			width: 100%;
+			max-width: 520px;
+			background: #fff;
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+			padding: 20px 20px 16px;
+		}
+		.nm-reco-modal__title {
+			font-size: 18px;
+			font-weight: 700;
+			color: #101828;
+			margin: 0 0 8px 0;
+		}
+		.nm-reco-modal__desc {
+			font-size: 13px;
+			color: #667085;
+			margin: 0 0 12px 0;
+		}
+		.nm-reco-modal__textarea {
+			width: 100%;
+			min-height: 120px;
+			border: 1px solid #d0d5dd;
+			border-radius: 10px;
+			padding: 10px 12px;
+			font-size: 14px;
+			resize: vertical;
+			box-sizing: border-box;
+		}
+		.nm-reco-modal__textarea:focus {
+			outline: none;
+			border-color: #2b58e6;
+			box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.15);
+		}
+		.nm-reco-modal__actions {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-top: 12px;
+		}
+		.nm-reco-modal__left {
+			display: flex;
+			gap: 8px;
+		}
+		.nm-reco-modal__msg {
+			font-size: 12px;
+			color: #667085;
+		}
+		.nm-reco-btn {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 14px;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			border: 1px solid transparent;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+		.nm-reco-btn--primary {
+			background: #2b58e6;
+			color: #fff;
+			border-color: #2b58e6;
+		}
+		.nm-reco-btn--primary:hover { background: #1f46c2; }
+		.nm-reco-btn--ghost {
+			background: #fff;
+			color: #475467;
+			border: 1px solid #d0d5dd;
+		}
+		.nm-reco-btn--ghost:hover { background: #f3f4f6; }
+		.nm-reco-btn--text {
+			background: transparent;
+			color: #667085;
+		}
+		.nm-reco-btn--text:hover { color: #2b58e6; }
 		.nm-section__more {
 			font-size: 14px;
 			color: #667085;
@@ -909,10 +1024,15 @@
 		<!-- 추천 동영상 섹션 -->
 		<section class="nm-section" id="videos">
 			<div class="nm-section__header">
-				<h2 class="nm-section__title">추천 동영상</h2>
+				<div class="nm-section__title-row">
+					<h2 class="nm-section__title">추천 동영상</h2>
+					<button type="button" class="nm-reco-config-btn" id="recoPromptOpenBtn" aria-label="추천 설정">
+						<i class="bi bi-gear"></i>
+					</button>
+				</div>
 				<a href="/mypage/reco_video_more.jsp" class="nm-section__more">더보기 →</a>
 			</div>
-			<div class="nm-grid nm-grid--4">
+			<div class="nm-grid nm-grid--4" id="recoVideoGrid">
 				<!--@loop(reco_video_list)-->
 				<div class="nm-card">
 					<a href="javascript:OpenWindowr('{{reco_video_list.play_url}}', 'RECO_VIEWER', 1000, 700);" class="nm-card__img-link" style="display:block; position:relative;">
@@ -1083,6 +1203,25 @@
 		
 
 	</main>
+
+	<!-- 추천 프롬프트 설정 모달 -->
+	<div class="nm-reco-modal" id="recoPromptModal" aria-hidden="true">
+		<div class="nm-reco-modal__card" role="dialog" aria-modal="true" aria-labelledby="recoPromptTitle">
+			<h3 class="nm-reco-modal__title" id="recoPromptTitle">추천 설정</h3>
+			<p class="nm-reco-modal__desc">원하는 추천 내용을 자연어로 적어주세요. 저장하면 다음부터 이 기준으로 추천됩니다.</p>
+			<textarea class="nm-reco-modal__textarea" id="recoPromptInput" maxlength="500" placeholder="예) 전기/전자 전공에 도움이 되는 취업 준비 영상 추천해줘"></textarea>
+			<div class="nm-reco-modal__actions">
+				<div class="nm-reco-modal__left">
+					<button type="button" class="nm-reco-btn nm-reco-btn--ghost" id="recoPromptResetBtn">초기화</button>
+					<button type="button" class="nm-reco-btn nm-reco-btn--text" id="recoPromptCloseBtn">닫기</button>
+				</div>
+				<div>
+					<button type="button" class="nm-reco-btn nm-reco-btn--primary" id="recoPromptSaveBtn">저장</button>
+				</div>
+			</div>
+			<p class="nm-reco-modal__msg" id="recoPromptMsg"></p>
+		</div>
+	</div>
 	
 	<!-- 푸터 -->
 	<footer class="nm-footer">
@@ -1194,5 +1333,139 @@
 			closeLoginModal();
 		}
 	});
+
+	// 추천 프롬프트 설정
+	(function() {
+		var openBtn = document.getElementById('recoPromptOpenBtn');
+		var modal = document.getElementById('recoPromptModal');
+		var input = document.getElementById('recoPromptInput');
+		var saveBtn = document.getElementById('recoPromptSaveBtn');
+		var resetBtn = document.getElementById('recoPromptResetBtn');
+		var closeBtn = document.getElementById('recoPromptCloseBtn');
+		var msg = document.getElementById('recoPromptMsg');
+
+		if (!openBtn) return;
+
+		function setMsg(text, isError) {
+			msg.textContent = text || '';
+			msg.style.color = isError ? '#dc2626' : '#667085';
+		}
+
+		function openModal() {
+			modal.classList.add('active');
+			modal.setAttribute('aria-hidden', 'false');
+			document.body.style.overflow = 'hidden';
+			setMsg('불러오는 중...', false);
+			fetch('/mypage/new_main/reco_prompt.jsp')
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					if (data && data.ok === false) {
+						setMsg(data.msg || '로그인이 필요합니다.', true);
+						input.value = '';
+						return;
+					}
+					input.value = (data && data.prompt) ? data.prompt : '';
+					setMsg('', false);
+					input.focus();
+				})
+				.catch(function() {
+					setMsg('불러오기에 실패했습니다.', true);
+				});
+		}
+
+		function closeModal() {
+			modal.classList.remove('active');
+			modal.setAttribute('aria-hidden', 'true');
+			document.body.style.overflow = '';
+		}
+
+		function escapeHtml(text) {
+			var div = document.createElement('div');
+			div.textContent = text || '';
+			return div.innerHTML;
+		}
+
+		function renderRecoList(items) {
+			var grid = document.getElementById('recoVideoGrid');
+			if (!grid) return;
+			if (!items || items.length === 0) {
+				grid.innerHTML = '<div class="nm-empty" style="grid-column: 1/-1;"><i class="bi bi-film"></i><p>추천 동영상이 준비 중입니다.</p></div>';
+				return;
+			}
+
+			var html = '';
+			items.forEach(function(item) {
+				var title = escapeHtml(item.title || '');
+				var category = escapeHtml(item.category_nm || '');
+				var playUrl = item.play_url || '#';
+				var thumb = item.thumbnail || '/html/images/common/noimage_course.gif';
+				html += '<div class="nm-card">';
+				html += '  <a href="javascript:OpenWindowr(\\'' + playUrl + '\\', \\'RECO_VIEWER\\', 1000, 700);" class="nm-card__img-link" style="display:block; position:relative;">';
+				html += '    <img src="' + thumb + '" alt="' + title + '" class="nm-card__img" onerror="this.src=\\'/html/images/common/noimage_course.gif\\'">';
+				html += '    <span style="position:absolute; right:10px; bottom:10px; width:34px; height:34px; border-radius:999px; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;">';
+				html += '      <i class="bi bi-play-fill" style="color:#fff; font-size:18px; margin-left:2px;"></i>';
+				html += '    </span>';
+				html += '  </a>';
+				html += '  <div class="nm-card__body">';
+				html += '    <h3 class="nm-card__title">' + title + '</h3>';
+				if (category) {
+					html += '  <p class="nm-card__meta" style="font-size:12px; margin-bottom:4px; color:#667085;">' + category + '</p>';
+				}
+				html += '    <a href="javascript:OpenWindowr(\\'' + playUrl + '\\', \\'RECO_VIEWER\\', 1000, 700);" class="nm-continue__btn">미리보기</a>';
+				html += '  </div>';
+				html += '</div>';
+			});
+			grid.innerHTML = html;
+		}
+
+		function refreshRecoList() {
+			return fetch('/mypage/new_main/reco_video_list.jsp')
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					renderRecoList(data && data.items ? data.items : []);
+				});
+		}
+
+		function savePrompt() {
+			var value = (input.value || '').trim();
+			setMsg('저장 중...', false);
+			var body = new URLSearchParams();
+			body.set('prompt', value);
+			fetch('/mypage/new_main/reco_prompt.jsp', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+				body: body.toString()
+			})
+				.then(function(res) { return res.json(); })
+				.then(function(data) {
+					if (data && data.ok) {
+						setMsg(data.msg || '저장되었습니다.', false);
+						refreshRecoList();
+					} else {
+						setMsg((data && data.msg) ? data.msg : '저장에 실패했습니다.', true);
+					}
+				})
+				.catch(function() {
+					setMsg('저장 중 오류가 발생했습니다.', true);
+				});
+		}
+
+		function resetPrompt() {
+			input.value = '';
+			savePrompt();
+		}
+
+		openBtn.addEventListener('click', openModal);
+		closeBtn.addEventListener('click', closeModal);
+		modal.addEventListener('click', function(e) {
+			if (e.target === modal) closeModal();
+		});
+		saveBtn.addEventListener('click', savePrompt);
+		resetBtn.addEventListener('click', resetPrompt);
+
+		document.addEventListener('keydown', function(e) {
+			if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
+		});
+	})();
 	</script>
 </div>

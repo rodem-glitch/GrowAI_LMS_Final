@@ -363,31 +363,12 @@ public class StudentContentRecommendService {
     }
 
     private String buildHomeQueryText(StudentHomeRecommendRequest request) {
-        // 왜: 홈 추천은 사용자가 검색어를 입력하지 않아도, "내가 무엇을 배우고 있는지"를 힌트로 추천을 만들기 위함입니다.
-        StringBuilder sb = new StringBuilder();
-
-        appendIfPresent(sb, "학과", request.deptName());
-        appendIfPresent(sb, "전공", request.majorName());
-
-        if (request.courseNames() != null && !request.courseNames().isEmpty()) {
-            String joined = request.courseNames().stream()
-                .filter(v -> v != null && !v.isBlank())
-                .map(String::trim)
-                .distinct()
-                .limit(20)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse("");
-            appendIfPresent(sb, "수강과목", joined);
-        }
-
-        appendIfPresent(sb, "관심사/요청", request.extraQuery());
-
-        if (sb.length() == 0) {
+        // 왜: 홈 추천은 "학생이 저장한 프롬프트"만 기준으로 추천합니다.
+        String extra = request.extraQuery() == null ? "" : request.extraQuery().trim();
+        if (extra.isBlank()) {
             return "학생에게 도움이 되는 교육용 영상을 추천해 주세요.";
         }
-
-        sb.append("요청: 위 학생에게 도움이 되는 교육용 영상을 추천해 주세요.");
-        return sb.toString();
+        return extra;
     }
 
     private String buildSearchQueryText(StudentSearchRecommendRequest request) {

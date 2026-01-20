@@ -18,6 +18,7 @@ UserDeptDao userDept = new UserDeptDao();
 CourseDao course = new CourseDao();
 CourseUserDao courseUser = new CourseUserDao();
 LmCategoryDao lmCategory = new LmCategoryDao("course");
+StudentRecoPromptDao recoPrompt = new StudentRecoPromptDao();
 
 PolyStudentDao polyStudent = new PolyStudentDao();
 PolyCourseDao polyCourse = new PolyCourseDao();
@@ -42,6 +43,18 @@ if(userId > 0) {
 	uinfo = user.find("id = " + userId + " AND status = 1");
 	if(!uinfo.next()) {
 		uinfo = null;
+	}
+}
+
+// 추천 프롬프트 (왜: 홈 추천 쿼리는 학생이 저장한 문장만 사용합니다.)
+String studentRecoPrompt = "";
+if(userId > 0) {
+	DataSet promptInfo = recoPrompt.find(
+		"site_id = " + siteId + " AND user_id = " + userId + " AND status = 1",
+		"prompt"
+	);
+	if(promptInfo.next()) {
+		studentRecoPrompt = promptInfo.s("prompt");
 	}
 }
 
@@ -116,6 +129,8 @@ try {
 	if(userId > 0) payload.put("userId", userId);
 	payload.put("siteId", siteId);
 	payload.put("topK", 4);
+	// 왜: 학생이 저장한 프롬프트만 기준으로 추천합니다.
+	if(!"".equals(studentRecoPrompt)) payload.put("extraQuery", studentRecoPrompt);
 
 	String responseBody = "";
 	int httpCode = 0;
