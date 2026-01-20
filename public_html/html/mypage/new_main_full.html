@@ -1385,6 +1385,10 @@
 			return div.innerHTML;
 		}
 
+		function escapeJsString(text) {
+			return String(text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+		}
+
 		function renderRecoList(items) {
 			var grid = document.getElementById('recoVideoGrid');
 			if (!grid) return;
@@ -1397,23 +1401,23 @@
 			items.forEach(function(item) {
 				var title = escapeHtml(item.title || '');
 				var category = escapeHtml(item.category_nm || '');
-				var playUrl = item.play_url || '#';
+				var playUrl = escapeJsString(item.play_url || '#');
 				var thumb = item.thumbnail || '/html/images/common/noimage_course.gif';
-				html += '<div class="nm-card">';
-				html += '  <a href="javascript:OpenWindowr(\\'' + playUrl + '\\', \\'RECO_VIEWER\\', 1000, 700);" class="nm-card__img-link" style="display:block; position:relative;">';
-				html += '    <img src="' + thumb + '" alt="' + title + '" class="nm-card__img" onerror="this.src=\\'/html/images/common/noimage_course.gif\\'">';
-				html += '    <span style="position:absolute; right:10px; bottom:10px; width:34px; height:34px; border-radius:999px; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;">';
-				html += '      <i class="bi bi-play-fill" style="color:#fff; font-size:18px; margin-left:2px;"></i>';
-				html += '    </span>';
-				html += '  </a>';
-				html += '  <div class="nm-card__body">';
-				html += '    <h3 class="nm-card__title">' + title + '</h3>';
+				html += "<div class=\"nm-card\">";
+				html += "  <a href=\"javascript:OpenWindowr('" + playUrl + "', 'RECO_VIEWER', 1000, 700);\" class=\"nm-card__img-link\" style=\"display:block; position:relative;\">";
+				html += "    <img src=\"" + thumb + "\" alt=\"" + title + "\" class=\"nm-card__img\" onerror=\"this.src='/html/images/common/noimage_course.gif'\">";
+				html += "    <span style=\"position:absolute; right:10px; bottom:10px; width:34px; height:34px; border-radius:999px; background:rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center;\">";
+				html += "      <i class=\"bi bi-play-fill\" style=\"color:#fff; font-size:18px; margin-left:2px;\"></i>";
+				html += "    </span>";
+				html += "  </a>";
+				html += "  <div class=\"nm-card__body\">";
+				html += "    <h3 class=\"nm-card__title\">" + title + "</h3>";
 				if (category) {
-					html += '  <p class="nm-card__meta" style="font-size:12px; margin-bottom:4px; color:#667085;">' + category + '</p>';
+					html += "  <p class=\"nm-card__meta\" style=\"font-size:12px; margin-bottom:4px; color:#667085;\">" + category + "</p>";
 				}
-				html += '    <a href="javascript:OpenWindowr(\\'' + playUrl + '\\', \\'RECO_VIEWER\\', 1000, 700);" class="nm-continue__btn">미리보기</a>';
-				html += '  </div>';
-				html += '</div>';
+				html += "    <a href=\"javascript:OpenWindowr('" + playUrl + "', 'RECO_VIEWER', 1000, 700);\" class=\"nm-continue__btn\">미리보기</a>";
+				html += "  </div>";
+				html += "</div>";
 			});
 			grid.innerHTML = html;
 		}
