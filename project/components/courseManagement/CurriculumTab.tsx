@@ -26,6 +26,11 @@ interface CurriculumTabProps {
 interface HaksaSession {
   sessionId: string;
   sessionName: string;
+  sessionNo?: number;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
   contents: WeekContentItem[];
   isExpanded: boolean;
 }
@@ -66,6 +71,11 @@ const migrateV1ToV2 = (courseId: string): WeekData[] | null => {
         sessions: [{
           sessionId: `session_migrated_${weekNumber}_${Date.now()}`,
           sessionName: `1차시`,
+          sessionNo: weekNumber,
+          startDate: '',
+          startTime: '',
+          endDate: '',
+          endTime: '',
           contents,
           isExpanded: true,
         }]
@@ -88,6 +98,14 @@ const createDefaultWeeks = (weekCount: number) =>
     isExpanded: i === 0,
     sessions: [],
   }));
+
+const getNextSessionNo = (weeks: WeekData[]) => {
+  const numbers = weeks
+    .flatMap((w) => w.sessions.map((s) => s.sessionNo || 0))
+    .filter((n) => n > 0);
+  const maxNo = numbers.length > 0 ? Math.max(...numbers) : 0;
+  return maxNo + 1;
+};
 
 const normalizeWeeks = (source: WeekData[], weekCount: number) =>
   Array.from({ length: weekCount }, (_, i) => {
@@ -281,21 +299,27 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
 
   // 차시 추가
   const addSession = (weekNumber: number) => {
-    setWeeks(prev =>
-      prev.map(w => {
+    setWeeks(prev => {
+      const nextSessionNo = getNextSessionNo(prev);
+      return prev.map(w => {
         if (w.weekNumber === weekNumber) {
           const sessionCount = w.sessions.length + 1;
           const newSession: HaksaSession = {
             sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             sessionName: `${sessionCount}차시`,
+            sessionNo: nextSessionNo,
+            startDate: '',
+            startTime: '',
+            endDate: '',
+            endTime: '',
             contents: [],
             isExpanded: true,
           };
           return { ...w, sessions: [...w.sessions, newSession] };
         }
         return w;
-      })
-    );
+      });
+    });
   };
 
   // 차시 이름 수정
@@ -307,6 +331,27 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
             ...w,
             sessions: w.sessions.map(s =>
               s.sessionId === sessionId ? { ...s, sessionName: name } : s
+            ),
+          };
+        }
+        return w;
+      })
+    );
+  };
+
+  const updateSessionPeriod = (
+    weekNumber: number,
+    sessionId: string,
+    field: 'startDate' | 'startTime' | 'endDate' | 'endTime',
+    value: string
+  ) => {
+    setWeeks(prev =>
+      prev.map(w => {
+        if (w.weekNumber === weekNumber) {
+          return {
+            ...w,
+            sessions: w.sessions.map(s =>
+              s.sessionId === sessionId ? { ...s, [field]: value } : s
             ),
           };
         }
@@ -622,6 +667,48 @@ export function CurriculumTab({ courseId, course }: CurriculumTabProps) {
                         {/* 차시 콘텐츠 목록 */}
                         {session.isExpanded && (
                           <div className="px-4 py-3 border-t border-gray-100 bg-white">
+                            {/* 차시 수강기간 */}
+                            <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="text-xs text-gray-600 mb-2">차시 수강기간(날짜+시간)</div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                  type="date"
+                                  value={session.startDate || ''}
+                                  onChange={(e) =>
+                                    updateSessionPeriod(week.weekNumber, session.sessionId, 'startDate', e.target.value)
+                                  }
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <input
+                                  type="time"
+                                  value={session.startTime || ''}
+                                  onChange={(e) =>
+                                    updateSessionPeriod(week.weekNumber, session.sessionId, 'startTime', e.target.value)
+                                  }
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-500">~</span>
+                                <input
+                                  type="date"
+                                  value={session.endDate || ''}
+                                  onChange={(e) =>
+                                    updateSessionPeriod(week.weekNumber, session.sessionId, 'endDate', e.target.value)
+                                  }
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                                <input
+                                  type="time"
+                                  value={session.endTime || ''}
+                                  onChange={(e) =>
+                                    updateSessionPeriod(week.weekNumber, session.sessionId, 'endTime', e.target.value)
+                                  }
+                                  className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                왜: 차시 수강기간을 지나면 콘텐츠를 잠그고, 출석 판정도 이 기간으로 계산합니다.
+                              </div>
+                            </div>
                             {session.contents.length > 0 ? (
                               <div className="space-y-2">
                                 {session.contents.map(content => (

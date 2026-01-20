@@ -869,6 +869,19 @@ export type TutorHomeworkSubmissionRow = {
   source_type?: 'prism' | 'haksa' | string;
 };
 
+export type HaksaAttendanceRow = {
+  course_user_id: number;
+  student_id?: string;
+  name?: string;
+  attend_yn?: 'Y' | 'N';
+  video_done_cnt?: number;
+  video_total_cnt?: number;
+  exam_done_cnt?: number;
+  exam_total_cnt?: number;
+  homework_done_cnt?: number;
+  homework_total_cnt?: number;
+};
+
 // 과목별 통합 출력용 (과제 제출/피드백)
 export type TutorHomeworkReportRow = {
   course_id: number;
@@ -1643,6 +1656,19 @@ export const tutorLmsApi = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
+  },
+
+  async getHaksaAttendance(params: HaksaCourseKey & { courseId?: number; sessionId: string }) {
+    const url = `/tutor_lms/api/haksa_attendance.jsp${buildQuery({
+      course_code: params.courseCode,
+      open_year: params.openYear,
+      open_term: params.openTerm,
+      bunban_code: params.bunbanCode,
+      group_code: params.groupCode,
+      course_id: params.courseId,
+      session_id: params.sessionId,
+    })}`;
+    return requestJson<HaksaAttendanceRow[]>(url);
   },
 
   async getHaksaExams(params: HaksaCourseKey) {

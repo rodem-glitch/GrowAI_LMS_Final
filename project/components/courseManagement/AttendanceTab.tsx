@@ -5,6 +5,7 @@ import {
   TutorProgressDetailRow,
   TutorProgressStudentRow,
   TutorProgressSummaryRow,
+  HaksaAttendanceRow,
 } from '../../api/tutorLmsApi';
 import { buildHaksaCourseKey } from '../../utils/haksa';
 
@@ -42,6 +43,11 @@ type HaksaSessionItem = {
   sessionName: string;
   weekNumber: number;
   weekTitle: string;
+  sessionNo?: number;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
   videoLessons: { lessonId: number; title: string }[];
   videoCount: number;
 };
@@ -142,7 +148,12 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
   const [studentLoading, setStudentLoading] = useState(false);
   const [studentError, setStudentError] = useState<string | null>(null);
 
+  const [haksaAttendanceRows, setHaksaAttendanceRows] = useState<HaksaAttendanceRow[]>([]);
+  const [haksaAttendanceLoading, setHaksaAttendanceLoading] = useState(false);
+  const [haksaAttendanceError, setHaksaAttendanceError] = useState<string | null>(null);
+
   const [studentKeyword, setStudentKeyword] = useState('');
+  const [haksaViewMode, setHaksaViewMode] = useState<'attendance' | 'progress'>('attendance');
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detail, setDetail] = useState<TutorProgressDetailRow | null>(null);
@@ -152,6 +163,7 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
     setSelectedLessonId(null);
     setSelectedSessionId(null);
     setStudentRows([]);
+    setHaksaAttendanceRows([]);
     setStudentKeyword('');
   }, [courseId, course?.mappedCourseId, course?.sourceType]);
 
@@ -301,6 +313,11 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
           sessionName: session.sessionName || `${sessionIdx + 1}차시`,
           weekNumber,
           weekTitle,
+          sessionNo: Number(session.sessionNo ?? 0) || undefined,
+          startDate: session.startDate,
+          startTime: session.startTime,
+          endDate: session.endDate,
+          endTime: session.endTime,
           videoLessons,
           videoCount: videoContents.length,
         } as HaksaSessionItem;
@@ -348,6 +365,47 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
     setSelectedLessonId(nextLessonId);
   }, [isHaksaCourse, selectedSessionId, haksaSessionsFlat]);
 
+  useEffect(() => {
+    if (!isHaksaCourse) return;
+    if (haksaViewMode !== 'attendance') {
+      setHaksaAttendanceRows([]);
+      return;
+    }
+    if (!selectedSessionId || selectedSessionId === 'overall') {
+      setHaksaAttendanceRows([]);
+      return;
+    }
+    if (!haksaKey) return;
+    if (!effectiveCourseId) return;
+
+    let cancelled = false;
+    const run = async () => {
+      setHaksaAttendanceLoading(true);
+      setHaksaAttendanceError(null);
+      try {
+        const res = await tutorLmsApi.getHaksaAttendance({
+          ...haksaKey,
+          courseId: effectiveCourseId,
+          sessionId: selectedSessionId,
+        });
+        if (res.rst_code !== '0000') throw new Error(res.rst_message);
+        if (!cancelled) setHaksaAttendanceRows(res.rst_data ?? []);
+      } catch (e) {
+        if (!cancelled) {
+          setHaksaAttendanceRows([]);
+          setHaksaAttendanceError(e instanceof Error ? e.message : '출석 목록을 불러오는 중 오류가 발생했습니다.');
+        }
+      } finally {
+        if (!cancelled) setHaksaAttendanceLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHaksaCourse, haksaKey, selectedSessionId, effectiveCourseId]);
+
   const selectedSummary = useMemo(
     () => summaryRows.find((r) => Number(r.lesson_id) === Number(selectedLessonId)),
     [summaryRows, selectedLessonId]
@@ -357,11 +415,6 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
     () => haksaSessionsFlat.find((s) => s.sessionId === selectedSessionId) ?? null,
     [haksaSessionsFlat, selectedSessionId]
   );
-
-  const selectedHaksaVideo = useMemo(() => {
-    if (!selectedHaksaSession || !selectedLessonId) return null;
-    return selectedHaksaSession.videoLessons.find((video) => video.lessonId === selectedLessonId) ?? null;
-  }, [selectedHaksaSession, selectedLessonId]);
 
   const buildSessionSummary = (session: HaksaSessionItem) => {
     if (session.videoLessons.length === 0) return null;
@@ -392,8 +445,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
   useEffect(() => {
     // 왜: selectedLessonId가 -1(전체 보기)일 때도 API를 호출해야 합니다.
     if (selectedLessonId === null || selectedLessonId === 0 || !effectiveCourseId) return;
+    if (isHaksaCourse && haksaViewMode !== 'progress') return;
     fetchStudents(selectedLessonId);
-  }, [selectedLessonId, effectiveCourseId]);
+  }, [selectedLessonId, effectiveCourseId, isHaksaCourse, haksaViewMode]);
 
   const filteredStudents = useMemo(() => {
     const kw = studentKeyword.trim().toLowerCase();
@@ -405,6 +459,16 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
       return name.includes(kw) || studentId.includes(kw) || email.includes(kw);
     });
   }, [studentRows, studentKeyword]);
+
+  const filteredHaksaAttendance = useMemo(() => {
+    const kw = studentKeyword.trim().toLowerCase();
+    if (!kw) return haksaAttendanceRows;
+    return haksaAttendanceRows.filter((row) => {
+      const name = String(row.name || '').toLowerCase();
+      const studentId = String(row.student_id || '').toLowerCase();
+      return name.includes(kw) || studentId.includes(kw);
+    });
+  }, [haksaAttendanceRows, studentKeyword]);
 
   const openDetail = async (row: TutorProgressStudentRow) => {
     if (!selectedLessonId || !effectiveCourseId) return;
@@ -432,8 +496,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
           <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
-            학사 과목은 <strong>주차/차시 기준</strong>으로 진도를 보여줍니다.
-            동영상 콘텐츠가 있는 차시만 진도 데이터가 표시됩니다.
+            학사 과목은 <strong>주차/차시 기준</strong>으로 출석을 판정합니다.
+            동영상/시험/과제 모두 <strong>차시 수강기간 안에 제출·완료</strong>되어야 출석입니다.
+            필요하면 <strong>진도 보기</strong>로 전환해 예전 진도 화면도 확인할 수 있습니다.
           </div>
         </div>
 
@@ -450,8 +515,22 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-4 border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm text-gray-700">
-              주차별 차시 목록
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm text-gray-700 flex items-center justify-between gap-3">
+              <span>주차별 차시 목록</span>
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  onClick={() => setHaksaViewMode('attendance')}
+                  className={`px-2 py-1 rounded ${haksaViewMode === 'attendance' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300 text-gray-700'}`}
+                >
+                  출석 보기
+                </button>
+                <button
+                  onClick={() => setHaksaViewMode('progress')}
+                  className={`px-2 py-1 rounded ${haksaViewMode === 'progress' ? 'bg-purple-600 text-white' : 'bg-white border border-gray-300 text-gray-700'}`}
+                >
+                  진도 보기
+                </button>
+              </div>
             </div>
 
             {haksaLoading && (
@@ -467,24 +546,25 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
             )}
 
             <div className="divide-y divide-gray-200">
-              {/* 전체 정보 보기 옵션 */}
-              <button
-                onClick={() => {
-                  setSelectedSessionId('overall');
-                  setSelectedLessonId(-1);
-                }}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                  selectedSessionId === 'overall' ? 'bg-purple-50' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm text-purple-700 font-medium">전체 정보 보기</div>
-                    <div className="text-xs text-gray-600">전체 진도율 확인</div>
+              {haksaViewMode === 'progress' && (
+                <button
+                  onClick={() => {
+                    setSelectedSessionId('overall');
+                    setSelectedLessonId(-1);
+                  }}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                    selectedSessionId === 'overall' ? 'bg-purple-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm text-purple-700 font-medium">전체 정보 보기</div>
+                      <div className="text-xs text-gray-600">전체 진도율 확인</div>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${selectedSessionId === 'overall' ? 'text-purple-600' : 'text-gray-400'}`} />
                   </div>
-                  <ChevronRight className={`w-4 h-4 ${selectedSessionId === 'overall' ? 'text-purple-600' : 'text-gray-400'}`} />
-                </div>
-              </button>
+                </button>
+              )}
               {haksaWeekGroups.map((week) => (
                 <div key={`week-${week.weekNumber}`}>
                   <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
@@ -512,7 +592,7 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                               </div>
                               <div className="text-xs text-gray-600">
                                 {videoLabel}
-                                {stats
+                                {haksaViewMode === 'progress' && stats
                                   ? ` · 완료 ${Math.round(stats.completeRate)}% · 평균 ${Math.round(stats.avgRatio)}%`
                                   : ''}
                               </div>
@@ -532,15 +612,19 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3">
               {/* 왜: min-w-0과 truncate를 추가하여 긴 텍스트가 레이아웃을 깨지 않도록 합니다 */}
               <div className="text-sm text-gray-700 min-w-0 flex-1 truncate">
-                {selectedSessionId === 'overall' ? (
+                {selectedSessionId === 'overall' && haksaViewMode === 'progress' ? (
                   <span className="text-purple-700 font-medium">전체 정보 보기</span>
                 ) : selectedHaksaSession ? (
                   <>
                     <span className="text-gray-900">
                       {selectedHaksaSession.weekTitle} · {selectedHaksaSession.sessionName}
                     </span>
-                    {selectedHaksaVideo && (
-                      <span className="text-gray-600"> · {selectedHaksaVideo.title}</span>
+                    {(selectedHaksaSession.startDate || selectedHaksaSession.endDate) && (
+                      <span className="text-gray-600">
+                        {' '}
+                        · {selectedHaksaSession.startDate || '-'} {selectedHaksaSession.startTime || '00:00'}
+                        {' '}~ {selectedHaksaSession.endDate || '-'} {selectedHaksaSession.endTime || '23:59'}
+                      </span>
                     )}
                   </>
                 ) : (
@@ -550,7 +634,7 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
               {/* 왜: flex-shrink-0으로 오른쪽 컨트롤이 너무 작아지는 것을 방지합니다 */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {selectedHaksaSession && selectedHaksaSession.videoLessons.length > 1 && (
+                {haksaViewMode === 'progress' && selectedHaksaSession && selectedHaksaSession.videoLessons.length > 1 && (
                   <select
                     value={selectedLessonId ?? ''}
                     onChange={(e) => setSelectedLessonId(Number(e.target.value))}
@@ -575,86 +659,56 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
               </div>
             </div>
 
-            {selectedHaksaSession && selectedHaksaSession.videoLessons.length === 0 && (
-              <div className="p-6 text-sm text-gray-500">
-                선택한 차시에는 동영상 콘텐츠가 없습니다.
-              </div>
-            )}
-
-            {studentLoading && (
+            {haksaViewMode === 'attendance' && haksaAttendanceLoading && (
               <div className="p-4 text-sm text-gray-600 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 불러오는 중...
               </div>
             )}
-            {studentError && <div className="p-4 text-sm text-red-600">{studentError}</div>}
+            {haksaViewMode === 'attendance' && haksaAttendanceError && <div className="p-4 text-sm text-red-600">{haksaAttendanceError}</div>}
 
-            {(selectedLessonId === -1 || selectedLessonId) && (
+            {haksaViewMode === 'attendance' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-white border-b border-gray-200">
                     <tr>
                       <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">학번</th>
                       <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">이름</th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">총 학습시간</th>
-                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">
-                        {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
-                      </th>
-                      <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">
-                        {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
-                      </th>
-                      {selectedLessonId !== -1 && (
-                        <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">상세</th>
-                      )}
+                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">출석</th>
+                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">동영상</th>
+                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">시험</th>
+                      <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">과제</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredStudents.map((row) => {
-                      const ratio = Math.max(0, Math.min(100, Number(row.ratio ?? 0)));
-                      const complete = row.complete_yn === 'Y';
+                    {filteredHaksaAttendance.map((row) => {
+                      const attend = row.attend_yn === 'Y';
+                      const videoDone = Number(row.video_done_cnt ?? 0);
+                      const videoTotal = Number(row.video_total_cnt ?? 0);
+                      const examDone = Number(row.exam_done_cnt ?? 0);
+                      const examTotal = Number(row.exam_total_cnt ?? 0);
+                      const homeworkDone = Number(row.homework_done_cnt ?? 0);
+                      const homeworkTotal = Number(row.homework_total_cnt ?? 0);
 
                       return (
                         <tr key={row.course_user_id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 text-sm text-gray-900">{row.student_id || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{row.name || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{row.study_time_conv || '-'}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${selectedLessonId === -1 ? 'bg-purple-600' : complete ? 'bg-green-600' : 'bg-blue-600'}`}
-                                  style={{ width: `${ratio}%` }}
-                                />
-                              </div>
-                              <span className="text-sm text-gray-900">{Math.round(ratio)}%</span>
-                            </div>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`px-2 py-1 rounded text-xs ${attend ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {attend ? '출석' : '결석'}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-700">
-                            {selectedLessonId === -1 ? (
-                              <span className={`px-2 py-1 rounded text-xs ${complete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                {complete ? '수료' : '미수료'}
-                              </span>
-                            ) : (
-                              row.last_date_conv || '-'
-                            )}
-                          </td>
-                          {selectedLessonId !== -1 && (
-                            <td className="px-4 py-3 text-center whitespace-nowrap">
-                              <button
-                                onClick={() => openDetail(row)}
-                                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
-                              >
-                                보기
-                              </button>
-                            </td>
-                          )}
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{videoDone}/{videoTotal}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{examDone}/{examTotal}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{homeworkDone}/{homeworkTotal}</td>
                         </tr>
                       );
                     })}
 
-                    {!studentLoading && !studentError && filteredStudents.length === 0 && (
+                    {!haksaAttendanceLoading && !haksaAttendanceError && filteredHaksaAttendance.length === 0 && (
                       <tr>
-                        <td colSpan={selectedLessonId === -1 ? 5 : 6} className="px-4 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
                           표시할 수강생이 없습니다.
                         </td>
                       </tr>
@@ -663,14 +717,103 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
                 </table>
               </div>
             )}
+
+            {haksaViewMode === 'progress' && (
+              <>
+                {selectedHaksaSession && selectedHaksaSession.videoLessons.length === 0 && (
+                  <div className="p-6 text-sm text-gray-500">
+                    선택한 차시에는 동영상 콘텐츠가 없습니다.
+                  </div>
+                )}
+
+                {studentLoading && (
+                  <div className="p-4 text-sm text-gray-600 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    불러오는 중...
+                  </div>
+                )}
+                {studentError && <div className="p-4 text-sm text-red-600">{studentError}</div>}
+
+                {(selectedLessonId === -1 || selectedLessonId) && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-white border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">학번</th>
+                          <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">이름</th>
+                          <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">총 학습시간</th>
+                          <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">
+                            {selectedLessonId === -1 ? '전체 진도율' : '진도율'}
+                          </th>
+                          <th className="px-4 py-3 text-left text-sm text-gray-700 whitespace-nowrap">
+                            {selectedLessonId === -1 ? '수료여부' : '마지막 학습'}
+                          </th>
+                          {selectedLessonId !== -1 && (
+                            <th className="px-4 py-3 text-center text-sm text-gray-700 whitespace-nowrap">상세</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {filteredStudents.map((row) => {
+                          const ratio = Math.max(0, Math.min(100, Number(row.ratio ?? 0)));
+                          const complete = row.complete_yn === 'Y';
+
+                          return (
+                            <tr key={row.course_user_id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 text-sm text-gray-900">{row.student_id || '-'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900">{row.name || '-'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">{row.study_time_conv || '-'}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${selectedLessonId === -1 ? 'bg-purple-600' : complete ? 'bg-green-600' : 'bg-blue-600'}`}
+                                      style={{ width: `${ratio}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm text-gray-900">{Math.round(ratio)}%</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700">
+                                {selectedLessonId === -1 ? (
+                                  <span className={`px-2 py-1 rounded text-xs ${complete ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                    {complete ? '수료' : '미수료'}
+                                  </span>
+                                ) : (
+                                  row.last_date_conv || '-'
+                                )}
+                              </td>
+                              {selectedLessonId !== -1 && (
+                                <td className="px-4 py-3 text-center whitespace-nowrap">
+                                  <button
+                                    onClick={() => openDetail(row)}
+                                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                                  >
+                                    보기
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+
+                        {!studentLoading && !studentError && filteredStudents.length === 0 && (
+                          <tr>
+                            <td colSpan={selectedLessonId === -1 ? 5 : 6} className="px-4 py-10 text-center text-sm text-gray-500">
+                              표시할 수강생이 없습니다.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
-        <ProgressDetailModal
-          isOpen={detailOpen}
-          onClose={() => setDetailOpen(false)}
-          detail={detail}
-        />
+        <ProgressDetailModal isOpen={detailOpen} onClose={() => setDetailOpen(false)} detail={detail} />
       </div>
     );
   }
