@@ -754,6 +754,14 @@
             </div>
           </div>
         </div>
+        <div class="row g-3 mt-1">
+          <div class="col-12">
+            <label for="deptselect" class="filter-label">학과(테스트)</label>
+            <select id="deptselect" class="filter-select" aria-label="학과 테스트 선택">
+              <option value="">학과를 선택하세요 (테스트)</option>
+            </select>
+          </div>
+        </div>
         
         <!-- 선택된 필터 태그 -->
         <div id="activeFilters" class="active-filters" aria-live="polite"></div>
@@ -787,6 +795,7 @@
     const jobSmallSelect = document.getElementById("jobselectSmall");
     const areaSelect = document.getElementById("areaselect");
     const providerSelect = document.getElementById("providerselect");
+    const deptSelect = document.getElementById("deptselect");
     const jobSearchBtn = document.getElementById("jobsearchbtn");
     const jobResetBtn = document.getElementById("jobresetbtn");
     const workList = document.getElementById("worklist");
@@ -794,6 +803,15 @@
     const activeFiltersEl = document.getElementById("activeFilters");
     const paginationWrapper = document.getElementById("paginationWrapper");
     const paginationEl = document.getElementById("pagination");
+
+    // URL 파라미터 (왜: 학생의 학과에 맞춰 기본값을 자동으로 맞추기 위해 사용합니다)
+    const queryParams = new URLSearchParams(window.location.search);
+    const defaultDept = (queryParams.get("dept") || "").trim();
+    const defaultDepth1 = (queryParams.get("depth1") || "").trim();
+    const defaultDepth2 = (queryParams.get("depth2") || "").trim();
+    const defaultDepth3 = (queryParams.get("depth3") || "").trim();
+    const defaultProvider = (queryParams.get("provider") || "").trim();
+    let deptOccupationMap = null;
 
     // 상태 관리
     let currentPage = 1;
@@ -819,6 +837,201 @@
       option.textContent = label;
       select.appendChild(option);
       select.value = "";
+    }
+
+    function normalizeDeptText(text) {
+      if (!text) return "";
+      return text
+        .replace(/\([^)]*\)/g, " ")
+        .replace(/학과|학부|전공|과/g, " ")
+        .replace(/[^가-힣a-zA-Z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function buildDeptTokens(text) {
+      if (!text) return [];
+      const tokens = text.split(" ").filter((token) => token.length >= 2);
+      return Array.from(new Set(tokens));
+    }
+
+    function selectByValue(select, value) {
+      if (!select || !value) return false;
+      const option = Array.from(select.options).find((opt) => opt.value === value);
+      if (!option) return false;
+      select.value = value;
+      return true;
+    }
+
+    function selectByText(select, label) {
+      if (!select || !label) return false;
+      const target = normalizeDeptText(label);
+      if (!target) return false;
+
+      const options = Array.from(select.options).filter((opt) => opt.value);
+      let best = null;
+      let bestScore = 0;
+
+      options.forEach((opt) => {
+        const optionText = normalizeDeptText(opt.textContent || "");
+        if (!optionText) return;
+        let score = 0;
+        if (optionText === target) score += 4;
+        if (optionText.includes(target)) score += 3;
+        if (target.includes(optionText)) score += 2;
+        if (score > bestScore) {
+          bestScore = score;
+          best = opt;
+        }
+      });
+
+      if (best && best.value) {
+        select.value = best.value;
+        return true;
+      }
+      return false;
+    }
+
+    function selectBestMatch(select, deptText) {
+      if (!select || !deptText) return false;
+      const target = normalizeDeptText(deptText);
+      if (!target) return false;
+
+      const tokens = buildDeptTokens(target);
+      let bestScore = 0;
+      let bestValue = "";
+
+      Array.from(select.options).forEach((opt) => {
+        if (!opt.value) return;
+        const optionText = normalizeDeptText(opt.textContent || "");
+        if (!optionText) return;
+
+        let score = 0;
+        if (optionText.includes(target)) score += 3;
+        if (target.includes(optionText)) score += 2;
+        tokens.forEach((token) => {
+          if (optionText.includes(token)) score += 1;
+        });
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestValue = opt.value;
+        }
+      });
+
+      if (bestScore > 0 && bestValue) {
+        select.value = bestValue;
+        return true;
+      }
+      return false;
+    }
+
+    async function loadDeptOccupationMap() {
+      try {
+        const res = await fetch("/job-dept-occupation-map.json", { cache: "no-store" });
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data || !Array.isArray(data.items)) return null;
+        return data;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function populateDeptSelect(mapData) {
+      if (!deptSelect || !mapData || !Array.isArray(mapData.items)) return;
+      const list = mapData.items
+        .map((item) => item.deptName)
+        .filter((name) => name && name.trim());
+      const uniq = Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, "ko"));
+
+      deptSelect.innerHTML = "";
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "학과를 선택하세요 (테스트)";
+      deptSelect.appendChild(defaultOption);
+
+      uniq.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        deptSelect.appendChild(option);
+      });
+
+      if (defaultDept) {
+        deptSelect.value = defaultDept;
+      }
+    }
+
+    function findDeptMapping(deptName, mapData) {
+      if (!deptName || !mapData || !Array.isArray(mapData.items)) return null;
+      const target = normalizeDeptText(deptName);
+      if (!target) return null;
+
+      const exact = mapData.items.find((item) => {
+        if (!item || !item.deptName) return false;
+        return normalizeDeptText(item.deptName) === target;
+      });
+      if (exact) return exact;
+
+      const contains = mapData.items.find((item) => {
+        if (!item || !item.deptName) return false;
+        const key = normalizeDeptText(item.deptName);
+        return key && target.includes(key);
+      });
+      if (contains) return contains;
+
+      const keyword = mapData.items.find((item) => {
+        if (!item || !item.keywords) return false;
+        const keywords = Array.isArray(item.keywords) ? item.keywords : [];
+        return keywords.some((k) => target.includes(normalizeDeptText(k)));
+      });
+      return keyword || null;
+    }
+
+    async function applyDeptMapping(mapping) {
+      if (!mapping) return false;
+      let applied = false;
+
+      if (mapping.provider) {
+        selectByValue(providerSelect, mapping.provider);
+      }
+
+      if (mapping.depth1Code) {
+        if (selectByValue(jobLargeSelect, mapping.depth1Code)) {
+          await loadOccupationDepth2();
+          applied = true;
+        }
+      } else if (mapping.depth1Label) {
+        if (selectByText(jobLargeSelect, mapping.depth1Label)) {
+          await loadOccupationDepth2();
+          applied = true;
+        }
+      }
+
+      if (mapping.depth2Code) {
+        if (selectByValue(jobMiddleSelect, mapping.depth2Code)) {
+          await loadOccupationDepth3();
+          applied = true;
+        }
+      } else if (mapping.depth2Label) {
+        if (selectByText(jobMiddleSelect, mapping.depth2Label)) {
+          await loadOccupationDepth3();
+          applied = true;
+        }
+      }
+
+      if (mapping.depth3Code) {
+        if (selectByValue(jobSmallSelect, mapping.depth3Code)) {
+          applied = true;
+        }
+      } else if (mapping.depth3Label) {
+        if (selectByText(jobSmallSelect, mapping.depth3Label)) {
+          applied = true;
+        }
+      }
+
+      return applied;
     }
 
     // D-Day 계산
@@ -1159,6 +1372,50 @@
       jobSmallSelect.value = "";
     }
 
+    async function applyDefaultFilters() {
+      // 왜: URL에 전달된 기본값이 있으면 학생 학과에 맞춰 자동 선택합니다.
+      if (defaultProvider) {
+        selectByValue(providerSelect, defaultProvider);
+      }
+
+      let applied = false;
+
+      if (defaultDept && deptOccupationMap) {
+        const mapping = findDeptMapping(defaultDept, deptOccupationMap);
+        if (mapping) {
+          applied = await applyDeptMapping(mapping);
+        }
+      }
+
+      if (defaultDepth1) {
+        if (selectByValue(jobLargeSelect, defaultDepth1)) {
+          await loadOccupationDepth2();
+          applied = true;
+        }
+      }
+
+      if (defaultDepth2) {
+        if (selectByValue(jobMiddleSelect, defaultDepth2)) {
+          await loadOccupationDepth3();
+          applied = true;
+        }
+      }
+
+      if (defaultDepth3) {
+        if (selectByValue(jobSmallSelect, defaultDepth3)) {
+          applied = true;
+        }
+      }
+
+      if (!applied && defaultDept) {
+        const matchedLarge = selectBestMatch(jobLargeSelect, defaultDept);
+        if (matchedLarge) await loadOccupationDepth2();
+        const matchedMiddle = selectBestMatch(jobMiddleSelect, defaultDept);
+        if (matchedMiddle) await loadOccupationDepth3();
+        selectBestMatch(jobSmallSelect, defaultDept);
+      }
+    }
+
     async function loadRegionCodes() {
       const data = await fetchJson("/job/region-codes?depthType=1");
       areaSelect.innerHTML = "";
@@ -1210,6 +1467,20 @@
     // ==========================================
     // 이벤트 리스너
     // ==========================================
+    if (deptSelect) {
+      deptSelect.addEventListener("change", () => {
+        const nextDept = deptSelect.value || "";
+        const params = new URLSearchParams(window.location.search);
+        if (nextDept) {
+          params.set("dept", nextDept);
+        } else {
+          params.delete("dept");
+        }
+        // 왜: 학과 테스트는 새로고침으로 전체 초기화가 가장 안전합니다.
+        const query = params.toString();
+        window.location.search = query ? `?${query}` : "";
+      });
+    }
     jobSearchBtn.addEventListener("click", () => {
       currentPage = 1;
       searchWorkList();
@@ -1254,8 +1525,16 @@
     // ==========================================
     // 초기 로딩
     // ==========================================
-    Promise.all([loadOccupationDepth1(), loadRegionCodes()])
-      .then(() => searchWorkList())
+    Promise.all([loadOccupationDepth1(), loadRegionCodes(), loadDeptOccupationMap().then((map) => {
+      deptOccupationMap = map;
+      populateDeptSelect(map);
+    })])
+      .then(async () => {
+        await applyDefaultFilters();
+        currentPage = 1;
+        updateActiveFilters();
+        searchWorkList();
+      })
       .catch(err => {
         resultCount.textContent = "(0건)";
         workList.innerHTML = renderErrorState(`초기 로딩 실패: ${err.message}`);

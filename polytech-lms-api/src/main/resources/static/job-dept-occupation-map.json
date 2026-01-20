@@ -1,0 +1,2915 @@
+{
+  "version": 3,
+  "items": [
+    {
+      "deptName": "건축과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "건축설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "건축시공과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "건축의장과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "관광게이밍과",
+      "depth1Label": "미용·여행·숙박·음식·경비·돌봄·청소",
+      "depth1Code": "06",
+      "depth2Label": "여행·객실승무·숙박·오락 서비스",
+      "depth2Code": "063",
+      "depth3Label": "여행 사무원",
+      "depth3Code": "521200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "광고디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "광고디자이너",
+      "depth3Code": "415401",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "교무부과",
+      "depth1Label": "경영·사무·금융·보험",
+      "depth1Code": "01",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "귀금속공예과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "팬시, 귀금속, 생활잡화 등 기타 제품 디자이너",
+      "depth3Code": "415104",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "그린건축과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "그린반도체설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "그린반도체시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "그린에너지설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "금속과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "금속재료과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "금형가공시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "금형과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "금형디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계가공과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계공작과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계과(기계융합시스템)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계보전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계설계공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계설계과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계설비보전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계시스템과(기계시스템설계)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계시스템과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계시스템디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계시스템디자인과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계제강시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기계조립과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "기관정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "나노측정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "냉동기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "녹색산업설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "농생명바이오시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "니트과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "데이터분석과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "데이터 분석가(빅데이터 분석가)",
+      "depth3Code": "134102",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "도장과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털기계시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털기계시스템과(기계융합시스템)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털방송과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털애니메이션과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털융합제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털콘텐츠과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "디지털헬스케어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "로봇기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "로봇공학 기술자 및 연구원",
+      "depth3Code": "151200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "로봇시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "로봇공학 기술자 및 연구원",
+      "depth3Code": "151200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "로봇자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "로봇공학 기술자 및 연구원",
+      "depth3Code": "151200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "로봇전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "로봇IT과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "로봇공학 기술자 및 연구원",
+      "depth3Code": "151200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "메카트로닉스공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "메카트로닉스과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "메카트로닉스과(기계장치제어)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "메타버스콘텐츠과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "모바일정보통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "물류자동화시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "미디어콘텐츠과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "미래자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "미래전기자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "미래형자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "미래형자동차과(ICT그린자동차)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오나노소재과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오메디컬소재과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오배양공정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오생명정보과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오식품분석과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오의약공정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오의약분석과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오의약품소재과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "바이오품질관리과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체공정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체공정장비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체금형과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체기계과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체디스플레이과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체소재응용과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체시스템과(융합전기전자)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체시스템과(ICT융합전자)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체시스템제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체융합기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체융합SW과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체응용설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체자동화설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비개발과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비과(ICT메카트로닉스)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체장비제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체전기과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체전기과(반도체제조공정)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체전기시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체측정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체테스트과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체패키징공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "반도체품질측정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "반도체공학 기술자 및 연구원",
+      "depth3Code": "153205",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "발전설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "방송미디어과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "빅데이터과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "데이터 분석가(빅데이터 분석가)",
+      "depth3Code": "134102",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "사물인터넷소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "웹 개발자",
+      "depth3Code": "133300",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "사물인터넷소프트웨어과(SW개발)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "웹 개발자",
+      "depth3Code": "133300",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "사이버보안과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "정보 보안 및 통신·방송 송출",
+      "depth2Code": "026",
+      "depth3Label": "정보보안 전문가",
+      "depth3Code": "135000",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "사이버보안과(융합보안소프트웨어)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "정보 보안 및 통신·방송 송출",
+      "depth2Code": "026",
+      "depth3Label": "정보보안 전문가",
+      "depth3Code": "135000",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업설비과(스마트설비)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업설비자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업안전환경과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업안전ICT과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "산업 안전원 및 위험물 관리원",
+      "depth3Code": "158400",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업잠수과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산업전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "산학협력팀과",
+      "depth1Label": "경영·사무·금융·보험",
+      "depth1Code": "01",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "생명의료시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "인문·사회·자연·생명과학 연구 및 시험",
+      "depth2Code": "021",
+      "depth3Label": "생명과학 연구원",
+      "depth3Code": "122101",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "석유화학공정과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "설비보전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "섬유공예디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "섬유디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "소방시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "산업 안전원 및 위험물 관리원",
+      "depth3Code": "158400",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "소프트웨어융합과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "소프트웨어융합디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트금융과",
+      "depth1Label": "경영·사무·금융·보험",
+      "depth1Code": "01",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트금형과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트기계설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트기계정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트로봇자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "로봇공학 기술자 및 연구원",
+      "depth3Code": "151200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트시스템제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트융합설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트응용기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트재료과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기과(융합스마트전기)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기과(ICT융합제어)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기융합기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기자동차과(자동차기계시스템)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전기자동차과(ICT그린자동차)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트전자과(ICT융합전자)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트정보통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트정보통신과(ICT융합전자)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트제조기계설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트제품디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트패션디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "패션 디자이너",
+      "depth3Code": "415200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트패션소재과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "패션 디자이너",
+      "depth3Code": "415200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트팩토리과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트표면처리과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "스마트IoT과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "승강기안전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "산업 안전원 및 위험물 관리원",
+      "depth3Code": "158400",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "시각디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "시각 디자이너",
+      "depth3Code": "415400",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "신소재응용과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "신소재화학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "신중년단기",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "실내건축디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "건설·채굴 연구 및 공학기술",
+      "depth2Code": "027",
+      "depth3Label": "건축가(건축설계 포함)",
+      "depth3Code": "140100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "실내디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "인테리어 디자이너",
+      "depth3Code": "415301",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지산업설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지설비자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지설비자동화과(스마트설비)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지재료과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "에너지환경과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "여성재취업(예산)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "염색가공과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "염색과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "염직디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "영상그래픽과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "영상디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "외식조리과",
+      "depth1Label": "미용·여행·숙박·음식·경비·돌봄·청소",
+      "depth1Code": "06",
+      "depth2Label": "주방장 및 조리사",
+      "depth2Code": "064",
+      "depth3Label": "주방장 및 요리 연구가(푸드코디네이터 포함)",
+      "depth3Code": "531100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "용접학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "융합기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "융합디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "융합산업설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "의료공학과",
+      "depth1Label": "보건·의료",
+      "depth1Code": "04",
+      "depth2Label": "그 외 보건·의료 종사자",
+      "depth2Code": "044",
+      "depth3Label": "기타 보건·의료 서비스 종사원",
+      "depth3Code": "307903",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "의료공학과(융합시스템제어)",
+      "depth1Label": "보건·의료",
+      "depth1Code": "04",
+      "depth2Label": "그 외 보건·의료 종사자",
+      "depth2Code": "044",
+      "depth3Label": "기타 보건·의료 서비스 종사원",
+      "depth3Code": "307903",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "의료정보과",
+      "depth1Label": "보건·의료",
+      "depth1Code": "04",
+      "depth2Label": "그 외 보건·의료 종사자",
+      "depth2Code": "044",
+      "depth3Label": "의무기록사",
+      "depth3Code": "307400",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "이차전지시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "이차전지융합신소재과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인공지능과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인공지능소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인공지능SW융합과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인쇄과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인쇄매체과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "인터넷비즈니스과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "웹 개발자",
+      "depth3Code": "133300",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동제어시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차과(ICT그린자동차)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차융합기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차융합기계과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동차정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동화설비보전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "자동화시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "재료화학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기계측제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기공사과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기공학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기과(융합제어)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기기기과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기소방융합과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기시스템제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기에너지과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기에너지시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기자동차과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "자동차공학 기술자 및 연구원",
+      "depth3Code": "151108",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기전자제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기전자제어과(융합제어)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전기제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전산응용기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전자공학 기술자 및 연구원",
+      "depth3Code": "153200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전자정보통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "전자통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정밀기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정보보안과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "정보 보안 및 통신·방송 송출",
+      "depth2Code": "026",
+      "depth3Label": "정보보안 전문가",
+      "depth3Code": "135000",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정보처리과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정보통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정보통신설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "정보통신시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "제직과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "조리과",
+      "depth1Label": "미용·여행·숙박·음식·경비·돌봄·청소",
+      "depth1Code": "06",
+      "depth2Label": "주방장 및 조리사",
+      "depth2Code": "064",
+      "depth3Label": "주방장 및 요리 연구가(푸드코디네이터 포함)",
+      "depth3Code": "531100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "주얼리디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "팬시, 귀금속, 생활잡화 등 기타 제품 디자이너",
+      "depth3Code": "415104",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "중장년재취업(예산)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "지능기계시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "지능기계시스템과(ICT기계가공)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "지능형기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "지능형에너지설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "지능형전력시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "직물설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "차량정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "차량학과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "출판편집디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "친환경산업디자인과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "카일렉트로닉스과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터응용과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터응용기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터응용기계설계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터정보과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "컴퓨터출판디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "기타 미디어 콘텐츠 디자이너",
+      "depth3Code": "415505",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "콘텐츠디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "미디어콘텐츠·UX/UI 디자이너",
+      "depth2Code": "056",
+      "depth3Label": "미디어 콘텐츠 디자이너",
+      "depth3Code": "415500",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "클라우드보안과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "클라우드컴퓨팅과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "통신전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "특수용접과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "특수용접설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "패션디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "패션 디자이너",
+      "depth3Code": "415200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "패션산업과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "패션 디자이너",
+      "depth3Code": "415200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "편성과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "섬유·식품·소방·방재·산업안전 연구 및 공학기술",
+      "depth2Code": "02B",
+      "depth3Label": "섬유공학 기술자 및 연구원",
+      "depth3Code": "156100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "표면처리과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "플랜트설비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공기계과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공메카트로닉스과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공모빌리티과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "항공기·철도차량 공학 기술자 및 연구원",
+      "depth3Code": "151107",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공모빌리티과(스마트기계시스템)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "기계공학 기술자 및 연구원",
+      "depth3Code": "151100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공모빌리티정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "항공기·철도차량 공학 기술자 및 연구원",
+      "depth3Code": "151107",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공전기전자정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공정비과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "항공기·철도차량 공학 기술자 및 연구원",
+      "depth3Code": "151107",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "항공MRO과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "기계·로봇·금속·재료 연구 및 공학기술",
+      "depth2Code": "028",
+      "depth3Label": "항공기·철도차량 공학 기술자 및 연구원",
+      "depth3Code": "151107",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "호텔관광과",
+      "depth1Label": "미용·여행·숙박·음식·경비·돌봄·청소",
+      "depth1Code": "06",
+      "depth2Label": "여행·객실승무·숙박·오락 서비스",
+      "depth2Code": "063",
+      "depth3Label": "여행 사무원",
+      "depth3Code": "521200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "화학공정운전과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "화학·에너지·환경 연구 및 공학기술",
+      "depth2Code": "02A",
+      "depth3Label": "화학공학 기술자 및 연구원",
+      "depth3Code": "154100",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI드론과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI산업안전시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI융합과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI융합소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI융합전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI응용소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI의약바이오과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI자동화과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI자동화시스템과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI전자과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI전자과(스마트융합전자)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "AI정보통신과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "데이터·네트워크 및 시스템 운영",
+      "depth2Code": "025",
+      "depth3Label": "네트워크 관리자(클라우딩컴퓨터운영관리자)",
+      "depth3Code": "134302",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "CAD/CAM과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "i-패션디자인과",
+      "depth1Label": "예술·디자인·방송·스포츠",
+      "depth1Code": "05",
+      "depth2Label": "디자이너 (미디어콘텐츠 제외)",
+      "depth2Code": "055",
+      "depth3Label": "패션 디자이너",
+      "depth3Code": "415200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "IoT소프트웨어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "IoT소프트웨어과(SW개발)",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "소프트웨어",
+      "depth2Code": "024",
+      "depth3Label": "응용 소프트웨어 개발자",
+      "depth3Code": "133200",
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "IT융합제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": null,
+      "depth2Code": null,
+      "depth3Label": null,
+      "depth3Code": null,
+      "provider": "WORK24"
+    },
+    {
+      "deptName": "SG전기전자제어과",
+      "depth1Label": "연구 및 공학기술",
+      "depth1Code": "02",
+      "depth2Label": "전기·전자 연구 및 공학기술",
+      "depth2Code": "029",
+      "depth3Label": "전기공학 기술자 및 연구원",
+      "depth3Code": "153100",
+      "provider": "WORK24"
+    }
+  ]
+}
