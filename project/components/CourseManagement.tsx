@@ -21,6 +21,7 @@ import {
   Clock,
   Plus,
   BookOpen,
+  Printer,
 } from 'lucide-react';
 import { SessionEditModal } from './SessionEditModal';
 import { CourseInfoTab } from './CourseInfoTabs';
@@ -34,6 +35,7 @@ import { CurriculumTab } from './courseManagement/CurriculumTab';
 import { StudentsTab } from './courseManagement/StudentsTab';
 import { AttendanceTab } from './courseManagement/AttendanceTab';
 import { downloadCsv } from '../utils/csv';
+import { CourseFeedbackReportTab } from './CourseFeedbackReportTab';
 
 
 interface CourseManagementProps {
@@ -181,7 +183,8 @@ export type CourseManagementTabId =
   | 'materials'
   | 'qna'
   | 'grades'
-  | 'completion';
+  | 'completion'
+  | 'feedback-report';
 
 type TabType = CourseManagementTabId;
 
@@ -235,6 +238,7 @@ export function CourseManagement({ course: initialCourse, onBack, initialTab, in
     { id: 'assignment' as TabType, label: '과제', icon: Briefcase, isSubTab: false, hasSubTabs: true },
     { id: 'materials' as TabType, label: '자료', icon: FolderOpen, isSubTab: false },
     { id: 'qna' as TabType, label: 'Q&A', icon: MessageSquare, isSubTab: false },
+    { id: 'feedback-report' as TabType, label: '통합출력', icon: Printer, isSubTab: false },
     { id: 'grades' as TabType, label: '성적관리', icon: Award, isSubTab: false },
     { id: 'completion' as TabType, label: '수료관리', icon: CheckCircle, isSubTab: false },
   ];
@@ -333,6 +337,8 @@ export function CourseManagement({ course: initialCourse, onBack, initialTab, in
             course={course}
           />
         );
+      case 'feedback-report':
+        return <CourseFeedbackReportTab course={course} />;
       case 'qna':
         return <QnaTab courseId={courseIdNum} initialPostId={initialQnaPostId} />;
       case 'grades':

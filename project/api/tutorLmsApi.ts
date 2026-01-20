@@ -80,6 +80,7 @@ export type TutorCourseRow = {
   id: number;
   course_nm: string;
   mapped_course_id?: number;
+  source_type?: 'prism' | 'haksa' | string;
   // 왜: course_list_combined.jsp에서는 화면에서 쓰기 편하게 변환값을 같이 내려줍니다.
   course_nm_conv?: string;
   course_cd?: string;
@@ -868,6 +869,34 @@ export type TutorHomeworkSubmissionRow = {
   source_type?: 'prism' | 'haksa' | string;
 };
 
+// 과목별 통합 출력용 (과제 제출/피드백)
+export type TutorHomeworkReportRow = {
+  course_id: number;
+  homework_id: number;
+  homework_nm: string;
+  course_user_id: number;
+  user_nm?: string;
+  login_id?: string;
+  student_id?: string;
+  submit_yn?: string;
+  submitted?: boolean;
+  submit_date?: string;
+  submitted_at?: string;
+  confirm_yn?: string;
+  confirmed?: boolean;
+  confirm_date?: string;
+  confirm_at?: string;
+  marking_score?: number;
+  marking_score_conv?: string;
+  score?: number;
+  score_conv?: string;
+  subject?: string;
+  feedback?: string;
+  task_cnt?: number;
+  last_task_date?: string;
+  last_task_date_conv?: string;
+};
+
 export type TutorDashboardQnaRow = {
   post_id: number;
   course_id: number;
@@ -894,6 +923,25 @@ export type TutorQnaManageRow = {
   user_nm?: string;
   login_id?: string;
   source_type?: 'prism' | 'haksa' | string;
+};
+
+// 과목별 통합 출력용 (Q&A 질문/답변)
+export type TutorQnaReportRow = {
+  question_id: number;
+  subject: string;
+  question_content?: string;
+  question_user_nm?: string;
+  question_login_id?: string;
+  question_reg_date?: string;
+  question_reg_date_conv?: string;
+  proc_status?: number;
+  answered?: boolean;
+  answer_id?: number;
+  answer_content?: string;
+  answer_user_nm?: string;
+  answer_login_id?: string;
+  answer_reg_date?: string;
+  answer_reg_date_conv?: string;
 };
 
 export type TutorCourseResolveRow = {
@@ -985,6 +1033,22 @@ export const tutorLmsApi = {
       status: params.status,
     })}`;
     return requestJson<TutorQnaManageRow[]>(url);
+  },
+
+  // 왜: 과목별로 과제/피드백 + Q&A를 한 번에 출력해야 하므로 통합 데이터를 받습니다.
+  async getCourseFeedbackReport(params: { courseId: number; startDate?: string; endDate?: string }) {
+    const url = `/tutor_lms/api/course_feedback_report.jsp${buildQuery({
+      course_id: params.courseId,
+      start_date: params.startDate,
+      end_date: params.endDate,
+    })}`;
+    return requestJson<unknown>(url) as Promise<
+      TutorLmsApiResponse<unknown> & {
+        rst_course?: unknown;
+        rst_homework?: TutorHomeworkReportRow[];
+        rst_qna?: TutorQnaReportRow[];
+      }
+    >;
   },
 
   async getProgram(id: number) {
