@@ -20,7 +20,6 @@ import kr.polytech.lms.contentsummary.entity.KollusTranscript;
 import kr.polytech.lms.contentsummary.repository.ContentSummaryRepository;
 import kr.polytech.lms.recocontent.entity.RecoContent;
 import kr.polytech.lms.recocontent.repository.RecoContentRepository;
-import kr.polytech.lms.recocontent.service.RecoContentVectorIndexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,7 +41,6 @@ public class ContentSummaryService {
     private final ContentTranscriptionProperties transcriptionProperties;
     private final ContentSummaryRepository transcriptRepository;
     private final RecoContentRepository recoContentRepository;
-    private final RecoContentVectorIndexService recoContentVectorIndexService;
 
     public ContentSummaryService(
         KollusApiClient kollusApiClient,
@@ -51,8 +49,7 @@ public class ContentSummaryService {
         GeminiVideoSummaryClient geminiVideoSummaryClient,
         ContentTranscriptionProperties transcriptionProperties,
         ContentSummaryRepository transcriptRepository,
-        RecoContentRepository recoContentRepository,
-        RecoContentVectorIndexService recoContentVectorIndexService
+        RecoContentRepository recoContentRepository
     ) {
         // 왜: 영상 요약은 "외부 API + 대용량 파일" 조합이라 실패 지점이 많습니다. 의존성을 분리해두면 원인 추적이 쉬워집니다.
         this.kollusApiClient = Objects.requireNonNull(kollusApiClient);
@@ -62,7 +59,6 @@ public class ContentSummaryService {
         this.transcriptionProperties = Objects.requireNonNull(transcriptionProperties);
         this.transcriptRepository = Objects.requireNonNull(transcriptRepository);
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
-        this.recoContentVectorIndexService = Objects.requireNonNull(recoContentVectorIndexService);
     }
 
     public KollusWebhookIngestResponse ingestKollusWebhook(Integer siteId, String mediaContentKey, String title) {
@@ -318,13 +314,6 @@ public class ContentSummaryService {
             RecoContent content = new RecoContent(categoryNm, title, summary, keywords);
             content.setLessonId(mediaKey.trim());
             RecoContent saved = recoContentRepository.save(content);
-
-            // 4. 벡터 DB에 upsert (best-effort)
-            try {
-                recoContentVectorIndexService.upsertOne(saved);
-            } catch (Exception e) {
-                log.warn("TB_RECO_CONTENT 벡터 upsert에 실패했습니다. (lesson_id={})", mediaKey, e);
-            }
 
             transcript.markSummaryDone();
             transcriptRepository.save(transcript);
