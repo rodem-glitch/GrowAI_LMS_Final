@@ -152,6 +152,20 @@
     .nav-tabs-premium .nav-link i {
       font-size: 1rem;
     }
+
+    /* 하위 탭 네비게이션 (입학·양성·취업 내부) */
+    .nav-tabs-premium.sub-tabs {
+      margin-bottom: 1rem;
+      padding: 0.375rem;
+      gap: 0.375rem;
+      background: var(--color-bg);
+      box-shadow: none;
+    }
+
+    .nav-tabs-premium.sub-tabs .nav-link {
+      padding: 0.5rem 0.875rem;
+      font-size: 0.8125rem;
+    }
     
     /* ─────────────────────────────────────────────────────────────
        통계 요약 카드 그리드
@@ -540,71 +554,148 @@
         <i class="bi bi-robot"></i> AI 통계
       </button>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="tab-rawdata" data-bs-toggle="tab" data-bs-target="#pane-rawdata" type="button" role="tab" aria-label="로우 데이터 조회">
-        <i class="bi bi-file-earmark-spreadsheet"></i> 로우 데이터
-      </button>
-    </li>
   </ul>
 
 
   <div class="tab-content">
     <div class="tab-pane fade show active" id="pane-internal" role="tabpanel" aria-labelledby="tab-internal">
+      <ul class="nav-tabs-premium sub-tabs" role="tablist" aria-label="입학·양성·취업 하위 탭">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-internal-charts" data-bs-toggle="tab" data-bs-target="#pane-internal-charts" type="button" role="tab" aria-label="입학 양성 취업 통계 차트">
+            📊 통계 차트
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-internal-rawdata" data-bs-toggle="tab" data-bs-target="#pane-internal-rawdata" type="button" role="tab" aria-label="입학 양성 취업 로우 데이터">
+            📋 로우 데이터
+          </button>
+        </li>
+      </ul>
 
-      <!-- 필터 영역 -->
-      <div class="filter-section">
-        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
-        <div class="filter-controls">
-          <select id="internalCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
-        </div>
-      </div>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="pane-internal-charts" role="tabpanel" aria-labelledby="tab-internal-charts">
+          <!-- 필터 영역 -->
+          <div class="filter-section">
+            <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+            <div class="filter-controls">
+              <select id="internalCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+            </div>
+          </div>
 
-      <!-- 데이터 다운로드 카드 -->
-      <div class="data-download-card">
-        <div class="info">
-          <h4><i class="bi bi-download me-1"></i>입학 양성 취업 통합 데이터</h4>
-          <p>입학, 양성, 취업 관련 모든 상세 데이터를 필터/캠퍼스/연도로 조회하고 다운로드할 수 있습니다.</p>
-        </div>
-        <button id="downloadInternalCsv" class="btn-premium btn-primary" type="button" aria-label="전체 데이터 다운로드">
-          <i class="bi bi-file-earmark-arrow-down"></i> 전체 다운로드
-        </button>
-      </div>
+          <!-- 데이터 다운로드 카드 -->
+          <div class="data-download-card">
+            <div class="info">
+              <h4><i class="bi bi-download me-1"></i>입학 양성 취업 통합 데이터</h4>
+              <p>입학, 양성, 취업 관련 모든 상세 데이터를 필터/캠퍼스/연도로 조회하고 다운로드할 수 있습니다.</p>
+            </div>
+            <button id="downloadInternalCsv" class="btn-premium btn-primary" type="button" aria-label="전체 데이터 다운로드">
+              <i class="bi bi-file-earmark-arrow-down"></i> 전체 다운로드
+            </button>
+          </div>
 
-      <!-- 상태 메시지 -->
-      <div id="internalStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+          <!-- 상태 메시지 -->
+          <div id="internalStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
 
-      <!-- 차트 카드: 학과별 취업률 -->
-      <div class="card-premium">
-        <div class="card-header-premium">
-          <h3><i class="bi bi-bar-chart"></i> 학과별 취업률</h3>
-        </div>
-        <div class="card-body-premium">
-          <div class="chart-container" style="height: 280px;">
-            <canvas id="internalEmploymentChart"></canvas>
+          <!-- 차트 카드: 학과별 취업률 -->
+          <div class="card-premium">
+            <div class="card-header-premium">
+              <h3><i class="bi bi-bar-chart"></i> 학과별 취업률</h3>
+            </div>
+            <div class="card-body-premium">
+              <div class="chart-container" style="height: 280px;">
+                <canvas id="internalEmploymentChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- 차트 카드: 학과별 입학충원률 -->
+          <div class="card-premium">
+            <div class="card-header-premium">
+              <h3><i class="bi bi-person-plus"></i> 학과별 입학충원률</h3>
+            </div>
+            <div class="card-body-premium">
+              <div class="chart-container" style="height: 280px;">
+                <canvas id="internalAdmissionChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- 차트 카드: 연도별 취업률 추이 -->
+          <div class="card-premium">
+            <div class="card-header-premium">
+              <h3><i class="bi bi-graph-up"></i> 연도별 취업률 추이</h3>
+            </div>
+            <div class="card-body-premium">
+              <div class="chart-container" style="height: 260px;">
+                <canvas id="internalTrendChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 차트 카드: 학과별 입학충원률 -->
-      <div class="card-premium">
-        <div class="card-header-premium">
-          <h3><i class="bi bi-person-plus"></i> 학과별 입학충원률</h3>
-        </div>
-        <div class="card-body-premium">
-          <div class="chart-container" style="height: 280px;">
-            <canvas id="internalAdmissionChart"></canvas>
+        <div class="tab-pane fade" id="pane-internal-rawdata" role="tabpanel" aria-labelledby="tab-internal-rawdata">
+          <!-- 필터 영역 -->
+          <div class="filter-section">
+            <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
+            <div class="filter-controls">
+              <select id="rawDataCategory" class="form-select" style="min-width: 160px;" aria-label="분류 선택">
+                <option value="employment" selected>취업</option>
+                <option value="admission">입학</option>
+                <option value="population">재학생 인구</option>
+              </select>
+              <select id="rawDataCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
+              <select id="rawDataYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- 차트 카드: 연도별 취업률 추이 -->
-      <div class="card-premium">
-        <div class="card-header-premium">
-          <h3><i class="bi bi-graph-up"></i> 연도별 취업률 추이</h3>
-        </div>
-        <div class="card-body-premium">
-          <div class="chart-container" style="height: 260px;">
-            <canvas id="internalTrendChart"></canvas>
+          <!-- 검색 및 다운로드 영역 -->
+          <div class="data-download-card">
+            <div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">
+              <input id="rawDataSearch" type="text" class="form-control" style="max-width: 250px;" placeholder="검색어 입력" aria-label="검색어 입력"/>
+              <select id="rawDataPageSize" class="form-select" style="max-width: 110px;" aria-label="표시 행 수">
+                <option value="20">20행</option>
+                <option value="50" selected>50행</option>
+                <option value="100">100행</option>
+                <option value="200">200행</option>
+              </select>
+            </div>
+            <button id="rawDataDownload" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
+              <i class="bi bi-file-earmark-excel"></i> 엑셀 다운로드
+            </button>
+          </div>
+
+          <!-- 상태 메시지 -->
+          <div id="rawDataStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
+
+          <!-- 테이블 카드 -->
+          <div class="card-premium">
+            <div class="card-header-premium">
+              <h3><i class="bi bi-table"></i> 로우 데이터</h3>
+              <div class="d-flex align-items-center gap-3">
+                <span id="rawDataRowCount" class="text-secondary" style="font-size: 0.8125rem;"></span>
+                <span id="rawDataPageInfo" class="text-secondary tabular-nums" style="font-size: 0.8125rem;"></span>
+              </div>
+            </div>
+            <div class="card-body-premium p-0">
+              <div class="table-responsive">
+                <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
+                  <thead>
+                  <tr id="rawDataTableHead"></tr>
+                  </thead>
+                  <tbody id="rawDataTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 페이지네이션 -->
+          <div class="d-flex justify-content-center gap-2 mt-3">
+            <button id="rawDataPrev" class="btn-premium btn-secondary" type="button" aria-label="이전 페이지">
+              <i class="bi bi-chevron-left"></i> 이전
+            </button>
+            <button id="rawDataNext" class="btn-premium btn-secondary" type="button" aria-label="다음 페이지">
+              다음 <i class="bi bi-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -1279,72 +1370,6 @@
       </div>
     </div>
 
-    <!-- 로우 데이터 탭 -->
-    <div class="tab-pane fade" id="pane-rawdata" role="tabpanel" aria-labelledby="tab-rawdata">
-      <!-- 필터 영역 -->
-      <div class="filter-section">
-        <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
-        <div class="filter-controls">
-          <select id="rawDataCategory" class="form-select" style="min-width: 160px;" aria-label="분류 선택">
-            <option value="employment" selected>취업</option>
-            <option value="admission">입학</option>
-            <option value="population">재학생 인구</option>
-          </select>
-          <select id="rawDataCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
-          <select id="rawDataYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
-        </div>
-      </div>
-
-      <!-- 검색 및 다운로드 영역 -->
-      <div class="data-download-card">
-        <div class="d-flex flex-wrap gap-2 align-items-center flex-grow-1">
-          <input id="rawDataSearch" type="text" class="form-control" style="max-width: 250px;" placeholder="검색어 입력" aria-label="검색어 입력"/>
-          <select id="rawDataPageSize" class="form-select" style="max-width: 110px;" aria-label="표시 행 수">
-            <option value="20">20행</option>
-            <option value="50" selected>50행</option>
-            <option value="100">100행</option>
-            <option value="200">200행</option>
-          </select>
-        </div>
-        <button id="rawDataDownload" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
-          <i class="bi bi-file-earmark-excel"></i> 엑셀 다운로드
-        </button>
-      </div>
-
-      <!-- 상태 메시지 -->
-      <div id="rawDataStatus" class="status-message d-none"><i class="bi bi-info-circle"></i> <span></span></div>
-
-      <!-- 테이블 카드 -->
-      <div class="card-premium">
-        <div class="card-header-premium">
-          <h3><i class="bi bi-table"></i> 로우 데이터</h3>
-          <div class="d-flex align-items-center gap-3">
-            <span id="rawDataRowCount" class="text-secondary" style="font-size: 0.8125rem;"></span>
-            <span id="rawDataPageInfo" class="text-secondary tabular-nums" style="font-size: 0.8125rem;"></span>
-          </div>
-        </div>
-        <div class="card-body-premium p-0">
-          <div class="table-responsive">
-            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
-              <thead>
-              <tr id="rawDataTableHead"></tr>
-              </thead>
-              <tbody id="rawDataTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- 페이지네이션 -->
-      <div class="d-flex justify-content-center gap-2 mt-3">
-        <button id="rawDataPrev" class="btn-premium btn-secondary" type="button" aria-label="이전 페이지">
-          <i class="bi bi-chevron-left"></i> 이전
-        </button>
-        <button id="rawDataNext" class="btn-premium btn-secondary" type="button" aria-label="다음 페이지">
-          다음 <i class="bi bi-chevron-right"></i>
-        </button>
-      </div>
-    </div>
   </div>
 
 </main>
