@@ -25,6 +25,16 @@ spring:
       hibernate:
         format_sql: true
 
+  devtools:
+    restart:
+      # 왜: 영상 요약 워커는 장시간 스케줄 작업이 돌기 때문에, DevTools의 자동 재시작이 걸리면
+      # 처리 중 ApplicationContext가 닫히면서 스케줄 작업이 예외로 끊기고(Unexpected error occurred in scheduled task),
+      # DB 커넥션이 끊어지는 등(예: SQLSTATE 08S01) 안정성이 크게 떨어질 수 있습니다.
+      enabled: false
+    livereload:
+      # 왜: LiveReload는 운영/배치 처리에는 필요 없고, 포트 점유/경고 로그만 늘릴 수 있어 비활성화합니다.
+      enabled: false
+
   ai:
     # 왜: 추천(유사도 검색)은 "임베딩 모델 + 벡터 DB" 조합이 표준입니다.
     # - 임베딩: Google GenAI (API Key 방식)
