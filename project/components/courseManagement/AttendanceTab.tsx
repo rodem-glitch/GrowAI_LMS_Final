@@ -248,6 +248,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
 
   useEffect(() => {
     if (!effectiveCourseId) return;
+    // 왜: 학사 과목은 강의목차 조회(getHaksaCurriculum) 과정에서 인정시간/진도 보정이 같이 일어날 수 있어,
+    //     진도 요약을 너무 빨리 호출하면 보정 전 값(예: 22초인데 100%)을 먼저 받아올 수 있습니다.
+    if (isHaksaCourse && haksaLoading) return;
     let cancelled = false;
 
     const run = async () => {
@@ -273,7 +276,7 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
     return () => {
       cancelled = true;
     };
-  }, [effectiveCourseId, isHaksaCourse]);
+  }, [effectiveCourseId, isHaksaCourse, haksaLoading]);
 
   const summaryMap = useMemo(() => {
     const map = new Map<number, TutorProgressSummaryRow>();
@@ -483,7 +486,9 @@ export function AttendanceTab({ courseId, course }: { courseId: number; course?:
         lessonId: Number(selectedLessonId),
       });
       if (res.rst_code !== '0000') throw new Error(res.rst_message);
-      setDetail(res.rst_data ?? null);
+      // 왜: JSP(Json)에서 DataSet(1행)도 배열로 내려오는 케이스가 있어 호환 처리합니다.
+      const payload = Array.isArray(res.rst_data) ? res.rst_data[0] : res.rst_data;
+      setDetail(payload ?? null);
     } catch (e) {
       alert(e instanceof Error ? e.message : '진도 상세 조회 중 오류가 발생했습니다.');
       setDetailOpen(false);

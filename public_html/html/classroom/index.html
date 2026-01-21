@@ -203,6 +203,8 @@
 						</div>
 						<script type="application/json" id="haksa_curriculum_json">{{haksa_curriculum_json}}</script>
 						<script type="application/json" id="haksa_video_ek_map_json">{{haksa_video_ek_map_json}}</script>
+						<script type="application/json" id="haksa_video_time_map_json">{{haksa_video_time_map_json}}</script>
+						<script type="application/json" id="haksa_video_progress_map_json">{{haksa_video_progress_map_json}}</script>
 						<script type="application/json" id="haksa_week_count">{{haksa_week_count}}</script>
 					</div>
 					<!--/if(cuinfo.is_haksa)-->
@@ -431,6 +433,8 @@
 				// 정규(학사) 커리큘럼 렌더링
 				var courseQs = "{{course_qs}}";
 				var haksaVideoEkMap = {};
+				var haksaVideoTimeMap = {};
+				var haksaVideoProgressMap = {};
 				// 왜: 학사 커리큘럼 JSON에 링크가 없을 때, 기존 강의실 화면으로 안전하게 이어줍니다.
 				function pickFirstId(item, keys) {
 					for(var i = 0; i < keys.length; i++) {
@@ -505,9 +509,20 @@
 					var now = new Date();
 					return now >= start && now <= end;
 				}
+				function formatStudyTime(sec) {
+					var n = parseInt(sec, 10);
+					if(isNaN(n) || n <= 0) return '';
+					var m = Math.floor(n / 60);
+					var s = n % 60;
+					if(m > 0 && s > 0) return '진도 ' + m + '분 ' + s + '초';
+					if(m > 0) return '진도 ' + m + '분';
+					return '진도 ' + s + '초';
+				}
 				function renderHaksaCurriculum() {
 					var weeks = parseHaksaJson('haksa_curriculum_json');
 					haksaVideoEkMap = parseHaksaJson('haksa_video_ek_map_json') || {};
+					haksaVideoTimeMap = parseHaksaJson('haksa_video_time_map_json') || {};
+					haksaVideoProgressMap = parseHaksaJson('haksa_video_progress_map_json') || {};
 					var weekCountRaw = parseHaksaJson('haksa_week_count');
 					var weekCount = parseInt(weekCountRaw, 10);
 					if(isNaN(weekCount) || weekCount <= 0) weekCount = 15;
@@ -604,7 +619,22 @@
 										if(!openBlock) $li.addClass('haksa_content_locked');
 										$li.append($('<span class="haksa_type">').addClass(typeClass).text(typeLabel));
 										$li.append($('<span class="haksa_content_title">').text(item.title || '-'));
-										if(item.duration) {
+										if(itemType === 'video') {
+											var metaParts = [];
+											if(item.duration) metaParts.push(item.duration);
+											var timeInfo = haksaVideoTimeMap[String(item.lessonId || '')] || null;
+											// 왜: 학사 인정시간은 커리큘럼 JSON(completeTime)이 기준이며, DB(LM_LESSON.complete_time)는 보조/캐시로 봅니다.
+											var completeTimeMin = 0;
+											try {
+												completeTimeMin = parseInt(item.completeTime || item.complete_time || (timeInfo ? timeInfo.complete_time : 0), 10) || 0;
+											} catch(e) { completeTimeMin = 0; }
+											if(completeTimeMin > 0) metaParts.push('인정 ' + completeTimeMin + '분');
+											var studyText = formatStudyTime(haksaVideoProgressMap[String(item.lessonId || '')]);
+											if(studyText) metaParts.push(studyText);
+											if(metaParts.length > 0) {
+												$li.append($('<span class="haksa_content_meta">').text(metaParts.join(' / ')));
+											}
+										} else if(item.duration) {
 											$li.append($('<span class="haksa_content_meta">').text(item.duration));
 										}
 

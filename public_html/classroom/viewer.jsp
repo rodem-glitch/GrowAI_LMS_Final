@@ -580,9 +580,17 @@ p.setVar("no_list_block", list.size() == 0);
 //왜: 콜러스(외부 플레이어) 화면을 “리다이렉트로만” 열면,
 //    우리 화면이 사라져서 서브영상 완료 후 다음 영상으로 넘어갈 수 없습니다.
 //    다중영상 차시에서는 반드시 iframe 기반으로 열어, 이어보기(자동/버튼)를 할 수 있게 합니다.
+// 왜: 로컬 개발(localhost)에서는 콜러스 콜백(check_api.jsp)이 도달하지 못해 진도 저장이 되지 않을 수 있습니다.
+//     이때는 iframe + JS 저장으로 보완할 수 있게 플래그를 내려줍니다.
+String hostName = request.getServerName();
+boolean kollusLocalProgressBlock = "localhost".equalsIgnoreCase(hostName)
+	|| "127.0.0.1".equals(hostName)
+	|| "0:0:0:0:0:0:0:1".equals(hostName);
 boolean iframeBlock = "Y".equals(m.rs("iframe")) || "Y".equals(SiteConfig.s("kollus_iframe_yn"));
 if(multiBlock && ("05".equals(info.s("lesson_type")) || "07".equals(info.s("lesson_type")))) iframeBlock = true;
+if(kollusLocalProgressBlock && ("05".equals(info.s("lesson_type")) || "07".equals(info.s("lesson_type")))) iframeBlock = true;
 p.setVar("iframe_block", iframeBlock);
+p.setVar("kollus_local_progress_block", kollusLocalProgressBlock);
 
 p.display();
 

@@ -74,6 +74,36 @@
 		var vg_timer_id = 0;
 		var vg_timer_alert_id = 0;
 		var is_play = false;
+		<!--@if(kollus_local_progress_block)-->
+		// 왜: 로컬에서는 콜러스 콜백이 안 올 수 있어, 클라이언트에서 진도를 직접 저장합니다.
+		var kl_play_time = 0;
+		var kl_timer_id = 0;
+		var kl_start_ts = 0;
+		var kl_curr_time = 0;
+
+		function kl_start_timer() {
+			if(kl_timer_id) clearInterval(kl_timer_id);
+			kl_start_ts = new Date().getTime();
+			kl_timer_id = setInterval(function() {
+				kl_stop_timer();
+				kl_save_progress();
+				kl_start_timer();
+			}, 30000);
+		}
+
+		function kl_stop_timer() {
+			if(!kl_timer_id) return;
+			kl_play_time = parseInt((new Date().getTime() - kl_start_ts) / 1000, 10);
+			clearInterval(kl_timer_id);
+			kl_timer_id = 0;
+		}
+
+		function kl_save_progress() {
+			if(kl_play_time <= 0 || kl_curr_time <= 0) { kl_play_time = 0; return; }
+			$.get('/classroom/progress_movie.jsp?study_time=' + kl_play_time + '&curr_time=' + kl_curr_time + '&last_time=' + kl_curr_time + '&cuid={{cuid}}&lid={{lesson_id}}&chapter={{chapter}}&vid={{video_id}}');
+			kl_play_time = 0;
+		}
+		<!--/if(kollus_local_progress_block)-->
 		window.onload = function() {
 			<!--@nif(download_block)-->
 			<!--@nif(iframe_block)-->location.href = '{{start_url_conv}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';<!--/nif(iframe_block)-->
@@ -93,6 +123,7 @@
 				controller.on("play", function() {
 					is_play = true;
 					controller.set_subtitle_visibility(false);
+					<!--@if(kollus_local_progress_block)-->kl_start_timer();<!--/if(kollus_local_progress_block)-->
 					<!--@if(leave_block)-->
 					if(1 > vg_timer_id) vg_timer_id = setInterval(function() {
 						$("#vg-seconds").html(is_play ? ++vg_time : vg_time);
@@ -110,13 +141,24 @@
 				});
 				controller.on("pause", function() {
 					is_play = false;
+					<!--@if(kollus_local_progress_block)-->
+					kl_stop_timer();
+					kl_save_progress();
+					<!--/if(kollus_local_progress_block)-->
 				});
 				controller.on("done", function() {
 					is_play = false;
+					<!--@if(kollus_local_progress_block)-->
+					kl_stop_timer();
+					kl_save_progress();
+					<!--/if(kollus_local_progress_block)-->
 					try { onMultiVideoDone(); } catch(e) { }
 				});
 				controller.on("progress", function(percent, position, duration) {
 					//$("#vg-seconds").html(++vg_time);
+					<!--@if(kollus_local_progress_block)-->
+					kl_curr_time = parseInt(position, 10) || 0;
+					<!--/if(kollus_local_progress_block)-->
 				});
 			} catch(e) {
 				console.log("컨트롤러를 구동하는 중 오류가 발생했습니다.");
@@ -129,6 +171,12 @@
 			kollus_custom_scheme_call(scheme_param);
 			<!--/if(download_block)-->
 		};
+		<!--@if(kollus_local_progress_block)-->
+		addEvent("onunload", function() {
+			kl_stop_timer();
+			kl_save_progress();
+		});
+		<!--/if(kollus_local_progress_block)-->
 
 		function kollus_custom_scheme_call(scheme_param) {
 			<!--@nif(leave_block)-->
@@ -202,6 +250,36 @@
 	var vg_timer_id = 0;
 	var vg_timer_alert_id = 0;
 	var is_play = false;
+	<!--@if(kollus_local_progress_block)-->
+	// 왜: 로컬에서는 콜러스 콜백이 안 올 수 있어, 클라이언트에서 진도를 직접 저장합니다.
+	var kl_play_time = 0;
+	var kl_timer_id = 0;
+	var kl_start_ts = 0;
+	var kl_curr_time = 0;
+
+	function kl_start_timer() {
+		if(kl_timer_id) clearInterval(kl_timer_id);
+		kl_start_ts = new Date().getTime();
+		kl_timer_id = setInterval(function() {
+			kl_stop_timer();
+			kl_save_progress();
+			kl_start_timer();
+		}, 30000);
+	}
+
+	function kl_stop_timer() {
+		if(!kl_timer_id) return;
+		kl_play_time = parseInt((new Date().getTime() - kl_start_ts) / 1000, 10);
+		clearInterval(kl_timer_id);
+		kl_timer_id = 0;
+	}
+
+	function kl_save_progress() {
+		if(kl_play_time <= 0 || kl_curr_time <= 0) { kl_play_time = 0; return; }
+		$.get('/classroom/progress_movie.jsp?study_time=' + kl_play_time + '&curr_time=' + kl_curr_time + '&last_time=' + kl_curr_time + '&cuid={{cuid}}&lid={{lesson_id}}&chapter={{chapter}}&vid={{video_id}}');
+		kl_play_time = 0;
+	}
+	<!--/if(kollus_local_progress_block)-->
 	window.onload = function() {
 		<!--@nif(download_block)-->
 		var scheme_param = 'path?url={{download_url}}&uservalue0={{cuid}}&uservalue1={{lesson_id}}&uservalue2={{chapter}}&uservalue3={{video_id}}';
@@ -215,13 +293,14 @@
 			controller.on("ready", function() {
 				controller.set_playback_rates('[0.25,0.5,0.75,1,1.25,1.5,1.75,2]');
 			});
-			controller.on("play", function() {
-				is_play = true;
-				controller.set_subtitle_visibility(false);
-				<!--@if(leave_block)-->
-				if(1 > vg_timer_id) vg_timer_id = setInterval(function() {
-					$("#vg-seconds").html(is_play ? ++vg_time : vg_time);
-					if(vg_time >= (60 * {{site_config.lesson_detect_leave_min}})) {
+		controller.on("play", function() {
+			is_play = true;
+			controller.set_subtitle_visibility(false);
+			<!--@if(kollus_local_progress_block)-->kl_start_timer();<!--/if(kollus_local_progress_block)-->
+			<!--@if(leave_block)-->
+			if(1 > vg_timer_id) vg_timer_id = setInterval(function() {
+				$("#vg-seconds").html(is_play ? ++vg_time : vg_time);
+				if(vg_time >= (60 * {{site_config.lesson_detect_leave_min}})) {
 						controller.pause();
 						setTimeout(function() {
 							if(confirm("학습을 계속 진행하시겠습니까?")) {
@@ -233,19 +312,30 @@
 				}, 1000);
 				<!--/if(leave_block)-->
 			});
-			controller.on("pause", function() {
-				is_play = false;
-			});
-			controller.on("done", function() {
-				is_play = false;
-				try { onMultiVideoDone(); } catch(e) { }
-			});
-			controller.on("progress", function(percent, position, duration) {
-				//$("#vg-seconds").html(++vg_time);
-			});
-		} catch(e) {
-			console.log("컨트롤러를 구동하는 중 오류가 발생했습니다.");
-		}
+		controller.on("pause", function() {
+			is_play = false;
+			<!--@if(kollus_local_progress_block)-->
+			kl_stop_timer();
+			kl_save_progress();
+			<!--/if(kollus_local_progress_block)-->
+		});
+		controller.on("done", function() {
+			is_play = false;
+			<!--@if(kollus_local_progress_block)-->
+			kl_stop_timer();
+			kl_save_progress();
+			<!--/if(kollus_local_progress_block)-->
+			try { onMultiVideoDone(); } catch(e) { }
+		});
+		controller.on("progress", function(percent, position, duration) {
+			//$("#vg-seconds").html(++vg_time);
+			<!--@if(kollus_local_progress_block)-->
+			kl_curr_time = parseInt(position, 10) || 0;
+			<!--/if(kollus_local_progress_block)-->
+		});
+	} catch(e) {
+		console.log("컨트롤러를 구동하는 중 오류가 발생했습니다.");
+	}
 		<!--/nif(download_block)-->
 
 		<!--@if(download_block)-->
@@ -253,6 +343,12 @@
 		kollus_custom_scheme_call(scheme_param);
 		<!--/if(download_block)-->
 	};
+	<!--@if(kollus_local_progress_block)-->
+	addEvent("onunload", function() {
+		kl_stop_timer();
+		kl_save_progress();
+	});
+	<!--/if(kollus_local_progress_block)-->
 
 	function kollus_custom_scheme_call(scheme_param) {
 		<!--@nif(leave_block)-->

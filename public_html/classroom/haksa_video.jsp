@@ -80,6 +80,7 @@ JSONObject targetSession = null;
 int sessionNo = 0;
 int seq = 0;
 boolean lessonMatched = false;
+int curriculumCompleteTimeMin = 0; // 학사 목차(커리큘럼)에서 설정한 인정시간(분)
 
 for(int i = 0; i < weeks.length(); i++) {
 	JSONObject w = weeks.optJSONObject(i);
@@ -104,6 +105,10 @@ for(int i = 0; i < weeks.length(); i++) {
 					if(!"video".equalsIgnoreCase(type)) continue;
 					if(lessonId == content.optInt("lessonId", 0)) {
 						lessonMatched = true;
+						// 왜: 교수자 화면에서 설정한 인정시간(completeTime)이 DB(LM_LESSON.complete_time)와 어긋나면
+						//     진도율/완료 판정이 잘못될 수 있어, 재생 전에 여기서 보정합니다.
+						curriculumCompleteTimeMin = content.optInt("completeTime", 0);
+						if(curriculumCompleteTimeMin <= 0) curriculumCompleteTimeMin = content.optInt("complete_time", 0);
 						break;
 					}
 				}
@@ -144,9 +149,19 @@ if(mappedCourseId <= 0 || cuid <= 0) {
 }
 
 LessonDao lesson = new LessonDao();
-if(0 == lesson.findCount("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1")) {
+DataSet lessonInfo = lesson.find("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1", "id, total_time, complete_time");
+if(!lessonInfo.next()) {
 	m.jsErrClose("레슨 정보를 찾지 못했습니다.");
 	return;
+}
+
+// 인정시간 보정(학사 커리큘럼 값 우선)
+if(curriculumCompleteTimeMin > 0 && lessonInfo.i("complete_time") != curriculumCompleteTimeMin) {
+	lesson.clear();
+	lesson.item("complete_time", curriculumCompleteTimeMin);
+	// 왜: 총 시간이 비어 있는 영상은 인정시간을 기본값으로 써서 진도율 계산이 0/100으로 튀지 않게 합니다.
+	if(lessonInfo.i("total_time") <= 0) lesson.item("total_time", curriculumCompleteTimeMin);
+	lesson.update("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1");
 }
 
 CourseLessonDao courseLesson = new CourseLessonDao();

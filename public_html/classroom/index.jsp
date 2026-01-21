@@ -338,6 +338,8 @@ DataSet siteconfig = SiteConfig.getArr("classroom_");
 //학사 커리큘럼(정규 탭) 데이터
 String haksaCurriculumJson = "";
 String haksaVideoEkMapJson = "{}";
+String haksaVideoTimeMapJson = "{}";
+String haksaVideoProgressMapJson = "{}";
 int haksaWeekCount = 15;
 if(cuinfo.b("is_haksa")) {
 	PolyCourseSettingDao haksaSetting = new PolyCourseSettingDao();
@@ -390,6 +392,7 @@ if(cuinfo.b("is_haksa")) {
 			if("".equals(endDateTime)) endDateTime = now;
 
 			JSONObject ekMap = new JSONObject();
+			java.util.HashSet<Integer> haksaLessonIds = new java.util.HashSet<Integer>();
 			int maxWeek = 0;
 			JSONArray weeks = new JSONArray(haksaCurriculumJson);
 			for(int i = 0; i < weeks.length(); i++) {
@@ -558,7 +561,74 @@ if(cuinfo.b("is_haksa")) {
 						if(!ekMap.has(lidKey)) {
 							ekMap.put(lidKey, m.encrypt(lid + "|0|" + m.time("yyyyMMdd")));
 						}
+						// 왜: 학사 탭에서 인정시간(complete_time)을 보여주기 위해 영상 ID를 모아둡니다.
+						haksaLessonIds.add(Integer.valueOf(lid));
 					}
+				}
+			}
+
+			// 왜: 학사 커리큘럼에는 영상 시간 정보가 없을 수 있어, DB에서 인정시간을 보완합니다.
+			if(haksaLessonIds.size() > 0) {
+				StringBuilder idList = new StringBuilder();
+				for(Integer idVal : haksaLessonIds) {
+					if(idList.length() > 0) idList.append(",");
+					idList.append(idVal.intValue());
+				}
+				JSONObject timeMap = new JSONObject();
+				DataSet timeRows = lesson.query(
+					"SELECT id, total_time, complete_time"
+					+ " FROM " + lesson.table
+					+ " WHERE site_id = " + siteId
+					+ " AND status = 1"
+					+ " AND id IN (" + idList.toString() + ")"
+				);
+				while(timeRows.next()) {
+					JSONObject t = new JSONObject();
+					t.put("total_time", timeRows.i("total_time"));
+					t.put("complete_time", timeRows.i("complete_time"));
+					timeMap.put("" + timeRows.i("id"), t);
+				}
+				haksaVideoTimeMapJson = timeMap.toString();
+
+				// 왜: 학사 탭에서 내 진도(시청 시간)를 보여주기 위해 사용자별 학습시간을 조회합니다.
+				if(cuid > 0) {
+					JSONObject progressMap = new JSONObject();
+					java.util.HashSet<Integer> missingIds = new java.util.HashSet<Integer>();
+					DataSet progressRows = courseProgress.query(
+						"SELECT lesson_id, study_time"
+						+ " FROM " + courseProgress.table
+						+ " WHERE course_user_id = " + cuid
+						+ " AND lesson_id IN (" + idList.toString() + ")"
+					);
+					while(progressRows.next()) {
+						progressMap.put("" + progressRows.i("lesson_id"), progressRows.i("study_time"));
+					}
+
+					// 왜: 다중영상(서브영상) 진도는 LM_COURSE_PROGRESS_VIDEO에 저장되므로,
+					//     LM_COURSE_PROGRESS에 없는 영상은 서브영상 테이블에서 보완합니다.
+					for(Integer idVal : haksaLessonIds) {
+						if(!progressMap.has("" + idVal.intValue())) missingIds.add(idVal);
+					}
+					if(missingIds.size() > 0) {
+						StringBuilder missingList = new StringBuilder();
+						for(Integer idVal : missingIds) {
+							if(missingList.length() > 0) missingList.append(",");
+							missingList.append(idVal.intValue());
+						}
+						CourseProgressVideoDao cpv = new CourseProgressVideoDao(siteId);
+						DataSet pvRows = cpv.query(
+							"SELECT video_id, MAX(study_time) study_time"
+							+ " FROM " + cpv.table
+							+ " WHERE course_user_id = " + cuid
+							+ " AND video_id IN (" + missingList.toString() + ")"
+							+ " GROUP BY video_id"
+						);
+						while(pvRows.next()) {
+							progressMap.put("" + pvRows.i("video_id"), pvRows.i("study_time"));
+						}
+					}
+
+					haksaVideoProgressMapJson = progressMap.toString();
 				}
 			}
 
@@ -622,6 +692,8 @@ p.setVar("push_survey_block"
 p.setVar("SITE_CONFIG", siteconfig);
 p.setVar("haksa_curriculum_json", haksaCurriculumJson);
 p.setVar("haksa_video_ek_map_json", haksaVideoEkMapJson);
+p.setVar("haksa_video_time_map_json", haksaVideoTimeMapJson);
+p.setVar("haksa_video_progress_map_json", haksaVideoProgressMapJson);
 p.setVar("haksa_week_count", haksaWeekCount);
 p.display();
 

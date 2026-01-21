@@ -195,6 +195,110 @@ if(("".equals(curriculumJson) || normalizedWeeks == null) ) {
 	} catch(Exception ignore) {}
 }
 
+// 2-1) 학사 목차의 동영상 인정시간(completeTime) → LM_LESSON.complete_time 동기화
+// 왜 필요한가:
+// - 교수자 화면은 학사 목차 JSON에 인정시간을 저장하지만,
+//   진도율/완료 판정(CourseProgressDao)은 LM_LESSON.complete_time을 기준으로 계산합니다.
+// - 두 값이 어긋나면 "22초 봤는데 100%" 같은 문제가 생길 수 있어, 조회 시점에 최소한으로 보정합니다.
+try {
+	int mappedCourseIdForSync = 0;
+	try {
+		String haksaCourseKey = courseCode + "_" + openYear + "_" + openTerm + "_" + bunbanCode + "_" + groupCode;
+		String haksaCourseCd = m.md5(haksaCourseKey);
+		if(haksaCourseCd != null && haksaCourseCd.length() > 20) haksaCourseCd = haksaCourseCd.substring(0, 20);
+		if(haksaCourseCd == null) haksaCourseCd = "";
+
+		String safeHaksaCourseKey = m.replace(haksaCourseKey, "'", "''");
+		String safeHaksaCourseCd = m.replace(haksaCourseCd, "'", "''");
+
+		CourseDao course = new CourseDao();
+		DataSet mappedCourse = course.find(
+			"site_id = " + siteId
+			+ " AND (course_cd = '" + safeHaksaCourseCd + "' OR course_cd = '" + safeHaksaCourseKey + "' OR etc1 = '" + safeHaksaCourseKey + "')"
+			+ " AND status != -1"
+		);
+		if(mappedCourse.next()) mappedCourseIdForSync = mappedCourse.i("id");
+	} catch(Exception ignore2) {}
+
+	if(normalizedWeeks != null && normalizedWeeks.length() > 0) {
+		LessonDao lesson = new LessonDao();
+		CourseProgressDao courseProgress = new CourseProgressDao(siteId);
+		String now = m.time("yyyyMMddHHmmss");
+
+		java.util.HashSet<Integer> changedLessonIds = new java.util.HashSet<Integer>();
+
+		int seq = 0;
+		for(int i = 0; i < normalizedWeeks.length(); i++) {
+			JSONObject w = normalizedWeeks.optJSONObject(i);
+			if(w == null) continue;
+			JSONArray sessions = w.optJSONArray("sessions");
+			if(sessions == null) continue;
+			for(int s = 0; s < sessions.length(); s++) {
+				JSONObject sessionObj = sessions.optJSONObject(s);
+				if(sessionObj == null) continue;
+				seq++;
+				JSONArray contents = sessionObj.optJSONArray("contents");
+				if(contents == null) continue;
+				for(int c = 0; c < contents.length(); c++) {
+					JSONObject content = contents.optJSONObject(c);
+					if(content == null) continue;
+					String t = content.optString("type", "");
+					if(!"video".equalsIgnoreCase(t)) continue;
+
+					int lessonId = content.optInt("lessonId", 0);
+					int completeTime = content.optInt("completeTime", 0);
+					if(completeTime <= 0) completeTime = content.optInt("complete_time", 0);
+					if(lessonId <= 0 || completeTime <= 0) continue;
+
+					DataSet linfo = lesson.find("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1", "total_time, complete_time");
+					if(!linfo.next()) continue;
+					if(linfo.i("complete_time") == completeTime) continue;
+
+					lesson.clear();
+					lesson.item("complete_time", completeTime);
+					if(linfo.i("total_time") <= 0) lesson.item("total_time", completeTime);
+					lesson.update("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1");
+					changedLessonIds.add(Integer.valueOf(lessonId));
+				}
+			}
+		}
+
+		// 왜: 인정시간이 바뀌면 과거 진도율/완료여부도 함께 보정해야 교수자 "진도/출석" 화면이 맞습니다.
+		if(mappedCourseIdForSync > 0 && changedLessonIds.size() > 0) {
+			for(Integer lidObj : changedLessonIds) {
+				int lessonId = lidObj.intValue();
+				DataSet linfo = lesson.find("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1", "total_time, complete_time");
+				if(!linfo.next()) continue;
+				int totalSec = linfo.i("total_time") * 60;
+				int completeSec = linfo.i("complete_time") * 60;
+
+				String ratioExpr =
+					(completeSec <= 0)
+					? "100.0"
+					: ("(CASE"
+						+ " WHEN " + totalSec + " > 0 AND LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) < " + completeSec + " THEN LEAST(100.0, (LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) / " + (double)totalSec + ") * 100.0)"
+						+ " ELSE 100.0 END)");
+
+				String completeExpr =
+					(completeSec <= 0)
+					? "'Y'"
+					: ("(CASE"
+						+ " WHEN LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) >= " + completeSec + " THEN 'Y'"
+						+ " WHEN " + totalSec + " > 0 AND LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) >= " + totalSec + " THEN 'Y'"
+						+ " ELSE 'N' END)");
+
+				courseProgress.execute(
+					"UPDATE " + courseProgress.table + " cp "
+					+ " INNER JOIN LM_COURSE_USER cu ON cu.id = cp.course_user_id AND cu.course_id = " + mappedCourseIdForSync + " AND cu.site_id = " + siteId + " AND cu.status NOT IN (-1, -4) "
+					+ " SET cp.ratio = " + ratioExpr + ", cp.complete_yn = " + completeExpr
+					+ " , cp.complete_date = (CASE WHEN " + completeExpr + " = 'Y' THEN (CASE WHEN IFNULL(cp.complete_date,'') = '' THEN '" + now + "' ELSE cp.complete_date END) ELSE '' END) "
+					+ " WHERE cp.site_id = " + siteId + " AND cp.status = 1 AND cp.lesson_id = " + lessonId
+				);
+			}
+		}
+	}
+} catch(Exception ignore) {}
+
 // 3) 필요 시 DB에 저장(학생/교수자 화면 동일 데이터 보장)
 if(needSave && normalizedWeeks != null) {
 	try {

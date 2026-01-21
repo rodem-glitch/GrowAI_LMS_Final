@@ -145,14 +145,20 @@ CourseModuleDao courseModule = new CourseModuleDao();
 HomeworkDao homework = new HomeworkDao();
 LibraryDao library = new LibraryDao();
 CourseLibraryDao courseLibrary = new CourseLibraryDao();
+CourseLessonDao courseLesson = new CourseLessonDao();
+LessonDao lesson = new LessonDao();
+CourseProgressDao courseProgress = new CourseProgressDao(siteId);
 
 java.util.HashSet<Integer> newHomeworkIds = new java.util.HashSet<Integer>();
 java.util.HashSet<Integer> newExamModuleIds = new java.util.HashSet<Integer>();
 java.util.HashSet<Integer> newLibraryIds = new java.util.HashSet<Integer>();
+java.util.HashSet<String> newVideoKeys = new java.util.HashSet<String>(); // lesson_id:chapter
+java.util.HashSet<Integer> changedVideoLessonIds = new java.util.HashSet<Integer>();
 
 java.util.HashSet<Integer> oldHomeworkIds = new java.util.HashSet<Integer>();
 java.util.HashSet<Integer> oldExamModuleIds = new java.util.HashSet<Integer>();
 java.util.HashSet<Integer> oldLibraryIds = new java.util.HashSet<Integer>();
+java.util.HashSet<String> oldVideoKeys = new java.util.HashSet<String>(); // lesson_id:chapter
 
 // 왜: 삭제 동기화를 위해 "이전 목차에 있었던 모듈"만 추려 둡니다.
 try {
@@ -164,6 +170,7 @@ try {
 
 		// v1은 여기서 굳이 변환하지 않고 "type이 있는 배열"로만 수집합니다.
 		if(oldWeeks != null) {
+			int oldSeq = 0;
 			for(int i = 0; i < oldWeeks.length(); i++) {
 				JSONObject w = oldWeeks.optJSONObject(i);
 				if(w == null) continue;
@@ -172,6 +179,9 @@ try {
 				for(int s = 0; s < sessions.length(); s++) {
 					JSONObject sessionObj = sessions.optJSONObject(s);
 					if(sessionObj == null) continue;
+					oldSeq++;
+					int oldSessionNo = sessionObj.optInt("sessionNo", 0);
+					if(oldSessionNo <= 0) oldSessionNo = oldSeq;
 					JSONArray contents = sessionObj.optJSONArray("contents");
 					if(contents == null) continue;
 					for(int c = 0; c < contents.length(); c++) {
@@ -194,6 +204,9 @@ try {
 						} else if("document".equalsIgnoreCase(t)) {
 							int lid = content.optInt("libraryId", 0);
 							if(lid > 0) oldLibraryIds.add(lid);
+						} else if("video".equalsIgnoreCase(t)) {
+							int lessonId = content.optInt("lessonId", 0);
+							if(lessonId > 0) oldVideoKeys.add(lessonId + ":" + oldSessionNo);
 						}
 					}
 				}
@@ -217,6 +230,9 @@ try {
 				} else if("document".equalsIgnoreCase(t)) {
 					int lid = content.optInt("libraryId", 0);
 					if(lid > 0) oldLibraryIds.add(lid);
+				} else if("video".equalsIgnoreCase(t)) {
+					int lessonId = content.optInt("lessonId", 0);
+					if(lessonId > 0) oldVideoKeys.add(lessonId + ":1");
 				}
 			}
 		}
@@ -228,6 +244,7 @@ String now = m.time("yyyyMMddHHmmss");
 
 if(mappedCourseId > 0) {
 	try {
+		int seq = 0;
 		for(int i = 0; i < weeks.length(); i++) {
 			JSONObject w = weeks.optJSONObject(i);
 			if(w == null) continue;
@@ -237,6 +254,33 @@ if(mappedCourseId > 0) {
 			for(int s = 0; s < sessions.length(); s++) {
 				JSONObject sessionObj = sessions.optJSONObject(s);
 				if(sessionObj == null) continue;
+				seq++;
+				int sessionNo = sessionObj.optInt("sessionNo", 0);
+				if(sessionNo <= 0) sessionNo = seq;
+
+				// 차시 기간(없으면 빈 값)
+				String sDate = sessionObj.optString("startDate", "");
+				String eDate = sessionObj.optString("endDate", "");
+				String sTime = sessionObj.optString("startTime", "");
+				String eTime = sessionObj.optString("endTime", "");
+
+				// 왜: 날짜/시간 포맷이 2026-01-20, 04:11 처럼 섞여 들어올 수 있어 숫자만 남겨 DB 포맷(yyyyMMdd / HHmmss)으로 맞춥니다.
+				try {
+					if(sDate != null) sDate = sDate.replaceAll("[^0-9]", "");
+					if(eDate != null) eDate = eDate.replaceAll("[^0-9]", "");
+					if(sTime != null) sTime = sTime.replaceAll("[^0-9]", "");
+					if(eTime != null) eTime = eTime.replaceAll("[^0-9]", "");
+				} catch(Exception ignore2) {}
+				if(sDate == null) sDate = "";
+				if(eDate == null) eDate = "";
+				if(sTime == null) sTime = "";
+				if(eTime == null) eTime = "";
+
+				if(sDate.length() >= 8) sDate = sDate.substring(0, 8);
+				if(eDate.length() >= 8) eDate = eDate.substring(0, 8);
+				if(sTime.length() >= 4) sTime = sTime.substring(0, 4) + "00";
+				if(eTime.length() >= 4) eTime = eTime.substring(0, 4) + "59";
+
 				JSONArray contents = sessionObj.optJSONArray("contents");
 				if(contents == null) continue;
 
@@ -486,6 +530,85 @@ if(mappedCourseId > 0) {
 							newExamModuleIds.add(examModuleId);
 						}
 					}
+					// 동영상(=video)
+					else if("video".equalsIgnoreCase(contentType)) {
+						int lessonId = content.optInt("lessonId", 0);
+						if(lessonId <= 0) {
+							// 왜: lessonId가 비어도 mediaKey(start_url)로 기존 레슨을 찾을 수 있습니다(운영 실수/구버전 호환).
+							String mediaKey = content.optString("mediaKey", "");
+							if(!"".equals(mediaKey)) {
+								String safeMediaKey = m.replace(mediaKey, "'", "''");
+								DataSet lfind = lesson.find(
+									"site_id = " + siteId
+									+ " AND start_url = '" + safeMediaKey + "'"
+									+ " AND status != -1"
+									, "id"
+								);
+								if(lfind.next()) {
+									lessonId = lfind.i("id");
+									content.put("lessonId", lessonId);
+									curriculumChanged = true;
+								}
+							}
+						}
+						if(lessonId <= 0) continue;
+
+						// 1) 인정시간(completeTime) → LM_LESSON.complete_time 동기화
+						int completeTime = content.optInt("completeTime", 0);
+						if(completeTime <= 0) completeTime = content.optInt("complete_time", 0);
+						if(completeTime > 0) {
+							DataSet linfo = lesson.find("id = " + lessonId + " AND site_id = " + siteId + " AND status != -1", "id, total_time, complete_time");
+							if(linfo.next()) {
+								int beforeComplete = linfo.i("complete_time");
+								if(beforeComplete != completeTime) {
+									lesson.clear();
+									lesson.item("complete_time", completeTime);
+									// 왜: 총 시간이 비어 있는 영상은 인정시간을 기본값으로 써서 진도율 계산이 0/100으로 튀지 않게 합니다.
+									if(linfo.i("total_time") <= 0) lesson.item("total_time", completeTime);
+									lesson.update("id = " + lessonId + " AND site_id = " + siteId + " AND status != -1");
+									changedVideoLessonIds.add(Integer.valueOf(lessonId));
+								}
+							}
+						}
+
+						// 2) 차시 구성(LM_COURSE_LESSON) 동기화
+						newVideoKeys.add(lessonId + ":" + sessionNo);
+
+						int exist = courseLesson.findCount(
+							"course_id = " + mappedCourseId + " AND lesson_id = " + lessonId + " AND chapter = " + sessionNo
+						);
+						if(exist > 0) {
+							courseLesson.clear();
+							courseLesson.item("start_date", sDate);
+							courseLesson.item("end_date", eDate);
+							courseLesson.item("start_time", sTime);
+							courseLesson.item("end_time", eTime);
+							courseLesson.item("status", 1);
+							courseLesson.update(
+								"course_id = " + mappedCourseId
+								+ " AND lesson_id = " + lessonId
+								+ " AND chapter = " + sessionNo
+								+ " AND site_id = " + siteId
+							);
+						} else {
+							courseLesson.clear();
+							courseLesson.item("course_id", mappedCourseId);
+							courseLesson.item("lesson_id", lessonId);
+							courseLesson.item("section_id", 0);
+							courseLesson.item("site_id", siteId);
+							courseLesson.item("chapter", sessionNo);
+							courseLesson.item("start_day", 0);
+							courseLesson.item("period", 0);
+							courseLesson.item("start_date", sDate);
+							courseLesson.item("end_date", eDate);
+							courseLesson.item("start_time", sTime);
+							courseLesson.item("end_time", eTime);
+							courseLesson.item("lesson_hour", 1.00);
+							courseLesson.item("progress_yn", "Y");
+							courseLesson.item("status", 1);
+							courseLesson.insert();
+						}
+					}
 				}
 			}
 		}
@@ -511,6 +634,62 @@ if(mappedCourseId > 0) {
 			if(newLibraryIds.contains(lid)) continue;
 			// 왜: LM_COURSE_LIBRARY는 status 컬럼이 없는 환경이 있어, 연결 행 자체를 삭제합니다.
 			courseLibrary.delete("course_id = " + mappedCourseId + " AND library_id = " + lid);
+		}
+		// 왜: 동영상은 진도 기록이 남아 있을 수 있어 완전 삭제 대신 status=0(숨김) 처리합니다.
+		for(String key : oldVideoKeys) {
+			if(newVideoKeys.contains(key)) continue;
+			try {
+				String[] parts = key.split(":");
+				if(parts.length < 2) continue;
+				int lid = Integer.parseInt(parts[0]);
+				int chap = Integer.parseInt(parts[1]);
+				courseLesson.clear();
+				courseLesson.item("status", 0);
+				courseLesson.update(
+					"course_id = " + mappedCourseId
+					+ " AND lesson_id = " + lid
+					+ " AND chapter = " + chap
+					+ " AND site_id = " + siteId
+				);
+			} catch(Exception ignore2) {}
+		}
+	} catch(Exception ignore) {}
+}
+
+// 5) 인정시간 변경 시, 기존 진도(특히 complete_time=0으로 100% 처리된 케이스)를 재계산해 화면/출석이 꼬이지 않게 보완합니다.
+if(mappedCourseId > 0 && changedVideoLessonIds.size() > 0) {
+	try {
+		for(Integer lidObj : changedVideoLessonIds) {
+			int lessonId = lidObj.intValue();
+			DataSet linfo = lesson.find("id = " + lessonId + " AND site_id = " + siteId + " AND status = 1", "total_time, complete_time");
+			if(!linfo.next()) continue;
+
+			int totalSec = linfo.i("total_time") * 60;
+			int completeSec = linfo.i("complete_time") * 60;
+
+			// 왜: 동영상 진도율은 LEAST(study_time, last_time)을 기준으로 계산합니다(기존 CourseProgressDao 로직과 동일한 철학).
+			String ratioExpr =
+				(completeSec <= 0)
+				? "100.0"
+				: ("(CASE"
+					+ " WHEN " + totalSec + " > 0 AND LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) < " + completeSec + " THEN LEAST(100.0, (LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) / " + (double)totalSec + ") * 100.0)"
+					+ " ELSE 100.0 END)");
+
+			String completeExpr =
+				(completeSec <= 0)
+				? "'Y'"
+				: ("(CASE"
+					+ " WHEN LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) >= " + completeSec + " THEN 'Y'"
+					+ " WHEN " + totalSec + " > 0 AND LEAST(IFNULL(cp.study_time,0), IFNULL(cp.last_time,0)) >= " + totalSec + " THEN 'Y'"
+					+ " ELSE 'N' END)");
+
+			courseProgress.execute(
+				"UPDATE " + courseProgress.table + " cp "
+				+ " INNER JOIN LM_COURSE_USER cu ON cu.id = cp.course_user_id AND cu.course_id = " + mappedCourseId + " AND cu.site_id = " + siteId + " AND cu.status NOT IN (-1, -4) "
+				+ " SET cp.ratio = " + ratioExpr + ", cp.complete_yn = " + completeExpr
+				+ " , cp.complete_date = (CASE WHEN " + completeExpr + " = 'Y' THEN (CASE WHEN IFNULL(cp.complete_date,'') = '' THEN '" + now + "' ELSE cp.complete_date END) ELSE '' END) "
+				+ " WHERE cp.site_id = " + siteId + " AND cp.status = 1 AND cp.lesson_id = " + lessonId
+			);
 		}
 	} catch(Exception ignore) {}
 }
