@@ -57,7 +57,10 @@ if("1".equals(info.s("apply_type"))) { //기간
 
 String status = "-";
 if(info.b("submit_yn")) status = _message.get("classroom.exam.status.complete");
-else if("W".equals(progress) || isReady) status = _message.get("classroom.module.status.waiting");
+// 왜: 기간형 시험(apply_type=1)은 "시험기간"이 곧 응시 가능 조건이므로,
+//     수강상태(progress=W 대기)만으로 대기로 표시하면 학사/매핑 과정에서 "항상 대기"가 될 수 있습니다.
+//     따라서 기간형은 isReady(시험 시작 전)만 대기로 처리하고, 차시형(apply_type=2)만 수강 대기(progress=W)를 반영합니다.
+else if(isReady || ("W".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.waiting");
 // 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일이 지나기 전까지는 응시를 허용해야 합니다.
 //     (단, 차시(apply_type=2)형은 학기 종료와 함께 종료로 처리합니다.)
 else if(isEnd || ("E".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.end");
@@ -72,8 +75,10 @@ info.put("result_score", info.b("submit_yn")
 		: "-"
 );
 
-// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일 전까지 입장을 허용합니다.
-boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
+// 왜: 기간형 시험(apply_type=1)은 "시험기간"이 곧 입장 조건이므로,
+//     수강상태(progress)가 W/E/R로 남아 있더라도(특히 학사/매핑 과정) 시험기간 내면 입장을 허용합니다.
+//     (단, 차시형(apply_type=2)은 수강중(I)일 때만 응시 가능하게 유지합니다.)
+boolean canOpenByProgress = isPeriodApply ? true : "I".equals(progress);
 info.put("open_block",
 	!isReady && !isEnd
 	&& canOpenByProgress

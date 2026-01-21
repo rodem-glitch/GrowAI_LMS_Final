@@ -44,8 +44,10 @@ if("1".equals(info.s("apply_type"))) { //기간
 	if(info.i("chapter") > 0 && courseProgress.getExamReadyFlag(cuid, courseId, info.i("chapter"))) isReady = true;
 }
 
-// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일 전까지 재응시를 허용합니다.
-boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
+// 왜: 기간형 시험(apply_type=1)은 "시험기간"이 곧 재응시 가능 조건이므로,
+//     수강상태(progress)가 W/E/R로 남아 있더라도(특히 학사/매핑 과정) 시험기간 내면 재응시를 허용합니다.
+//     (단, 차시형(apply_type=2)은 수강중(I)일 때만 재응시 가능하게 유지합니다.)
+boolean canOpenByProgress = isPeriodApply ? true : "I".equals(progress);
 if(!isReady && !isEnd
 	&& canOpenByProgress
 	&& info.b("confirm_yn") 

@@ -53,8 +53,10 @@ if("1".equals(info.s("apply_type"))) { //시작일
 }
 
 //제한-응시기간
-// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일 전까지 응시를 허용합니다.
-boolean canOpenByProgress = "I".equals(progress) || ("E".equals(progress) && isPeriodApply);
+// 왜: 기간형 시험(apply_type=1)은 "시험기간"이 곧 응시 가능 조건이므로,
+//     수강상태(progress)가 W/E/R로 남아 있더라도(특히 학사/매핑 과정) 시험기간 내면 응시를 허용합니다.
+//     (단, 차시형(apply_type=2)은 수강중(I)일 때만 응시 가능하게 유지합니다.)
+boolean canOpenByProgress = isPeriodApply ? true : "I".equals(progress);
 if(isReady || isEnd || !canOpenByProgress) { m.jsErrClose(_message.get("alert.classroom.noperiod_exam")); return; }
 
 //응시자 생성

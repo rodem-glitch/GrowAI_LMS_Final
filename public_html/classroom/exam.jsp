@@ -23,7 +23,8 @@ while(list.next()) {
 	//상태 [progress] (W : 대기, E : 종료, I : 수강중, R : 복습중)
 	boolean isReady = false; //대기
 	boolean isEnd = false; //완료
-	if("1".equals(list.s("apply_type"))) { //기간
+	boolean isPeriodApply = "1".equals(list.s("apply_type"));
+	if(isPeriodApply) { //기간
 		list.put("start_date_conv", m.time(_message.get("format.datetime.dot"), list.s("start_date")));
 		list.put("end_date_conv", m.time(_message.get("format.datetime.dot"), list.s("end_date")));
 
@@ -49,10 +50,13 @@ while(list.next()) {
 
 	String status = "-";
 	if(list.b("submit_yn")) status = _message.get("classroom.exam.status.complete");
-	else if("W".equals(progress) || isReady) status = _message.get("classroom.module.status.waiting");
+	// 왜: 기간형 시험(apply_type=1)은 "시험기간"이 곧 응시 가능 조건이므로,
+	//     수강상태(progress=W 대기)만으로 대기로 표시하면 학사/매핑 과정에서 "항상 대기"가 될 수 있습니다.
+	//     따라서 기간형은 isReady(시험 시작 전)만 대기로 처리하고, 차시형(apply_type=2)만 수강 대기(progress=W)를 반영합니다.
+	else if(isReady || ("W".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.waiting");
 	// 왜: 학기(progress)가 종료(E)라도, 기간(apply_type=1)형 시험은 종료일이 지나기 전까지는 응시를 허용해야 합니다.
 	//     (단, 차시(apply_type=2)형은 학기 종료와 함께 종료로 처리합니다.)
-	else if(isEnd || ("E".equals(progress) && !"1".equals(list.s("apply_type")))) status = _message.get("classroom.module.status.end");
+	else if(isEnd || ("E".equals(progress) && !isPeriodApply)) status = _message.get("classroom.module.status.end");
 	else if("I".equals(progress) && list.i("user_id") != 0) status = _message.get("classroom.exam.status.during");
 	else status = "-";
 	list.put("status_conv", status);
