@@ -55,12 +55,8 @@ if("".equals(deptName) && userId > 0 && uinfo != null) {
 	}
 }
 
-// 채용 페이지 URL (API 서버에서 제공)
-String apiBase = System.getenv("POLYTECH_LMS_API_BASE");
-if(apiBase == null || "".equals(apiBase.trim())) apiBase = "http://localhost:8081";
-apiBase = apiBase.replaceAll("/+$", "");
-
-String jobUrl = apiBase + "/job-test.html";
+// 채용 페이지 URL (같은 도메인 프록시를 사용해서 외부 PC에서도 열리게 합니다)
+String jobUrl = "/api/job_proxy.jsp/job-test.html";
 if(!"".equals(deptName)) {
 	jobUrl += "?dept=" + URLEncoder.encode(deptName, "UTF-8");
 }
