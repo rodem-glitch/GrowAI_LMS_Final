@@ -195,6 +195,8 @@ auth.put("TUTOR_YN", "Y".equals(info.s("tutor_yn")) ? "Y" : "N");
 auth.setAuthInfo();
 
 //로그
+// 왜: 접속 로그는 2년만 보관해야 하므로, 저장 전에 오래된 로그를 정리합니다.
+userLogin.purgeExpiredLogs(siteId);
 userLogin.item("id", userLogin.getSequence());
 userLogin.item("site_id", siteId);
 userLogin.item("user_id", info.i("id"));
