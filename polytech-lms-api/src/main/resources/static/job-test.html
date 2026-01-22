@@ -468,6 +468,21 @@
     .job-bookmark.active {
       color: var(--color-primary);
     }
+
+    .job-title-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .job-title-link:hover,
+    .job-title-link:focus {
+      color: var(--color-primary);
+      text-decoration: underline;
+    }
+
+    .job-card.clickable {
+      cursor: pointer;
+    }
     
     .job-title {
       font-size: 1.125rem;
@@ -911,6 +926,75 @@
       color: var(--color-gray-500);
       margin-top: var(--spacing-sm);
     }
+
+    /* 교수 추천 모달 */
+    .recommend-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: var(--z-modal);
+      padding: var(--spacing-lg);
+    }
+    .recommend-modal.active { display: flex; }
+    .recommend-modal__card {
+      width: 100%;
+      max-width: 760px;
+      background: #fff;
+      border-radius: var(--radius-xl);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      padding: var(--spacing-xl);
+      max-height: 80vh;
+      overflow: auto;
+    }
+    .recommend-modal__title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--color-gray-900);
+      margin: 0 0 var(--spacing-sm) 0;
+    }
+    .recommend-modal__desc {
+      font-size: 0.875rem;
+      color: var(--color-gray-500);
+      margin: 0 0 var(--spacing-md) 0;
+    }
+    .recommend-modal__section {
+      margin-bottom: var(--spacing-md);
+    }
+    .recommend-modal__label {
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+      display: block;
+    }
+    .recommend-students {
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-sm);
+      max-height: 280px;
+      overflow: auto;
+      background: var(--color-gray-50);
+    }
+    .recommend-students__item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 4px;
+      border-bottom: 1px dashed var(--color-gray-200);
+    }
+    .recommend-students__item:last-child { border-bottom: none; }
+    .recommend-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
+    .recommend-actions__right {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
     .reco-btn {
       display: inline-flex;
       align-items: center;
@@ -1055,6 +1139,9 @@
             <button id="jobTabBookmark" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist">
               북마크 <span id="bookmarkCount" class="job-tab-badge">0</span>
             </button>
+            <button id="jobTabRecommend" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist">
+              교수 추천 <span id="recommendCount" class="job-tab-badge">0</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1091,6 +1178,40 @@
         <p class="reco-modal__msg" id="recoPromptMsg"></p>
       </div>
     </div>
+
+    <!-- 교수 추천 모달 -->
+    <div class="recommend-modal" id="recommendModal" aria-hidden="true">
+      <div class="recommend-modal__card" role="dialog" aria-modal="true" aria-labelledby="recommendTitle">
+        <h3 class="recommend-modal__title" id="recommendTitle">학생에게 공고 추천하기</h3>
+        <p class="recommend-modal__desc">담당과목과 학생을 선택한 뒤 추천을 보내주세요. (학생 기준 1회 저장)</p>
+
+        <div class="recommend-modal__section">
+          <label class="recommend-modal__label" for="recommendCourseSelect">담당과목</label>
+          <select id="recommendCourseSelect" class="filter-select" aria-label="담당과목 선택">
+            <option value="">과목을 선택하세요</option>
+          </select>
+        </div>
+
+        <div class="recommend-modal__section">
+          <label class="recommend-modal__label">학생 선택</label>
+          <div class="recommend-students" id="recommendStudents">
+            <div class="text-muted" style="padding: 8px;">과목을 먼저 선택해 주세요.</div>
+          </div>
+        </div>
+
+        <div class="recommend-actions">
+          <label class="d-flex align-items-center gap-2">
+            <input type="checkbox" id="recommendSelectAll">
+            전체 선택
+          </label>
+          <div class="recommend-actions__right">
+            <button type="button" class="reco-btn reco-btn--ghost" id="recommendCloseBtn">닫기</button>
+            <button type="button" class="reco-btn reco-btn--primary" id="recommendSendBtn">추천 보내기</button>
+          </div>
+        </div>
+        <p class="reco-modal__msg" id="recommendMsg"></p>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -1116,8 +1237,18 @@
     const paginationEl = document.getElementById("pagination");
     const jobTabAllBtn = document.getElementById("jobTabAll");
     const jobTabBookmarkBtn = document.getElementById("jobTabBookmark");
+    const jobTabRecommendBtn = document.getElementById("jobTabRecommend");
     const bookmarkCountEl = document.getElementById("bookmarkCount");
+    const recommendCountEl = document.getElementById("recommendCount");
     const jobToastEl = document.getElementById("jobToast");
+
+    const recommendModal = document.getElementById("recommendModal");
+    const recommendCourseSelect = document.getElementById("recommendCourseSelect");
+    const recommendStudentsEl = document.getElementById("recommendStudents");
+    const recommendSelectAll = document.getElementById("recommendSelectAll");
+    const recommendCloseBtn = document.getElementById("recommendCloseBtn");
+    const recommendSendBtn = document.getElementById("recommendSendBtn");
+    const recommendMsgEl = document.getElementById("recommendMsg");
 
     // URL 파라미터 (왜: 학생의 학과에 맞춰 기본값을 자동으로 맞추기 위해 사용합니다)
     const queryParams = new URLSearchParams(window.location.search);
@@ -1132,12 +1263,21 @@
     let currentPage = 1;
     const itemsPerPage = 10;
     let totalItems = 0;
-    let currentView = "all"; // all | bookmark
+    let currentView = "all"; // all | bookmark | recommend
 
     // 북마크 상태(왜: 카드 렌더링 시 아이콘 활성화를 바로 반영하기 위해)
     const bookmarkedKeys = new Set();
     let bookmarkTotal = 0;
     let bookmarkItems = []; // DB에서 내려온 스냅샷 목록
+
+    // 교수 추천 상태
+    let recommendTotal = 0;
+    let recommendItems = [];
+
+    // 교수 모드 여부/데이터
+    let isTutorMode = false;
+    let tutorCourses = [];
+    let currentRecommendItem = null;
 
     // 현재 화면에 렌더링한 아이템 캐시(왜: 클릭 시 dataset에 전체 텍스트를 넣지 않고, JS에서 안전하게 꺼내기 위해)
     const currentItemMap = new Map();
@@ -1333,12 +1473,223 @@
       bookmarkCountEl.textContent = count.toLocaleString();
     }
 
+    function updateRecommendCount() {
+      if (!recommendCountEl) return;
+      const count = Number(recommendTotal || recommendItems.length || 0);
+      recommendCountEl.textContent = count.toLocaleString();
+    }
+
+    async function loadRecommendations(force = false) {
+      if (!force && (recommendItems && recommendItems.length > 0)) return;
+
+      const size = 200;
+      const maxPages = 5;
+
+      recommendItems = [];
+      recommendTotal = 0;
+
+      for (let page = 1; page <= maxPages; page++) {
+        const payload = await fetchMalgnApi(`/api/job_recommend.jsp?mode=list&page=${page}&size=${size}`);
+        if (!payload) break;
+
+        const total = Number(payload.total || 0);
+        if (!Number.isNaN(total)) recommendTotal = total;
+
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        items.forEach((row) => recommendItems.push(row));
+
+        if (recommendItems.length >= recommendTotal) break;
+        if (items.length < size) break;
+      }
+
+      updateRecommendCount();
+    }
+
+    async function renderRecommendList() {
+      workList.innerHTML = renderSkeletons(6);
+      if (paginationWrapper) paginationWrapper.style.display = "none";
+
+      try {
+        await loadRecommendations(false);
+
+        resultCount.textContent = `(${Number(recommendTotal || recommendItems.length || 0).toLocaleString()}건)`;
+
+        if (!recommendItems || recommendItems.length === 0) {
+          workList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="empty-state-icon"><i class="bi bi-mortarboard"></i></div>
+              <h2 class="empty-state-title">추천 받은 공고가 없습니다</h2>
+              <p class="empty-state-description">교수님이 추천한 공고가 여기 표시됩니다.</p>
+              <button class="btn-search" type="button" id="goToAllFromRecommend">
+                <i class="bi bi-grid"></i> 전체 공고 보기
+              </button>
+            </div>
+          `;
+          const goBtn = document.getElementById("goToAllFromRecommend");
+          if (goBtn) {
+            goBtn.addEventListener("click", () => {
+              setTab("all");
+              currentPage = 1;
+              searchWorkList();
+            });
+          }
+          return;
+        }
+
+        currentItemMap.clear();
+        const cards = recommendItems.map((row) => {
+          let item = null;
+          if (row.item_json) {
+            try {
+              item = JSON.parse(row.item_json);
+            } catch (e) {
+              item = null;
+            }
+          }
+
+          if (!item || typeof item !== "object") {
+            item = {
+              wantedAuthNo: row.wanted_auth_no,
+              company: row.company,
+              title: row.title,
+              region: row.region,
+              closeDt: row.close_dt,
+              wantedInfoUrl: row.wanted_info_url,
+              infoSvc: row.provider
+            };
+          }
+
+          item.infoSvc = (row.provider || item.infoSvc || "WORK24");
+          item.wantedAuthNo = (row.wanted_auth_no || item.wantedAuthNo || "");
+          if (!item.title) item.title = row.title || "";
+          if (!item.company) item.company = row.company || "";
+          if (!item.wantedInfoUrl) item.wantedInfoUrl = row.wanted_info_url || "";
+          if (!item.region) item.region = row.region || "";
+          if (!item.closeDt) item.closeDt = row.close_dt || "";
+
+          const key = makeBookmarkKey(item.infoSvc, item.wantedAuthNo);
+          if (key) currentItemMap.set(key, item);
+          return buildWorkCard(item);
+        });
+        workList.innerHTML = cards.join("");
+      } catch (err) {
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(`추천 공고 조회 실패: ${err.message}`);
+      }
+    }
+
+    async function loadTutorCourses(force = false) {
+      if (!force && tutorCourses && tutorCourses.length > 0) return tutorCourses;
+
+      const payload = await fetchMalgnApi("/tutor_lms/api/course_list.jsp");
+      if (!payload || payload.rst_code !== "0000") {
+        tutorCourses = [];
+        return tutorCourses;
+      }
+      tutorCourses = Array.isArray(payload.rst_data) ? payload.rst_data : [];
+      return tutorCourses;
+    }
+
+    function renderTutorCourseOptions(courses) {
+      if (!recommendCourseSelect) return;
+      recommendCourseSelect.innerHTML = "";
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "과목을 선택하세요";
+      recommendCourseSelect.appendChild(option);
+
+      (courses || []).forEach((row) => {
+        const courseId = row.id || row.course_id || row.courseId;
+        if (!courseId) return;
+        const courseName = row.course_nm || row.subject_nm_conv || row.course_nm_conv || "과목";
+        const programName = row.program_nm_conv || row.program_nm || "";
+        const label = programName && programName !== "-" ? `${courseName} (${programName})` : courseName;
+        const opt = document.createElement("option");
+        opt.value = String(courseId);
+        opt.textContent = label;
+        recommendCourseSelect.appendChild(opt);
+      });
+    }
+
+    async function detectTutorMode() {
+      try {
+        const payload = await fetchMalgnApi("/tutor_lms/api/course_list.jsp");
+        isTutorMode = !!(payload && payload.rst_code === "0000");
+      } catch (e) {
+        isTutorMode = false;
+      }
+    }
+
+    async function loadCourseStudents(courseId) {
+      if (!courseId) return [];
+      const payload = await fetchMalgnApi(`/tutor_lms/api/course_students_list.jsp?course_id=${encodeURIComponent(courseId)}`);
+      if (!payload || payload.rst_code !== "0000") return [];
+      return Array.isArray(payload.rst_data) ? payload.rst_data : [];
+    }
+
+    function openRecommendModal(item) {
+      if (!recommendModal) return;
+      currentRecommendItem = item || null;
+      if (recommendMsgEl) recommendMsgEl.textContent = "";
+      if (recommendSelectAll) recommendSelectAll.checked = false;
+      if (recommendModal) recommendModal.classList.add("active");
+      if (recommendModal) recommendModal.setAttribute("aria-hidden", "false");
+      loadTutorCourses(false)
+        .then((courses) => {
+          renderTutorCourseOptions(courses);
+          if (recommendStudentsEl) {
+            recommendStudentsEl.innerHTML = `<div class="text-muted" style="padding: 8px;">과목을 먼저 선택해 주세요.</div>`;
+          }
+        })
+        .catch(() => {
+          if (recommendStudentsEl) {
+            recommendStudentsEl.innerHTML = `<div class="text-muted" style="padding: 8px;">담당과목을 불러오지 못했습니다.</div>`;
+          }
+        });
+    }
+
+    function closeRecommendModal() {
+      if (recommendModal) recommendModal.classList.remove("active");
+      if (recommendModal) recommendModal.setAttribute("aria-hidden", "true");
+      currentRecommendItem = null;
+    }
+
+    function renderRecommendStudents(students) {
+      if (!recommendStudentsEl) return;
+      if (!students || students.length === 0) {
+        recommendStudentsEl.innerHTML = `<div class="text-muted" style="padding: 8px;">수강생이 없습니다.</div>`;
+        return;
+      }
+
+      const html = students.map((row) => {
+        const uid = row.user_id || row.userId || "";
+        const name = row.name || row.user_nm || row.userName || "";
+        const loginId = row.login_id || row.student_id || "";
+        return `
+          <label class="recommend-students__item">
+            <input type="checkbox" class="recommend-student-checkbox" value="${uid}">
+            <span>${name}${loginId ? ` (${loginId})` : ""}</span>
+          </label>
+        `;
+      });
+      recommendStudentsEl.innerHTML = html.join("");
+    }
+
+    function collectSelectedStudentIds() {
+      if (!recommendStudentsEl) return [];
+      const checkboxes = recommendStudentsEl.querySelectorAll(".recommend-student-checkbox:checked");
+      return Array.from(checkboxes).map((el) => el.value).filter((v) => v);
+    }
+
     function setTab(view) {
       currentView = view;
       const isAll = view === "all";
+      const isBookmark = view === "bookmark";
+      const isRecommend = view === "recommend";
 
       if (jobTabAllBtn) jobTabAllBtn.setAttribute("aria-selected", isAll ? "true" : "false");
-      if (jobTabBookmarkBtn) jobTabBookmarkBtn.setAttribute("aria-selected", isAll ? "false" : "true");
+      if (jobTabBookmarkBtn) jobTabBookmarkBtn.setAttribute("aria-selected", isBookmark ? "true" : "false");
+      if (jobTabRecommendBtn) jobTabRecommendBtn.setAttribute("aria-selected", isRecommend ? "true" : "false");
 
       // 왜: 북마크 탭은 DB 목록(최대 200*5)을 그대로 보여주므로, 기존 검색 페이지네이션은 숨깁니다.
       if (paginationWrapper) paginationWrapper.style.display = isAll ? (totalItems > itemsPerPage ? "block" : "none") : "none";
@@ -1646,6 +1997,7 @@
       const ddayClass = dday?.urgent ? "urgent" : "";
       const provider = resolveProviderFromItem(item);
       const wantedAuthNo = resolveWantedAuthNo(item);
+      const detailUrl = item.wantedInfoUrl || item.wantedMobileInfoUrl || "";
       const key = makeBookmarkKey(provider, wantedAuthNo);
       const isBookmarked = key ? bookmarkedKeys.has(key) : false;
       const bookmarkIconClass = isBookmarked ? "bi-bookmark-fill" : "bi-bookmark";
@@ -1662,8 +2014,13 @@
         badges.push(`<span class="job-badge job-badge-success">${item.salTpNm}</span>`);
       }
 
+      const titleHtml = detailUrl
+        ? `<a class="job-title-link" href="${detailUrl}" target="_blank" rel="noopener noreferrer">${item.title || "-"}</a>`
+        : `${item.title || "-"}`;
+
       return `
-        <article class="job-card" role="listitem" aria-label="${item.title || '채용 공고'}" data-job-key="${key}" data-job-provider="${provider}" data-job-auth-no="${wantedAuthNo}">
+        <article class="job-card ${detailUrl ? "clickable" : ""}" role="listitem" aria-label="${item.title || '채용 공고'}"
+          data-job-key="${key}" data-job-provider="${provider}" data-job-auth-no="${wantedAuthNo}" data-detail-url="${detailUrl}">
           <div class="job-card-header">
             <div class="job-company">
               <div class="job-company-icon" aria-hidden="true">
@@ -1676,7 +2033,7 @@
             </button>
           </div>
           
-          <h2 class="job-title">${item.title || "-"}</h2>
+          <h2 class="job-title">${titleHtml}</h2>
           
           <div class="job-meta">
             <span class="job-meta-item">
@@ -1711,14 +2068,20 @@
           </div>
           
           <div class="job-actions">
-            <a href="${item.wantedInfoUrl || '#'}" target="_blank" rel="noopener noreferrer" 
+            <a href="${detailUrl || '#'}" target="_blank" rel="noopener noreferrer" 
                class="btn-apply" aria-label="${item.title}에 지원하기">
               <i class="bi bi-send" aria-hidden="true"></i> 지원하기
             </a>
-            <a href="${item.wantedInfoUrl || '#'}" target="_blank" rel="noopener noreferrer"
-               class="btn-detail" aria-label="${item.title} 상세보기">
-              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
-            </a>
+            ${isTutorMode ? `
+              <button class="btn-detail btn-recommend" type="button" aria-label="${item.title} 추천 보내기">
+                <i class="bi bi-send" aria-hidden="true"></i> 추천 보내기
+              </button>
+            ` : `
+              <a href="${detailUrl || '#'}" target="_blank" rel="noopener noreferrer"
+                 class="btn-detail" aria-label="${item.title} 상세보기">
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+              </a>
+            `}
           </div>
         </article>
       `;
@@ -2297,6 +2660,35 @@
       }
     });
 
+    // 추천 보내기/카드 클릭 이벤트
+    workList.addEventListener("click", async (e) => {
+      const recommendBtn = e.target.closest(".btn-recommend");
+      if (recommendBtn) {
+        e.preventDefault();
+        if (!isTutorMode) {
+          showToast("교수 계정에서만 추천을 보낼 수 있습니다.", true);
+          return;
+        }
+        const card = recommendBtn.closest(".job-card");
+        const key = card ? (card.getAttribute("data-job-key") || "") : "";
+        const item = key ? currentItemMap.get(key) : null;
+        if (!item) {
+          showToast("공고 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.", true);
+          return;
+        }
+        openRecommendModal(item);
+        return;
+      }
+
+      const card = e.target.closest(".job-card");
+      if (!card) return;
+      if (e.target.closest(".job-bookmark") || e.target.closest(".btn-apply") || e.target.closest(".btn-detail") || e.target.closest(".job-title-link")) return;
+      const detailUrl = card.getAttribute("data-detail-url") || "";
+      if (detailUrl) {
+        window.open(detailUrl, "_blank", "noopener");
+      }
+    });
+
     // 탭 전환
     if (jobTabAllBtn) {
       jobTabAllBtn.addEventListener("click", () => {
@@ -2311,11 +2703,143 @@
         await renderBookmarkList();
       });
     }
+    if (jobTabRecommendBtn) {
+      jobTabRecommendBtn.addEventListener("click", async () => {
+        setTab("recommend");
+        await renderRecommendList();
+      });
+    }
+
+    if (recommendCloseBtn) recommendCloseBtn.addEventListener("click", closeRecommendModal);
+    if (recommendModal) {
+      recommendModal.addEventListener("click", (e) => {
+        if (e.target === recommendModal) closeRecommendModal();
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && recommendModal && recommendModal.classList.contains("active")) {
+        closeRecommendModal();
+      }
+    });
+
+    if (recommendCourseSelect) {
+      recommendCourseSelect.addEventListener("change", async () => {
+        const courseId = recommendCourseSelect.value || "";
+        if (recommendSelectAll) recommendSelectAll.checked = false;
+        if (!courseId) {
+          if (recommendStudentsEl) {
+            recommendStudentsEl.innerHTML = `<div class="text-muted" style="padding: 8px;">과목을 먼저 선택해 주세요.</div>`;
+          }
+          return;
+        }
+        if (recommendStudentsEl) recommendStudentsEl.innerHTML = renderSkeletons(3);
+        try {
+          const students = await loadCourseStudents(courseId);
+          renderRecommendStudents(students);
+        } catch (err) {
+          if (recommendStudentsEl) {
+            recommendStudentsEl.innerHTML = `<div class="text-muted" style="padding: 8px;">학생 목록을 불러오지 못했습니다.</div>`;
+          }
+        }
+      });
+    }
+
+    if (recommendSelectAll) {
+      recommendSelectAll.addEventListener("change", () => {
+        const checked = recommendSelectAll.checked;
+        if (!recommendStudentsEl) return;
+        const checkboxes = recommendStudentsEl.querySelectorAll(".recommend-student-checkbox");
+        checkboxes.forEach((el) => { el.checked = checked; });
+      });
+    }
+
+    if (recommendSendBtn) {
+      recommendSendBtn.addEventListener("click", async () => {
+        if (!currentRecommendItem) {
+          showToast("공고 정보를 찾지 못했습니다.", true);
+          return;
+        }
+        const courseId = recommendCourseSelect ? recommendCourseSelect.value : "";
+        if (!courseId) {
+          if (recommendMsgEl) recommendMsgEl.textContent = "담당과목을 선택해 주세요.";
+          return;
+        }
+        const studentIds = collectSelectedStudentIds();
+        if (studentIds.length === 0) {
+          if (recommendMsgEl) recommendMsgEl.textContent = "추천할 학생을 선택해 주세요.";
+          return;
+        }
+
+        const item = currentRecommendItem;
+        const provider = resolveProviderFromItem(item);
+        const wantedAuthNo = resolveWantedAuthNo(item);
+        const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "") : item.region;
+        const wantedInfoUrl = item.wantedInfoUrl || item.wantedMobileInfoUrl || "";
+        const itemJson = JSON.stringify({
+          // 왜: 추천 탭에서도 “전체 목록”과 동일한 카드 UI를 그대로 그리기 위해 스냅샷을 저장합니다.
+          wantedAuthNo: wantedAuthNo,
+          company: item.company || "",
+          busino: item.busino || "",
+          indTpNm: item.indTpNm || "",
+          title: item.title || "",
+          salTpNm: item.salTpNm || "",
+          sal: item.sal || "",
+          minSal: item.minSal || "",
+          maxSal: item.maxSal || "",
+          region: item.region || "",
+          holidayTpNm: item.holidayTpNm || "",
+          minEdubg: item.minEdubg || "",
+          career: item.career || "",
+          regDt: item.regDt || "",
+          closeDt: item.closeDt || "",
+          infoSvc: provider,
+          wantedInfoUrl: item.wantedInfoUrl || "",
+          wantedMobileInfoUrl: item.wantedMobileInfoUrl || "",
+          smodifyDtm: item.smodifyDtm || "",
+          zipCd: item.zipCd || "",
+          strtnmCd: item.strtnmCd || "",
+          basicAddr: item.basicAddr || "",
+          detailAddr: item.detailAddr || "",
+          empTpCd: item.empTpCd || "",
+          jobsCd: item.jobsCd || ""
+        });
+
+        const body = new URLSearchParams({
+          mode: "add",
+          course_id: courseId,
+          student_user_ids: studentIds.join(","),
+          provider,
+          wanted_auth_no: wantedAuthNo,
+          wanted_info_url: wantedInfoUrl,
+          title: item.title || "",
+          company: item.company || "",
+          region: region || "",
+          close_dt: item.closeDt || "",
+          item_json: itemJson
+        });
+
+        recommendSendBtn.disabled = true;
+        try {
+          await fetchMalgnApi("/api/job_recommend.jsp", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            body
+          });
+          showToast("추천을 보냈습니다.");
+          if (recommendMsgEl) recommendMsgEl.textContent = "추천이 저장되었습니다.";
+          closeRecommendModal();
+        } catch (err) {
+          if (recommendMsgEl) recommendMsgEl.textContent = err.message || "추천 저장 중 오류가 발생했습니다.";
+        } finally {
+          recommendSendBtn.disabled = false;
+        }
+      });
+    }
 
     // ==========================================
     // 초기 로딩
     // ==========================================
-    Promise.all([loadOccupationDepth1(), loadRegionCodes(), loadDeptOccupationMap().then((map) => {
+    Promise.all([loadOccupationDepth1(), loadRegionCodes(), detectTutorMode(), loadDeptOccupationMap().then((map) => {
       deptOccupationMap = map;
       populateDeptSelect(map);
     })])
@@ -2323,6 +2847,7 @@
         setWork24OnlyControlsEnabled(isWork24Selected());
         // 왜: 아이콘 활성화(저장 상태)를 바로 보이게 하려면, 검색 전에 북마크 목록을 한 번 로딩해야 합니다.
         try { await loadBookmarks(true); } catch (e) { /* 로그인/권한 문제는 무시(북마크 탭에서 안내) */ }
+        try { await loadRecommendations(true); } catch (e) { /* 로그인/권한 문제는 무시(추천 탭에서 안내) */ }
         await applyDefaultFilters();
         currentPage = 1;
         updateActiveFilters();
