@@ -18,9 +18,10 @@ export function StatisticsPage() {
       try {
         const doc = iframe.contentDocument || iframe.contentWindow?.document;
         if (doc && doc.body) {
-          // 왜: scrollHeight로 전체 콘텐츠 높이를 측정하고, 여유 공간(padding)을 추가합니다.
-          const contentHeight = doc.documentElement.scrollHeight || doc.body.scrollHeight;
-          setIframeHeight(contentHeight + 40);
+          // 왜: scrollHeight로 전체 콘텐츠 높이를 측정해 iframe 높이를 콘텐츠에 맞춥니다.
+          //     (주의) 반복 측정 중에 여유값(+px)을 더하면 iframe 높이가 계속 커질 수 있어, 계산값 그대로 사용합니다.
+          const contentHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+          setIframeHeight(contentHeight);
         }
       } catch (e) {
         // 왜: cross-origin 제한이 있을 경우 기본 높이를 충분히 크게 설정합니다.
