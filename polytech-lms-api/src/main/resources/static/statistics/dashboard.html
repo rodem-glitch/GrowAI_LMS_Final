@@ -949,6 +949,11 @@
           </div>
         </div>
       </div>
+
+      <!-- 출처 정보 -->
+      <div class="text-end text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+        <i class="bi bi-info-circle"></i> 인구 데이터 출처: KOSIS(국가통계포털), 2019~2024년
+      </div>
     </div>
 
     <div class="tab-pane fade" id="pane-industry" role="tabpanel" aria-labelledby="tab-industry">
@@ -1004,13 +1009,27 @@
         </div>
         <div class="card-body-premium p-0">
           <div class="table-responsive">
-            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 120px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
               <thead>
               <tr>
-                <th style="min-width: 160px;">분야</th>
-                <th>행정구역 종사자 비율</th>
-                <th>캠퍼스 학생 비율</th>
-                <th>GAP(캠퍼스-행정, %p)</th>
+                <th rowspan="2" style="vertical-align: middle;">분야</th>
+                <th colspan="2" style="background: rgba(107, 114, 128, 0.15);">행정구역 (종사자)</th>
+                <th colspan="2" style="background: rgba(59, 130, 246, 0.15);">캠퍼스 (학생)</th>
+                <th rowspan="2" style="vertical-align: middle;">GAP<br><small class="text-muted">(%p)</small></th>
+              </tr>
+              <tr>
+                <th style="background: rgba(107, 114, 128, 0.08);">인원</th>
+                <th style="background: rgba(107, 114, 128, 0.08);">비율(%)</th>
+                <th style="background: rgba(59, 130, 246, 0.08);">인원</th>
+                <th style="background: rgba(59, 130, 246, 0.08);">비율(%)</th>
               </tr>
               </thead>
               <tbody id="industryTableBody"></tbody>
@@ -1041,6 +1060,11 @@
             <canvas id="industryGapChart"></canvas>
           </div>
         </div>
+      </div>
+
+      <!-- 출처 정보 -->
+      <div class="text-end text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+        <i class="bi bi-info-circle"></i> 산업 데이터 출처: SGIS(통계지리정보서비스), 2019~2023년
       </div>
     </div>
 
@@ -3325,9 +3349,11 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="text-start">${r.category ?? ""}</td>
-        <td>${Number(r.regionRatio ?? 0).toFixed(2)}</td>
-        <td>${Number(r.campusRatio ?? 0).toFixed(2)}</td>
-        <td>${Number(r.gap ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.regionCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums">${Number(r.regionRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.campusCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums">${Number(r.campusRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.gap ?? 0).toFixed(2)}</td>
       `;
       body.appendChild(tr);
     });
