@@ -1,5 +1,6 @@
 package dao;
 
+import java.util.concurrent.ConcurrentHashMap;
 import malgnsoft.db.*;
 import malgnsoft.util.*;
 
@@ -7,6 +8,8 @@ public class InfoLogDao extends DataObject {
 
     public String[] types = {"A=>동의", "L=>목록", "V=>조회", "E=>엑셀", "C=>등록", "U=>갱신"};
     public String[] categories = { "B=>관리자단", "T=>교강사단" };
+
+    private static final ConcurrentHashMap<Integer, String> LAST_PURGE_DATE_BY_SITE = new ConcurrentHashMap<>();
 
     public int userId = 0;
     public int siteId = 0;
@@ -39,6 +42,9 @@ public class InfoLogDao extends DataObject {
 
     public int add(String logType, String pageNm, int userCnt, String purpose, DataSet list) {
         if(this.userId == 0 || "".equals(this.pagePath) || "".equals(this.ipAddr)) return 0;
+
+        // 왜: 개인정보 조회 로그를 3년까지만 보관해야 하므로, 조회 시점에 오래된 로그를 정리합니다.
+        this.purgeExpiredLogs();
 
         String now = Malgn.time("yyyyMMddHHmmss");
         String today = Malgn.time("yyyyMMdd");
@@ -74,6 +80,38 @@ public class InfoLogDao extends DataObject {
         if(newId > 0 && list != null) _logUser.add(newId, list);
 
         return newId;
+    }
+
+    public void purgeExpiredLogs() {
+        if(this.siteId == 0) return;
+
+        String today = Malgn.time("yyyyMMdd");
+        String lastPurgeDate = LAST_PURGE_DATE_BY_SITE.get(this.siteId);
+        if(today.equals(lastPurgeDate)) return;
+
+        // 왜: 하루 1회만 정리하여 불필요한 반복 삭제를 막습니다.
+        LAST_PURGE_DATE_BY_SITE.put(this.siteId, today);
+
+        String now = Malgn.time("yyyyMMddHHmmss");
+        String cutoff = Malgn.addDate("M", -36, now, "yyyyMMddHHmmss");
+
+        // 왜: 연결 테이블을 먼저 지워야 로그 삭제 후에도 고아 데이터가 남지 않습니다.
+        this.execute(
+            "DELETE FROM TB_INFO_USER "
+            + " WHERE site_id = " + this.siteId
+            + " AND log_id IN ("
+            + " SELECT id FROM " + this.table
+            + " WHERE site_id = " + this.siteId
+            + " AND reg_date < '" + cutoff + "'"
+            + " )"
+        );
+
+        // 왜: 3년이 지난 개인정보 조회 로그를 정리하여 보관 기간을 지킵니다.
+        this.execute(
+            "DELETE FROM " + this.table
+            + " WHERE site_id = " + this.siteId
+            + " AND reg_date < '" + cutoff + "'"
+        );
     }
 
     public String getAgreeDate(int userId) {
