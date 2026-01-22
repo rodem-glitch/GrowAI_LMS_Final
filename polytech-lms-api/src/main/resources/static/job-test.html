@@ -285,6 +285,95 @@
       /* UI Skills: tabular-nums for data */
       font-variant-numeric: tabular-nums;
     }
+
+    .results-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .job-tabs {
+      display: inline-flex;
+      background: #fff;
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-lg);
+      padding: 0.25rem;
+      gap: 0.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .job-tab {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--color-gray-700);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: calc(var(--radius-lg) - 0.25rem);
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .job-tab:hover {
+      background: var(--color-gray-50);
+    }
+
+    .job-tab[aria-selected="true"] {
+      background: var(--color-primary);
+      color: #fff;
+    }
+
+    .job-tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.5rem;
+      height: 1.5rem;
+      padding: 0 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      /* UI Skills: tabular-nums for badges */
+      font-variant-numeric: tabular-nums;
+      background: var(--color-gray-100);
+      color: var(--color-gray-800);
+    }
+
+    .job-tab[aria-selected="true"] .job-tab-badge {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+    }
+
+    /* ============================================
+       토스트(간단 메시지)
+       ============================================ */
+    .job-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 1.25rem;
+      transform: translateX(-50%);
+      max-width: min(540px, calc(100vw - 2rem));
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 999px;
+      box-shadow: var(--shadow-lg);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-fast);
+      font-size: 0.875rem;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .job-toast.show {
+      opacity: 1;
+    }
     
     /* ============================================
        채용 공고 카드
@@ -891,13 +980,26 @@
         <h1 class="results-title">
           채용 공고 <span class="results-count" id="resultCount">(0건)</span>
         </h1>
+        <div class="results-actions">
+          <div class="job-tabs" role="tablist" aria-label="채용 목록 보기 전환">
+            <button id="jobTabAll" type="button" class="job-tab" role="tab" aria-selected="true" aria-controls="worklist">
+              전체
+            </button>
+            <button id="jobTabBookmark" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist">
+              북마크 <span id="bookmarkCount" class="job-tab-badge">0</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 채용 공고 목록 -->
       <div id="worklist" class="job-grid" role="list" aria-label="채용 공고 목록">
         <!-- 카드들이 여기에 동적으로 추가됨 -->
       </div>
-      
+
+      <!-- 간단 토스트 -->
+      <div id="jobToast" class="job-toast" aria-live="polite" aria-atomic="true"></div>
+       
       <!-- 페이지네이션 -->
       <div id="paginationWrapper" class="pagination-wrapper" style="display:none;">
         <div id="pagination" class="pagination" role="navigation" aria-label="페이지 네비게이션"></div>
@@ -941,6 +1043,10 @@
     const activeFiltersEl = document.getElementById("activeFilters");
     const paginationWrapper = document.getElementById("paginationWrapper");
     const paginationEl = document.getElementById("pagination");
+    const jobTabAllBtn = document.getElementById("jobTabAll");
+    const jobTabBookmarkBtn = document.getElementById("jobTabBookmark");
+    const bookmarkCountEl = document.getElementById("bookmarkCount");
+    const jobToastEl = document.getElementById("jobToast");
 
     // URL 파라미터 (왜: 학생의 학과에 맞춰 기본값을 자동으로 맞추기 위해 사용합니다)
     const queryParams = new URLSearchParams(window.location.search);
@@ -955,6 +1061,15 @@
     let currentPage = 1;
     const itemsPerPage = 10;
     let totalItems = 0;
+    let currentView = "all"; // all | bookmark
+
+    // 북마크 상태(왜: 카드 렌더링 시 아이콘 활성화를 바로 반영하기 위해)
+    const bookmarkedKeys = new Set();
+    let bookmarkTotal = 0;
+    let bookmarkItems = []; // DB에서 내려온 스냅샷 목록
+
+    // 현재 화면에 렌더링한 아이템 캐시(왜: 클릭 시 dataset에 전체 텍스트를 넣지 않고, JS에서 안전하게 꺼내기 위해)
+    const currentItemMap = new Map();
 
     // ==========================================
     // 유틸리티 함수
@@ -966,6 +1081,135 @@
         throw new Error(text || response.statusText);
       }
       return response.json();
+    }
+
+    function showToast(message, isError = false) {
+      if (!jobToastEl) return;
+      jobToastEl.textContent = message || "";
+      jobToastEl.style.background = isError ? "rgba(153, 27, 27, 0.92)" : "rgba(17, 24, 39, 0.92)";
+      jobToastEl.classList.add("show");
+      window.clearTimeout(showToast._t);
+      showToast._t = window.setTimeout(() => jobToastEl.classList.remove("show"), 2200);
+    }
+
+    function makeBookmarkKey(provider, wantedAuthNo) {
+      const p = (provider || "").trim().toUpperCase();
+      const a = (wantedAuthNo || "").trim();
+      if (!p || !a) return "";
+      return `${p}|${a}`;
+    }
+
+    function resolveProviderFromItem(item) {
+      // 왜: provider=ALL일 때도 아이템별 제공처가 달라서, item.infoSvc를 최우선으로 봅니다.
+      if (item && item.infoSvc) return String(item.infoSvc).trim().toUpperCase();
+      const selected = (providerSelect && providerSelect.value) ? providerSelect.value.trim().toUpperCase() : "";
+      if (!selected || selected === "ALL") return "WORK24";
+      return selected;
+    }
+
+    function resolveWantedAuthNo(item) {
+      return (item && item.wantedAuthNo) ? String(item.wantedAuthNo).trim() : "";
+    }
+
+    async function fetchMalgnApi(url, options = {}) {
+      // 왜: Malgn JSON 응답은 화면/모듈마다 포맷이 조금씩 달라서, 여기서 한 번에 풀어 씁니다.
+      // - (A) /api/init.jsp 계열: ret_code / ret_msg / ret_json
+      // - (B) util.Json.print 계열: error / message / json
+      const response = await fetch(url, options);
+      const text = await response.text();
+
+      let data = null;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch (e) {
+        // 500 HTML 에러페이지가 섞이면 여기로 들어옵니다.
+        throw new Error(text && text.length < 200 ? text : "서버 응답이 JSON이 아닙니다.");
+      }
+
+      if (!data || typeof data !== "object") {
+        throw new Error("서버 응답이 비어 있습니다.");
+      }
+
+      if ("ret_code" in data) {
+        const code = data.ret_code;
+        const ok = (code === 0 || code === "0" || code === "000");
+        if (!ok) {
+          throw new Error(data.ret_msg || data.message || "요청에 실패했습니다.");
+        }
+        const payload = (data.ret_json !== undefined) ? data.ret_json : null;
+        if (payload == null || payload === "") return null;
+        if (typeof payload === "string") {
+          try { return JSON.parse(payload); } catch (e) { return payload; }
+        }
+        return payload;
+      }
+
+      if ("error" in data) {
+        const code = Number(data.error);
+        const ok = (!Number.isNaN(code) && code === 0);
+        if (!ok) {
+          throw new Error(data.message || data.ret_msg || data.msg || "요청에 실패했습니다.");
+        }
+
+        const payload = (data.json !== undefined) ? data.json : ((data.data !== undefined) ? data.data : null);
+        if (payload == null || payload === "") return null;
+        if (typeof payload === "string") {
+          try { return JSON.parse(payload); } catch (e) { return payload; }
+        }
+        return payload;
+      }
+
+      // 일반 JSON(프록시/스프링 등) 응답은 그대로 반환
+      return data;
+    }
+
+    async function loadBookmarks(force = false) {
+      if (!force && (bookmarkItems && bookmarkItems.length > 0)) return;
+
+      // 왜: size 상한이 200이라, 총 개수가 많을 때는 여러 번 가져옵니다(테스트용으로는 최대 5페이지까지만).
+      const size = 200;
+      const maxPages = 5;
+
+      bookmarkItems = [];
+      bookmarkedKeys.clear();
+      bookmarkTotal = 0;
+
+      for (let page = 1; page <= maxPages; page++) {
+        const payload = await fetchMalgnApi(`/api/job_bookmark.jsp?mode=list&page=${page}&size=${size}`);
+        if (!payload) break;
+
+        const total = Number(payload.total || 0);
+        if (!Number.isNaN(total)) bookmarkTotal = total;
+
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        items.forEach((row) => {
+          bookmarkItems.push(row);
+          const key = makeBookmarkKey(row.provider, row.wanted_auth_no);
+          if (key) bookmarkedKeys.add(key);
+        });
+
+        if (bookmarkItems.length >= bookmarkTotal) break;
+        if (items.length < size) break;
+      }
+
+      updateBookmarkCount();
+    }
+
+    function updateBookmarkCount() {
+      if (!bookmarkCountEl) return;
+      const count = Number(bookmarkTotal || bookmarkedKeys.size || 0);
+      bookmarkCountEl.textContent = count.toLocaleString();
+    }
+
+    function setTab(view) {
+      currentView = view;
+      const isAll = view === "all";
+
+      if (jobTabAllBtn) jobTabAllBtn.setAttribute("aria-selected", isAll ? "true" : "false");
+      if (jobTabBookmarkBtn) jobTabBookmarkBtn.setAttribute("aria-selected", isAll ? "false" : "true");
+
+      // 왜: 북마크 탭은 DB 목록(최대 200*5)을 그대로 보여주므로, 기존 검색 페이지네이션은 숨깁니다.
+      if (paginationWrapper) paginationWrapper.style.display = isAll ? (totalItems > itemsPerPage ? "block" : "none") : "none";
     }
 
     function resetSelect(select, label) {
@@ -1268,7 +1512,12 @@
       const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "-") : item.region;
       const dday = calculateDday(item.closeDt);
       const ddayClass = dday?.urgent ? "urgent" : "";
-      
+      const provider = resolveProviderFromItem(item);
+      const wantedAuthNo = resolveWantedAuthNo(item);
+      const key = makeBookmarkKey(provider, wantedAuthNo);
+      const isBookmarked = key ? bookmarkedKeys.has(key) : false;
+      const bookmarkIconClass = isBookmarked ? "bi-bookmark-fill" : "bi-bookmark";
+       
       // 뱃지 생성
       const badges = [];
       if (item.empTpCd || item.holidayTpNm) {
@@ -1282,7 +1531,7 @@
       }
 
       return `
-        <article class="job-card" role="listitem" aria-label="${item.title || '채용 공고'}">
+        <article class="job-card" role="listitem" aria-label="${item.title || '채용 공고'}" data-job-key="${key}" data-job-provider="${provider}" data-job-auth-no="${wantedAuthNo}">
           <div class="job-card-header">
             <div class="job-company">
               <div class="job-company-icon" aria-hidden="true">
@@ -1290,8 +1539,8 @@
               </div>
               <span class="job-company-name">${item.company || "-"}</span>
             </div>
-            <button class="job-bookmark" aria-label="저장하기" title="저장하기">
-              <i class="bi bi-bookmark"></i>
+            <button class="job-bookmark ${isBookmarked ? "active" : ""}" aria-label="${isBookmarked ? "저장 해제" : "저장하기"}" title="${isBookmarked ? "저장 해제" : "저장하기"}" ${wantedAuthNo ? "" : "disabled"}>
+              <i class="bi ${bookmarkIconClass}"></i>
             </button>
           </div>
           
@@ -1593,12 +1842,192 @@
         if (items.length === 0) {
           workList.innerHTML = renderEmptyState();
         } else {
+          // 왜: 클릭 이벤트에서 아이템 스냅샷을 꺼내 쓰기 위해 렌더링 직전에 Map을 채웁니다.
+          currentItemMap.clear();
+          items.forEach((item) => {
+            const provider = resolveProviderFromItem(item);
+            const wantedAuthNo = resolveWantedAuthNo(item);
+            const key = makeBookmarkKey(provider, wantedAuthNo);
+            if (key) currentItemMap.set(key, item);
+          });
           workList.innerHTML = items.map(buildWorkCard).join("");
           renderPagination();
         }
       } catch (err) {
         resultCount.textContent = "(0건)";
         workList.innerHTML = renderErrorState(`조회 실패: ${err.message}`);
+      }
+    }
+
+    async function renderBookmarkList() {
+      workList.innerHTML = renderSkeletons(6);
+      if (paginationWrapper) paginationWrapper.style.display = "none";
+
+      try {
+        await loadBookmarks(false);
+
+        resultCount.textContent = `(${Number(bookmarkTotal || bookmarkItems.length || 0).toLocaleString()}건)`;
+
+        if (!bookmarkItems || bookmarkItems.length === 0) {
+          workList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="empty-state-icon"><i class="bi bi-bookmark"></i></div>
+              <h2 class="empty-state-title">저장한 공고가 없습니다</h2>
+              <p class="empty-state-description">관심 있는 공고를 저장(북마크)해 두면 여기에 모아서 볼 수 있습니다.</p>
+              <button class="btn-search" type="button" id="goToAllFromBookmark">
+                <i class="bi bi-grid"></i> 전체 공고 보기
+              </button>
+            </div>
+          `;
+          const goBtn = document.getElementById("goToAllFromBookmark");
+          if (goBtn) {
+            goBtn.addEventListener("click", () => {
+              setTab("all");
+              currentPage = 1;
+              searchWorkList();
+            });
+          }
+          return;
+        }
+
+        // 왜: DB에 공고 JSON 스냅샷(item_json)이 있으면, 그걸로 “전체 목록”과 동일한 카드 UI를 그대로 렌더링할 수 있습니다.
+        currentItemMap.clear();
+        const cards = bookmarkItems.map((row) => {
+          let item = null;
+          if (row.item_json) {
+            try {
+              item = JSON.parse(row.item_json);
+            } catch (e) {
+              item = null;
+            }
+          }
+
+          if (!item || typeof item !== "object") {
+            item = {
+              wantedAuthNo: row.wanted_auth_no,
+              company: row.company,
+              title: row.title,
+              region: row.region,
+              closeDt: row.close_dt,
+              wantedInfoUrl: row.wanted_info_url,
+              infoSvc: row.provider
+            };
+          }
+
+          // 왜: 키/제공처는 DB 값이 기준이므로 항상 보정합니다.
+          item.infoSvc = (row.provider || item.infoSvc || "WORK24");
+          item.wantedAuthNo = (row.wanted_auth_no || item.wantedAuthNo || "");
+          if (!item.title) item.title = row.title || "";
+          if (!item.company) item.company = row.company || "";
+          if (!item.wantedInfoUrl) item.wantedInfoUrl = row.wanted_info_url || "";
+          if (!item.region) item.region = row.region || "";
+          if (!item.closeDt) item.closeDt = row.close_dt || "";
+
+          const key = makeBookmarkKey(item.infoSvc, item.wantedAuthNo);
+          if (key) currentItemMap.set(key, item);
+          return buildWorkCard(item);
+        });
+        workList.innerHTML = cards.join("");
+      } catch (err) {
+        // 왜: 로그인 만료/권한/서버 오류 등은 사용자가 바로 이해할 수 있게 안내합니다.
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(`북마크 조회 실패: ${err.message}`);
+      }
+    }
+
+    async function addBookmarkByItem(item) {
+      const provider = resolveProviderFromItem(item);
+      const wantedAuthNo = resolveWantedAuthNo(item);
+      const key = makeBookmarkKey(provider, wantedAuthNo);
+      if (!key) throw new Error("공고 키가 없어 저장할 수 없습니다.");
+
+      const region = (!item.region || item.region === "undefined") ? (item.basicAddr || "") : item.region;
+      const wantedInfoUrl = item.wantedInfoUrl || item.wantedMobileInfoUrl || "";
+      const itemJson = JSON.stringify({
+        // 왜: 북마크 탭에서도 “전체 목록”과 동일한 카드 UI를 그리려면, 배지/급여/경력 같은 필드가 필요합니다.
+        wantedAuthNo: wantedAuthNo,
+        company: item.company || "",
+        busino: item.busino || "",
+        indTpNm: item.indTpNm || "",
+        title: item.title || "",
+        salTpNm: item.salTpNm || "",
+        sal: item.sal || "",
+        minSal: item.minSal || "",
+        maxSal: item.maxSal || "",
+        region: item.region || "",
+        holidayTpNm: item.holidayTpNm || "",
+        minEdubg: item.minEdubg || "",
+        career: item.career || "",
+        regDt: item.regDt || "",
+        closeDt: item.closeDt || "",
+        infoSvc: provider,
+        wantedInfoUrl: item.wantedInfoUrl || "",
+        wantedMobileInfoUrl: item.wantedMobileInfoUrl || "",
+        smodifyDtm: item.smodifyDtm || "",
+        zipCd: item.zipCd || "",
+        strtnmCd: item.strtnmCd || "",
+        basicAddr: item.basicAddr || "",
+        detailAddr: item.detailAddr || "",
+        empTpCd: item.empTpCd || "",
+        jobsCd: item.jobsCd || ""
+      });
+
+      const body = new URLSearchParams({
+        mode: "add",
+        provider,
+        wanted_auth_no: wantedAuthNo,
+        wanted_info_url: wantedInfoUrl,
+        title: item.title || "",
+        company: item.company || "",
+        region: region || "",
+        close_dt: item.closeDt || "",
+        item_json: itemJson
+      });
+
+      await fetchMalgnApi("/api/job_bookmark.jsp", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body
+      });
+
+      // 성공 반영
+      bookmarkedKeys.add(key);
+      bookmarkTotal = Math.max(0, (Number(bookmarkTotal) || 0) + 1);
+      updateBookmarkCount();
+    }
+
+    async function deleteBookmarkByItem(item) {
+      const provider = resolveProviderFromItem(item);
+      const wantedAuthNo = resolveWantedAuthNo(item);
+      const key = makeBookmarkKey(provider, wantedAuthNo);
+      if (!key) return;
+
+      const body = new URLSearchParams({
+        mode: "del",
+        provider,
+        wanted_auth_no: wantedAuthNo
+      });
+
+      await fetchMalgnApi("/api/job_bookmark.jsp", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+        body
+      });
+
+      bookmarkedKeys.delete(key);
+      bookmarkTotal = Math.max(0, (Number(bookmarkTotal) || 0) - 1);
+      updateBookmarkCount();
+    }
+
+    function syncBookmarkButtonUI(btn, isActive) {
+      if (!btn) return;
+      const icon = btn.querySelector("i");
+      btn.classList.toggle("active", !!isActive);
+      btn.setAttribute("aria-label", isActive ? "저장 해제" : "저장하기");
+      btn.setAttribute("title", isActive ? "저장 해제" : "저장하기");
+      if (icon) {
+        icon.classList.toggle("bi-bookmark-fill", !!isActive);
+        icon.classList.toggle("bi-bookmark", !isActive);
       }
     }
 
@@ -1643,22 +2072,61 @@
     jobSmallSelect.addEventListener("change", updateActiveFilters);
     areaSelect.addEventListener("change", updateActiveFilters);
 
-    // 북마크 버튼 이벤트 위임
-    workList.addEventListener("click", (e) => {
+    // 북마크 버튼 이벤트 위임 (DB 연동)
+    workList.addEventListener("click", async (e) => {
       const bookmarkBtn = e.target.closest(".job-bookmark");
-      if (bookmarkBtn) {
-        e.preventDefault();
-        bookmarkBtn.classList.toggle("active");
-        const icon = bookmarkBtn.querySelector("i");
-        if (bookmarkBtn.classList.contains("active")) {
-          icon.classList.remove("bi-bookmark");
-          icon.classList.add("bi-bookmark-fill");
+      if (!bookmarkBtn) return;
+
+      e.preventDefault();
+      const card = bookmarkBtn.closest(".job-card");
+      const key = card ? (card.getAttribute("data-job-key") || "") : "";
+      const item = key ? currentItemMap.get(key) : null;
+
+      if (!item) {
+        showToast("공고 정보를 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.", true);
+        return;
+      }
+
+      const isActive = bookmarkBtn.classList.contains("active");
+      bookmarkBtn.disabled = true;
+
+      try {
+        if (isActive) {
+          await deleteBookmarkByItem(item);
+          syncBookmarkButtonUI(bookmarkBtn, false);
+          showToast("북마크를 해제했습니다.");
         } else {
-          icon.classList.remove("bi-bookmark-fill");
-          icon.classList.add("bi-bookmark");
+          await addBookmarkByItem(item);
+          syncBookmarkButtonUI(bookmarkBtn, true);
+          showToast("북마크에 저장했습니다.");
         }
+
+        // 왜: 북마크 탭에서는 바로 반영되어야 사용자가 “됐다”를 확실히 알 수 있습니다.
+        if (currentView === "bookmark") {
+          await loadBookmarks(true);
+          await renderBookmarkList();
+        }
+      } catch (err) {
+        showToast(err.message || "북마크 처리 중 오류가 발생했습니다.", true);
+      } finally {
+        bookmarkBtn.disabled = false;
       }
     });
+
+    // 탭 전환
+    if (jobTabAllBtn) {
+      jobTabAllBtn.addEventListener("click", () => {
+        setTab("all");
+        currentPage = 1;
+        searchWorkList();
+      });
+    }
+    if (jobTabBookmarkBtn) {
+      jobTabBookmarkBtn.addEventListener("click", async () => {
+        setTab("bookmark");
+        await renderBookmarkList();
+      });
+    }
 
     // ==========================================
     // 초기 로딩
@@ -1668,6 +2136,8 @@
       populateDeptSelect(map);
     })])
       .then(async () => {
+        // 왜: 아이콘 활성화(저장 상태)를 바로 보이게 하려면, 검색 전에 북마크 목록을 한 번 로딩해야 합니다.
+        try { await loadBookmarks(true); } catch (e) { /* 로그인/권한 문제는 무시(북마크 탭에서 안내) */ }
         await applyDefaultFilters();
         currentPage = 1;
         updateActiveFilters();
