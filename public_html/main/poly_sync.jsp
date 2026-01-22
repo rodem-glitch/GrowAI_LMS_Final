@@ -4,6 +4,24 @@
 //- 학사(View) 데이터는 외부(e-poly)에서 내려오며, API는 cnt 제한 때문에 “앞부분만” 받으면 수강생/회원 조인이 깨질 수 있습니다.
 //- 그래서 하루 1~2회 이 JSP를 호출해 우리 DB에 미리 저장(미러링)해두고, 화면은 로컬 DB만 조회하도록 만듭니다.
 
+public java.util.HashSet<String> parsePipeSet(String raw) {
+	java.util.HashSet<String> set = new java.util.HashSet<String>();
+	if(raw == null) return set;
+	String trimmed = raw.trim();
+	if("".equals(trimmed)) return set;
+
+	// 왜: 운영에서 설정값을 '|' 또는 줄바꿈/콤마로 관리하는 경우가 있어 모두 허용합니다.
+	String normalized = trimmed.replace("\r", "|").replace("\n", "|").replace(",", "|");
+	String[] parts = normalized.split("\\|");
+	for(String p : parts) {
+		if(p == null) continue;
+		String v = p.trim();
+		if("".equals(v)) continue;
+		set.add(v);
+	}
+	return set;
+}
+
 public String unwrapPre(String raw) {
 	if(raw == null) return "";
 	int preStart = raw.indexOf("<pre");
@@ -138,10 +156,25 @@ String syncDate = m.time("yyyyMMddHHmmss");
 
 PolySyncLogDao syncLog = new PolySyncLogDao();
 
+// === 학사 삭제 사용자 자동삭제(개인정보영향평가 대응) 설정 ===
+// 왜: 학사(View)에서 사라진 사용자는 우리 DB(미러/회원)에도 남으면 개인정보 보관 이슈가 될 수 있습니다.
+//     다만 외부 API 장애/누락 시 “대량 오삭제” 위험이 있어서, 설정 기반 + 안전장치(최소 비율 가드)를 둡니다.
+boolean enableUserAutoDelete = "Y".equalsIgnoreCase(SiteConfig.s("poly_auto_delete_yn"));
+boolean dryRunUserDelete = "dry_run".equalsIgnoreCase(syncMode) || "Y".equalsIgnoreCase(m.rs("dry_run_user_delete"));
+boolean matchLoginIdAlso = "Y".equalsIgnoreCase(SiteConfig.s("poly_auto_delete_match_login_id_yn"));
+java.util.HashSet<String> excludeLoginIds = parsePipeSet(
+	!"".equals(m.rs("exclude_login_ids")) ? m.rs("exclude_login_ids") : SiteConfig.s("poly_auto_delete_exclude_login_ids")
+);
+int minMemberRatio = m.ri("min_member_ratio", m.parseInt(SiteConfig.s("poly_auto_delete_min_member_ratio")));
+if(minMemberRatio <= 0) minMemberRatio = 50;
+if(minMemberRatio > 100) minMemberRatio = 100;
+
 //테이블 존재 확인(없으면 DDL을 먼저 적용해야 합니다)
 String[] baseTables = {
 	"LM_POLY_COURSE", "LM_POLY_MEMBER", "LM_POLY_MEMBER_KEY", "LM_POLY_STUDENT",
-	"LM_POLY_PROFESSOR", "LM_POLY_COURSE_PROF", "LM_POLY_SYNC_LOG"
+	"LM_POLY_PROFESSOR", "LM_POLY_COURSE_PROF", "LM_POLY_SYNC_LOG",
+	// 왜: 삭제 감지를 위해 “이번 스냅샷”을 TMP에 적재한 뒤, 정상일 때만 스왑합니다.
+	"LM_POLY_MEMBER_TMP", "LM_POLY_MEMBER_KEY_TMP"
 };
 int missing = 0;
 for(int i = 0; i < baseTables.length; i++) {
@@ -197,6 +230,8 @@ try {
 	PolyStudentDao polyStudent = new PolyStudentDao();
 	PolyMemberDao polyMember = new PolyMemberDao();
 	PolyMemberKeyDao polyMemberKey = new PolyMemberKeyDao();
+	PolyMemberDao polyMemberTmp = new PolyMemberDao(); polyMemberTmp.table = "LM_POLY_MEMBER_TMP";
+	PolyMemberKeyDao polyMemberKeyTmp = new PolyMemberKeyDao(); polyMemberKeyTmp.table = "LM_POLY_MEMBER_KEY_TMP";
 	PolyProfessorDao polyProfessor = new PolyProfessorDao();
 	PolyCourseProfDao polyCourseProf = new PolyCourseProfDao();
 
@@ -207,6 +242,15 @@ try {
 	int professorSaved = 0;
 	int courseProfSaved = 0;
 	int studentMaxYear = 0;
+	int memberOldCount = 0;
+	int memberNewCount = 0;
+	int memberDeletedKeys = 0;
+	int userDeleteCandidate = 0;
+	int userDeleteDone = 0;
+	int userDeleteSkipped = 0;
+	int userDeleteFailed = 0;
+	boolean memberSwapDone = false;
+	boolean memberGuardBlocked = false;
 
 	//2-1) 과목
 	if(!studentOnly) {
@@ -263,6 +307,18 @@ try {
 
 	//2-2) 회원
 	if(!studentOnly) {
+		// 왜: 이번에 받은 “스냅샷”을 TMP 테이블에 먼저 적재합니다.
+		//     외부 API가 누락/장애로 0건이 내려오면, 기존 데이터를 지우면 안 되므로 스왑 방식으로 안전하게 처리합니다.
+		try { polyMemberTmp.execute("TRUNCATE TABLE " + polyMemberTmp.table); }
+		catch(Exception e1) {
+			// 왜: 일부 DB에서는 TRUNCATE 권한/옵션 이슈가 있을 수 있어, 안전하게 DELETE로 한 번 더 시도합니다.
+			polyMemberTmp.execute("DELETE FROM " + polyMemberTmp.table);
+		}
+		try { polyMemberKeyTmp.execute("TRUNCATE TABLE " + polyMemberKeyTmp.table); }
+		catch(Exception e1) {
+			polyMemberKeyTmp.execute("DELETE FROM " + polyMemberKeyTmp.table);
+		}
+
 		memberList.first();
 		while(memberList.next()) {
 			String memberKey = pick(memberList, "member_key");
@@ -285,8 +341,8 @@ try {
 			String useYn = pick(memberList, "use_yn");
 			String gender = pick(memberList, "gender");
 
-			int ret = polyMember.execute(
-				" REPLACE INTO " + polyMember.table
+			int ret = polyMemberTmp.execute(
+				" REPLACE INTO " + polyMemberTmp.table
 				+ " (member_key, rpst_member_key, sync_date, user_type"
 				+ " , kor_name, eng_name, email, mobile, phone"
 				+ " , campus_code, campus_name, institution_code, institution_name"
@@ -304,15 +360,15 @@ try {
 			if(-1 < ret) memberSaved++;
 
 			//별칭 매핑(두 키 모두 조회 가능하게)
-			int retAlias1 = polyMemberKey.execute(
-				" REPLACE INTO " + polyMemberKey.table + " (alias_key, member_key, sync_date, reg_date, mod_date) VALUES(?,?,?,?,?) "
+			int retAlias1 = polyMemberKeyTmp.execute(
+				" REPLACE INTO " + polyMemberKeyTmp.table + " (alias_key, member_key, sync_date, reg_date, mod_date) VALUES(?,?,?,?,?) "
 				, new Object[] { memberKey, memberKey, syncDate, syncDate, syncDate }
 			);
 			if(-1 < retAlias1) aliasSaved++;
 
 			if(!"".equals(rpstKey)) {
-				int retAlias2 = polyMemberKey.execute(
-					" REPLACE INTO " + polyMemberKey.table + " (alias_key, member_key, sync_date, reg_date, mod_date) VALUES(?,?,?,?,?) "
+				int retAlias2 = polyMemberKeyTmp.execute(
+					" REPLACE INTO " + polyMemberKeyTmp.table + " (alias_key, member_key, sync_date, reg_date, mod_date) VALUES(?,?,?,?,?) "
 					, new Object[] { rpstKey, memberKey, syncDate, syncDate, syncDate }
 				);
 				if(-1 < retAlias2) aliasSaved++;
@@ -325,18 +381,107 @@ try {
 		//     강의실/교수자 탭/수강현황에서 동일한 member_key로 매핑되게 합니다.
 		try {
 			// 기본 가정: TB_USER.etc3에 학번/교번이 들어옵니다. (운영에서 다르면 여기만 바꾸면 됩니다)
-			int retAliasUser = polyMemberKey.execute(
-				" REPLACE INTO " + polyMemberKey.table
+			int retAliasUser = polyMemberKeyTmp.execute(
+				" REPLACE INTO " + polyMemberKeyTmp.table
 				+ " (alias_key, member_key, sync_date, reg_date, mod_date) "
 				+ " SELECT u.login_id, pm.member_key, '" + syncDate + "', '" + syncDate + "', '" + syncDate + "' "
 				+ " FROM TB_USER u "
-				+ " INNER JOIN " + polyMember.table + " pm ON pm.member_key = u.etc3 "
+				+ " INNER JOIN " + polyMemberTmp.table + " pm ON pm.member_key = u.etc3 "
 				+ " WHERE u.site_id = " + siteId + " AND u.status = 1 "
 				+ " AND u.login_id IS NOT NULL AND u.login_id <> '' "
 				+ " AND u.etc3 IS NOT NULL AND u.etc3 <> '' "
 			);
 			if(-1 < retAliasUser) aliasSaved += retAliasUser;
 		} catch(Exception ignore) {}
+
+		// 2-2.9) 삭제 감지 + (선택) TB_USER 자동삭제
+		try { memberOldCount = polyMember.getOneInt("SELECT COUNT(*) FROM " + polyMember.table); } catch(Exception ignore) {}
+		try { memberNewCount = polyMemberTmp.getOneInt("SELECT COUNT(*) FROM " + polyMemberTmp.table); } catch(Exception ignore) {}
+
+		// 왜: 외부 API 장애/누락으로 new가 급감하면, 학사에 남아있는 사용자까지 오삭제될 수 있어 차단합니다.
+		if(memberNewCount <= 0) memberGuardBlocked = true;
+		if(!memberGuardBlocked && memberOldCount > 0 && (memberNewCount * 100) < (memberOldCount * minMemberRatio)) memberGuardBlocked = true;
+
+		if(!memberGuardBlocked) {
+			// 왜: 학사에서 “사라진(member_key 미존재)” 사용자를 차집합으로 구합니다.
+			try {
+				DataSet deletedKeys = polyMember.query(
+					" SELECT o.member_key "
+					+ " FROM " + polyMember.table + " o "
+					+ " LEFT JOIN " + polyMemberTmp.table + " n ON n.member_key = o.member_key "
+					+ " WHERE n.member_key IS NULL "
+				);
+				memberDeletedKeys = deletedKeys.size();
+			} catch(Exception ignore) {}
+
+			// 왜: TMP를 준비한 뒤, 테이블명을 스왑하면 읽는 쪽은 항상 LM_POLY_MEMBER/LM_POLY_MEMBER_KEY만 보면 됩니다.
+			//     RENAME TABLE은 한 문장에 여러 스왑을 묶을 수 있어, 중간 상태(비어있는 테이블)를 최소화합니다.
+			try {
+				int swapExists = 0;
+				swapExists += syncLog.getOneInt(
+					" SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+					+ " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'LM_POLY_MEMBER_SWAP' "
+				);
+				swapExists += syncLog.getOneInt(
+					" SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+					+ " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'LM_POLY_MEMBER_KEY_SWAP' "
+				);
+				if(swapExists > 0) {
+					throw new RuntimeException("스왑 테이블(LM_POLY_MEMBER_SWAP/LM_POLY_MEMBER_KEY_SWAP)이 남아있습니다. 운영 반영 전 정리 후 다시 실행해 주세요.");
+				}
+
+				int renameRet = polyMember.execute(
+					" RENAME TABLE "
+					+ " " + polyMember.table + " TO LM_POLY_MEMBER_SWAP, " + polyMemberTmp.table + " TO " + polyMember.table + ", LM_POLY_MEMBER_SWAP TO " + polyMemberTmp.table
+					+ " , " + polyMemberKey.table + " TO LM_POLY_MEMBER_KEY_SWAP, " + polyMemberKeyTmp.table + " TO " + polyMemberKey.table + ", LM_POLY_MEMBER_KEY_SWAP TO " + polyMemberKeyTmp.table
+				);
+				memberSwapDone = -1 < renameRet;
+			} catch(Exception e) {
+				syncLog.upsert(syncKey, "ERR", "회원 스냅샷 스왑 실패: " + e.getMessage());
+				throw e;
+			}
+
+			// 왜: 학사에서 삭제된 사용자를 LMS 회원에서도 자동 처리(논리삭제)하려면,
+			//     “old에는 있고 new에는 없는” member_key를 기준으로 TB_USER를 찾습니다.
+			if(enableUserAutoDelete) {
+				UserDao userDao = new UserDao();
+				try {
+					String joinCond = "u.etc3 = o.member_key";
+					if(matchLoginIdAlso) joinCond = "(" + joinCond + " OR u.login_id = o.member_key)";
+
+					DataSet delUsers = userDao.query(
+						" SELECT DISTINCT u.id, u.login_id "
+						+ " FROM TB_USER u "
+						+ " INNER JOIN " + polyMemberTmp.table + " o ON " + joinCond
+						+ " LEFT JOIN " + polyMember.table + " n ON n.member_key = o.member_key "
+						+ " WHERE u.site_id = " + siteId
+						+ " AND u.status != -1 AND u.user_kind = 'U' "
+						+ " AND n.member_key IS NULL "
+					);
+
+					userDeleteCandidate = delUsers.size();
+					delUsers.first();
+					while(delUsers.next()) {
+						String lid = delUsers.s("login_id");
+						if(lid == null) lid = "";
+						lid = lid.trim();
+
+						// 왜: 테스트 계정/특수 계정은 운영 정책상 자동삭제 대상에서 제외해야 합니다.
+						if(excludeLoginIds.contains(lid)) { userDeleteSkipped++; continue; }
+
+						if(dryRunUserDelete) { continue; }
+
+						boolean ok = userDao.deleteUser(delUsers.i("id"));
+						if(ok) userDeleteDone++;
+						else userDeleteFailed++;
+					}
+					delUsers.first();
+				} catch(Exception e) {
+					syncLog.upsert(syncKey, "ERR", "TB_USER 자동삭제 처리 실패: " + e.getMessage());
+					throw e;
+				}
+			}
+		}
 	}
 
 	//2-2.5) 교수자 뷰 미러 + 과목-교수 매핑
@@ -446,10 +591,15 @@ try {
 	}
 
 	//3) 로그 기록
-	syncLog.upsert(syncKey, "OK", "성공(req=" + requireYear + ", smax=" + studentMaxYear + ", cnt=" + studentCnt + ")");
+	syncLog.upsert(syncKey, "OK"
+		, "성공(req=" + requireYear + ", smax=" + studentMaxYear + ", cnt=" + studentCnt + ")"
+		+ ", member(old=" + memberOldCount + ", new=" + memberNewCount + ", del=" + memberDeletedKeys + ", swap=" + (memberSwapDone ? "Y" : "N") + ")"
+		+ (memberGuardBlocked ? ", member_guard=Y(min=" + minMemberRatio + "%)" : ", member_guard=N")
+		+ (enableUserAutoDelete ? ", user_del(cand=" + userDeleteCandidate + ", done=" + userDeleteDone + ", skip=" + userDeleteSkipped + ", fail=" + userDeleteFailed + ", dry=" + (dryRunUserDelete ? "Y" : "N") + ")" : ", user_del(disabled)")
+	);
 
 	result.put("rst_code", "0000");
-	result.put("rst_message", "성공");
+	result.put("rst_message", memberGuardBlocked ? "성공(회원 스냅샷 가드로 회원/자동삭제는 스킵됨)" : "성공");
 	result.put("rst_sync_date", syncDate);
 	result.put("rst_course_max_year", targetCourseMaxYear);
 	result.put("rst_require_year", requireYear);
@@ -458,6 +608,19 @@ try {
 	result.put("rst_course_saved", courseSaved);
 	result.put("rst_member_saved", memberSaved);
 	result.put("rst_alias_saved", aliasSaved);
+	result.put("rst_member_old_count", memberOldCount);
+	result.put("rst_member_new_count", memberNewCount);
+	result.put("rst_member_deleted_keys", memberDeletedKeys);
+	result.put("rst_member_swap_done", memberSwapDone ? "Y" : "N");
+	result.put("rst_member_guard_blocked", memberGuardBlocked ? "Y" : "N");
+	result.put("rst_member_guard_min_ratio", minMemberRatio);
+	result.put("rst_user_auto_delete_enabled", enableUserAutoDelete ? "Y" : "N");
+	result.put("rst_user_auto_delete_dry_run", dryRunUserDelete ? "Y" : "N");
+	result.put("rst_user_auto_delete_match_login_id", matchLoginIdAlso ? "Y" : "N");
+	result.put("rst_user_delete_candidate", userDeleteCandidate);
+	result.put("rst_user_delete_done", userDeleteDone);
+	result.put("rst_user_delete_skipped", userDeleteSkipped);
+	result.put("rst_user_delete_failed", userDeleteFailed);
 	result.put("rst_professor_saved", professorSaved);
 	result.put("rst_course_prof_saved", courseProfSaved);
 	result.put("rst_student_saved", studentSaved);
