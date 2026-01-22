@@ -661,5 +661,16 @@
 			closeLoginModal();
 		}
 	});
+
+	// iframe 높이 자동 조절 (스크롤 통합)
+	window.addEventListener('message', function(e) {
+		if (e.data && e.data.type === 'iframeHeight') {
+			var iframe = document.querySelector('.nm-job__iframe');
+			if (iframe && e.data.height) {
+				iframe.style.height = e.data.height + 'px';
+				iframe.style.minHeight = 'auto';
+			}
+		}
+	});
 	</script>
 </div>

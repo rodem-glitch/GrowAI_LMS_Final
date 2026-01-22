@@ -108,6 +108,8 @@
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      /* iframe 내부에서 스크롤 방지 - 부모 페이지에서 스크롤 처리 */
+      overflow: hidden;
     }
     
     /* ============================================
@@ -1737,6 +1739,25 @@
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal.classList.contains('active')) closeModal();
       });
+    })();
+
+    // 부모 페이지에 iframe 높이를 전달 (스크롤 통합을 위해)
+    (function() {
+      function sendHeight() {
+        var height = document.body.scrollHeight;
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'iframeHeight', height: height }, '*');
+        }
+      }
+      // 초기 로드 시 전달
+      sendHeight();
+      // 콘텐츠 변경 시 전달 (MutationObserver 사용)
+      var observer = new MutationObserver(function() {
+        sendHeight();
+      });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      // 윈도우 리사이즈 시에도 전달
+      window.addEventListener('resize', sendHeight);
     })();
   </script>
 </body>
