@@ -187,6 +187,32 @@
       border-color: var(--color-primary);
       box-shadow: 0 0 0 3px var(--color-primary-100);
     }
+
+    .filter-input {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      font-size: 0.875rem;
+      border: 1px solid var(--color-gray-300);
+      border-radius: var(--radius-md);
+      background-color: #fff;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .filter-input:hover {
+      border-color: var(--color-gray-400);
+    }
+
+    .filter-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-100);
+    }
+
+    .filter-hint {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--color-gray-500);
+    }
     
     .btn-search {
       background: var(--color-primary);
@@ -963,6 +989,47 @@
           </div>
         </div>
         <div class="row g-3 mt-1">
+          <div class="col-md-4 col-lg-2">
+            <label for="salTypeSelect" class="filter-label">급여 유형</label>
+            <select id="salTypeSelect" class="filter-select" aria-label="급여 유형 선택">
+              <option value="">전체</option>
+              <option value="Y">연봉(만원)</option>
+              <option value="M">월급(만원)</option>
+              <option value="D">일급(원)</option>
+              <option value="H">시급(원)</option>
+            </select>
+          </div>
+          <div class="col-md-4 col-lg-2">
+            <label for="minPayInput" class="filter-label">급여 최소</label>
+            <input id="minPayInput" class="filter-input" type="number" min="0" step="1" inputmode="numeric" placeholder="예) 3000">
+          </div>
+          <div class="col-md-4 col-lg-2">
+            <label for="maxPayInput" class="filter-label">급여 최대</label>
+            <input id="maxPayInput" class="filter-input" type="number" min="0" step="1" inputmode="numeric" placeholder="예) 5000">
+          </div>
+          <div class="col-md-4 col-lg-3">
+            <label for="educationSelect" class="filter-label">내 학력</label>
+            <select id="educationSelect" class="filter-select" aria-label="내 학력 선택">
+              <option value="">전체</option>
+              <option value="01">초졸이하</option>
+              <option value="02">중졸</option>
+              <option value="03">고졸</option>
+              <option value="04">대졸(2~3년)</option>
+              <option value="05">대졸(4년)</option>
+              <option value="06">석사</option>
+              <option value="07">박사</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="filter-hint">
+              선택한 학력으로 지원 가능한 공고만 조회합니다. (학력무관 포함)
+            </div>
+            <div id="work24OnlyHint" class="filter-hint" style="display:none;">
+              급여/학력 필터는 현재 Work24 제공처에서만 지원됩니다.
+            </div>
+          </div>
+        </div>
+        <div class="row g-3 mt-1">
           <div class="col-12">
             <label for="deptselect" class="filter-label">학과(테스트)</label>
             <select id="deptselect" class="filter-select" aria-label="학과 테스트 선택">
@@ -1036,6 +1103,10 @@
     const areaSelect = document.getElementById("areaselect");
     const providerSelect = document.getElementById("providerselect");
     const deptSelect = document.getElementById("deptselect");
+    const salTypeSelect = document.getElementById("salTypeSelect");
+    const minPayInput = document.getElementById("minPayInput");
+    const maxPayInput = document.getElementById("maxPayInput");
+    const educationSelect = document.getElementById("educationSelect");
     const jobSearchBtn = document.getElementById("jobsearchbtn");
     const jobResetBtn = document.getElementById("jobresetbtn");
     const workList = document.getElementById("worklist");
@@ -1078,6 +1149,17 @@
       const response = await fetch(url, options);
       if (!response.ok) {
         const text = await response.text();
+        // 왜: 스프링 API 에러는 보통 {"message":"..."} 형태로 오므로, 그대로 던지면 화면에 JSON 문자열이 그대로 보입니다.
+        // 사용자에게는 메시지만 보여주는 게 이해하기 쉽습니다.
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            const message = (parsed && typeof parsed === "object") ? (parsed.message || parsed.error || parsed.msg) : null;
+            if (message) throw new Error(String(message));
+          } catch (e) {
+            // JSON 파싱 실패면 원문 텍스트를 그대로 사용합니다.
+          }
+        }
         throw new Error(text || response.statusText);
       }
       return response.json();
@@ -1091,6 +1173,56 @@
       window.clearTimeout(showToast._t);
       showToast._t = window.setTimeout(() => jobToastEl.classList.remove("show"), 2200);
     }
+
+    function isWork24Selected() {
+      const selected = (providerSelect && providerSelect.value) ? providerSelect.value.trim().toUpperCase() : "WORK24";
+      return selected === "WORK24";
+    }
+
+    function setWork24OnlyControlsEnabled(enabled) {
+      // 왜: 급여/학력 필터는 현재 Work24 OpenAPI 기준으로만 지원합니다(잡코리아/통합은 정확한 필터링이 어렵습니다).
+      const disabled = !enabled;
+      if (salTypeSelect) salTypeSelect.disabled = disabled;
+      if (minPayInput) minPayInput.disabled = disabled;
+      if (maxPayInput) maxPayInput.disabled = disabled;
+      if (educationSelect) educationSelect.disabled = disabled;
+
+      const hint = document.getElementById("work24OnlyHint");
+      if (hint) hint.style.display = enabled ? "none" : "block";
+
+      if (!enabled) {
+        if (salTypeSelect) salTypeSelect.value = "";
+        if (minPayInput) minPayInput.value = "";
+        if (maxPayInput) maxPayInput.value = "";
+        if (educationSelect) educationSelect.value = "";
+      }
+    }
+
+    function validateSalaryInputs() {
+      if (!salTypeSelect || !minPayInput || !maxPayInput) return { ok: true };
+      if (!isWork24Selected()) return { ok: true };
+
+      const salTp = (salTypeSelect.value || "").trim();
+      const minPayRaw = (minPayInput.value || "").trim();
+      const maxPayRaw = (maxPayInput.value || "").trim();
+
+      if (!salTp && !minPayRaw && !maxPayRaw) return { ok: true };
+
+      if (!salTp) return { ok: false, message: "급여 범위를 쓰려면 급여 유형을 먼저 선택해주세요." };
+      if (!minPayRaw || !maxPayRaw) return { ok: false, message: "급여 최소/최대 금액을 모두 입력해주세요." };
+
+      const minPay = Number(minPayRaw);
+      const maxPay = Number(maxPayRaw);
+      if (!Number.isFinite(minPay) || !Number.isFinite(maxPay) || minPay < 0 || maxPay < 0) {
+        return { ok: false, message: "급여 금액은 0 이상의 숫자만 입력할 수 있습니다." };
+      }
+      if (minPay > maxPay) return { ok: false, message: "급여 최소 금액이 최대 금액보다 클 수 없습니다." };
+
+      return { ok: true, minPay, maxPay, salTp };
+    }
+
+    // 주의: 검색은 “검색” 버튼 클릭 시에만 수행합니다.
+    // (왜: 어떤 필터는 자동 적용되고, 어떤 필터는 버튼을 눌러야 적용되면 사용자가 헷갈립니다.)
 
     function makeBookmarkKey(provider, wantedAuthNo) {
       const p = (provider || "").trim().toUpperCase();
@@ -1614,6 +1746,17 @@
         const text = areaSelect.options[areaSelect.selectedIndex].text;
         if (text !== "전체") filters.push({ type: "area", text });
       }
+
+      if (isWork24Selected() && educationSelect && educationSelect.value) {
+        const text = educationSelect.options[educationSelect.selectedIndex].text;
+        filters.push({ type: "edu", text: `학력: ${text}` });
+      }
+
+      const salaryValid = validateSalaryInputs();
+      if (salaryValid.ok && salaryValid.salTp) {
+        const unit = (salaryValid.salTp === "Y" || salaryValid.salTp === "M") ? "만원" : "원";
+        filters.push({ type: "salary", text: `급여: ${Number(salaryValid.minPay).toLocaleString()}~${Number(salaryValid.maxPay).toLocaleString()}${unit}` });
+      }
       
       if (filters.length === 0) {
         activeFiltersEl.innerHTML = "";
@@ -1705,6 +1848,11 @@
       resetSelect(jobSmallSelect, "전체");
       areaSelect.value = "";
       providerSelect.value = "WORK24";
+      if (salTypeSelect) salTypeSelect.value = "";
+      if (minPayInput) minPayInput.value = "";
+      if (maxPayInput) maxPayInput.value = "";
+      if (educationSelect) educationSelect.value = "";
+      setWork24OnlyControlsEnabled(true);
       currentPage = 1;
       updateActiveFilters();
       loadOccupationDepth1().then(() => searchWorkList());
@@ -1830,14 +1978,40 @@
       const region = areaSelect.value || "";
       const occupation = jobSmallSelect.value || jobMiddleSelect.value || jobLargeSelect.value || "";
       const provider = providerSelect.value || "WORK24";
-      const url = `/job/recruits?region=${encodeURIComponent(region)}&occupation=${encodeURIComponent(occupation)}&startPage=${currentPage}&display=${itemsPerPage}&provider=${encodeURIComponent(provider)}`;
+
+      const salaryValid = validateSalaryInputs();
+      if (!salaryValid.ok) {
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(salaryValid.message || "입력값을 확인해주세요.");
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set("region", region);
+      params.set("occupation", occupation);
+      params.set("startPage", String(currentPage));
+      params.set("display", String(itemsPerPage));
+      params.set("provider", provider);
+
+      if (isWork24Selected()) {
+        if (educationSelect && educationSelect.value) {
+          params.set("education", String(educationSelect.value).trim());
+        }
+        if (salaryValid.salTp) {
+          params.set("salTp", salaryValid.salTp);
+          params.set("minPay", String(salaryValid.minPay));
+          params.set("maxPay", String(salaryValid.maxPay));
+        }
+      }
+
+      const url = `/job/recruits?${params.toString()}`;
       
       try {
         const data = await fetchJson(url);
         const items = (data && data.wanted) ? data.wanted : [];
         totalItems = data.total || items.length;
         
-        resultCount.textContent = `(${totalItems.toLocaleString()}건)`;
+        resultCount.textContent = `(${Number(totalItems || 0).toLocaleString()}건)`;
         
         if (items.length === 0) {
           workList.innerHTML = renderEmptyState();
@@ -2071,6 +2245,16 @@
 
     jobSmallSelect.addEventListener("change", updateActiveFilters);
     areaSelect.addEventListener("change", updateActiveFilters);
+    if (providerSelect) {
+      providerSelect.addEventListener("change", () => {
+        setWork24OnlyControlsEnabled(isWork24Selected());
+        updateActiveFilters();
+      });
+    }
+    if (salTypeSelect) salTypeSelect.addEventListener("change", updateActiveFilters);
+    if (minPayInput) minPayInput.addEventListener("input", updateActiveFilters);
+    if (maxPayInput) maxPayInput.addEventListener("input", updateActiveFilters);
+    if (educationSelect) educationSelect.addEventListener("change", updateActiveFilters);
 
     // 북마크 버튼 이벤트 위임 (DB 연동)
     workList.addEventListener("click", async (e) => {
@@ -2136,6 +2320,7 @@
       populateDeptSelect(map);
     })])
       .then(async () => {
+        setWork24OnlyControlsEnabled(isWork24Selected());
         // 왜: 아이콘 활성화(저장 상태)를 바로 보이게 하려면, 검색 전에 북마크 목록을 한 번 로딩해야 합니다.
         try { await loadBookmarks(true); } catch (e) { /* 로그인/권한 문제는 무시(북마크 탭에서 안내) */ }
         await applyDefaultFilters();

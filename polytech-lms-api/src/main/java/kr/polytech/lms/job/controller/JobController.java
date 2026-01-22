@@ -55,6 +55,10 @@ public class JobController {
     public ResponseEntity<?> recruitList(
         @RequestParam(name = "region", required = false) String region,
         @RequestParam(name = "occupation", required = false) String occupation,
+        @RequestParam(name = "salTp", required = false) String salTp,
+        @RequestParam(name = "minPay", required = false) Integer minPay,
+        @RequestParam(name = "maxPay", required = false) Integer maxPay,
+        @RequestParam(name = "education", required = false) String education,
         @RequestParam(name = "startPage", required = false) Integer startPage,
         @RequestParam(name = "display", required = false) Integer display,
         @RequestParam(name = "provider", required = false) String provider,
@@ -66,6 +70,10 @@ public class JobController {
             JobRecruitListResponse response = jobService.getRecruitments(
                 region,
                 occupation,
+                salTp,
+                minPay,
+                maxPay,
+                education,
                 startPage,
                 display,
                 safeProvider,
@@ -105,12 +113,25 @@ public class JobController {
         @RequestHeader(name = "X-Job-Admin-Token", required = false) String adminToken,
         @RequestParam(name = "region", required = false) String region,
         @RequestParam(name = "occupation", required = false) String occupation,
+        @RequestParam(name = "salTp", required = false) String salTp,
+        @RequestParam(name = "minPay", required = false) Integer minPay,
+        @RequestParam(name = "maxPay", required = false) Integer maxPay,
+        @RequestParam(name = "education", required = false) String education,
         @RequestParam(name = "startPage", required = false) Integer startPage,
         @RequestParam(name = "display", required = false) Integer display
     ) {
         ensureAdminAccess(adminToken);
         try {
-            JobRecruitListResponse response = jobService.refreshRecruitments(region, occupation, startPage, display);
+            JobRecruitListResponse response = jobService.refreshRecruitments(
+                region,
+                occupation,
+                salTp,
+                minPay,
+                maxPay,
+                education,
+                startPage,
+                display
+            );
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));

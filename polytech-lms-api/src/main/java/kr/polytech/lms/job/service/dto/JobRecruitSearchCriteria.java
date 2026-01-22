@@ -4,6 +4,10 @@ package kr.polytech.lms.job.service.dto;
 public record JobRecruitSearchCriteria(
     String region,
     String occupation,
+    String salTp,
+    Integer minPay,
+    Integer maxPay,
+    String education,
     int startPage,
     int display,
     String callType

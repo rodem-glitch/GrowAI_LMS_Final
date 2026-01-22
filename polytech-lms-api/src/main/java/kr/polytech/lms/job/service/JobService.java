@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -325,24 +326,36 @@ public class JobService {
     public JobRecruitListResponse getRecruitments(
         String region,
         String occupation,
+        String salTp,
+        Integer minPay,
+        Integer maxPay,
+        String education,
         Integer startPage,
         Integer display,
         CachePolicy cachePolicy
     ) {
-        return getRecruitments(region, occupation, startPage, display, Provider.WORK24, cachePolicy);
+        return getRecruitments(region, occupation, salTp, minPay, maxPay, education, startPage, display, Provider.WORK24, cachePolicy);
     }
 
     public JobRecruitListResponse getRecruitments(
         String region,
         String occupation,
+        String salTp,
+        Integer minPay,
+        Integer maxPay,
+        String education,
         Integer startPage,
         Integer display,
         Provider provider,
         CachePolicy cachePolicy
     ) {
         Provider safeProvider = provider == null ? Provider.WORK24 : provider;
-        JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, startPage, display);
+        JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, salTp, minPay, maxPay, education, startPage, display);
         CachePolicy safePolicy = cachePolicy == null ? CachePolicy.PREFER_CACHE : cachePolicy;
+
+        if (hasWork24OnlyFilters(criteria) && safeProvider != Provider.WORK24) {
+            throw new IllegalArgumentException("급여/학력 필터는 Work24 제공처에서만 지원합니다.");
+        }
 
         if (safeProvider == Provider.ALL) {
             return mergeRecruitments(criteria, safePolicy);
@@ -355,23 +368,150 @@ public class JobService {
             }
         }
 
-        JobRecruitListResponse live = fetchFromProvider(criteria, safeProvider);
+        JobRecruitListResponse live = (safeProvider == Provider.WORK24 && criteria.education() != null)
+            ? fetchWork24WithEducationUnion(criteria)
+            : fetchFromProvider(criteria, safeProvider);
         saveRecruitCache(criteria, safeProvider, live);
         return live;
     }
 
     public JobRecruitListResponse getRelatedRecruitments(String occupation, Integer limit, CachePolicy cachePolicy) {
         int safeLimit = normalizeDisplay(limit, 3);
-        return getRecruitments(null, occupation, 1, safeLimit, cachePolicy);
+        return getRecruitments(null, occupation, null, null, null, null, 1, safeLimit, cachePolicy);
+    }
+
+    private boolean hasWork24OnlyFilters(JobRecruitSearchCriteria criteria) {
+        if (criteria == null) return false;
+        return criteria.salTp() != null
+            || criteria.minPay() != null
+            || criteria.maxPay() != null
+            || criteria.education() != null;
+    }
+
+    private JobRecruitListResponse fetchWork24WithEducationUnion(JobRecruitSearchCriteria criteria) {
+        // 왜: 요구사항상 “학력무관” 공고는 어떤 학력을 선택해도 항상 포함돼야 합니다.
+        // 그런데 Work24의 education 파라미터는 OR 조건(education=선택학력 이하 + 무관)을 직접 표현하기 어렵습니다.
+        // 그래서 (학력무관 00) + (초졸~선택학력) 각각을 조회해서 합칩니다.
+        String education = criteria.education();
+        if (education == null || education.isBlank()) {
+            return work24Client.fetchRecruitList(criteria);
+        }
+
+        List<String> codes = buildEducationUnionCodes(education.trim());
+        if (codes.isEmpty()) {
+            return work24Client.fetchRecruitList(criteria);
+        }
+
+        LinkedHashMap<String, Integer> totalsByCode = new LinkedHashMap<>();
+        for (String code : codes) {
+            JobRecruitSearchCriteria one = withEducationAndPaging(criteria, code, 1, 1);
+            JobRecruitListResponse res = work24Client.fetchRecruitList(one);
+            totalsByCode.put(code, Math.max(0, res.total()));
+        }
+
+        int globalTotal = 0;
+        for (Integer t : totalsByCode.values()) globalTotal += (t == null ? 0 : t);
+
+        int display = criteria.display();
+        int startPage = criteria.startPage();
+        long offsetStart = (long) (Math.max(1, startPage) - 1) * (long) display;
+        if (display <= 0) display = 10;
+
+        List<JobRecruitItem> merged = new ArrayList<>(display);
+        LinkedHashMap<String, JobRecruitListResponse> pageCache = new LinkedHashMap<>();
+
+        long offset = offsetStart;
+        int remaining = display;
+
+        while (remaining > 0 && offset < globalTotal) {
+            CodeWindow window = findCodeWindow(totalsByCode, offset);
+            if (window == null) break;
+
+            int within = (int) (offset - window.startOffset());
+            int pageInCode = (within / display) + 1;
+            int indexInPage = within % display;
+
+            String cacheKey = window.code() + "|" + pageInCode;
+            JobRecruitListResponse pageRes = pageCache.get(cacheKey);
+            if (pageRes == null) {
+                JobRecruitSearchCriteria one = withEducationAndPaging(criteria, window.code(), pageInCode, display);
+                pageRes = work24Client.fetchRecruitList(one);
+                pageCache.put(cacheKey, pageRes);
+            }
+
+            List<JobRecruitItem> wanted = (pageRes != null) ? pageRes.wanted() : null;
+            if (wanted == null || wanted.isEmpty()) break;
+
+            for (int i = indexInPage; i < wanted.size() && remaining > 0; i++) {
+                merged.add(wanted.get(i));
+                remaining--;
+                offset++;
+            }
+
+            // 안전장치: 더 이상 진행이 안 되면 무한루프 방지
+            if (indexInPage >= wanted.size()) break;
+        }
+
+        // 왜: total은 “합집합 총 건수”를 내려줍니다(페이지네이션이 일관되게 동작하도록).
+        return new JobRecruitListResponse(globalTotal, startPage, display, merged);
+    }
+
+    private List<String> buildEducationUnionCodes(String selected) {
+        // 왜: Work24 education 파라미터는 “선택한 학력 이하” 조건으로 동작하는 것으로 보고,
+        // (학력무관 00)만 추가로 합치면 요구사항(무관은 항상 포함)을 만족할 수 있습니다.
+        // 예: 선택=고졸(03) → (education=03 결과) + (education=00 결과)
+        List<String> ordered = List.of("01", "02", "03", "04", "05", "06", "07");
+        if (!ordered.contains(selected)) return List.of();
+        return List.of("00", selected);
+    }
+
+    private JobRecruitSearchCriteria withEducationAndPaging(
+        JobRecruitSearchCriteria base,
+        String education,
+        int startPage,
+        int display
+    ) {
+        return new JobRecruitSearchCriteria(
+            base.region(),
+            base.occupation(),
+            base.salTp(),
+            base.minPay(),
+            base.maxPay(),
+            education,
+            startPage,
+            display,
+            base.callType()
+        );
+    }
+
+    private CodeWindow findCodeWindow(LinkedHashMap<String, Integer> totalsByCode, long offset) {
+        long cursor = 0L;
+        for (var entry : totalsByCode.entrySet()) {
+            String code = entry.getKey();
+            long size = (entry.getValue() == null) ? 0L : entry.getValue().longValue();
+            long next = cursor + size;
+            if (offset < next) {
+                return new CodeWindow(code, cursor);
+            }
+            cursor = next;
+        }
+        return null;
+    }
+
+    private record CodeWindow(String code, long startOffset) {
     }
 
     public JobRecruitListResponse refreshRecruitments(
         String region,
         String occupation,
+        String salTp,
+        Integer minPay,
+        Integer maxPay,
+        String education,
         Integer startPage,
         Integer display
     ) {
-        JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, startPage, display);
+        JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, salTp, minPay, maxPay, education, startPage, display);
         JobRecruitListResponse live = work24Client.fetchRecruitList(criteria);
         saveRecruitCache(criteria, Provider.WORK24, live);
         return live;
@@ -397,6 +537,10 @@ public class JobService {
         JobRecruitSearchCriteria criteria = new JobRecruitSearchCriteria(
             key.regionCode(),
             key.occupationCode(),
+            null,
+            null,
+            null,
+            null,
             key.startPage(),
             key.display(),
             "L"
@@ -489,16 +633,68 @@ public class JobService {
     private JobRecruitSearchCriteria normalizeCriteria(
         String region,
         String occupation,
+        String salTp,
+        Integer minPay,
+        Integer maxPay,
+        String education,
         Integer startPage,
         Integer display
     ) {
+        String safeSalTp = normalizeSalTp(salTp);
+        Integer safeMinPay = normalizePay(minPay);
+        Integer safeMaxPay = normalizePay(maxPay);
+        String safeEducation = normalizeEducation(education);
+
+        // 왜: 급여 범위는 유형+최소+최대가 함께 있어야 Work24 API에서 일관되게 동작합니다.
+        if (safeSalTp != null || safeMinPay != null || safeMaxPay != null) {
+            if (safeSalTp == null) {
+                throw new IllegalArgumentException("급여 유형(salTp)을 선택해주세요.");
+            }
+            if (safeMinPay == null || safeMaxPay == null) {
+                throw new IllegalArgumentException("급여 최소/최대 금액(minPay/maxPay)을 모두 입력해주세요.");
+            }
+            if (safeMinPay > safeMaxPay) {
+                throw new IllegalArgumentException("급여 최소 금액이 최대 금액보다 클 수 없습니다.");
+            }
+        }
+
         return new JobRecruitSearchCriteria(
             trimToNull(region),
             trimToNull(occupation),
+            safeSalTp,
+            safeMinPay,
+            safeMaxPay,
+            safeEducation,
             normalizeStartPage(startPage, 1),
             normalizeDisplay(display, 10),
             "L"
         );
+    }
+
+    private String normalizeSalTp(String value) {
+        if (value == null) return null;
+        String v = value.trim().toUpperCase();
+        if (v.isBlank()) return null;
+        return switch (v) {
+            case "H", "D", "M", "Y" -> v;
+            default -> throw new IllegalArgumentException("급여 유형(salTp)이 올바르지 않습니다.");
+        };
+    }
+
+    private Integer normalizePay(Integer value) {
+        if (value == null) return null;
+        if (value < 0) throw new IllegalArgumentException("급여 금액은 0 이상이어야 합니다.");
+        return value;
+    }
+
+    private String normalizeEducation(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        if (v.isBlank()) return null;
+        return switch (v) {
+            case "00", "01", "02", "03", "04", "05", "06", "07" -> v;
+            default -> throw new IllegalArgumentException("학력(education) 값이 올바르지 않습니다.");
+        };
     }
 
     private int normalizeStartPage(Integer value, int fallback) {
@@ -512,10 +708,26 @@ public class JobService {
     }
 
     private String buildQueryKey(JobRecruitSearchCriteria criteria, Provider provider) {
-        return "%s|%s|%s|%d|%d".formatted(
+        // 왜: 기존 운영 DB에는 “예전 포맷(provider|region|occupation|page|display)” 캐시가 이미 쌓여 있을 수 있습니다.
+        // 필터를 안 쓰는 기본 검색은 예전 키를 그대로 써야, Work24 인증키가 없는 환경에서도 캐시로 정상 동작할 수 있습니다.
+        if (!hasWork24OnlyFilters(criteria)) {
+            return "%s|%s|%s|%d|%d".formatted(
+                provider.name(),
+                nullToDash(criteria.region()),
+                nullToDash(criteria.occupation()),
+                criteria.startPage(),
+                criteria.display()
+            );
+        }
+
+        return "%s|%s|%s|%s|%s|%s|%s|%d|%d".formatted(
             provider.name(),
             nullToDash(criteria.region()),
             nullToDash(criteria.occupation()),
+            nullToDash(criteria.salTp()),
+            criteria.minPay() == null ? "-" : String.valueOf(criteria.minPay()),
+            criteria.maxPay() == null ? "-" : String.valueOf(criteria.maxPay()),
+            nullToDash(criteria.education()),
             criteria.startPage(),
             criteria.display()
         );
@@ -535,6 +747,10 @@ public class JobService {
         JobRecruitListResponse work24 = getRecruitments(
             criteria.region(),
             criteria.occupation(),
+            criteria.salTp(),
+            criteria.minPay(),
+            criteria.maxPay(),
+            criteria.education(),
             criteria.startPage(),
             criteria.display(),
             Provider.WORK24,
@@ -543,6 +759,10 @@ public class JobService {
         JobRecruitListResponse jobkorea = getRecruitments(
             criteria.region(),
             criteria.occupation(),
+            null,
+            null,
+            null,
+            null,
             criteria.startPage(),
             criteria.display(),
             Provider.JOBKOREA,

@@ -60,6 +60,18 @@ public class Work24Client {
         if (criteria.occupation() != null && !criteria.occupation().isBlank()) {
             builder.queryParam("occupation", criteria.occupation().trim());
         }
+        if (criteria.salTp() != null && !criteria.salTp().isBlank()) {
+            builder.queryParam("salTp", criteria.salTp().trim());
+        }
+        if (criteria.minPay() != null) {
+            builder.queryParam("minPay", criteria.minPay());
+        }
+        if (criteria.maxPay() != null) {
+            builder.queryParam("maxPay", criteria.maxPay());
+        }
+        if (criteria.education() != null && !criteria.education().isBlank()) {
+            builder.queryParam("education", criteria.education().trim());
+        }
 
         return builder.build(true).toUriString();
     }
