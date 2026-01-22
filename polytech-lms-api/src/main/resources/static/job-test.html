@@ -1142,6 +1142,9 @@
             <button id="jobTabRecommend" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist">
               교수 추천 <span id="recommendCount" class="job-tab-badge">0</span>
             </button>
+            <button id="jobTabSent" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist" style="display:none">
+              보낸 추천 <span id="sentCount" class="job-tab-badge">0</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1238,8 +1241,10 @@
     const jobTabAllBtn = document.getElementById("jobTabAll");
     const jobTabBookmarkBtn = document.getElementById("jobTabBookmark");
     const jobTabRecommendBtn = document.getElementById("jobTabRecommend");
+    const jobTabSentBtn = document.getElementById("jobTabSent");
     const bookmarkCountEl = document.getElementById("bookmarkCount");
     const recommendCountEl = document.getElementById("recommendCount");
+    const sentCountEl = document.getElementById("sentCount");
     const jobToastEl = document.getElementById("jobToast");
 
     const recommendModal = document.getElementById("recommendModal");
@@ -1273,6 +1278,10 @@
     // 교수 추천 상태
     let recommendTotal = 0;
     let recommendItems = [];
+
+    // 교수 보낸 추천 상태
+    let sentTotal = 0;
+    let sentItems = [];
 
     // 교수 모드 여부/데이터
     let isTutorMode = false;
@@ -1479,6 +1488,12 @@
       recommendCountEl.textContent = count.toLocaleString();
     }
 
+    function updateSentCount() {
+      if (!sentCountEl) return;
+      const count = Number(sentTotal || sentItems.length || 0);
+      sentCountEl.textContent = count.toLocaleString();
+    }
+
     async function loadRecommendations(force = false) {
       if (!force && (recommendItems && recommendItems.length > 0)) return;
 
@@ -1566,6 +1581,8 @@
           if (!item.wantedInfoUrl) item.wantedInfoUrl = row.wanted_info_url || "";
           if (!item.region) item.region = row.region || "";
           if (!item.closeDt) item.closeDt = row.close_dt || "";
+          item.recommendTutorName = row.tutor_user_nm || "";
+          item.recommendCourseName = row.course_nm || "";
 
           const key = makeBookmarkKey(item.infoSvc, item.wantedAuthNo);
           if (key) currentItemMap.set(key, item);
@@ -1575,6 +1592,108 @@
       } catch (err) {
         resultCount.textContent = "(0건)";
         workList.innerHTML = renderErrorState(`추천 공고 조회 실패: ${err.message}`);
+      }
+    }
+
+    async function loadSentRecommendations(force = false) {
+      // 왜: 교수는 보낸 추천을 확인할 수 있어야 합니다.
+      if (!force && (sentItems && sentItems.length > 0)) return;
+
+      const size = 200;
+      const maxPages = 5;
+
+      sentItems = [];
+      sentTotal = 0;
+
+      for (let page = 1; page <= maxPages; page++) {
+        const payload = await fetchMalgnApi(`/api/job_recommend.jsp?mode=sent&page=${page}&size=${size}`);
+        if (!payload) break;
+
+        const total = Number(payload.total || 0);
+        if (!Number.isNaN(total)) sentTotal = total;
+
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        items.forEach((row) => sentItems.push(row));
+
+        if (sentItems.length >= sentTotal) break;
+        if (items.length < size) break;
+      }
+
+      updateSentCount();
+    }
+
+    function buildSentCard(row) {
+      // 왜: 교수 보낸내역은 “학생/과목/공고”를 한눈에 보이게 카드로 정리합니다.
+      const detailUrl = row.wanted_info_url || "";
+      const titleHtml = detailUrl
+        ? `<a class="job-title-link" href="${detailUrl}" target="_blank" rel="noopener noreferrer">${row.title || "-"}</a>`
+        : `${row.title || "-"}`;
+      const studentLabel = row.student_user_nm ? `${row.student_user_nm}${row.student_login_id ? ` (${row.student_login_id})` : ""}` : "-";
+      const courseLabel = row.course_nm || "-";
+      const regDate = row.reg_date || "-";
+
+      return `
+        <article class="job-card" role="listitem" aria-label="${row.title || '추천 공고'}">
+          <div class="job-card-header">
+            <div class="job-company">
+              <div class="job-company-icon" aria-hidden="true">
+                <i class="bi bi-building"></i>
+              </div>
+              <span class="job-company-name">${row.company || "-"}</span>
+            </div>
+          </div>
+
+          <h2 class="job-title">${titleHtml}</h2>
+
+          <div class="job-meta">
+            <span class="job-meta-item">
+              <i class="bi bi-person" aria-hidden="true"></i>
+              추천 대상: ${studentLabel}
+            </span>
+            <span class="job-meta-item">
+              <i class="bi bi-mortarboard" aria-hidden="true"></i>
+              과목: ${courseLabel}
+            </span>
+          </div>
+
+          <div class="job-footer">
+            <div class="job-salary">
+              <span class="job-salary-label">보낸일</span>
+              <span class="job-salary-value">${regDate}</span>
+            </div>
+            <div class="job-deadline">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+              ${row.close_dt || "-"}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    async function renderSentList() {
+      workList.innerHTML = renderSkeletons(6);
+      if (paginationWrapper) paginationWrapper.style.display = "none";
+
+      try {
+        await loadSentRecommendations(false);
+
+        resultCount.textContent = `(${Number(sentTotal || sentItems.length || 0).toLocaleString()}건)`;
+
+        if (!sentItems || sentItems.length === 0) {
+          workList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="empty-state-icon"><i class="bi bi-send"></i></div>
+              <h2 class="empty-state-title">보낸 추천이 없습니다</h2>
+              <p class="empty-state-description">학생에게 추천을 보내면 여기에 기록됩니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        workList.innerHTML = sentItems.map(buildSentCard).join("");
+      } catch (err) {
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState(`보낸 추천 조회 실패: ${err.message}`);
       }
     }
 
@@ -1617,6 +1736,12 @@
         isTutorMode = !!(payload && payload.rst_code === "0000");
       } catch (e) {
         isTutorMode = false;
+      }
+    }
+
+    function applyTutorUiVisibility() {
+      if (jobTabSentBtn) {
+        jobTabSentBtn.style.display = isTutorMode ? "" : "none";
       }
     }
 
@@ -1686,10 +1811,12 @@
       const isAll = view === "all";
       const isBookmark = view === "bookmark";
       const isRecommend = view === "recommend";
+      const isSent = view === "sent";
 
       if (jobTabAllBtn) jobTabAllBtn.setAttribute("aria-selected", isAll ? "true" : "false");
       if (jobTabBookmarkBtn) jobTabBookmarkBtn.setAttribute("aria-selected", isBookmark ? "true" : "false");
       if (jobTabRecommendBtn) jobTabRecommendBtn.setAttribute("aria-selected", isRecommend ? "true" : "false");
+      if (jobTabSentBtn) jobTabSentBtn.setAttribute("aria-selected", isSent ? "true" : "false");
 
       // 왜: 북마크 탭은 DB 목록(최대 200*5)을 그대로 보여주므로, 기존 검색 페이지네이션은 숨깁니다.
       if (paginationWrapper) paginationWrapper.style.display = isAll ? (totalItems > itemsPerPage ? "block" : "none") : "none";
@@ -2018,6 +2145,23 @@
         ? `<a class="job-title-link" href="${detailUrl}" target="_blank" rel="noopener noreferrer">${item.title || "-"}</a>`
         : `${item.title || "-"}`;
 
+      const recommendInfo = (item.recommendTutorName || item.recommendCourseName) ? `
+        <div class="job-meta job-meta-recommend">
+          ${item.recommendTutorName ? `
+            <span class="job-meta-item">
+              <i class="bi bi-mortarboard" aria-hidden="true"></i>
+              추천: ${item.recommendTutorName}
+            </span>
+          ` : ""}
+          ${item.recommendCourseName ? `
+            <span class="job-meta-item">
+              <i class="bi bi-book" aria-hidden="true"></i>
+              과목: ${item.recommendCourseName}
+            </span>
+          ` : ""}
+        </div>
+      ` : "";
+
       return `
         <article class="job-card ${detailUrl ? "clickable" : ""}" role="listitem" aria-label="${item.title || '채용 공고'}"
           data-job-key="${key}" data-job-provider="${provider}" data-job-auth-no="${wantedAuthNo}" data-detail-url="${detailUrl}">
@@ -2034,6 +2178,7 @@
           </div>
           
           <h2 class="job-title">${titleHtml}</h2>
+          ${recommendInfo}
           
           <div class="job-meta">
             <span class="job-meta-item">
@@ -2709,6 +2854,12 @@
         await renderRecommendList();
       });
     }
+    if (jobTabSentBtn) {
+      jobTabSentBtn.addEventListener("click", async () => {
+        setTab("sent");
+        await renderSentList();
+      });
+    }
 
     if (recommendCloseBtn) recommendCloseBtn.addEventListener("click", closeRecommendModal);
     if (recommendModal) {
@@ -2844,10 +2995,14 @@
       populateDeptSelect(map);
     })])
       .then(async () => {
+        applyTutorUiVisibility();
         setWork24OnlyControlsEnabled(isWork24Selected());
         // 왜: 아이콘 활성화(저장 상태)를 바로 보이게 하려면, 검색 전에 북마크 목록을 한 번 로딩해야 합니다.
         try { await loadBookmarks(true); } catch (e) { /* 로그인/권한 문제는 무시(북마크 탭에서 안내) */ }
         try { await loadRecommendations(true); } catch (e) { /* 로그인/권한 문제는 무시(추천 탭에서 안내) */ }
+        if (isTutorMode) {
+          try { await loadSentRecommendations(true); } catch (e) { /* 교수 보낸내역은 탭에서 안내 */ }
+        }
         await applyDefaultFilters();
         currentPage = 1;
         updateActiveFilters();
