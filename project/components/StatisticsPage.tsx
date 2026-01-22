@@ -40,7 +40,7 @@ export function StatisticsPage() {
   }, []);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-visible">
+    <div className="overflow-visible">
       <iframe
         ref={iframeRef}
         src={STATISTICS_DASHBOARD_URL}
