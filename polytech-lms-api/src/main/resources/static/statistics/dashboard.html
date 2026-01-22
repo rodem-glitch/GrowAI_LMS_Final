@@ -522,6 +522,159 @@
         padding-bottom: 0.75rem;
       }
     }
+
+    /* ─────────────────────────────────────────────────────────────
+       기술업종 정보 모달
+       ───────────────────────────────────────────────────────────── */
+    .tech-info-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+    .tech-info-modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .tech-info-modal {
+      background: var(--color-card);
+      border-radius: var(--radius-xl);
+      max-width: 720px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(20px);
+      transition: transform var(--transition-normal);
+    }
+    .tech-info-modal-overlay.show .tech-info-modal {
+      transform: translateY(0);
+    }
+    .tech-info-modal-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tech-info-modal-header h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tech-info-modal-header .subtitle {
+      font-size: 0.8125rem;
+      opacity: 0.9;
+      margin-top: 0.25rem;
+    }
+    .tech-info-modal-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition-fast);
+    }
+    .tech-info-modal-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .tech-info-modal-body {
+      padding: 1.5rem;
+    }
+    .tech-category {
+      margin-bottom: 1.5rem;
+    }
+    .tech-category:last-child {
+      margin-bottom: 0;
+    }
+    .tech-category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--color-primary);
+    }
+    .tech-category-desc {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    .tech-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .tech-item {
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      border: 1px solid var(--color-border);
+    }
+    .tech-item-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .tech-item-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+    }
+    .tech-info-source {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border);
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      text-align: right;
+    }
+    .tech-info-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+      margin-left: 0.25rem;
+    }
+    .tech-info-btn:hover {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+    }
+    .tech-info-btn i {
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body class="bg-light">
@@ -842,7 +995,7 @@
       <!-- 테이블 카드: 산업분포 분석 -->
       <div class="card-premium">
         <div class="card-header-premium">
-          <h3><i class="bi bi-table"></i> 산업분포 분석</h3>
+          <h3><i class="bi bi-table"></i> 산업분포 분석 <button type="button" class="tech-info-btn" id="openTechInfoModal" aria-label="기술업종 분류 안내"><i class="bi bi-info-circle"></i></button></h3>
           <button id="downloadIndustryCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
             <i class="bi bi-file-earmark-excel"></i> 엑셀
           </button>
@@ -3278,6 +3431,119 @@
   }
 
   init();
+</script>
+
+<!-- 기술업종 분류 정보 모달 -->
+<div class="tech-info-modal-overlay" id="techInfoModalOverlay">
+  <div class="tech-info-modal" role="dialog" aria-labelledby="techInfoModalTitle">
+    <div class="tech-info-modal-header">
+      <div>
+        <h2 id="techInfoModalTitle"><i class="bi bi-cpu"></i> 기술업종</h2>
+        <p class="subtitle">신기술을 기반으로 수익을 창출하는 기술집약적 업종</p>
+      </div>
+      <button type="button" class="tech-info-modal-close" id="closeTechInfoModal" aria-label="닫기">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="tech-info-modal-body">
+      <!-- 기술혁신정도 -->
+      <div class="tech-category">
+        <div class="tech-category-header">
+          <i class="bi bi-gear-wide-connected"></i> 기술혁신정도
+        </div>
+        <p class="tech-category-desc">
+          연구개발집약도에 따라 제조업을 첨단기술, 고기술, 중기술, 저기술 등으로 분류하는 산업
+        </p>
+        <div class="tech-items-grid">
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-rocket-takeoff"></i> 첨단기술업종</div>
+            <div class="tech-item-desc">기술집약도가 높고 제품의 수명주기가 짧으며 경제적 파급효과가 큰 산업</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-tools"></i> 고기술업종</div>
+            <div class="tech-item-desc">진보되고 정교한 기술을 포함하는 산업</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-wrench"></i> 중기술업종</div>
+            <div class="tech-item-desc">기술이전이 용이한 성숙기술을 포함하는 산업</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-hammer"></i> 저기술업종</div>
+            <div class="tech-item-desc">사회의 다양한 세부 분야에 침투되어 낮은 수준의 공업기술 산업</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 지식집약정도 -->
+      <div class="tech-category">
+        <div class="tech-category-header">
+          <i class="bi bi-lightbulb"></i> 지식집약정도
+        </div>
+        <p class="tech-category-desc">
+          기술, 정보, 지식 등 무형자산의 활용도가 높은 정보 통신업, 금융 및 보험업, 사업서비스업 등으로 분류하는 산업
+        </p>
+        <div class="tech-items-grid">
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-palette"></i> 창의 및 디지털 업종</div>
+            <div class="tech-item-desc">인간의 감성, 창의력, 상상력을 기반으로 경제적 가치를 창출하는 산업</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-hdd-network"></i> ICT업종</div>
+            <div class="tech-item-desc">정보통신기술을 기반으로 하는 전기통신, 컴퓨터 프로그램 등을 포함하는 정보서비스 산업</div>
+          </div>
+          <div class="tech-item">
+            <div class="tech-item-title"><i class="bi bi-briefcase"></i> 전문서비스업종</div>
+            <div class="tech-item-desc">전문지식을 갖춘 인력자원이 주요 요소로 투입되는 산업</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tech-info-source">
+        <i class="bi bi-info-circle"></i> 출처: SGIS 통계지리정보서비스
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 기술업종 정보 모달 제어
+  (function() {
+    const overlay = document.getElementById('techInfoModalOverlay');
+    const openBtn = document.getElementById('openTechInfoModal');
+    const closeBtn = document.getElementById('closeTechInfoModal');
+
+    function openModal() {
+      overlay.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    if (openBtn) {
+      openBtn.addEventListener('click', openModal);
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+
+    // 오버레이 클릭 시 닫기
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeModal();
+      }
+    });
+
+    // ESC 키로 닫기
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('show')) {
+        closeModal();
+      }
+    });
+  })();
 </script>
 </body>
 </html>
