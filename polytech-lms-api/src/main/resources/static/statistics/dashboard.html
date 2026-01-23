@@ -976,10 +976,49 @@
       <div class="card-premium">
         <div class="card-header-premium">
           <h3><i class="bi bi-gender-ambiguous"></i> 연령대별 남녀 성비: 행정구역 vs 캠퍼스</h3>
+          <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
+            <button type="button" class="btn btn-outline-secondary active" id="genderChartViewBtn" onclick="toggleGenderView('chart')">
+              <i class="bi bi-bar-chart"></i> 차트
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="genderTableViewBtn" onclick="toggleGenderView('table')">
+              <i class="bi bi-table"></i> 표
+            </button>
+          </div>
         </div>
         <div class="card-body-premium">
-          <div class="chart-container" style="height: 320px;">
+          <!-- 차트 뷰 -->
+          <div id="genderChartView" class="chart-container" style="height: 320px;">
             <canvas id="populationGenderChart"></canvas>
+          </div>
+          <!-- 표 뷰 (기본 숨김) -->
+          <div id="genderTableView" style="display: none; max-height: 400px; overflow-y: auto;">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 80px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
+              <thead class="table-light" style="position: sticky; top: 0;">
+                <tr>
+                  <th rowspan="2" class="align-middle">연령대</th>
+                  <th colspan="2" style="background: rgba(107, 114, 128, 0.15);">행정구역</th>
+                  <th colspan="2" style="background: rgba(59, 130, 246, 0.15);">캠퍼스</th>
+                  <th rowspan="2" class="align-middle">GAP<br><small class="text-muted">(%p)</small></th>
+                </tr>
+                <tr>
+                  <th style="background: rgba(107, 114, 128, 0.08);">남성(%)</th>
+                  <th style="background: rgba(107, 114, 128, 0.08);">여성(%)</th>
+                  <th style="background: rgba(59, 130, 246, 0.08);">남성(%)</th>
+                  <th style="background: rgba(59, 130, 246, 0.08);">여성(%)</th>
+                </tr>
+              </thead>
+              <tbody id="genderTableBody">
+                <!-- JavaScript로 데이터 채움 -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1915,6 +1954,65 @@
       tbody.appendChild(tr);
     });
   }
+
+  // ==================== 남녀 성비 차트/표 토글 기능 ====================
+  // 성비 데이터 저장용 (표 렌더링에 사용)
+  let genderTableData = [];
+
+  // 차트/표 뷰 토글 함수
+  function toggleGenderView(view) {
+    const chartView = document.getElementById('genderChartView');
+    const tableView = document.getElementById('genderTableView');
+    const chartBtn = document.getElementById('genderChartViewBtn');
+    const tableBtn = document.getElementById('genderTableViewBtn');
+    
+    if (view === 'chart') {
+      chartView.style.display = 'block';
+      tableView.style.display = 'none';
+      chartBtn.classList.add('active');
+      tableBtn.classList.remove('active');
+    } else {
+      chartView.style.display = 'none';
+      tableView.style.display = 'block';
+      chartBtn.classList.remove('active');
+      tableBtn.classList.add('active');
+      // 표 데이터 렌더링
+      renderGenderTable();
+    }
+  }
+
+  // 성비 데이터 표 렌더링 함수
+  function renderGenderTable() {
+    const tbody = document.getElementById('genderTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (!genderTableData || genderTableData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">데이터가 없습니다.</td></tr>';
+      return;
+    }
+    
+    genderTableData.forEach(row => {
+      const regionMale = Number(row.regionMaleRatio ?? 0);
+      const regionFemale = 100 - regionMale;
+      const campusMale = Number(row.campusMaleRatio ?? 0);
+      const campusFemale = 100 - campusMale;
+      const gap = Number(row.maleGap ?? 0);
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.ageBand ?? ''}</td>
+        <td class="tabular-nums">${regionMale.toFixed(1)}</td>
+        <td class="tabular-nums">${regionFemale.toFixed(1)}</td>
+        <td class="tabular-nums">${campusMale.toFixed(1)}</td>
+        <td class="tabular-nums">${campusFemale.toFixed(1)}</td>
+        <td class="tabular-nums">${gap.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
   // 그라데이션 생성 함수
   function createGradient(ctx, color1, color2) {
     const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
@@ -3588,6 +3686,7 @@
     // population charts
     const popRows = populationData.rows || [];
     populationTableData = popRows; // 표 뷰용 데이터 저장
+    genderTableData = popRows; // 성비 표 뷰용 데이터 저장
     const popLabels = popRows.map((r) => r.ageBand);
     const regionRatios = popRows.map((r) => Number(r.regionRatio || 0));
     const campusRatios = popRows.map((r) => Number(r.campusRatio || 0));
