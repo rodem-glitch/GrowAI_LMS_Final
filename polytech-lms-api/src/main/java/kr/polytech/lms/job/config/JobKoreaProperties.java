@@ -16,9 +16,20 @@ public class JobKoreaProperties {
     private String apiKeyParam = "api";
     private String oemCodeParam = "Oem_Code";
     private String pageParam = "Page";
-    private String displayParam = "PageSize";
-    private String regionParam = "AreaCode";
-    private String occupationParam = "Job_Ctgr_Code";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 페이지당 건수 파라미터는 Size를 사용합니다.
+    private String displayParam = "Size";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 지역 파라미터는 area(예: I010)를 사용합니다.
+    private String regionParam = "area";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 업직종 대분류 파라미터는 rbcd를 사용합니다.
+    private String industryParam = "rbcd";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 업직종 소분류 파라미터는 rpcd(예: 1000001)를 사용합니다.
+    private String occupationParam = "rpcd";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 급여 필터는 pay/payterm 파라미터를 사용합니다.
+    private String payParam = "pay";
+    private String payTermParam = "payterm";
+    // 왜: 잡코리아 가이드(v4.1) 기준으로 학력 필터는 edu1/edu3(학력무관 포함) 파라미터를 사용합니다.
+    private String edu1Param = "edu1";
+    private String edu3Param = "edu3";
     private Map<String, String> params = new LinkedHashMap<>();
     private Cache cache = new Cache();
 
@@ -94,12 +105,52 @@ public class JobKoreaProperties {
         this.regionParam = regionParam;
     }
 
+    public String getIndustryParam() {
+        return industryParam;
+    }
+
+    public void setIndustryParam(String industryParam) {
+        this.industryParam = industryParam;
+    }
+
     public String getOccupationParam() {
         return occupationParam;
     }
 
     public void setOccupationParam(String occupationParam) {
         this.occupationParam = occupationParam;
+    }
+
+    public String getPayParam() {
+        return payParam;
+    }
+
+    public void setPayParam(String payParam) {
+        this.payParam = payParam;
+    }
+
+    public String getPayTermParam() {
+        return payTermParam;
+    }
+
+    public void setPayTermParam(String payTermParam) {
+        this.payTermParam = payTermParam;
+    }
+
+    public String getEdu1Param() {
+        return edu1Param;
+    }
+
+    public void setEdu1Param(String edu1Param) {
+        this.edu1Param = edu1Param;
+    }
+
+    public String getEdu3Param() {
+        return edu3Param;
+    }
+
+    public void setEdu3Param(String edu3Param) {
+        this.edu3Param = edu3Param;
     }
 
     public Map<String, String> getParams() {

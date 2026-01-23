@@ -1109,7 +1109,7 @@
               선택한 학력으로 지원 가능한 공고만 조회합니다. (학력무관 포함)
             </div>
             <div id="work24OnlyHint" class="filter-hint" style="display:none;">
-              급여/학력 필터는 현재 Work24 제공처에서만 지원됩니다.
+              급여/학력 필터는 통합 제공처에서는 지원되지 않습니다.
             </div>
           </div>
         </div>
@@ -1323,13 +1323,17 @@
       showToast._t = window.setTimeout(() => jobToastEl.classList.remove("show"), 2200);
     }
 
-    function isWork24Selected() {
-      const selected = (providerSelect && providerSelect.value) ? providerSelect.value.trim().toUpperCase() : "WORK24";
-      return selected === "WORK24";
+    function resolveSelectedProvider() {
+      return (providerSelect && providerSelect.value) ? providerSelect.value.trim().toUpperCase() : "WORK24";
     }
 
-    function setWork24OnlyControlsEnabled(enabled) {
-      // 왜: 급여/학력 필터는 현재 Work24 OpenAPI 기준으로만 지원합니다(잡코리아/통합은 정확한 필터링이 어렵습니다).
+    function isSalaryEducationSupported() {
+      const selected = resolveSelectedProvider();
+      return selected === "WORK24" || selected === "JOBKOREA";
+    }
+
+    function setSalaryEducationControlsEnabled(enabled) {
+      // 왜: 급여/학력 필터는 제공처별 파라미터/코드 체계가 달라, 지원하는 제공처만 활성화합니다.
       const disabled = !enabled;
       if (salTypeSelect) salTypeSelect.disabled = disabled;
       if (minPayInput) minPayInput.disabled = disabled;
@@ -1349,7 +1353,7 @@
 
     function validateSalaryInputs() {
       if (!salTypeSelect || !minPayInput || !maxPayInput) return { ok: true };
-      if (!isWork24Selected()) return { ok: true };
+      if (!isSalaryEducationSupported()) return { ok: true };
 
       const salTp = (salTypeSelect.value || "").trim();
       const minPayRaw = (minPayInput.value || "").trim();
@@ -2033,6 +2037,7 @@
       // 날짜 포맷 파싱 (YYYY-MM-DD 또는 YY-MM-DD)
       const dateStr = closeDt.replace(/\./g, '-');
       const closeDate = new Date(dateStr);
+      if (!Number.isFinite(closeDate.getTime())) return null;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       closeDate.setHours(0, 0, 0, 0);
@@ -2255,7 +2260,7 @@
         if (text !== "전체") filters.push({ type: "area", text });
       }
 
-      if (isWork24Selected() && educationSelect && educationSelect.value) {
+      if (isSalaryEducationSupported() && educationSelect && educationSelect.value) {
         const text = educationSelect.options[educationSelect.selectedIndex].text;
         filters.push({ type: "edu", text: `학력: ${text}` });
       }
@@ -2360,17 +2365,18 @@
       if (minPayInput) minPayInput.value = "";
       if (maxPayInput) maxPayInput.value = "";
       if (educationSelect) educationSelect.value = "";
-      setWork24OnlyControlsEnabled(true);
+      setSalaryEducationControlsEnabled(isSalaryEducationSupported());
       currentPage = 1;
       updateActiveFilters();
-      loadOccupationDepth1().then(() => searchWorkList());
+      Promise.all([loadOccupationDepth1(), loadRegionCodes()]).then(() => searchWorkList());
     }
 
     // ==========================================
     // API 호출 함수들
     // ==========================================
     async function loadOccupationDepth1() {
-      const data = await fetchJson("/job/occupation-codes?depthType=1");
+      const provider = resolveSelectedProvider();
+      const data = await fetchJson(`/job/occupation-codes?depthType=1&provider=${encodeURIComponent(provider)}`);
       resetSelect(jobLargeSelect, "전체");
       data.forEach(item => {
         const option = document.createElement("option");
@@ -2389,7 +2395,8 @@
       resetSelect(jobSmallSelect, "전체");
       if (!depth1Code) return;
 
-      const data = await fetchJson(`/job/occupation-codes?depthType=2&depth1=${encodeURIComponent(depth1Code)}`);
+      const provider = resolveSelectedProvider();
+      const data = await fetchJson(`/job/occupation-codes?depthType=2&depth1=${encodeURIComponent(depth1Code)}&provider=${encodeURIComponent(provider)}`);
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.code || "";
@@ -2405,7 +2412,8 @@
       resetSelect(jobSmallSelect, "전체");
       if (!depth1Code || !depth2Code) return;
 
-      const data = await fetchJson(`/job/occupation-codes?depthType=3&depth1=${encodeURIComponent(depth1Code)}&depth2=${encodeURIComponent(depth2Code)}`);
+      const provider = resolveSelectedProvider();
+      const data = await fetchJson(`/job/occupation-codes?depthType=3&depth1=${encodeURIComponent(depth1Code)}&depth2=${encodeURIComponent(depth2Code)}&provider=${encodeURIComponent(provider)}`);
       data.forEach(item => {
         const option = document.createElement("option");
         option.value = item.code || "";
@@ -2460,7 +2468,8 @@
     }
 
     async function loadRegionCodes() {
-      const data = await fetchJson("/job/region-codes?depthType=1");
+      const provider = resolveSelectedProvider();
+      const data = await fetchJson(`/job/region-codes?depthType=1&provider=${encodeURIComponent(provider)}`);
       areaSelect.innerHTML = "";
       
       const allOption = document.createElement("option");
@@ -2470,7 +2479,7 @@
       
       data.forEach(item => {
         const option = document.createElement("option");
-        option.value = (item.title === "지역무관") ? "" : item.idx;
+        option.value = (item.title === "지역무관") ? "" : (item.code || "");
         option.textContent = item.title;
         areaSelect.appendChild(option);
       });
@@ -2485,7 +2494,7 @@
       
       const region = areaSelect.value || "";
       const occupation = jobSmallSelect.value || jobMiddleSelect.value || jobLargeSelect.value || "";
-      const provider = providerSelect.value || "WORK24";
+      const provider = resolveSelectedProvider();
 
       const salaryValid = validateSalaryInputs();
       if (!salaryValid.ok) {
@@ -2501,7 +2510,7 @@
       params.set("display", String(itemsPerPage));
       params.set("provider", provider);
 
-      if (isWork24Selected()) {
+      if (isSalaryEducationSupported()) {
         if (educationSelect && educationSelect.value) {
           params.set("education", String(educationSelect.value).trim());
         }
@@ -2755,8 +2764,11 @@
     areaSelect.addEventListener("change", updateActiveFilters);
     if (providerSelect) {
       providerSelect.addEventListener("change", () => {
-        setWork24OnlyControlsEnabled(isWork24Selected());
-        updateActiveFilters();
+        setSalaryEducationControlsEnabled(isSalaryEducationSupported());
+        // 왜: 제공처별 코드(지역/직종) 체계가 달라서, 제공처를 바꾸면 셀렉트 옵션도 같이 갱신해야 합니다.
+        Promise.all([loadOccupationDepth1(), loadRegionCodes()])
+          .then(updateActiveFilters)
+          .catch(() => updateActiveFilters());
       });
     }
     if (salTypeSelect) salTypeSelect.addEventListener("change", updateActiveFilters);
@@ -2990,13 +3002,18 @@
     // ==========================================
     // 초기 로딩
     // ==========================================
+    // 왜: URL에 provider가 있으면 코드 로딩 전에 먼저 반영해야 “잡코리아 선택인데 Work24 코드가 로딩되는” 혼선을 막습니다.
+    if (defaultProvider) {
+      selectByValue(providerSelect, defaultProvider);
+    }
+
     Promise.all([loadOccupationDepth1(), loadRegionCodes(), detectTutorMode(), loadDeptOccupationMap().then((map) => {
       deptOccupationMap = map;
       populateDeptSelect(map);
     })])
       .then(async () => {
         applyTutorUiVisibility();
-        setWork24OnlyControlsEnabled(isWork24Selected());
+        setSalaryEducationControlsEnabled(isSalaryEducationSupported());
         // 왜: 아이콘 활성화(저장 상태)를 바로 보이게 하려면, 검색 전에 북마크 목록을 한 번 로딩해야 합니다.
         try { await loadBookmarks(true); } catch (e) { /* 로그인/권한 문제는 무시(북마크 탭에서 안내) */ }
         try { await loadRecommendations(true); } catch (e) { /* 로그인/권한 문제는 무시(추천 탭에서 안내) */ }

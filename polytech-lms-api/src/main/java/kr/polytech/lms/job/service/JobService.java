@@ -73,10 +73,30 @@ public class JobService {
     }
 
     public List<JobRegionCodeResponse> getRegionCodes(String depthType, String depth1) {
+        return getRegionCodes(depthType, depth1, Provider.WORK24);
+    }
+
+    public List<JobRegionCodeResponse> getRegionCodes(String depthType, String depth1, Provider provider) {
+        Provider safeProvider = provider == null ? Provider.WORK24 : provider;
+        if (safeProvider == Provider.JOBKOREA) {
+            // 왜: 잡코리아는 별도 코드(알파벳+숫자)라서 Work24 코드 테이블을 그대로 재사용할 수 없습니다.
+            // 현재 화면은 depthType=1(시/도) 단일 셀렉트만 쓰므로, 여기서는 상위 코드만 제공합니다.
+            if (!"1".equals(String.valueOf(depthType).trim())) return List.of();
+            return kr.polytech.lms.job.code.JobKoreaCodeCatalog.topLevelAreaCodes().stream()
+                .map(item -> new JobRegionCodeResponse(
+                    item.code(),
+                    item.name(),
+                    item.name(),
+                    "",
+                    ""
+                ))
+                .toList();
+        }
+
         List<JobRegionCodeRow> rows = jobRepository.findRegionCodes(depthType, depth1);
         return rows.stream()
             .map(row -> new JobRegionCodeResponse(
-                row.idx(),
+                String.valueOf(row.idx()),
                 row.title(),
                 row.depth1(),
                 row.depth2(),
@@ -86,6 +106,41 @@ public class JobService {
     }
 
     public List<JobOccupationCodeResponse> getOccupationCodes(String depthType, String depth1, String depth2) {
+        return getOccupationCodes(depthType, depth1, depth2, Provider.WORK24);
+    }
+
+    public List<JobOccupationCodeResponse> getOccupationCodes(String depthType, String depth1, String depth2, Provider provider) {
+        Provider safeProvider = provider == null ? Provider.WORK24 : provider;
+        if (safeProvider == Provider.JOBKOREA) {
+            String safeDepthType = (depthType == null || depthType.isBlank()) ? "1" : depthType.trim();
+            return switch (safeDepthType) {
+                case "1" -> kr.polytech.lms.job.code.JobKoreaCodeCatalog.rbcd().stream()
+                    .map(item -> new JobOccupationCodeResponse(
+                        0,
+                        item.code(),
+                        item.name(),
+                        item.name(),
+                        "",
+                        ""
+                    ))
+                    .toList();
+                case "2" -> {
+                    String parent = (depth1 == null) ? "" : depth1.trim();
+                    yield kr.polytech.lms.job.code.JobKoreaCodeCatalog.rpcd(parent).stream()
+                        .map(item -> new JobOccupationCodeResponse(
+                            0,
+                            item.code(),
+                            item.name(),
+                            "",
+                            item.name(),
+                            ""
+                        ))
+                        .toList();
+                }
+                default -> List.of();
+            };
+        }
+
         List<JobOccupationCodeRow> rows = jobRepository.findOccupationCodes(depthType, depth1, depth2);
         return rows.stream()
             .map(row -> new JobOccupationCodeResponse(
@@ -353,11 +408,10 @@ public class JobService {
         JobRecruitSearchCriteria criteria = normalizeCriteria(region, occupation, salTp, minPay, maxPay, education, startPage, display);
         CachePolicy safePolicy = cachePolicy == null ? CachePolicy.PREFER_CACHE : cachePolicy;
 
-        if (hasWork24OnlyFilters(criteria) && safeProvider != Provider.WORK24) {
-            throw new IllegalArgumentException("급여/학력 필터는 Work24 제공처에서만 지원합니다.");
-        }
-
         if (safeProvider == Provider.ALL) {
+            if (hasWork24OnlyFilters(criteria)) {
+                throw new IllegalArgumentException("급여/학력 필터는 통합 제공처에서 지원하지 않습니다.");
+            }
             return mergeRecruitments(criteria, safePolicy);
         }
 

@@ -34,10 +34,12 @@ public class JobController {
     public List<JobRegionCodeResponse> regionCodes(
         @RequestParam(name = "depthType", required = false) String depthType,
         @RequestParam(name = "depthtype", required = false) String depthTypeLegacy,
-        @RequestParam(name = "depth1", required = false) String depth1
+        @RequestParam(name = "depth1", required = false) String depth1,
+        @RequestParam(name = "provider", required = false) String provider
     ) {
         String resolvedDepthType = depthType != null ? depthType : depthTypeLegacy;
-        return jobService.getRegionCodes(resolvedDepthType, depth1);
+        JobService.Provider safeProvider = JobService.Provider.from(provider);
+        return jobService.getRegionCodes(resolvedDepthType, depth1, safeProvider);
     }
 
     @GetMapping("/occupation-codes")
@@ -45,10 +47,12 @@ public class JobController {
         @RequestParam(name = "depthType", required = false) String depthType,
         @RequestParam(name = "depthtype", required = false) String depthTypeLegacy,
         @RequestParam(name = "depth1", required = false) String depth1,
-        @RequestParam(name = "depth2", required = false) String depth2
+        @RequestParam(name = "depth2", required = false) String depth2,
+        @RequestParam(name = "provider", required = false) String provider
     ) {
         String resolvedDepthType = depthType != null ? depthType : depthTypeLegacy;
-        return jobService.getOccupationCodes(resolvedDepthType, depth1, depth2);
+        JobService.Provider safeProvider = JobService.Provider.from(provider);
+        return jobService.getOccupationCodes(resolvedDepthType, depth1, depth2, safeProvider);
     }
 
     @GetMapping("/recruits")

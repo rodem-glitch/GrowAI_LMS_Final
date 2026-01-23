@@ -166,16 +166,26 @@ work24:
 jobkorea:
   # 왜: 잡코리아는 별도 OpenAPI 키와 OEM 코드가 필요하므로 환경변수로 분리합니다.
   enabled: ${JOBKOREA_ENABLED:true}
-  api-url: ${JOBKOREA_API_URL:}
+  # 왜: "전체 채용정보 XML" 기본 엔드포인트를 기본값으로 둬서, 로컬에서도 URL 미설정으로 인한 장애를 줄입니다.
+  # - 필요 시 `JOBKOREA_API_URL`로 손쉽게 오버라이드 가능합니다.
+  api-url: ${JOBKOREA_API_URL:http://www.jobkorea.co.kr/Service_JK/Data/JK_GI_XML_List.asp}
   api-key: ${JOBKOREA_API_KEY:}
   oem-code: ${JOBKOREA_OEM_CODE:}
   # 왜: 잡코리아 API 파라미터명이 프로젝트마다 달라져 재정의가 필요할 수 있습니다.
   api-key-param: ${JOBKOREA_API_KEY_PARAM:api}
   oem-code-param: ${JOBKOREA_OEM_CODE_PARAM:Oem_Code}
   page-param: ${JOBKOREA_PAGE_PARAM:Page}
-  display-param: ${JOBKOREA_DISPLAY_PARAM:PageSize}
-  region-param: ${JOBKOREA_REGION_PARAM:AreaCode}
-  occupation-param: ${JOBKOREA_OCCUPATION_PARAM:Job_Ctgr_Code}
+  # 왜: 잡코리아 가이드(v4.1) 기준으로 페이지당 건수 파라미터는 `Size`를 사용합니다.
+  display-param: ${JOBKOREA_DISPLAY_PARAM:Size}
+  # 왜: 잡코리아 가이드(v4.1) 기준으로 지역/직종 파라미터는 `area`/`rpcd`를 사용합니다.
+  region-param: ${JOBKOREA_REGION_PARAM:area}
+  industry-param: ${JOBKOREA_INDUSTRY_PARAM:rbcd}
+  occupation-param: ${JOBKOREA_OCCUPATION_PARAM:rpcd}
+  # 왜: 잡코리아 가이드(v4.1) 기준으로 급여/학력 필터 파라미터입니다.
+  pay-param: ${JOBKOREA_PAY_PARAM:pay}
+  payterm-param: ${JOBKOREA_PAYTERM_PARAM:payterm}
+  edu1-param: ${JOBKOREA_EDU1_PARAM:edu1}
+  edu3-param: ${JOBKOREA_EDU3_PARAM:edu3}
   # 왜: 추가 파라미터가 필요한 경우 key/value로 주입할 수 있게 둡니다.
   params: {}
   cache:
