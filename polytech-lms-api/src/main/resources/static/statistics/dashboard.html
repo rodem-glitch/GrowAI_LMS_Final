@@ -908,17 +908,12 @@
       <div class="card-premium">
         <div class="card-header-premium">
           <h3><i class="bi bi-pie-chart"></i> 연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</h3>
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
-              <button type="button" class="btn btn-outline-secondary active" id="populationChartViewBtn" onclick="togglePopulationView('chart')">
-                <i class="bi bi-bar-chart"></i> 차트
-              </button>
-              <button type="button" class="btn btn-outline-secondary" id="populationTableViewBtn" onclick="togglePopulationView('table')">
-                <i class="bi bi-table"></i> 표
-              </button>
-            </div>
-            <button id="downloadPopulationCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
-              <i class="bi bi-file-earmark-excel"></i> 엑셀
+          <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
+            <button type="button" class="btn btn-outline-secondary active" id="populationChartViewBtn" onclick="togglePopulationView('chart')">
+              <i class="bi bi-bar-chart"></i> 차트
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="populationTableViewBtn" onclick="togglePopulationView('table')">
+              <i class="bi bi-table"></i> 표
             </button>
           </div>
         </div>
