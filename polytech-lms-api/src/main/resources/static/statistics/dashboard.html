@@ -908,13 +908,54 @@
       <div class="card-premium">
         <div class="card-header-premium">
           <h3><i class="bi bi-pie-chart"></i> 연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</h3>
-          <button id="downloadPopulationCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
-            <i class="bi bi-file-earmark-excel"></i> 엑셀
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
+              <button type="button" class="btn btn-outline-secondary active" id="populationChartViewBtn" onclick="togglePopulationView('chart')">
+                <i class="bi bi-bar-chart"></i> 차트
+              </button>
+              <button type="button" class="btn btn-outline-secondary" id="populationTableViewBtn" onclick="togglePopulationView('table')">
+                <i class="bi bi-table"></i> 표
+              </button>
+            </div>
+            <button id="downloadPopulationCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
+              <i class="bi bi-file-earmark-excel"></i> 엑셀
+            </button>
+          </div>
         </div>
         <div class="card-body-premium">
-          <div class="chart-container" style="height: 320px;">
+          <!-- 차트 뷰 -->
+          <div id="populationChartView" class="chart-container" style="height: 320px;">
             <canvas id="populationChart"></canvas>
+          </div>
+          <!-- 표 뷰 (기본 숨김) -->
+          <div id="populationTableView" style="display: none; max-height: 400px; overflow-y: auto;">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 120px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
+              <thead class="table-light" style="position: sticky; top: 0;">
+                <tr>
+                  <th rowspan="2" class="text-center align-middle">연령대</th>
+                  <th colspan="2" class="text-center" style="background-color: #f0f0f0;">행정구역</th>
+                  <th colspan="2" class="text-center" style="background-color: #e3f2fd;">캠퍼스</th>
+                  <th rowspan="2" class="text-center align-middle">GAP<br>(%p)</th>
+                </tr>
+                <tr>
+                  <th class="text-center" style="background-color: #f0f0f0;">인원</th>
+                  <th class="text-center" style="background-color: #f0f0f0;">비율(%)</th>
+                  <th class="text-center" style="background-color: #e3f2fd;">인원</th>
+                  <th class="text-center" style="background-color: #e3f2fd;">비율(%)</th>
+                </tr>
+              </thead>
+              <tbody id="populationTableBody">
+                <!-- JavaScript로 데이터 채움 -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1823,6 +1864,57 @@
     return true;
   }
 
+  // ==================== 인구통계 차트/표 토글 기능 ====================
+  // 인구 데이터 저장용 (표 렌더링에 사용)
+  let populationTableData = [];
+
+  // 차트/표 뷰 토글 함수
+  function togglePopulationView(view) {
+    const chartView = document.getElementById('populationChartView');
+    const tableView = document.getElementById('populationTableView');
+    const chartBtn = document.getElementById('populationChartViewBtn');
+    const tableBtn = document.getElementById('populationTableViewBtn');
+    
+    if (view === 'chart') {
+      chartView.style.display = 'block';
+      tableView.style.display = 'none';
+      chartBtn.classList.add('active');
+      tableBtn.classList.remove('active');
+    } else {
+      chartView.style.display = 'none';
+      tableView.style.display = 'block';
+      chartBtn.classList.remove('active');
+      tableBtn.classList.add('active');
+      // 표 데이터 렌더링
+      renderPopulationTable();
+    }
+  }
+
+  // 인구 데이터 표 렌더링 함수
+  function renderPopulationTable() {
+    const tbody = document.getElementById('populationTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (!populationTableData || populationTableData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">데이터가 없습니다.</td></tr>';
+      return;
+    }
+    
+    populationTableData.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="text-center">${row.ageBand ?? ''}</td>
+        <td class="tabular-nums text-end">${Number(row.regionCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums text-end">${Number(row.regionRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums text-end">${Number(row.campusCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums text-end">${Number(row.campusRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums text-end">${Number(row.gap ?? 0).toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
   // 그라데이션 생성 함수
   function createGradient(ctx, color1, color2) {
     const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
@@ -3495,6 +3587,7 @@
 
     // population charts
     const popRows = populationData.rows || [];
+    populationTableData = popRows; // 표 뷰용 데이터 저장
     const popLabels = popRows.map((r) => r.ageBand);
     const regionRatios = popRows.map((r) => Number(r.regionRatio || 0));
     const campusRatios = popRows.map((r) => Number(r.campusRatio || 0));
