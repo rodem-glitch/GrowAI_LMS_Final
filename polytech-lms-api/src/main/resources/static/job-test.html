@@ -544,6 +544,22 @@
       background: var(--color-warning-light);
       color: var(--color-warning);
     }
+
+    /* 왜: 통합(ALL) 화면에서 공고가 섞여 나오기 때문에, 카드마다 제공처(Work24/잡코리아)를 한눈에 구분할 수 있어야 합니다. */
+    .job-badge-provider-work24 {
+      background: var(--color-primary-50);
+      color: var(--color-primary);
+    }
+
+    .job-badge-provider-jobkorea {
+      background: var(--color-warning-light);
+      color: var(--color-warning);
+    }
+
+    .job-badge-provider-neutral {
+      background: var(--color-gray-100);
+      color: var(--color-gray-700);
+    }
     
     .job-footer {
       display: flex;
@@ -1386,7 +1402,13 @@
 
     function resolveProviderFromItem(item) {
       // 왜: provider=ALL일 때도 아이템별 제공처가 달라서, item.infoSvc를 최우선으로 봅니다.
-      if (item && item.infoSvc) return String(item.infoSvc).trim().toUpperCase();
+      if (item && item.infoSvc) {
+        const v = String(item.infoSvc).trim().toUpperCase();
+        // 왜: Work24 공고에서 infoSvc가 `VALIDATION`처럼 내려오는 케이스가 있어도, 화면에서는 제공처를 Work24로 표시해야 합니다.
+        if (v === "JOBKOREA") return "JOBKOREA";
+        if (v === "WORK24") return "WORK24";
+        return "WORK24";
+      }
       const selected = (providerSelect && providerSelect.value) ? providerSelect.value.trim().toUpperCase() : "";
       if (!selected || selected === "ALL") return "WORK24";
       return selected;
@@ -2128,6 +2150,22 @@
       const dday = calculateDday(item.closeDt);
       const ddayClass = dday?.urgent ? "urgent" : "";
       const provider = resolveProviderFromItem(item);
+      // 왜: provider 값을 그대로 보여주면 사용자가 이해하기 어려워, 화면 표시용 라벨로 바꿉니다.
+      const providerLabel = (provider === "JOBKOREA")
+        ? "잡코리아"
+        : (provider === "WORK24")
+          ? "Work24"
+          : (provider === "ALL")
+            ? "통합"
+            : (provider || "");
+      const providerBadgeClass = (provider === "JOBKOREA")
+        ? "job-badge-provider-jobkorea"
+        : (provider === "WORK24")
+          ? "job-badge-provider-work24"
+          : "job-badge-provider-neutral";
+      const providerBadgeHtml = providerLabel
+        ? `<span class="job-badge ${providerBadgeClass}" aria-label="제공처: ${providerLabel}">${providerLabel}</span>`
+        : "";
       const wantedAuthNo = resolveWantedAuthNo(item);
       const detailUrl = item.wantedInfoUrl || item.wantedMobileInfoUrl || "";
       const key = makeBookmarkKey(provider, wantedAuthNo);
@@ -2176,6 +2214,7 @@
                 <i class="bi bi-building"></i>
               </div>
               <span class="job-company-name">${item.company || "-"}</span>
+              ${providerBadgeHtml}
             </div>
             <button class="job-bookmark ${isBookmarked ? "active" : ""}" aria-label="${isBookmarked ? "저장 해제" : "저장하기"}" title="${isBookmarked ? "저장 해제" : "저장하기"}" ${wantedAuthNo ? "" : "disabled"}>
               <i class="bi ${bookmarkIconClass}"></i>

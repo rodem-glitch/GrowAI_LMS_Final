@@ -160,6 +160,10 @@ public class Work24Client {
                 }
             }
 
+            // 왜: Work24 응답의 infoSvc 값이 `VALIDATION`처럼 제공처가 아닌 다른 값으로 내려오는 경우가 있어,
+            // 통합(ALL) 화면에서 제공처 표시에 혼선이 생깁니다. 이 프로젝트에서는 제공처를 WORK24로 고정해 사용합니다.
+            String safeInfoSvc = "WORK24";
+
             items.add(new JobRecruitItem(
                 wantedAuthNo,
                 company,
@@ -176,7 +180,7 @@ public class Work24Client {
                 career,
                 regDt,
                 closeDt,
-                infoSvc,
+                safeInfoSvc,
                 wantedInfoUrl,
                 wantedMobileInfoUrl,
                 smodifyDtm,
