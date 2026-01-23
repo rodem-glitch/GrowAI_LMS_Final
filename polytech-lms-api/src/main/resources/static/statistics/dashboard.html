@@ -1733,6 +1733,94 @@
     return document.getElementById(sidoSelectId).value;
   }
 
+  // ==================== 캠퍼스-소재지 매핑 데이터 ====================
+  // 캠퍼스명 → { sido: 시도코드, district: 시군구코드 }
+  const CAMPUS_LOCATIONS = {
+    // 서울권
+    "서울정수": { sido: "11", district: "11170" },    // 서울 용산구
+    "서울강서": { sido: "11", district: "11500" },    // 서울 강서구
+    // 경기권
+    "성남": { sido: "41", district: "41131" },        // 경기 성남시 수정구
+    "화성": { sido: "41", district: "41590" },        // 경기 화성시
+    "안성": { sido: "41", district: "41550" },        // 경기 안성시
+    // 인천권
+    "인천": { sido: "28", district: "28237" },        // 인천 부평구
+    "부평": { sido: "28", district: "28237" },        // 인천 부평구
+    "인천캠퍼스": { sido: "28", district: "28177" },  // 인천 미추홀구
+    // 강원권
+    "춘천": { sido: "42", district: "42110" },        // 강원 춘천시
+    "원주": { sido: "42", district: "42130" },        // 강원 원주시
+    "강릉": { sido: "42", district: "42150" },        // 강원 강릉시
+    // 충청권
+    "대전": { sido: "30", district: "30110" },        // 대전 동구
+    "청주": { sido: "43", district: "43111" },        // 충북 청주시 상당구
+    "충주": { sido: "43", district: "43130" },        // 충북 충주시
+    "아산": { sido: "44", district: "44200" },        // 충남 아산시
+    "홍성": { sido: "44", district: "44800" },        // 충남 홍성군
+    "논산": { sido: "44", district: "44230" },        // 충남 논산시
+    // 전라권
+    "광주": { sido: "29", district: "29170" },        // 광주 북구
+    "김제": { sido: "45", district: "45210" },        // 전북 김제시
+    "익산": { sido: "45", district: "45140" },        // 전북 익산시
+    "순천": { sido: "46", district: "46150" },        // 전남 순천시
+    "무안": { sido: "46", district: "46840" },        // 전남 무안군
+    // 경상권
+    "대구": { sido: "27", district: "27170" },        // 대구 서구
+    "대구캠퍼스": { sido: "27", district: "27140" },  // 대구 동구
+    "구미": { sido: "47", district: "47190" },        // 경북 구미시
+    "영주": { sido: "47", district: "47210" },        // 경북 영주시
+    "영천": { sido: "47", district: "47230" },        // 경북 영천시
+    "창원": { sido: "48", district: "48121" },        // 경남 창원시 의창구
+    "진주": { sido: "48", district: "48170" },        // 경남 진주시
+    "사천": { sido: "48", district: "48240" },        // 경남 사천시
+    // 부산/울산권
+    "부산": { sido: "26", district: "26320" },        // 부산 북구
+    "기장": { sido: "26", district: "26710" },        // 부산 기장군
+    "울산": { sido: "31", district: "31110" },        // 울산 중구
+    // 제주권
+    "제주": { sido: "50", district: "50110" }         // 제주 제주시
+  };
+
+  // 캠퍼스 선택 시 시도/시군구 자동 선택 함수
+  function autoSelectLocationByCampus(campusSelectId, sidoSelectId, districtSelectId, refreshCallback) {
+    const campusName = document.getElementById(campusSelectId).value;
+    if (!campusName) return false;
+    
+    // 캠퍼스명에서 키워드 매칭 (부분 일치 허용)
+    let location = CAMPUS_LOCATIONS[campusName];
+    if (!location) {
+      // 정확한 키가 없으면 포함된 키워드로 검색
+      for (const [key, loc] of Object.entries(CAMPUS_LOCATIONS)) {
+        if (campusName.includes(key) || key.includes(campusName)) {
+          location = loc;
+          break;
+        }
+      }
+    }
+    
+    if (!location) {
+      // 매핑 데이터가 없으면 알림
+      alert(`"${campusName}" 캠퍼스의 소재지 정보가 없습니다.\n시도와 시군구를 직접 선택해 주세요.`);
+      return false;
+    }
+    
+    // 시도 선택
+    const sidoSelect = document.getElementById(sidoSelectId);
+    sidoSelect.value = location.sido;
+    
+    // 시군구 목록 업데이트
+    updateDistrictSelect(sidoSelectId, districtSelectId);
+    
+    // 시군구 선택
+    const districtSelect = document.getElementById(districtSelectId);
+    districtSelect.value = location.district;
+    
+    // 데이터 새로고침
+    if (refreshCallback) refreshCallback();
+    
+    return true;
+  }
+
   // 그라데이션 생성 함수
   function createGradient(ctx, color1, color2) {
     const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
@@ -3552,13 +3640,23 @@
   function attachEvents() {
     // 왜: 인구/산업 탭이 분리되어, 각 탭의 필터 변경이 해당 탭만 갱신하도록 분리합니다.
     
+    // 인구 탭: 캠퍼스 선택 시 소재지 자동 선택
+    document.getElementById("populationCampus").addEventListener("change", () => {
+      autoSelectLocationByCampus("populationCampus", "populationAdmCd", "populationDistrict", refreshPopulation);
+    });
+    
     // 인구 탭: 시도 변경 시 시군구 목록 업데이트 후 데이터 갱신
     document.getElementById("populationAdmCd").addEventListener("change", () => {
       updateDistrictSelect("populationAdmCd", "populationDistrict");
       refreshPopulation();
     });
-    ["populationCampus", "populationDistrict", "populationYear"].forEach((id) => {
+    ["populationDistrict", "populationYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshPopulation);
+    });
+    
+    // 산업 탭: 캠퍼스 선택 시 소재지 자동 선택
+    document.getElementById("industryCampus").addEventListener("change", () => {
+      autoSelectLocationByCampus("industryCampus", "industryAdmCd", "industryDistrict", refreshIndustry);
     });
     
     // 산업 탭: 시도 변경 시 시군구 목록 업데이트 후 데이터 갱신
@@ -3566,7 +3664,7 @@
       updateDistrictSelect("industryAdmCd", "industryDistrict");
       refreshIndustry();
     });
-    ["industryCampus", "industryDistrict", "industryYear"].forEach((id) => {
+    ["industryDistrict", "industryYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshIndustry);
     });
     
