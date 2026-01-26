@@ -112,6 +112,24 @@ public class JobRepository {
         });
     }
 
+    public List<String> findJobKoreaOccupationCodesByWork24Code(String work24Code) {
+        String code = trimToNull(work24Code);
+        if (code == null) return List.of();
+
+        try {
+            return jdbcTemplate.query("""
+                SELECT jobkorea_code
+                FROM job_work24_jobkorea_occupation_map
+                WHERE work24_code = ?
+                ORDER BY jobkorea_code
+                """, new Object[]{code}, (rs, rowNum) -> rs.getString("jobkorea_code"));
+        } catch (DataAccessException e) {
+            // 왜: 운영/개발 DB에 테이블 또는 매핑 데이터가 아직 없을 수 있어,
+            //      통합 조회가 예외로 터지지 않게 빈 목록으로 처리합니다.
+            return List.of();
+        }
+    }
+
     public Optional<JobRecruitCacheRow> findRecruitCache(String queryKey, String provider) {
         try {
             List<JobRecruitCacheRow> rows = jdbcTemplate.query("""

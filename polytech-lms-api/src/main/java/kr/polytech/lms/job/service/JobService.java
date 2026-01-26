@@ -39,12 +39,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class JobService {
     // 왜: 채용 API는 Work24 실시간 조회 + DB 캐시를 동시에 지원해야 해서 서비스에서 정책을 통합합니다.
 
     private static final Logger log = LoggerFactory.getLogger(JobService.class);
+    private static final Pattern WORK24_SMALL_OCCUPATION_CODE = Pattern.compile("^\\d{6}$");
 
     private final JobRepository jobRepository;
     private final Work24Client work24Client;
@@ -810,23 +812,77 @@ public class JobService {
             Provider.WORK24,
             cachePolicy
         );
-        JobRecruitListResponse jobkorea = getRecruitments(
-            criteria.region(),
-            criteria.occupation(),
-            null,
-            null,
-            null,
-            null,
-            criteria.startPage(),
-            criteria.display(),
-            Provider.JOBKOREA,
-            cachePolicy
-        );
+
+        // 왜: 통합(ALL) 화면의 직종코드(Work24 6자리 소분류)를 잡코리아 필터로 그대로 쓰면 필터가 적용되지 않습니다.
+        // 그래서 "Work24 소분류 → 잡코리아 업직종 코드"로 변환해 잡코리아 조회에 사용합니다(매핑 없으면 잡코리아 결과 제외).
+        JobRecruitListResponse jobkorea;
+        if (looksLikeWork24SmallOccupationCode(criteria.occupation())) {
+            List<String> mapped = jobRepository.findJobKoreaOccupationCodesByWork24Code(criteria.occupation());
+            if (mapped.isEmpty()) {
+                log.warn("통합(ALL) 직종 매핑이 없어 잡코리아 결과를 제외합니다. work24OccupationCode={}", criteria.occupation());
+                jobkorea = new JobRecruitListResponse(0, criteria.startPage(), criteria.display(), List.of());
+            } else if (mapped.size() == 1) {
+                jobkorea = getRecruitments(
+                    criteria.region(),
+                    mapped.get(0),
+                    null,
+                    null,
+                    null,
+                    null,
+                    criteria.startPage(),
+                    criteria.display(),
+                    Provider.JOBKOREA,
+                    cachePolicy
+                );
+            } else {
+                log.debug("통합(ALL) 직종 매핑이 여러 개입니다. work24OccupationCode={}, jobkoreaCodes={}", criteria.occupation(), mapped);
+                int total = 0;
+                List<JobRecruitItem> items = new ArrayList<>();
+                for (String code : mapped) {
+                    JobRecruitListResponse res = getRecruitments(
+                        criteria.region(),
+                        code,
+                        null,
+                        null,
+                        null,
+                        null,
+                        criteria.startPage(),
+                        criteria.display(),
+                        Provider.JOBKOREA,
+                        cachePolicy
+                    );
+                    total += Math.max(0, res.total());
+                    if (res.wanted() != null) items.addAll(res.wanted());
+                }
+                jobkorea = new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), items);
+            }
+        } else {
+            jobkorea = getRecruitments(
+                criteria.region(),
+                criteria.occupation(),
+                null,
+                null,
+                null,
+                null,
+                criteria.startPage(),
+                criteria.display(),
+                Provider.JOBKOREA,
+                cachePolicy
+            );
+        }
+
         List<JobRecruitItem> merged = new java.util.ArrayList<>();
         if (work24.wanted() != null) merged.addAll(work24.wanted());
         if (jobkorea.wanted() != null) merged.addAll(jobkorea.wanted());
         int total = work24.total() + jobkorea.total();
         return new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), merged);
+    }
+
+    private static boolean looksLikeWork24SmallOccupationCode(String raw) {
+        if (raw == null) return false;
+        String value = raw.trim();
+        if (value.isBlank()) return false;
+        return WORK24_SMALL_OCCUPATION_CODE.matcher(value).matches();
     }
 
     private JobRecruitListResponse fetchFromProvider(JobRecruitSearchCriteria criteria, Provider provider) {
