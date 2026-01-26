@@ -339,7 +339,9 @@ public class ContentSummaryService {
         // 왜: uploadAndSummarize()를 그대로 재시도하면 매번 파일 업로드까지 다시 하게 되어 비용/시간이 크게 늘어납니다.
         // 업로드는 1회만 하고(fileUri 재사용), 요약(generateContent)만 최대 3회(최초 1회 + 재시도 2회) 수행합니다.
         String mimeType = "video/mp4"; // 현재 다운로드 파일명은 input.mp4로 고정입니다.
-        String fileUri = geminiVideoSummaryClient.uploadVideo(videoFile);
+        GeminiVideoSummaryClient.UploadedFile uploaded = geminiVideoSummaryClient.uploadVideo(videoFile);
+        mimeType = uploaded.mimeType();
+        String fileUri = uploaded.fileUri();
 
         try {
             int maxAdditionalRetries = VIDEO_SUMMARY_MAX_ADDITIONAL_RETRIES;
