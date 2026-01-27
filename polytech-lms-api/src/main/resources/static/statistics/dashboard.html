@@ -62,10 +62,12 @@
     
     body {
       font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--color-bg);
+      background-color: transparent;
       color: var(--color-text);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      margin: 0;
+      padding: 0;
     }
     
     /* 제목 스타일 */
@@ -522,10 +524,163 @@
         padding-bottom: 0.75rem;
       }
     }
+
+    /* ─────────────────────────────────────────────────────────────
+       기술업종 정보 모달
+       ───────────────────────────────────────────────────────────── */
+    .tech-info-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+    .tech-info-modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .tech-info-modal {
+      background: var(--color-card);
+      border-radius: var(--radius-xl);
+      max-width: 720px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(20px);
+      transition: transform var(--transition-normal);
+    }
+    .tech-info-modal-overlay.show .tech-info-modal {
+      transform: translateY(0);
+    }
+    .tech-info-modal-header {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      color: white;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tech-info-modal-header h2 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tech-info-modal-header .subtitle {
+      font-size: 0.8125rem;
+      opacity: 0.9;
+      margin-top: 0.25rem;
+    }
+    .tech-info-modal-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition-fast);
+    }
+    .tech-info-modal-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    .tech-info-modal-body {
+      padding: 1.5rem;
+    }
+    .tech-category {
+      margin-bottom: 1.5rem;
+    }
+    .tech-category:last-child {
+      margin-bottom: 0;
+    }
+    .tech-category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--color-primary);
+    }
+    .tech-category-desc {
+      font-size: 0.875rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+    .tech-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .tech-item {
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      border: 1px solid var(--color-border);
+    }
+    .tech-item-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: 0.375rem;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .tech-item-desc {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      line-height: 1.4;
+    }
+    .tech-info-source {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border);
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      text-align: right;
+    }
+    .tech-info-btn {
+      background: transparent;
+      border: none;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+      margin-left: 0.25rem;
+    }
+    .tech-info-btn:hover {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+    }
+    .tech-info-btn i {
+      font-size: 1rem;
+    }
   </style>
 </head>
-<body class="bg-light">
-<main class="container py-4">
+<body>
+<main class="container-fluid px-4 py-3" style="max-width: 1600px;">
   <!-- 헤더 영역 -->
   <div class="page-header">
     <h1><i class="bi bi-bar-chart-line-fill" style="color: var(--color-primary);"></i> 통계 대시보드</h1>
@@ -708,7 +863,8 @@
         <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
         <div class="filter-controls">
           <select id="populationCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
-          <select id="populationAdmCd" class="form-select" style="min-width: 180px;" aria-label="행정구역 선택">
+          <select id="populationAdmCd" class="form-select" style="min-width: 150px;" aria-label="시도 선택">
+            <option value="">전국 전체</option>
             <option value="11" selected>서울특별시</option>
             <option value="26">부산광역시</option>
             <option value="27">대구광역시</option>
@@ -716,15 +872,19 @@
             <option value="29">광주광역시</option>
             <option value="30">대전광역시</option>
             <option value="31">울산광역시</option>
+            <option value="36">세종특별자치시</option>
             <option value="41">경기도</option>
-            <option value="42">강원도</option>
+            <option value="42">강원특별자치도</option>
             <option value="43">충청북도</option>
             <option value="44">충청남도</option>
-            <option value="45">전라북도</option>
+            <option value="45">전북특별자치도</option>
             <option value="46">전라남도</option>
             <option value="47">경상북도</option>
             <option value="48">경상남도</option>
             <option value="50">제주특별자치도</option>
+          </select>
+          <select id="populationDistrict" class="form-select" style="min-width: 140px;" aria-label="시군구 선택">
+            <option value="" selected>전체 (시군구)</option>
           </select>
           <select id="populationYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
         </div>
@@ -748,13 +908,49 @@
       <div class="card-premium">
         <div class="card-header-premium">
           <h3><i class="bi bi-pie-chart"></i> 연령대별 행정구역 인구비율 vs 캠퍼스 학생비율</h3>
-          <button id="downloadPopulationCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
-            <i class="bi bi-file-earmark-excel"></i> 엑셀
-          </button>
+          <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
+            <button type="button" class="btn btn-outline-secondary active" id="populationChartViewBtn" onclick="togglePopulationView('chart')">
+              <i class="bi bi-bar-chart"></i> 차트
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="populationTableViewBtn" onclick="togglePopulationView('table')">
+              <i class="bi bi-table"></i> 표
+            </button>
+          </div>
         </div>
         <div class="card-body-premium">
-          <div class="chart-container" style="height: 320px;">
+          <!-- 차트 뷰 -->
+          <div id="populationChartView" class="chart-container" style="height: 320px;">
             <canvas id="populationChart"></canvas>
+          </div>
+          <!-- 표 뷰 (기본 숨김) -->
+          <div id="populationTableView" style="display: none; max-height: 400px; overflow-y: auto;">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 120px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
+              <thead class="table-light" style="position: sticky; top: 0;">
+                <tr>
+                  <th rowspan="2" class="text-center align-middle">연령대</th>
+                  <th colspan="2" class="text-center" style="background-color: #f0f0f0;">행정구역</th>
+                  <th colspan="2" class="text-center" style="background-color: #e3f2fd;">캠퍼스</th>
+                  <th rowspan="2" class="text-center align-middle">GAP<br>(%p)</th>
+                </tr>
+                <tr>
+                  <th class="text-center" style="background-color: #f0f0f0;">인원</th>
+                  <th class="text-center" style="background-color: #f0f0f0;">비율(%)</th>
+                  <th class="text-center" style="background-color: #e3f2fd;">인원</th>
+                  <th class="text-center" style="background-color: #e3f2fd;">비율(%)</th>
+                </tr>
+              </thead>
+              <tbody id="populationTableBody">
+                <!-- JavaScript로 데이터 채움 -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -775,10 +971,49 @@
       <div class="card-premium">
         <div class="card-header-premium">
           <h3><i class="bi bi-gender-ambiguous"></i> 연령대별 남녀 성비: 행정구역 vs 캠퍼스</h3>
+          <div class="btn-group btn-group-sm" role="group" aria-label="차트/표 전환">
+            <button type="button" class="btn btn-outline-secondary active" id="genderChartViewBtn" onclick="toggleGenderView('chart')">
+              <i class="bi bi-bar-chart"></i> 차트
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="genderTableViewBtn" onclick="toggleGenderView('table')">
+              <i class="bi bi-table"></i> 표
+            </button>
+          </div>
         </div>
         <div class="card-body-premium">
-          <div class="chart-container" style="height: 320px;">
+          <!-- 차트 뷰 -->
+          <div id="genderChartView" class="chart-container" style="height: 320px;">
             <canvas id="populationGenderChart"></canvas>
+          </div>
+          <!-- 표 뷰 (기본 숨김) -->
+          <div id="genderTableView" style="display: none; max-height: 400px; overflow-y: auto;">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 80px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
+              <thead class="table-light" style="position: sticky; top: 0;">
+                <tr>
+                  <th rowspan="2" class="align-middle">연령대</th>
+                  <th colspan="2" style="background: rgba(107, 114, 128, 0.15);">행정구역</th>
+                  <th colspan="2" style="background: rgba(59, 130, 246, 0.15);">캠퍼스</th>
+                  <th rowspan="2" class="align-middle">GAP<br><small class="text-muted">(%p)</small></th>
+                </tr>
+                <tr>
+                  <th style="background: rgba(107, 114, 128, 0.08);">남성(%)</th>
+                  <th style="background: rgba(107, 114, 128, 0.08);">여성(%)</th>
+                  <th style="background: rgba(59, 130, 246, 0.08);">남성(%)</th>
+                  <th style="background: rgba(59, 130, 246, 0.08);">여성(%)</th>
+                </tr>
+              </thead>
+              <tbody id="genderTableBody">
+                <!-- JavaScript로 데이터 채움 -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -794,6 +1029,11 @@
           </div>
         </div>
       </div>
+
+      <!-- 출처 정보 -->
+      <div class="text-end text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+        <i class="bi bi-info-circle"></i> 인구 데이터 출처: KOSIS(국가통계포털), 2019~2024년
+      </div>
     </div>
 
     <div class="tab-pane fade" id="pane-industry" role="tabpanel" aria-labelledby="tab-industry">
@@ -802,7 +1042,8 @@
         <div class="filter-title"><i class="bi bi-funnel"></i> 필터 조건</div>
         <div class="filter-controls">
           <select id="industryCampus" class="form-select" style="min-width: 180px;" aria-label="캠퍼스 선택"></select>
-          <select id="industryAdmCd" class="form-select" style="min-width: 180px;" aria-label="행정구역 선택">
+          <select id="industryAdmCd" class="form-select" style="min-width: 150px;" aria-label="시도 선택">
+            <option value="">전국 전체</option>
             <option value="11" selected>서울특별시</option>
             <option value="26">부산광역시</option>
             <option value="27">대구광역시</option>
@@ -815,11 +1056,14 @@
             <option value="42">강원특별자치도</option>
             <option value="43">충청북도</option>
             <option value="44">충청남도</option>
-            <option value="45">전라북도</option>
+            <option value="45">전북특별자치도</option>
             <option value="46">전라남도</option>
             <option value="47">경상북도</option>
             <option value="48">경상남도</option>
             <option value="50">제주특별자치도</option>
+          </select>
+          <select id="industryDistrict" class="form-select" style="min-width: 140px;" aria-label="시군구 선택">
+            <option value="" selected>전체 (시군구)</option>
           </select>
           <select id="industryYear" class="form-select" style="min-width: 110px;" aria-label="연도 선택"></select>
         </div>
@@ -842,20 +1086,34 @@
       <!-- 테이블 카드: 산업분포 분석 -->
       <div class="card-premium">
         <div class="card-header-premium">
-          <h3><i class="bi bi-table"></i> 산업분포 분석</h3>
+          <h3><i class="bi bi-table"></i> 산업분포 분석 <button type="button" class="tech-info-btn" id="openTechInfoModal" aria-label="기술업종 분류 안내"><i class="bi bi-info-circle"></i></button></h3>
           <button id="downloadIndustryCsv" class="btn-premium btn-success" type="button" aria-label="엑셀 다운로드">
             <i class="bi bi-file-earmark-excel"></i> 엑셀
           </button>
         </div>
         <div class="card-body-premium p-0">
           <div class="table-responsive">
-            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0">
+            <table class="table table-premium table-sm table-bordered align-middle text-center mb-0" style="table-layout: fixed;">
+              <colgroup>
+                <col style="width: 120px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 100px;">
+                <col style="width: 80px;">
+              </colgroup>
               <thead>
               <tr>
-                <th style="min-width: 160px;">분야</th>
-                <th>행정구역 종사자 비율</th>
-                <th>캠퍼스 학생 비율</th>
-                <th>GAP(캠퍼스-행정, %p)</th>
+                <th rowspan="2" style="vertical-align: middle;">분야</th>
+                <th colspan="2" style="background: rgba(107, 114, 128, 0.15);">행정구역 (종사자)</th>
+                <th colspan="2" style="background: rgba(59, 130, 246, 0.15);">캠퍼스 (학생)</th>
+                <th rowspan="2" style="vertical-align: middle;">GAP<br><small class="text-muted">(%p)</small></th>
+              </tr>
+              <tr>
+                <th style="background: rgba(107, 114, 128, 0.08);">인원</th>
+                <th style="background: rgba(107, 114, 128, 0.08);">비율(%)</th>
+                <th style="background: rgba(59, 130, 246, 0.08);">인원</th>
+                <th style="background: rgba(59, 130, 246, 0.08);">비율(%)</th>
               </tr>
               </thead>
               <tbody id="industryTableBody"></tbody>
@@ -886,6 +1144,11 @@
             <canvas id="industryGapChart"></canvas>
           </div>
         </div>
+      </div>
+
+      <!-- 출처 정보 -->
+      <div class="text-end text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">
+        <i class="bi bi-info-circle"></i> 산업 데이터 출처: SGIS(통계지리정보서비스), 2019~2023년
       </div>
     </div>
 
@@ -1398,6 +1661,352 @@
     textColor: 'rgba(30, 41, 59, 1)',
     textMuted: 'rgba(100, 116, 139, 1)'
   };
+
+  // ==================== 시군구 코드 데이터 ====================
+  const DISTRICT_CODES = {
+    "11": [ // 서울특별시
+      { code: "11110", name: "종로구" }, { code: "11140", name: "중구" }, { code: "11170", name: "용산구" },
+      { code: "11200", name: "성동구" }, { code: "11215", name: "광진구" }, { code: "11230", name: "동대문구" },
+      { code: "11260", name: "중랑구" }, { code: "11290", name: "성북구" }, { code: "11305", name: "강북구" },
+      { code: "11320", name: "도봉구" }, { code: "11350", name: "노원구" }, { code: "11380", name: "은평구" },
+      { code: "11410", name: "서대문구" }, { code: "11440", name: "마포구" }, { code: "11470", name: "양천구" },
+      { code: "11500", name: "강서구" }, { code: "11530", name: "구로구" }, { code: "11545", name: "금천구" },
+      { code: "11560", name: "영등포구" }, { code: "11590", name: "동작구" }, { code: "11620", name: "관악구" },
+      { code: "11650", name: "서초구" }, { code: "11680", name: "강남구" }, { code: "11710", name: "송파구" },
+      { code: "11740", name: "강동구" }
+    ],
+    "26": [ // 부산광역시
+      { code: "26110", name: "중구" }, { code: "26140", name: "서구" }, { code: "26170", name: "동구" },
+      { code: "26200", name: "영도구" }, { code: "26230", name: "부산진구" }, { code: "26260", name: "동래구" },
+      { code: "26290", name: "남구" }, { code: "26320", name: "북구" }, { code: "26350", name: "해운대구" },
+      { code: "26380", name: "사하구" }, { code: "26410", name: "금정구" }, { code: "26440", name: "강서구" },
+      { code: "26470", name: "연제구" }, { code: "26500", name: "수영구" }, { code: "26530", name: "사상구" },
+      { code: "26710", name: "기장군" }
+    ],
+    "27": [ // 대구광역시
+      { code: "27110", name: "중구" }, { code: "27140", name: "동구" }, { code: "27170", name: "서구" },
+      { code: "27200", name: "남구" }, { code: "27230", name: "북구" }, { code: "27260", name: "수성구" },
+      { code: "27290", name: "달서구" }, { code: "27710", name: "달성군" }, { code: "27720", name: "군위군" }
+    ],
+    "28": [ // 인천광역시
+      { code: "28110", name: "중구" }, { code: "28140", name: "동구" }, { code: "28177", name: "미추홀구" },
+      { code: "28185", name: "연수구" }, { code: "28200", name: "남동구" }, { code: "28237", name: "부평구" },
+      { code: "28245", name: "계양구" }, { code: "28260", name: "서구" }, { code: "28710", name: "강화군" },
+      { code: "28720", name: "옹진군" }
+    ],
+    "29": [ // 광주광역시
+      { code: "29110", name: "동구" }, { code: "29140", name: "서구" }, { code: "29155", name: "남구" },
+      { code: "29170", name: "북구" }, { code: "29200", name: "광산구" }
+    ],
+    "30": [ // 대전광역시
+      { code: "30110", name: "동구" }, { code: "30140", name: "중구" }, { code: "30170", name: "서구" },
+      { code: "30200", name: "유성구" }, { code: "30230", name: "대덕구" }
+    ],
+    "31": [ // 울산광역시
+      { code: "31110", name: "중구" }, { code: "31140", name: "남구" }, { code: "31170", name: "동구" },
+      { code: "31200", name: "북구" }, { code: "31710", name: "울주군" }
+    ],
+    "36": [], // 세종특별자치시 (단일 행정구역)
+    "41": [ // 경기도
+      { code: "41111", name: "수원시 장안구" }, { code: "41113", name: "수원시 권선구" }, { code: "41115", name: "수원시 팔달구" },
+      { code: "41117", name: "수원시 영통구" }, { code: "41131", name: "성남시 수정구" }, { code: "41133", name: "성남시 중원구" },
+      { code: "41135", name: "성남시 분당구" }, { code: "41150", name: "의정부시" }, { code: "41171", name: "안양시 만안구" },
+      { code: "41173", name: "안양시 동안구" }, { code: "41190", name: "부천시" }, { code: "41210", name: "광명시" },
+      { code: "41220", name: "평택시" }, { code: "41250", name: "동두천시" }, { code: "41271", name: "안산시 상록구" },
+      { code: "41273", name: "안산시 단원구" }, { code: "41281", name: "고양시 덕양구" }, { code: "41285", name: "고양시 일산동구" },
+      { code: "41287", name: "고양시 일산서구" }, { code: "41290", name: "과천시" }, { code: "41310", name: "구리시" },
+      { code: "41360", name: "남양주시" }, { code: "41370", name: "오산시" }, { code: "41390", name: "시흥시" },
+      { code: "41410", name: "군포시" }, { code: "41430", name: "의왕시" }, { code: "41450", name: "하남시" },
+      { code: "41461", name: "용인시 처인구" }, { code: "41463", name: "용인시 기흥구" }, { code: "41465", name: "용인시 수지구" },
+      { code: "41480", name: "파주시" }, { code: "41500", name: "이천시" }, { code: "41550", name: "안성시" },
+      { code: "41570", name: "김포시" }, { code: "41590", name: "화성시" }, { code: "41610", name: "광주시" },
+      { code: "41630", name: "양주시" }, { code: "41650", name: "포천시" }, { code: "41670", name: "여주시" },
+      { code: "41800", name: "연천군" }, { code: "41820", name: "가평군" }, { code: "41830", name: "양평군" }
+    ],
+    "42": [ // 강원특별자치도
+      { code: "42110", name: "춘천시" }, { code: "42130", name: "원주시" }, { code: "42150", name: "강릉시" },
+      { code: "42170", name: "동해시" }, { code: "42190", name: "태백시" }, { code: "42210", name: "속초시" },
+      { code: "42230", name: "삼척시" }, { code: "42720", name: "홍천군" }, { code: "42730", name: "횡성군" },
+      { code: "42750", name: "영월군" }, { code: "42760", name: "평창군" }, { code: "42770", name: "정선군" },
+      { code: "42780", name: "철원군" }, { code: "42790", name: "화천군" }, { code: "42800", name: "양구군" },
+      { code: "42810", name: "인제군" }, { code: "42820", name: "고성군" }, { code: "42830", name: "양양군" }
+    ],
+    "43": [ // 충청북도
+      { code: "43111", name: "청주시 상당구" }, { code: "43112", name: "청주시 서원구" }, { code: "43113", name: "청주시 흥덕구" },
+      { code: "43114", name: "청주시 청원구" }, { code: "43130", name: "충주시" }, { code: "43150", name: "제천시" },
+      { code: "43720", name: "보은군" }, { code: "43730", name: "옥천군" }, { code: "43740", name: "영동군" },
+      { code: "43745", name: "증평군" }, { code: "43750", name: "진천군" }, { code: "43760", name: "괴산군" },
+      { code: "43770", name: "음성군" }, { code: "43800", name: "단양군" }
+    ],
+    "44": [ // 충청남도
+      { code: "44131", name: "천안시 동남구" }, { code: "44133", name: "천안시 서북구" }, { code: "44150", name: "공주시" },
+      { code: "44180", name: "보령시" }, { code: "44200", name: "아산시" }, { code: "44210", name: "서산시" },
+      { code: "44230", name: "논산시" }, { code: "44250", name: "계룡시" }, { code: "44270", name: "당진시" },
+      { code: "44710", name: "금산군" }, { code: "44760", name: "부여군" }, { code: "44770", name: "서천군" },
+      { code: "44790", name: "청양군" }, { code: "44800", name: "홍성군" }, { code: "44810", name: "예산군" },
+      { code: "44825", name: "태안군" }
+    ],
+    "45": [ // 전북특별자치도
+      { code: "45111", name: "전주시 완산구" }, { code: "45113", name: "전주시 덕진구" }, { code: "45130", name: "군산시" },
+      { code: "45140", name: "익산시" }, { code: "45180", name: "정읍시" }, { code: "45190", name: "남원시" },
+      { code: "45210", name: "김제시" }, { code: "45710", name: "완주군" }, { code: "45720", name: "진안군" },
+      { code: "45730", name: "무주군" }, { code: "45740", name: "장수군" }, { code: "45750", name: "임실군" },
+      { code: "45770", name: "순창군" }, { code: "45790", name: "고창군" }, { code: "45800", name: "부안군" }
+    ],
+    "46": [ // 전라남도
+      { code: "46110", name: "목포시" }, { code: "46130", name: "여수시" }, { code: "46150", name: "순천시" },
+      { code: "46170", name: "나주시" }, { code: "46230", name: "광양시" }, { code: "46710", name: "담양군" },
+      { code: "46720", name: "곡성군" }, { code: "46730", name: "구례군" }, { code: "46770", name: "고흥군" },
+      { code: "46780", name: "보성군" }, { code: "46790", name: "화순군" }, { code: "46800", name: "장흥군" },
+      { code: "46810", name: "강진군" }, { code: "46820", name: "해남군" }, { code: "46830", name: "영암군" },
+      { code: "46840", name: "무안군" }, { code: "46860", name: "함평군" }, { code: "46870", name: "영광군" },
+      { code: "46880", name: "장성군" }, { code: "46890", name: "완도군" }, { code: "46900", name: "진도군" },
+      { code: "46910", name: "신안군" }
+    ],
+    "47": [ // 경상북도
+      { code: "47111", name: "포항시 남구" }, { code: "47113", name: "포항시 북구" }, { code: "47130", name: "경주시" },
+      { code: "47150", name: "김천시" }, { code: "47170", name: "안동시" }, { code: "47190", name: "구미시" },
+      { code: "47210", name: "영주시" }, { code: "47230", name: "영천시" }, { code: "47250", name: "상주시" },
+      { code: "47280", name: "문경시" }, { code: "47290", name: "경산시" }, { code: "47720", name: "의성군" },
+      { code: "47730", name: "청송군" }, { code: "47750", name: "영양군" }, { code: "47760", name: "영덕군" },
+      { code: "47770", name: "청도군" }, { code: "47820", name: "고령군" }, { code: "47830", name: "성주군" },
+      { code: "47840", name: "칠곡군" }, { code: "47900", name: "예천군" }, { code: "47920", name: "봉화군" },
+      { code: "47930", name: "울진군" }, { code: "47940", name: "울릉군" }
+    ],
+    "48": [ // 경상남도
+      { code: "48121", name: "창원시 의창구" }, { code: "48123", name: "창원시 성산구" }, { code: "48125", name: "창원시 마산합포구" },
+      { code: "48127", name: "창원시 마산회원구" }, { code: "48129", name: "창원시 진해구" }, { code: "48170", name: "진주시" },
+      { code: "48220", name: "통영시" }, { code: "48240", name: "사천시" }, { code: "48250", name: "김해시" },
+      { code: "48270", name: "밀양시" }, { code: "48310", name: "거제시" }, { code: "48330", name: "양산시" },
+      { code: "48720", name: "의령군" }, { code: "48730", name: "함안군" }, { code: "48740", name: "창녕군" },
+      { code: "48820", name: "고성군" }, { code: "48840", name: "남해군" }, { code: "48850", name: "하동군" },
+      { code: "48860", name: "산청군" }, { code: "48870", name: "함양군" }, { code: "48880", name: "거창군" },
+      { code: "48890", name: "합천군" }
+    ],
+    "50": [ // 제주특별자치도
+      { code: "50110", name: "제주시" }, { code: "50130", name: "서귀포시" }
+    ]
+  };
+
+  // 시군구 select 업데이트 함수
+  function updateDistrictSelect(sidoSelectId, districtSelectId) {
+    const sidoCode = document.getElementById(sidoSelectId).value;
+    const districtSelect = document.getElementById(districtSelectId);
+    const districts = DISTRICT_CODES[sidoCode] || [];
+    
+    districtSelect.innerHTML = '<option value="" selected>전체 (시군구)</option>';
+    districts.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.code;
+      opt.textContent = d.name;
+      districtSelect.appendChild(opt);
+    });
+  }
+
+  // 최종 행정구역 코드 반환 (시군구 선택 시 시군구 코드, 아니면 시도 코드)
+  function getSelectedAdmCd(sidoSelectId, districtSelectId) {
+    const districtCode = document.getElementById(districtSelectId).value;
+    if (districtCode) return districtCode;
+    return document.getElementById(sidoSelectId).value;
+  }
+
+  // ==================== 캠퍼스-소재지 매핑 데이터 ====================
+  // 캠퍼스명 → { sido: 시도코드, district: 시군구코드 }
+  const CAMPUS_LOCATIONS = {
+    // 서울권
+    "서울정수": { sido: "11", district: "11170" },    // 서울 용산구
+    "서울강서": { sido: "11", district: "11500" },    // 서울 강서구
+    // 경기권
+    "성남": { sido: "41", district: "41131" },        // 경기 성남시 수정구
+    "화성": { sido: "41", district: "41590" },        // 경기 화성시
+    "안성": { sido: "41", district: "41550" },        // 경기 안성시
+    // 인천권
+    "인천": { sido: "28", district: "28237" },        // 인천 부평구
+    "부평": { sido: "28", district: "28237" },        // 인천 부평구
+    "인천캠퍼스": { sido: "28", district: "28177" },  // 인천 미추홀구
+    // 강원권
+    "춘천": { sido: "42", district: "42110" },        // 강원 춘천시
+    "원주": { sido: "42", district: "42130" },        // 강원 원주시
+    "강릉": { sido: "42", district: "42150" },        // 강원 강릉시
+    // 충청권
+    "대전": { sido: "30", district: "30110" },        // 대전 동구
+    "청주": { sido: "43", district: "43111" },        // 충북 청주시 상당구
+    "충주": { sido: "43", district: "43130" },        // 충북 충주시
+    "아산": { sido: "44", district: "44200" },        // 충남 아산시
+    "홍성": { sido: "44", district: "44800" },        // 충남 홍성군
+    "논산": { sido: "44", district: "44230" },        // 충남 논산시
+    // 전라권
+    "광주": { sido: "29", district: "29170" },        // 광주 북구
+    "김제": { sido: "45", district: "45210" },        // 전북 김제시
+    "익산": { sido: "45", district: "45140" },        // 전북 익산시
+    "순천": { sido: "46", district: "46150" },        // 전남 순천시
+    "무안": { sido: "46", district: "46840" },        // 전남 무안군
+    // 경상권
+    "대구": { sido: "27", district: "27170" },        // 대구 서구
+    "대구캠퍼스": { sido: "27", district: "27140" },  // 대구 동구
+    "구미": { sido: "47", district: "47190" },        // 경북 구미시
+    "영주": { sido: "47", district: "47210" },        // 경북 영주시
+    "영천": { sido: "47", district: "47230" },        // 경북 영천시
+    "창원": { sido: "48", district: "48121" },        // 경남 창원시 의창구
+    "진주": { sido: "48", district: "48170" },        // 경남 진주시
+    "사천": { sido: "48", district: "48240" },        // 경남 사천시
+    // 부산/울산권
+    "부산": { sido: "26", district: "26320" },        // 부산 북구
+    "기장": { sido: "26", district: "26710" },        // 부산 기장군
+    "울산": { sido: "31", district: "31110" },        // 울산 중구
+    // 제주권
+    "제주": { sido: "50", district: "50110" }         // 제주 제주시
+  };
+
+  // 캠퍼스 선택 시 시도/시군구 자동 선택 함수
+  function autoSelectLocationByCampus(campusSelectId, sidoSelectId, districtSelectId, refreshCallback) {
+    const campusName = document.getElementById(campusSelectId).value;
+    if (!campusName) return false;
+    
+    // 캠퍼스명에서 키워드 매칭 (부분 일치 허용)
+    let location = CAMPUS_LOCATIONS[campusName];
+    if (!location) {
+      // 정확한 키가 없으면 포함된 키워드로 검색
+      for (const [key, loc] of Object.entries(CAMPUS_LOCATIONS)) {
+        if (campusName.includes(key) || key.includes(campusName)) {
+          location = loc;
+          break;
+        }
+      }
+    }
+    
+    if (!location) {
+      // 매핑 데이터가 없으면 알림
+      alert(`"${campusName}" 캠퍼스의 소재지 정보가 없습니다.\n시도와 시군구를 직접 선택해 주세요.`);
+      return false;
+    }
+    
+    // 시도 선택
+    const sidoSelect = document.getElementById(sidoSelectId);
+    sidoSelect.value = location.sido;
+    
+    // 시군구 목록 업데이트
+    updateDistrictSelect(sidoSelectId, districtSelectId);
+    
+    // 시군구 선택
+    const districtSelect = document.getElementById(districtSelectId);
+    districtSelect.value = location.district;
+    
+    // 데이터 새로고침
+    if (refreshCallback) refreshCallback();
+    
+    return true;
+  }
+
+  // ==================== 인구통계 차트/표 토글 기능 ====================
+  // 인구 데이터 저장용 (표 렌더링에 사용)
+  let populationTableData = [];
+
+  // 차트/표 뷰 토글 함수
+  function togglePopulationView(view) {
+    const chartView = document.getElementById('populationChartView');
+    const tableView = document.getElementById('populationTableView');
+    const chartBtn = document.getElementById('populationChartViewBtn');
+    const tableBtn = document.getElementById('populationTableViewBtn');
+    
+    if (view === 'chart') {
+      chartView.style.display = 'block';
+      tableView.style.display = 'none';
+      chartBtn.classList.add('active');
+      tableBtn.classList.remove('active');
+    } else {
+      chartView.style.display = 'none';
+      tableView.style.display = 'block';
+      chartBtn.classList.remove('active');
+      tableBtn.classList.add('active');
+      // 표 데이터 렌더링
+      renderPopulationTable();
+    }
+  }
+
+  // 인구 데이터 표 렌더링 함수
+  function renderPopulationTable() {
+    const tbody = document.getElementById('populationTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (!populationTableData || populationTableData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">데이터가 없습니다.</td></tr>';
+      return;
+    }
+    
+    populationTableData.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="text-center">${row.ageBand ?? ''}</td>
+        <td class="tabular-nums text-end">${Number(row.regionCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums text-end">${Number(row.regionRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums text-end">${Number(row.campusCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums text-end">${Number(row.campusRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums text-end">${Number(row.gap ?? 0).toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ==================== 남녀 성비 차트/표 토글 기능 ====================
+  // 성비 데이터 저장용 (표 렌더링에 사용)
+  let genderTableData = [];
+
+  // 차트/표 뷰 토글 함수
+  function toggleGenderView(view) {
+    const chartView = document.getElementById('genderChartView');
+    const tableView = document.getElementById('genderTableView');
+    const chartBtn = document.getElementById('genderChartViewBtn');
+    const tableBtn = document.getElementById('genderTableViewBtn');
+    
+    if (view === 'chart') {
+      chartView.style.display = 'block';
+      tableView.style.display = 'none';
+      chartBtn.classList.add('active');
+      tableBtn.classList.remove('active');
+    } else {
+      chartView.style.display = 'none';
+      tableView.style.display = 'block';
+      chartBtn.classList.remove('active');
+      tableBtn.classList.add('active');
+      // 표 데이터 렌더링
+      renderGenderTable();
+    }
+  }
+
+  // 성비 데이터 표 렌더링 함수
+  function renderGenderTable() {
+    const tbody = document.getElementById('genderTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (!genderTableData || genderTableData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">데이터가 없습니다.</td></tr>';
+      return;
+    }
+    
+    genderTableData.forEach(row => {
+      const regionMale = Number(row.regionMaleRatio ?? 0);
+      const regionFemale = 100 - regionMale;
+      const campusMale = Number(row.campusMaleRatio ?? 0);
+      const campusFemale = 100 - campusMale;
+      const gap = Number(row.maleGap ?? 0);
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.ageBand ?? ''}</td>
+        <td class="tabular-nums">${regionMale.toFixed(1)}</td>
+        <td class="tabular-nums">${regionFemale.toFixed(1)}</td>
+        <td class="tabular-nums">${campusMale.toFixed(1)}</td>
+        <td class="tabular-nums">${campusFemale.toFixed(1)}</td>
+        <td class="tabular-nums">${gap.toFixed(2)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 
   // 그라데이션 생성 함수
   function createGradient(ctx, color1, color2) {
@@ -3040,8 +3649,9 @@
 
   async function refreshPopulation() {
     const campus = document.getElementById("populationCampus").value;
-    const admCd = document.getElementById("populationAdmCd").value;
-    const admLabel = getSelectedOptionText("populationAdmCd");
+    const admCd = getSelectedAdmCd("populationAdmCd", "populationDistrict");
+    const districtVal = document.getElementById("populationDistrict").value;
+    const admLabel = districtVal ? getSelectedOptionText("populationDistrict") : getSelectedOptionText("populationAdmCd");
     const populationYear = document.getElementById("populationYear").value;
 
     if (!campus) {
@@ -3070,6 +3680,8 @@
 
     // population charts
     const popRows = populationData.rows || [];
+    populationTableData = popRows; // 표 뷰용 데이터 저장
+    genderTableData = popRows; // 성비 표 뷰용 데이터 저장
     const popLabels = popRows.map((r) => r.ageBand);
     const regionRatios = popRows.map((r) => Number(r.regionRatio || 0));
     const campusRatios = popRows.map((r) => Number(r.campusRatio || 0));
@@ -3136,8 +3748,9 @@
 
   async function refreshIndustry() {
     const campus = document.getElementById("industryCampus").value;
-    const admCd = document.getElementById("industryAdmCd").value;
-    const admLabel = getSelectedOptionText("industryAdmCd");
+    const admCd = getSelectedAdmCd("industryAdmCd", "industryDistrict");
+    const districtVal = document.getElementById("industryDistrict").value;
+    const admLabel = districtVal ? getSelectedOptionText("industryDistrict") : getSelectedOptionText("industryAdmCd");
     const statsYear = document.getElementById("industryYear").value;
 
     if (!campus) {
@@ -3170,9 +3783,11 @@
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="text-start">${r.category ?? ""}</td>
-        <td>${Number(r.regionRatio ?? 0).toFixed(2)}</td>
-        <td>${Number(r.campusRatio ?? 0).toFixed(2)}</td>
-        <td>${Number(r.gap ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.regionCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums">${Number(r.regionRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.campusCount ?? 0).toLocaleString()}</td>
+        <td class="tabular-nums">${Number(r.campusRatio ?? 0).toFixed(2)}</td>
+        <td class="tabular-nums">${Number(r.gap ?? 0).toFixed(2)}</td>
       `;
       body.appendChild(tr);
     });
@@ -3213,12 +3828,35 @@
 
   function attachEvents() {
     // 왜: 인구/산업 탭이 분리되어, 각 탭의 필터 변경이 해당 탭만 갱신하도록 분리합니다.
-    ["populationCampus", "populationAdmCd", "populationYear"].forEach((id) => {
+    
+    // 인구 탭: 캠퍼스 선택 시 소재지 자동 선택
+    document.getElementById("populationCampus").addEventListener("change", () => {
+      autoSelectLocationByCampus("populationCampus", "populationAdmCd", "populationDistrict", refreshPopulation);
+    });
+    
+    // 인구 탭: 시도 변경 시 시군구 목록 업데이트 후 데이터 갱신
+    document.getElementById("populationAdmCd").addEventListener("change", () => {
+      updateDistrictSelect("populationAdmCd", "populationDistrict");
+      refreshPopulation();
+    });
+    ["populationDistrict", "populationYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshPopulation);
     });
-    ["industryCampus", "industryAdmCd", "industryYear"].forEach((id) => {
+    
+    // 산업 탭: 캠퍼스 선택 시 소재지 자동 선택
+    document.getElementById("industryCampus").addEventListener("change", () => {
+      autoSelectLocationByCampus("industryCampus", "industryAdmCd", "industryDistrict", refreshIndustry);
+    });
+    
+    // 산업 탭: 시도 변경 시 시군구 목록 업데이트 후 데이터 갱신
+    document.getElementById("industryAdmCd").addEventListener("change", () => {
+      updateDistrictSelect("industryAdmCd", "industryDistrict");
+      refreshIndustry();
+    });
+    ["industryDistrict", "industryYear"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshIndustry);
     });
+    
     ["internalCampus"].forEach((id) => {
       document.getElementById(id).addEventListener("change", refreshInternal);
     });
@@ -3278,6 +3916,20 @@
   }
 
   init();
+
+  // 기술업종 정보 버튼: 부모 창에 모달 열기 요청 전송
+  (function() {
+    const openBtn = document.getElementById('openTechInfoModal');
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        // 왜: iframe 내부에서 모달을 표시하면 iframe 영역 내에서만 보이므로,
+        //     부모 창에게 모달을 열라고 메시지를 전송합니다.
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'openTechInfoModal' }, '*');
+        }
+      });
+    }
+  })();
 </script>
 </body>
 </html>

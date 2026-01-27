@@ -64,6 +64,19 @@ public class ContentSummaryController {
         return contentSummaryService.enqueueBackfill(siteId, limit, keyword);
     }
 
+    /**
+     * 기존 영상들의 duration_seconds를 백필합니다.
+     * DB에 이미 있는 영상 중 duration_seconds가 null인 레코드에 대해 Kollus API로 길이를 조회하여 저장합니다.
+     */
+    @PostMapping("/admin/backfill-durations")
+    public java.util.Map<String, Object> backfillDurations(
+        @RequestHeader(name = "X-ContentSummary-Admin-Token", required = false) String adminToken
+    ) {
+        ensureAdminAccess(adminToken);
+        int count = contentSummaryService.backfillDurations();
+        return java.util.Map.of("status", "OK", "updatedCount", count);
+    }
+
     @PostMapping("/webhooks/kollus")
     public KollusWebhookIngestResponse ingestKollusWebhook(
         @RequestHeader(name = "X-Kollus-Webhook-Token", required = false) String webhookToken,

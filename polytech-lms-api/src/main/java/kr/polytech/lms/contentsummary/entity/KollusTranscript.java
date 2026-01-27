@@ -30,6 +30,9 @@ public class KollusTranscript {
     @Column(name = "title", length = 255)
     private String title;
 
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @Column(name = "transcript_text", columnDefinition = "LONGTEXT")
     private String transcriptText;
 
@@ -96,6 +99,14 @@ public class KollusTranscript {
 
     public String getTitle() {
         return title;
+    }
+
+    public Integer getDurationSeconds() {
+        return durationSeconds;
+    }
+
+    public void setDurationSeconds(Integer durationSeconds) {
+        this.durationSeconds = durationSeconds;
     }
 
     public String getTranscriptText() {
