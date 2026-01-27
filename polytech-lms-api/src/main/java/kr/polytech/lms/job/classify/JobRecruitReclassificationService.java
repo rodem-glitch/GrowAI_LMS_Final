@@ -54,7 +54,9 @@ public class JobRecruitReclassificationService {
     }
 
     public List<JobStandardClassification> classifyTopK(JobRecruitItem item) {
-        if (item == null) return List.of();
+        if (item == null) {
+            throw new IllegalArgumentException("직무 재분류 실패: 공고(item)가 null입니다.");
+        }
         String cacheKey = buildCacheKey(item);
         List<JobStandardClassification> cached = cache.get(cacheKey);
         if (cached != null) return cached;
@@ -62,41 +64,50 @@ public class JobRecruitReclassificationService {
         try {
             jobOccupationVectorIndexService.ensureIndexed();
         } catch (Exception e) {
-            log.warn(
+            // 왜: 폴백으로 조용히 넘기면(=빈 결과) 화면에서는 "그냥 안나오는" 현상만 보입니다. 실패는 즉시 에러로 노출합니다.
+            log.error(
                 "직무 소분류 벡터 색인 준비 실패: provider={}, id={}, title={}",
                 toString(item.infoSvc()),
                 toString(item.wantedAuthNo()),
                 toString(item.title()),
                 e
             );
-            return List.of();
+            throw new IllegalStateException("직무 재분류 실패: 벡터 색인 준비 실패", e);
         }
 
         String query = buildQueryText(item);
-        if (query.isBlank()) return List.of();
+        if (query.isBlank()) {
+            log.error(
+                "직무 재분류 실패: 검색 텍스트가 비었습니다. provider={}, id={}, title={}",
+                toString(item.infoSvc()),
+                toString(item.wantedAuthNo()),
+                toString(item.title())
+            );
+            throw new IllegalStateException("직무 재분류 실패: 검색 텍스트가 비었습니다.");
+        }
 
         List<VectorSearchResult> results;
         try {
             results = vectorStoreService.similaritySearch(query, DEFAULT_TOP_K, DEFAULT_THRESHOLD, FILTER_EXPRESSION);
         } catch (Exception e) {
-            log.warn(
+            log.error(
                 "직무 재분류 벡터 검색 실패: provider={}, id={}, title={}",
                 toString(item.infoSvc()),
                 toString(item.wantedAuthNo()),
                 toString(item.title()),
                 e
             );
-            return List.of();
+            throw new IllegalStateException("직무 재분류 실패: 벡터 검색 실패", e);
         }
 
         if (results == null || results.isEmpty()) {
-            log.warn(
+            log.error(
                 "직무 재분류 벡터 검색 결과가 비었습니다: provider={}, id={}, title={}",
                 toString(item.infoSvc()),
                 toString(item.wantedAuthNo()),
                 toString(item.title())
             );
-            return List.of();
+            throw new IllegalStateException("직무 재분류 실패: 검색 결과 0건");
         }
 
         List<JobStandardClassification> classifications = results.stream()
@@ -105,13 +116,13 @@ public class JobRecruitReclassificationService {
             .toList();
 
         if (classifications.isEmpty()) {
-            log.warn(
+            log.error(
                 "직무 재분류 벡터 검색 결과에서 usable classification이 없습니다: provider={}, id={}, title={}",
                 toString(item.infoSvc()),
                 toString(item.wantedAuthNo()),
                 toString(item.title())
             );
-            return List.of();
+            throw new IllegalStateException("직무 재분류 실패: usable classification 0건");
         }
 
         cache.put(cacheKey, classifications);
@@ -171,7 +182,7 @@ public class JobRecruitReclassificationService {
         if (!provider.isBlank() && !id.isBlank()) {
             return provider + ":" + id;
         }
-        // 왜: 외부 공고 id가 없을 때도 캐시가 완전히 깨지지 않도록 title 기반으로 fallback 합니다.
+        // 왜: 외부 공고 id가 없을 때도 캐시가 완전히 깨지지 않도록 title 기반의 "대체 키"를 사용합니다.
         String title = toString(item.title());
         String company = toString(item.company());
         return provider + ":" + title + ":" + company;

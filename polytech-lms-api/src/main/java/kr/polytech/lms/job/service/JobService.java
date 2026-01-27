@@ -895,57 +895,64 @@ public class JobService {
                 if (unique.size() >= 5) break; // 왜: 실시간 호출량 폭증을 막기 위해 상한을 둡니다.
             }
 
-            if (!unique.isEmpty()) {
-                log.info("통합(ALL) 잡코리아 코드 후보: standardCode={}, recommended={}, mappedRpcd={}", requested, recommended, mapped);
-
-                LinkedHashMap<String, JobRecruitItem> mergedByKey = new LinkedHashMap<>();
-                int total = 0;
-
-                List<String> codes = new ArrayList<>(unique);
-                List<CompletableFuture<JobRecruitListResponse>> futures = new ArrayList<>(codes.size());
-                for (String code : codes) {
-                    futures.add(CompletableFuture.supplyAsync(() -> getRecruitments(
-                        criteria.region(),
-                        code,
-                        null,
-                        null,
-                        null,
-                        null,
-                        criteria.startPage(),
-                        fetchDisplay,
-                        Provider.JOBKOREA,
-                        cachePolicy
-                    ), jobReclassifyExecutor));
-                }
-
-                for (int i = 0; i < codes.size(); i++) {
-                    CompletableFuture<JobRecruitListResponse> future = futures.get(i);
-                    JobRecruitListResponse res;
-                    try {
-                        res = future.get(20, TimeUnit.SECONDS);
-                    } catch (Exception e) {
-                        future.cancel(true);
-                        continue;
-                    }
-
-                    total += Math.max(0, res.total());
-                    if (res.wanted() == null) continue;
-                    for (JobRecruitItem item : res.wanted()) {
-                        if (item == null) continue;
-                        mergedByKey.putIfAbsent(buildRecruitItemKey(item), item);
-                    }
-                }
-
-                if (!mergedByKey.isEmpty()) {
-                    return new JobRecruitListResponse(total, criteria.startPage(), fetchDisplay, new ArrayList<>(mergedByKey.values()));
-                }
-            } else {
-                // 왜: 추천이 비면(벡터/설정 문제 등) "잡코리아 제외"로 끊지 않고 기존 방식(무필터)로 시도합니다.
-                log.warn("통합(ALL) 잡코리아 코드 추천이 없어 무필터로 조회 후 재분류합니다. standardCode={}", requested);
+            if (unique.isEmpty()) {
+                // 왜: 폴백(무필터)으로 넘어가면 "왜 잡코리아가 섞여서/안나와서" 원인이 가려집니다. 실패는 즉시 노출합니다.
+                log.error("통합(ALL) 잡코리아 코드 후보가 비었습니다: standardCode={}, recommended={}, mappedRpcd={}", requested, recommended, mapped);
+                throw new IllegalStateException("통합(ALL) 잡코리아 조회 실패: rpcd 후보 0건. standardCode=" + requested);
             }
+
+            log.info("통합(ALL) 잡코리아 코드 후보: standardCode={}, recommended={}, mappedRpcd={}", requested, recommended, mapped);
+
+            LinkedHashMap<String, JobRecruitItem> mergedByKey = new LinkedHashMap<>();
+            int total = 0;
+
+            List<String> codes = new ArrayList<>(unique);
+            List<CompletableFuture<JobRecruitListResponse>> futures = new ArrayList<>(codes.size());
+            for (String code : codes) {
+                futures.add(CompletableFuture.supplyAsync(() -> getRecruitments(
+                    criteria.region(),
+                    code,
+                    null,
+                    null,
+                    null,
+                    null,
+                    criteria.startPage(),
+                    fetchDisplay,
+                    Provider.JOBKOREA,
+                    cachePolicy
+                ), jobReclassifyExecutor));
+            }
+
+            for (int i = 0; i < codes.size(); i++) {
+                String code = codes.get(i);
+                CompletableFuture<JobRecruitListResponse> future = futures.get(i);
+                JobRecruitListResponse res;
+                try {
+                    res = future.get(20, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    // 왜: 폴백(continue)로 넘어가면 일부 rpcd 실패가 숨겨집니다. 실패는 즉시 노출합니다.
+                    future.cancel(true);
+                    log.error("통합(ALL) 잡코리아 조회 실패: rpcd={}, standardCode={}", code, requested, e);
+                    throw new IllegalStateException("통합(ALL) 잡코리아 조회 실패: rpcd=" + code + ", standardCode=" + requested, e);
+                }
+
+                total += Math.max(0, res.total());
+                if (res.wanted() == null) continue;
+                for (JobRecruitItem item : res.wanted()) {
+                    if (item == null) continue;
+                    mergedByKey.putIfAbsent(buildRecruitItemKey(item), item);
+                }
+            }
+
+            if (mergedByKey.isEmpty()) {
+                log.error("통합(ALL) 잡코리아 조회 결과가 0건입니다: standardCode={}, rpcdCandidates={}", requested, codes);
+                throw new IllegalStateException("통합(ALL) 잡코리아 조회 결과 0건: standardCode=" + requested);
+            }
+
+            return new JobRecruitListResponse(total, criteria.startPage(), fetchDisplay, new ArrayList<>(mergedByKey.values()));
         }
 
-        // 왜: 대/중분류(2/4자리) 또는 매핑이 없는 경우, 잡코리아는 Work24 코드를 이해하지 못하므로 occupation 필터 없이 조회합니다.
+        // 왜: 직무 선택이 없는 '전체' 조회는 잡코리아도 무필터로 조회합니다.
         return getRecruitments(
             criteria.region(),
             null,
@@ -977,6 +984,20 @@ public class JobService {
         }
 
         int fetched = jobkorea.wanted().size();
+
+        if (jobKoreaProperties != null
+            && jobKoreaProperties.getReclassification() != null
+            && !jobKoreaProperties.getReclassification().isEnabled()) {
+            // 왜: 임시 실험/튜닝(=임베딩 호출량 절감) 목적일 때는, 재분류 필터를 끄고 "추천 rpcd 조회 결과"를 그대로 노출합니다.
+            log.info(
+                "통합(ALL) 잡코리아 재분류 비활성화: requestedCode={}, fetchedItems={}, displayLimit={}",
+                requested,
+                fetched,
+                displayLimit
+            );
+            return new JobRecruitListResponse(jobkorea.total(), jobkorea.startPage(), displayLimit, limit(jobkorea.wanted(), displayLimit));
+        }
+
         log.info("통합(ALL) 잡코리아 재분류 필터 시작: requestedCode={}, fetchedItems={}, displayLimit={}", requested, fetched, displayLimit);
 
         int checked = 0;
@@ -996,14 +1017,14 @@ public class JobService {
             int end = Math.min(items.size(), offset + JOB_RECLASSIFY_BATCH_SIZE);
             List<JobRecruitItem> batch = items.subList(offset, end);
 
-            List<CompletableFuture<List<JobRecruitReclassificationService.JobStandardClassification>>> futures = new ArrayList<>(batch.size());
-            for (JobRecruitItem item : batch) {
-                if (item == null) {
-                    futures.add(CompletableFuture.completedFuture(List.of()));
-                    continue;
-                }
-                futures.add(CompletableFuture.supplyAsync(() -> jobRecruitReclassificationService.classifyTopK(item), jobReclassifyExecutor));
+        List<CompletableFuture<List<JobRecruitReclassificationService.JobStandardClassification>>> futures = new ArrayList<>(batch.size());
+        for (JobRecruitItem item : batch) {
+            if (item == null) {
+                futures.add(CompletableFuture.failedFuture(new IllegalArgumentException("잡코리아 재분류 실패: item이 null입니다.")));
+                continue;
             }
+            futures.add(CompletableFuture.supplyAsync(() -> jobRecruitReclassificationService.classifyTopK(item), jobReclassifyExecutor));
+        }
 
             for (int i = 0; i < batch.size(); i++) {
                 if (matchedByKey.size() >= displayLimit) break;
@@ -1017,17 +1038,28 @@ public class JobService {
                 try {
                     topK = future.get(JOB_RECLASSIFY_TASK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                 } catch (Exception e) {
-                    // 왜: 임베딩/벡터 검색이 지연되면 화면 응답이 끊기므로, 타임아웃으로 보호합니다.
+                    // 왜: 폴백(빈 결과)로 넘어가면 원인이 가려집니다. 실패는 즉시 노출합니다.
                     future.cancel(true);
-                    topK = List.of();
+                    log.error(
+                        "통합(ALL) 잡코리아 재분류 실패: requestedCode={}, provider={}, id={}, title={}",
+                        requested,
+                        item.infoSvc(),
+                        item.wantedAuthNo(),
+                        item.title(),
+                        e
+                    );
+                    throw new IllegalStateException("통합(ALL) 잡코리아 재분류 실패: requestedCode=" + requested, e);
                 }
 
                 if (topK == null || topK.isEmpty()) {
-                    classifyEmpty++;
-                    if (emptySamples.size() < 5) {
-                        emptySamples.add(safeSampleTitle(item));
-                    }
-                    continue;
+                    log.error(
+                        "통합(ALL) 잡코리아 재분류 결과가 비었습니다: requestedCode={}, provider={}, id={}, title={}",
+                        requested,
+                        item.infoSvc(),
+                        item.wantedAuthNo(),
+                        item.title()
+                    );
+                    throw new IllegalStateException("통합(ALL) 잡코리아 재분류 실패: 결과 0건. requestedCode=" + requested);
                 }
 
                 JobRecruitReclassificationService.JobStandardClassification top1 = topK.get(0);

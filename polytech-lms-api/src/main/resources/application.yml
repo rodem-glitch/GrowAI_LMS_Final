@@ -191,6 +191,11 @@ jobkorea:
   cache:
     enabled: ${JOBKOREA_CACHE_ENABLED:true}
     ttl-minutes: ${JOBKOREA_CACHE_TTL_MINUTES:1440}
+  reclassification:
+    # 왜: 통합(ALL)에서 잡코리아 공고를 표준 소분류로 "재분류 필터"할지 여부입니다.
+    # - false면: 임베딩 호출량/지연이 줄어 "추천(1회)" 중심으로 빠르게 품질을 확인할 수 있습니다.
+    # - true면: 공고를 다시 분류해 필터링하므로 품질은 좋아질 수 있지만 호출량/지연이 늘 수 있습니다.
+    enabled: ${JOBKOREA_RECLASSIFICATION_ENABLED:false}
 
 statistics:
   mapping:

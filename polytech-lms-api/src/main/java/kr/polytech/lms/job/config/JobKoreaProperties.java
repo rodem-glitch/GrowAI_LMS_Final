@@ -32,6 +32,7 @@ public class JobKoreaProperties {
     private String edu3Param = "edu3";
     private Map<String, String> params = new LinkedHashMap<>();
     private Cache cache = new Cache();
+    private Reclassification reclassification = new Reclassification();
 
     public boolean isEnabled() {
         return enabled;
@@ -169,6 +170,14 @@ public class JobKoreaProperties {
         this.cache = cache;
     }
 
+    public Reclassification getReclassification() {
+        return reclassification;
+    }
+
+    public void setReclassification(Reclassification reclassification) {
+        this.reclassification = reclassification;
+    }
+
     public static class Cache {
         // 왜: 잡코리아 캐시도 호출량을 줄이기 위해 별도 설정으로 관리합니다.
         private boolean enabled = true;
@@ -188,6 +197,21 @@ public class JobKoreaProperties {
 
         public void setTtlMinutes(long ttlMinutes) {
             this.ttlMinutes = ttlMinutes;
+        }
+    }
+
+    public static class Reclassification {
+        // 왜: 통합(ALL)에서 잡코리아 공고를 표준 소분류로 "재분류 필터"할지 여부를 실험/튜닝하기 위해 분리합니다.
+        // - 켜면: 품질이 좋아지지만(필터 정확도) 임베딩 호출량/지연이 늘 수 있습니다.
+        // - 끄면: 임베딩 호출량이 줄어 빠르지만, 외부 분류(잡코리아 rpcd 추천)의 품질에 더 의존합니다.
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

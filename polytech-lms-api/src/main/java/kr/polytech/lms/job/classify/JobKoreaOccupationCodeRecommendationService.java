@@ -55,31 +55,38 @@ public class JobKoreaOccupationCodeRecommendationService {
 
     public List<String> recommendRpcdCodesByStandardCode(String standardOccupationCode) {
         String requested = toString(standardOccupationCode);
-        if (requested.isBlank()) return List.of();
+        if (requested.isBlank()) {
+            throw new IllegalArgumentException("잡코리아 코드 추천 실패: 표준 직무 코드가 비었습니다.");
+        }
 
         List<String> cached = cache.get(requested);
         if (cached != null) return cached;
 
         String queryText = buildQueryText(requested);
-        if (queryText.isBlank()) return List.of();
+        if (queryText.isBlank()) {
+            throw new IllegalStateException("잡코리아 코드 추천 실패: 검색용 텍스트가 비었습니다. standardCode=" + requested);
+        }
 
         try {
             jobKoreaOccupationVectorIndexService.ensureIndexed();
         } catch (Exception e) {
-            log.warn("잡코리아 코드 벡터 색인 준비 실패: requestedStandardCode={}", requested, e);
-            return List.of();
+            // 왜: 폴백(무필터/빈 추천)으로 넘어가면 오류가 가려져 디버깅이 어려워집니다. 실패는 즉시 에러로 노출합니다.
+            log.error("잡코리아 코드 벡터 색인 준비 실패: requestedStandardCode={}", requested, e);
+            throw new IllegalStateException("잡코리아 코드 추천 실패: 벡터 색인 준비 실패. standardCode=" + requested, e);
         }
 
         List<VectorSearchResult> results;
         try {
             results = vectorStoreService.similaritySearch(queryText, DEFAULT_TOP_K, DEFAULT_THRESHOLD, FILTER_RPCD);
         } catch (Exception e) {
-            log.warn("잡코리아 코드 추천 벡터 검색 실패: requestedStandardCode={}", requested, e);
-            return List.of();
+            log.error("잡코리아 코드 추천 벡터 검색 실패: requestedStandardCode={}", requested, e);
+            throw new IllegalStateException("잡코리아 코드 추천 실패: 벡터 검색 실패. standardCode=" + requested, e);
         }
 
         if (results == null || results.isEmpty()) {
-            return List.of();
+            // 왜: 추천이 비면 이후 단계(잡코리아 조회)가 무의미해져 문제를 숨기게 됩니다.
+            log.error("잡코리아 코드 추천 결과가 비었습니다: requestedStandardCode={}", requested);
+            throw new IllegalStateException("잡코리아 코드 추천 실패: 추천 결과 0건. standardCode=" + requested);
         }
 
         Set<String> out = new LinkedHashSet<>();
@@ -92,6 +99,10 @@ public class JobKoreaOccupationCodeRecommendationService {
         }
 
         List<String> list = List.copyOf(out);
+        if (list.isEmpty()) {
+            log.error("잡코리아 코드 추천 결과에서 usable rpcd가 없습니다: requestedStandardCode={}", requested);
+            throw new IllegalStateException("잡코리아 코드 추천 실패: usable rpcd 0건. standardCode=" + requested);
+        }
         cache.put(requested, list);
         return list;
     }
