@@ -130,6 +130,61 @@ public class JobRepository {
         }
     }
 
+    public List<OccupationDepth3VectorRow> findAllOccupationDepth3VectorRows() {
+        // 왜: 직무 소분류(표준 코드) 벡터 색인을 만들기 위해, 대/중/소 코드 정보를 한 번에 조회합니다.
+        // - depth3(소분류)는 d3.code(6자리)이고
+        // - depth2(중분류)는 d3.parent_code
+        // - depth1(대분류)는 d2.parent_code 입니다.
+        try {
+            return jdbcTemplate.query("""
+                SELECT
+                    d3.code AS depth3_code,
+                    d3.parent_code AS depth2_code,
+                    d2.parent_code AS depth1_code,
+                    d3.depth1 AS depth1_name,
+                    d3.depth2 AS depth2_name,
+                    d3.depth3 AS depth3_name
+                FROM occupationcode d3
+                LEFT JOIN occupationcode d2 ON d2.code = d3.parent_code
+                WHERE d3.depth3 IS NOT NULL AND d3.depth3 <> ''
+                ORDER BY d3.code
+                """, (rs, rowNum) -> new OccupationDepth3VectorRow(
+                rs.getString("depth1_code"),
+                rs.getString("depth2_code"),
+                rs.getString("depth3_code"),
+                rs.getString("depth1_name"),
+                rs.getString("depth2_name"),
+                rs.getString("depth3_name")
+            ));
+        } catch (DataAccessException e) {
+            // 왜: 운영 DB 스키마가 다르거나 테이블이 없으면 기능 전체가 죽지 않게 빈 목록으로 처리합니다.
+            return List.of();
+        }
+    }
+
+    public Optional<OccupationLookupRow> findOccupationLookupByCode(String occupationCode) {
+        String code = trimToNull(occupationCode);
+        if (code == null) return Optional.empty();
+
+        try {
+            List<OccupationLookupRow> rows = jdbcTemplate.query("""
+                SELECT code, parent_code, depth1, depth2, depth3
+                FROM occupationcode
+                WHERE code = ?
+                """, new Object[]{code}, (rs, rowNum) -> new OccupationLookupRow(
+                rs.getString("code"),
+                rs.getString("parent_code"),
+                rs.getString("depth1"),
+                rs.getString("depth2"),
+                rs.getString("depth3")
+            ));
+            return rows.stream().findFirst();
+        } catch (DataAccessException e) {
+            // 왜: 운영 DB 스키마가 다르거나 테이블이 없으면 기능 전체가 죽지 않게 빈 값으로 처리합니다.
+            return Optional.empty();
+        }
+    }
+
     public Optional<JobRecruitCacheRow> findRecruitCache(String queryKey, String provider) {
         try {
             List<JobRecruitCacheRow> rows = jdbcTemplate.query("""
@@ -368,5 +423,24 @@ public class JobRepository {
     }
 
     public record OccupationCodeInsertRow(String code, String parentCode, String depth1, String depth2, String depth3) {
+    }
+
+    public record OccupationDepth3VectorRow(
+        String depth1Code,
+        String depth2Code,
+        String depth3Code,
+        String depth1Name,
+        String depth2Name,
+        String depth3Name
+    ) {
+    }
+
+    public record OccupationLookupRow(
+        String code,
+        String parentCode,
+        String depth1,
+        String depth2,
+        String depth3
+    ) {
     }
 }

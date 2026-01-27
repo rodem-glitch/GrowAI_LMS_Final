@@ -16,6 +16,8 @@ configurations {
 tasks.withType(JavaCompile).configureEach {
     sourceCompatibility = "17"
     targetCompatibility = "17"
+    // 왜: 윈도우 기본 인코딩(cp949)에서 한글 문자열/로그가 깨지지 않게 UTF-8로 고정합니다.
+    options.encoding = "UTF-8"
 }
 
 repositories {

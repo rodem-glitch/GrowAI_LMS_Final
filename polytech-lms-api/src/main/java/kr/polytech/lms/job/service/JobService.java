@@ -2,6 +2,8 @@ package kr.polytech.lms.job.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.polytech.lms.job.classify.JobKoreaOccupationCodeRecommendationService;
+import kr.polytech.lms.job.classify.JobRecruitReclassificationService;
 import kr.polytech.lms.job.client.JobKoreaClient;
 import kr.polytech.lms.job.client.Work24Client;
 import kr.polytech.lms.job.client.Work24CodeClient;
@@ -34,6 +36,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -54,6 +57,8 @@ public class JobService {
     private final Work24Properties work24Properties;
     private final JobKoreaClient jobKoreaClient;
     private final JobKoreaProperties jobKoreaProperties;
+    private final JobKoreaOccupationCodeRecommendationService jobKoreaOccupationCodeRecommendationService;
+    private final JobRecruitReclassificationService jobRecruitReclassificationService;
     private final ObjectMapper objectMapper;
 
     public JobService(
@@ -63,6 +68,8 @@ public class JobService {
         Work24Properties work24Properties,
         JobKoreaClient jobKoreaClient,
         JobKoreaProperties jobKoreaProperties,
+        JobKoreaOccupationCodeRecommendationService jobKoreaOccupationCodeRecommendationService,
+        JobRecruitReclassificationService jobRecruitReclassificationService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = Objects.requireNonNull(jobRepository);
@@ -71,6 +78,8 @@ public class JobService {
         this.work24Properties = Objects.requireNonNull(work24Properties);
         this.jobKoreaClient = Objects.requireNonNull(jobKoreaClient);
         this.jobKoreaProperties = Objects.requireNonNull(jobKoreaProperties);
+        this.jobKoreaOccupationCodeRecommendationService = Objects.requireNonNull(jobKoreaOccupationCodeRecommendationService);
+        this.jobRecruitReclassificationService = Objects.requireNonNull(jobRecruitReclassificationService);
         this.objectMapper = Objects.requireNonNull(objectMapper);
     }
 
@@ -813,32 +822,59 @@ public class JobService {
             cachePolicy
         );
 
-        // 왜: 통합(ALL) 화면의 직종코드(Work24 6자리 소분류)를 잡코리아 필터로 그대로 쓰면 필터가 적용되지 않습니다.
-        // 그래서 "Work24 소분류 → 잡코리아 업직종 코드"로 변환해 잡코리아 조회에 사용합니다(매핑 없으면 잡코리아 결과 제외).
-        JobRecruitListResponse jobkorea;
-        if (looksLikeWork24SmallOccupationCode(criteria.occupation())) {
-            List<String> mapped = jobRepository.findJobKoreaOccupationCodesByWork24Code(criteria.occupation());
-            if (mapped.isEmpty()) {
-                log.warn("통합(ALL) 직종 매핑이 없어 잡코리아 결과를 제외합니다. work24OccupationCode={}", criteria.occupation());
-                jobkorea = new JobRecruitListResponse(0, criteria.startPage(), criteria.display(), List.of());
-            } else if (mapped.size() == 1) {
-                jobkorea = getRecruitments(
-                    criteria.region(),
-                    mapped.get(0),
-                    null,
-                    null,
-                    null,
-                    null,
-                    criteria.startPage(),
-                    criteria.display(),
-                    Provider.JOBKOREA,
-                    cachePolicy
-                );
-            } else {
-                log.debug("통합(ALL) 직종 매핑이 여러 개입니다. work24OccupationCode={}, jobkoreaCodes={}", criteria.occupation(), mapped);
+        // 왜: 통합(ALL)에서 잡코리아는 Work24 코드로는 필터가 적용되지 않습니다.
+        //      그래서 (가능하면) 기존 매핑으로 "대충 좁혀서" 가져오고, 최종 노출은 "공고 텍스트 → 표준 소분류" 재분류로 걸러냅니다.
+        JobRecruitListResponse jobkorea = fetchJobKoreaForAll(criteria, cachePolicy);
+        jobkorea = filterJobKoreaByRequestedOccupation(jobkorea, criteria, cachePolicy);
+
+        List<JobRecruitItem> merged = new java.util.ArrayList<>();
+        if (work24.wanted() != null) merged.addAll(work24.wanted());
+        if (jobkorea.wanted() != null) merged.addAll(jobkorea.wanted());
+        int total = work24.total() + jobkorea.total();
+        return new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), merged);
+    }
+
+    private JobRecruitListResponse fetchJobKoreaForAll(JobRecruitSearchCriteria criteria, CachePolicy cachePolicy) {
+        // 왜: 재분류(필터링) 후에도 화면에 보여줄 결과가 남도록, 잡코리아는 display를 조금 넉넉히 받아옵니다.
+        int fetchDisplay = Math.min(100, Math.max(criteria.display(), criteria.display() * 5));
+
+        String requested = trimToNull(criteria.occupation());
+        if (requested != null) {
+            boolean isLeaf = looksLikeWork24SmallOccupationCode(requested);
+
+            // 왜: Work24(KEIS) 코드 ↔ 잡코리아(rpcd) 변환을 수동 테이블에만 의존하면 오매핑이 잦습니다.
+            //      그래서 표준 코드명(대/중/소)을 기준으로 잡코리아 rpcd를 자동 추천해 먼저 조회합니다.
+            List<String> recommended = jobKoreaOccupationCodeRecommendationService.recommendRpcdCodesByStandardCode(requested);
+
+            // 왜: 운영에 매핑 테이블이 이미 있을 수 있으니, 소분류(6자리)일 때만 rpcd를 추가 후보로 섞습니다.
+            // - rbcd(5자리)는 너무 넓어 오매핑 시 결과가 완전히 엉킬 수 있어 제외합니다.
+            List<String> mapped = isLeaf
+                ? jobRepository.findJobKoreaOccupationCodesByWork24Code(requested).stream()
+                .filter(code -> code != null && code.trim().length() > 5)
+                .toList()
+                : List.of();
+
+            List<String> candidates = new ArrayList<>();
+            if (recommended != null) candidates.addAll(recommended);
+            candidates.addAll(mapped);
+
+            // 중복 제거 + 너무 많은 호출 방지
+            LinkedHashSet<String> unique = new LinkedHashSet<>();
+            for (String c : candidates) {
+                if (c == null) continue;
+                String v = c.trim();
+                if (v.isBlank()) continue;
+                unique.add(v);
+                if (unique.size() >= 5) break; // 왜: 실시간 호출량 폭증을 막기 위해 상한을 둡니다.
+            }
+
+            if (!unique.isEmpty()) {
+                log.info("통합(ALL) 잡코리아 코드 후보: standardCode={}, recommended={}, mappedRpcd={}", requested, recommended, mapped);
+
+                LinkedHashMap<String, JobRecruitItem> mergedByKey = new LinkedHashMap<>();
                 int total = 0;
-                List<JobRecruitItem> items = new ArrayList<>();
-                for (String code : mapped) {
+
+                for (String code : unique) {
                     JobRecruitListResponse res = getRecruitments(
                         criteria.region(),
                         code,
@@ -847,35 +883,217 @@ public class JobService {
                         null,
                         null,
                         criteria.startPage(),
-                        criteria.display(),
+                        fetchDisplay,
                         Provider.JOBKOREA,
                         cachePolicy
                     );
                     total += Math.max(0, res.total());
-                    if (res.wanted() != null) items.addAll(res.wanted());
+                    if (res.wanted() == null) continue;
+                    for (JobRecruitItem item : res.wanted()) {
+                        if (item == null) continue;
+                        mergedByKey.putIfAbsent(buildRecruitItemKey(item), item);
+                    }
                 }
-                jobkorea = new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), items);
+
+                if (!mergedByKey.isEmpty()) {
+                    return new JobRecruitListResponse(total, criteria.startPage(), fetchDisplay, new ArrayList<>(mergedByKey.values()));
+                }
+            } else {
+                // 왜: 추천이 비면(벡터/설정 문제 등) "잡코리아 제외"로 끊지 않고 기존 방식(무필터)로 시도합니다.
+                log.warn("통합(ALL) 잡코리아 코드 추천이 없어 무필터로 조회 후 재분류합니다. standardCode={}", requested);
             }
-        } else {
-            jobkorea = getRecruitments(
-                criteria.region(),
-                criteria.occupation(),
-                null,
-                null,
-                null,
-                null,
-                criteria.startPage(),
-                criteria.display(),
-                Provider.JOBKOREA,
-                cachePolicy
-            );
         }
 
-        List<JobRecruitItem> merged = new java.util.ArrayList<>();
-        if (work24.wanted() != null) merged.addAll(work24.wanted());
-        if (jobkorea.wanted() != null) merged.addAll(jobkorea.wanted());
-        int total = work24.total() + jobkorea.total();
-        return new JobRecruitListResponse(total, criteria.startPage(), criteria.display(), merged);
+        // 왜: 대/중분류(2/4자리) 또는 매핑이 없는 경우, 잡코리아는 Work24 코드를 이해하지 못하므로 occupation 필터 없이 조회합니다.
+        return getRecruitments(
+            criteria.region(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            criteria.startPage(),
+            fetchDisplay,
+            Provider.JOBKOREA,
+            cachePolicy
+        );
+    }
+
+    private JobRecruitListResponse filterJobKoreaByRequestedOccupation(
+        JobRecruitListResponse jobkorea,
+        JobRecruitSearchCriteria criteria,
+        CachePolicy cachePolicy
+    ) {
+        int displayLimit = criteria == null ? 20 : criteria.display();
+        if (jobkorea == null || jobkorea.wanted() == null || jobkorea.wanted().isEmpty()) {
+            return new JobRecruitListResponse(0, criteria == null ? 1 : criteria.startPage(), displayLimit, List.of());
+        }
+
+        String requested = trimToNull(criteria == null ? null : criteria.occupation());
+        if (requested == null) {
+            // 왜: 직무 필터가 없으면(전체) 굳이 재분류로 비용을 쓰지 않습니다.
+            return new JobRecruitListResponse(jobkorea.total(), jobkorea.startPage(), displayLimit, limit(jobkorea.wanted(), displayLimit));
+        }
+
+        int fetched = jobkorea.wanted().size();
+        log.info("통합(ALL) 잡코리아 재분류 필터 시작: requestedCode={}, fetchedItems={}, displayLimit={}", requested, fetched, displayLimit);
+
+        int checked = 0;
+        int matched = 0;
+        int matchedTopKOnly = 0;
+        int classifyEmpty = 0;
+        int mismatch = 0;
+
+        List<String> emptySamples = new ArrayList<>();
+        List<String> mismatchSamples = new ArrayList<>();
+
+        LinkedHashMap<String, JobRecruitItem> matchedByKey = new LinkedHashMap<>();
+        for (JobRecruitItem item : jobkorea.wanted()) {
+            if (item == null) continue;
+            checked++;
+
+            List<JobRecruitReclassificationService.JobStandardClassification> topK = jobRecruitReclassificationService.classifyTopK(item);
+            if (topK == null || topK.isEmpty()) {
+                classifyEmpty++;
+                if (emptySamples.size() < 5) {
+                    emptySamples.add(safeSampleTitle(item));
+                }
+                continue;
+            }
+
+            JobRecruitReclassificationService.JobStandardClassification top1 = topK.get(0);
+
+            boolean isLeafRequested = looksLikeWork24SmallOccupationCode(requested);
+
+            boolean isMatchTop1 = requested.equals(top1.standardCode())
+                || requested.equals(top1.depth2Code())
+                || requested.equals(top1.depth1Code());
+
+            boolean isMatchAny = isMatchTop1;
+            int matchIndex = isMatchTop1 ? 0 : -1;
+            double matchScore = isMatchTop1 ? top1.score() : 0.0;
+
+            if (!isMatchAny && topK.size() > 1) {
+                for (int i = 1; i < topK.size(); i++) {
+                    JobRecruitReclassificationService.JobStandardClassification c = topK.get(i);
+                    if (c == null) continue;
+                    if (requested.equals(c.standardCode())
+                        || requested.equals(c.depth2Code())
+                        || requested.equals(c.depth1Code())) {
+                        isMatchAny = true;
+                        matchIndex = i;
+                        matchScore = c.score();
+                        break;
+                    }
+                }
+            }
+
+            if (isLeafRequested && isMatchAny && !isMatchTop1) {
+                // 왜: 소분류(6자리) 선택은 "topK에 우연히 끼는" 노이즈가 생길 수 있어,
+                //      top1이 아닐 때는 점수/순위 조건을 추가로 걸어 품질을 안정시킵니다.
+                // - matchIndex: 0(=top1)이면 이미 통과
+                // - matchScore: 절대 점수 하한
+                // - delta: top1과의 점수 차이가 너무 크면 제외(=확신 부족)
+                int maxRank = 2; // top3까지만 허용
+                double minScore = 0.85;
+                double maxDelta = 0.03;
+                double delta = Math.max(0.0, top1.score() - matchScore);
+
+                if (matchIndex < 0 || matchIndex > maxRank || matchScore < minScore || delta > maxDelta) {
+                    isMatchAny = false;
+                }
+            }
+
+            if (isMatchAny) {
+                String key = buildRecruitItemKey(item);
+                if (!matchedByKey.containsKey(key)) {
+                    matchedByKey.put(key, item);
+                    matched++;
+                    if (!isMatchTop1) matchedTopKOnly++;
+                }
+                if (matchedByKey.size() >= displayLimit) break;
+                continue;
+            }
+
+            mismatch++;
+            if (mismatchSamples.size() < 5) {
+                mismatchSamples.add(safeMismatchSample(item, topK));
+            }
+        }
+
+        List<JobRecruitItem> out = new ArrayList<>(matchedByKey.values());
+
+        log.info(
+            "통합(ALL) 잡코리아 재분류 필터 결과: requestedCode={}, checked={}, matched={}, matchedTopKOnly={}, classifyEmpty={}, mismatch={}, returned={}",
+            requested,
+            checked,
+            matched,
+            matchedTopKOnly,
+            classifyEmpty,
+            mismatch,
+            out.size()
+        );
+        if (!emptySamples.isEmpty()) {
+            log.info("통합(ALL) 재분류 실패 샘플(최대 5): {}", emptySamples);
+        }
+        if (!mismatchSamples.isEmpty()) {
+            log.info("통합(ALL) 재분류 불일치 샘플(최대 5): {}", mismatchSamples);
+        }
+
+        // 왜: 재분류 후 남은 건수만 화면에 주는 것이, "총 건수" 오해를 줄입니다.
+        return new JobRecruitListResponse(out.size(), criteria == null ? jobkorea.startPage() : criteria.startPage(), displayLimit, out);
+    }
+
+    private String safeSampleTitle(JobRecruitItem item) {
+        if (item == null) return "";
+        String title = item.title() == null ? "" : item.title().trim();
+        if (title.isBlank()) return "(제목없음)";
+        return title.length() > 60 ? title.substring(0, 60) + "..." : title;
+    }
+
+    private String safeMismatchSample(JobRecruitItem item, List<JobRecruitReclassificationService.JobStandardClassification> topK) {
+        String title = safeSampleTitle(item);
+        if (topK == null || topK.isEmpty()) return title + " | (분류정보없음)";
+
+        JobRecruitReclassificationService.JobStandardClassification top1 = topK.get(0);
+        StringBuilder sb = new StringBuilder();
+        sb.append(title)
+            .append(" | top1=")
+            .append(nullToDash(top1.depth1Code()))
+            .append("/")
+            .append(nullToDash(top1.depth2Code()))
+            .append("/")
+            .append(nullToDash(top1.standardCode()))
+            .append(" score=")
+            .append(String.format("%.4f", top1.score()));
+
+        // 왜: 소분류 선택에서 "top1은 다르지만 topK에는 있는지"가 중요한 디버깅 포인트라서, 상위 3개만 붙입니다.
+        int max = Math.min(3, topK.size());
+        sb.append(" | top").append(max).append("=");
+        for (int i = 0; i < max; i++) {
+            JobRecruitReclassificationService.JobStandardClassification c = topK.get(i);
+            if (c == null) continue;
+            if (i > 0) sb.append(", ");
+            sb.append(nullToDash(c.standardCode())).append(":").append(String.format("%.3f", c.score()));
+        }
+        return sb.toString();
+    }
+
+    private String buildRecruitItemKey(JobRecruitItem item) {
+        if (item == null) return "";
+        String provider = item.infoSvc() == null ? "" : item.infoSvc().trim().toUpperCase();
+        String id = item.wantedAuthNo() == null ? "" : item.wantedAuthNo().trim();
+        if (!provider.isBlank() && !id.isBlank()) return provider + ":" + id;
+        String title = item.title() == null ? "" : item.title().trim();
+        String company = item.company() == null ? "" : item.company().trim();
+        return provider + ":" + title + ":" + company;
+    }
+
+    private static List<JobRecruitItem> limit(List<JobRecruitItem> items, int limit) {
+        if (items == null || items.isEmpty()) return List.of();
+        if (limit <= 0) return List.of();
+        if (items.size() <= limit) return items;
+        return items.subList(0, limit);
     }
 
     private static boolean looksLikeWork24SmallOccupationCode(String raw) {
