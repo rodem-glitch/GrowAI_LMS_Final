@@ -2,6 +2,7 @@ package kr.polytech.lms.job.classify;
 
 import kr.polytech.lms.global.vector.service.VectorStoreService;
 import kr.polytech.lms.global.vector.service.dto.VectorSearchResult;
+import kr.polytech.lms.job.code.JobKoreaCodeCatalog;
 import kr.polytech.lms.job.service.dto.JobRecruitItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,7 +145,24 @@ public class JobRecruitReclassificationService {
         StringBuilder sb = new StringBuilder();
         if (!title.isBlank()) sb.append("공고: ").append(title).append("\n");
         if (!company.isBlank()) sb.append("회사: ").append(company).append("\n");
+
+        // 왜: 잡코리아 공고는 업직종 코드(jobsCd)가 함께 오므로, 코드명까지 같이 넣어주면 재분류 품질이 올라갑니다.
+        // (제목만으로는 "백엔드/웹/앱"처럼 뭉뚱그려져 소분류가 흔들리는 케이스가 많습니다)
+        if ("JOBKOREA".equalsIgnoreCase(toString(item.infoSvc()))) {
+            String jobCode = toString(item.jobsCd());
+            if (looksLikeJobKoreaOccupationCode(jobCode)) {
+                String label = JobKoreaCodeCatalog.resolveOccupationDisplayName(jobCode);
+                if (!label.isBlank()) sb.append("잡코리아 직무: ").append(label).append("\n");
+            }
+        }
         return sb.toString().trim();
+    }
+
+    private boolean looksLikeJobKoreaOccupationCode(String raw) {
+        if (raw == null) return false;
+        String value = raw.trim();
+        if (value.isBlank()) return false;
+        return value.matches("^100\\d{2,4}$");
     }
 
     private String buildCacheKey(JobRecruitItem item) {

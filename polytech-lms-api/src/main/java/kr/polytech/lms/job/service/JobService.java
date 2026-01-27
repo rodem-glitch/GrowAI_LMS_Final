@@ -1,5 +1,6 @@
 package kr.polytech.lms.job.service;
 
+import jakarta.annotation.PreDestroy;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.polytech.lms.job.classify.JobKoreaOccupationCodeRecommendationService;
@@ -42,6 +43,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 @Service
@@ -50,6 +57,9 @@ public class JobService {
 
     private static final Logger log = LoggerFactory.getLogger(JobService.class);
     private static final Pattern WORK24_SMALL_OCCUPATION_CODE = Pattern.compile("^\\d{6}$");
+    private static final int JOB_RECLASSIFY_THREADS = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors()));
+    private static final int JOB_RECLASSIFY_BATCH_SIZE = 20;
+    private static final long JOB_RECLASSIFY_TASK_TIMEOUT_SECONDS = 15L;
 
     private final JobRepository jobRepository;
     private final Work24Client work24Client;
@@ -60,6 +70,7 @@ public class JobService {
     private final JobKoreaOccupationCodeRecommendationService jobKoreaOccupationCodeRecommendationService;
     private final JobRecruitReclassificationService jobRecruitReclassificationService;
     private final ObjectMapper objectMapper;
+    private final ExecutorService jobReclassifyExecutor;
 
     public JobService(
         JobRepository jobRepository,
@@ -81,6 +92,13 @@ public class JobService {
         this.jobKoreaOccupationCodeRecommendationService = Objects.requireNonNull(jobKoreaOccupationCodeRecommendationService);
         this.jobRecruitReclassificationService = Objects.requireNonNull(jobRecruitReclassificationService);
         this.objectMapper = Objects.requireNonNull(objectMapper);
+        this.jobReclassifyExecutor = Executors.newFixedThreadPool(JOB_RECLASSIFY_THREADS, new JobThreadFactory("job-reclassify-"));
+    }
+
+    @PreDestroy
+    public void shutdownExecutors() {
+        // 왜: devtools 재시작/서버 종료 시 스레드가 남아 포트 점유/프로세스 종료가 지연되는 것을 막습니다.
+        jobReclassifyExecutor.shutdownNow();
     }
 
     public List<JobRegionCodeResponse> getRegionCodes(String depthType, String depth1) {
@@ -423,7 +441,16 @@ public class JobService {
             if (hasWork24OnlyFilters(criteria)) {
                 throw new IllegalArgumentException("급여/학력 필터는 통합 제공처에서 지원하지 않습니다.");
             }
-            return mergeRecruitments(criteria, safePolicy);
+            if (safePolicy != CachePolicy.FORCE_LIVE) {
+                Optional<JobRecruitListResponse> cached = findCachedRecruitments(criteria, safeProvider, safePolicy);
+                if (cached.isPresent()) {
+                    return cached.get();
+                }
+            }
+
+            JobRecruitListResponse merged = mergeRecruitments(criteria, safePolicy);
+            saveRecruitCache(criteria, safeProvider, merged);
+            return merged;
         }
 
         if (safePolicy != CachePolicy.FORCE_LIVE) {
@@ -874,8 +901,10 @@ public class JobService {
                 LinkedHashMap<String, JobRecruitItem> mergedByKey = new LinkedHashMap<>();
                 int total = 0;
 
-                for (String code : unique) {
-                    JobRecruitListResponse res = getRecruitments(
+                List<String> codes = new ArrayList<>(unique);
+                List<CompletableFuture<JobRecruitListResponse>> futures = new ArrayList<>(codes.size());
+                for (String code : codes) {
+                    futures.add(CompletableFuture.supplyAsync(() -> getRecruitments(
                         criteria.region(),
                         code,
                         null,
@@ -886,7 +915,19 @@ public class JobService {
                         fetchDisplay,
                         Provider.JOBKOREA,
                         cachePolicy
-                    );
+                    ), jobReclassifyExecutor));
+                }
+
+                for (int i = 0; i < codes.size(); i++) {
+                    CompletableFuture<JobRecruitListResponse> future = futures.get(i);
+                    JobRecruitListResponse res;
+                    try {
+                        res = future.get(20, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        future.cancel(true);
+                        continue;
+                    }
+
                     total += Math.max(0, res.total());
                     if (res.wanted() == null) continue;
                     for (JobRecruitItem item : res.wanted()) {
@@ -948,76 +989,104 @@ public class JobService {
         List<String> mismatchSamples = new ArrayList<>();
 
         LinkedHashMap<String, JobRecruitItem> matchedByKey = new LinkedHashMap<>();
-        for (JobRecruitItem item : jobkorea.wanted()) {
-            if (item == null) continue;
-            checked++;
+        List<JobRecruitItem> items = jobkorea.wanted();
+        for (int offset = 0; offset < items.size(); offset += JOB_RECLASSIFY_BATCH_SIZE) {
+            if (matchedByKey.size() >= displayLimit) break;
 
-            List<JobRecruitReclassificationService.JobStandardClassification> topK = jobRecruitReclassificationService.classifyTopK(item);
-            if (topK == null || topK.isEmpty()) {
-                classifyEmpty++;
-                if (emptySamples.size() < 5) {
-                    emptySamples.add(safeSampleTitle(item));
+            int end = Math.min(items.size(), offset + JOB_RECLASSIFY_BATCH_SIZE);
+            List<JobRecruitItem> batch = items.subList(offset, end);
+
+            List<CompletableFuture<List<JobRecruitReclassificationService.JobStandardClassification>>> futures = new ArrayList<>(batch.size());
+            for (JobRecruitItem item : batch) {
+                if (item == null) {
+                    futures.add(CompletableFuture.completedFuture(List.of()));
+                    continue;
                 }
-                continue;
+                futures.add(CompletableFuture.supplyAsync(() -> jobRecruitReclassificationService.classifyTopK(item), jobReclassifyExecutor));
             }
 
-            JobRecruitReclassificationService.JobStandardClassification top1 = topK.get(0);
+            for (int i = 0; i < batch.size(); i++) {
+                if (matchedByKey.size() >= displayLimit) break;
 
-            boolean isLeafRequested = looksLikeWork24SmallOccupationCode(requested);
+                JobRecruitItem item = batch.get(i);
+                if (item == null) continue;
+                checked++;
 
-            boolean isMatchTop1 = requested.equals(top1.standardCode())
-                || requested.equals(top1.depth2Code())
-                || requested.equals(top1.depth1Code());
+                List<JobRecruitReclassificationService.JobStandardClassification> topK;
+                CompletableFuture<List<JobRecruitReclassificationService.JobStandardClassification>> future = futures.get(i);
+                try {
+                    topK = future.get(JOB_RECLASSIFY_TASK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    // 왜: 임베딩/벡터 검색이 지연되면 화면 응답이 끊기므로, 타임아웃으로 보호합니다.
+                    future.cancel(true);
+                    topK = List.of();
+                }
 
-            boolean isMatchAny = isMatchTop1;
-            int matchIndex = isMatchTop1 ? 0 : -1;
-            double matchScore = isMatchTop1 ? top1.score() : 0.0;
+                if (topK == null || topK.isEmpty()) {
+                    classifyEmpty++;
+                    if (emptySamples.size() < 5) {
+                        emptySamples.add(safeSampleTitle(item));
+                    }
+                    continue;
+                }
 
-            if (!isMatchAny && topK.size() > 1) {
-                for (int i = 1; i < topK.size(); i++) {
-                    JobRecruitReclassificationService.JobStandardClassification c = topK.get(i);
-                    if (c == null) continue;
-                    if (requested.equals(c.standardCode())
-                        || requested.equals(c.depth2Code())
-                        || requested.equals(c.depth1Code())) {
-                        isMatchAny = true;
-                        matchIndex = i;
-                        matchScore = c.score();
-                        break;
+                JobRecruitReclassificationService.JobStandardClassification top1 = topK.get(0);
+
+                boolean isLeafRequested = looksLikeWork24SmallOccupationCode(requested);
+
+                boolean isMatchTop1 = requested.equals(top1.standardCode())
+                    || requested.equals(top1.depth2Code())
+                    || requested.equals(top1.depth1Code());
+
+                boolean isMatchAny = isMatchTop1;
+                int matchIndex = isMatchTop1 ? 0 : -1;
+                double matchScore = isMatchTop1 ? top1.score() : 0.0;
+
+                if (!isMatchAny && topK.size() > 1) {
+                    for (int j = 1; j < topK.size(); j++) {
+                        JobRecruitReclassificationService.JobStandardClassification c = topK.get(j);
+                        if (c == null) continue;
+                        if (requested.equals(c.standardCode())
+                            || requested.equals(c.depth2Code())
+                            || requested.equals(c.depth1Code())) {
+                            isMatchAny = true;
+                            matchIndex = j;
+                            matchScore = c.score();
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (isLeafRequested && isMatchAny && !isMatchTop1) {
-                // 왜: 소분류(6자리) 선택은 "topK에 우연히 끼는" 노이즈가 생길 수 있어,
-                //      top1이 아닐 때는 점수/순위 조건을 추가로 걸어 품질을 안정시킵니다.
-                // - matchIndex: 0(=top1)이면 이미 통과
-                // - matchScore: 절대 점수 하한
-                // - delta: top1과의 점수 차이가 너무 크면 제외(=확신 부족)
-                int maxRank = 2; // top3까지만 허용
-                double minScore = 0.85;
-                double maxDelta = 0.03;
-                double delta = Math.max(0.0, top1.score() - matchScore);
+                if (isLeafRequested && isMatchAny && !isMatchTop1) {
+                    // 왜: 소분류(6자리) 선택은 "topK에 우연히 끼는" 노이즈가 생길 수 있어,
+                    //      top1이 아닐 때는 점수/순위 조건을 추가로 걸어 품질을 안정시킵니다.
+                    // - matchIndex: 0(=top1)이면 이미 통과
+                    // - matchScore: 절대 점수 하한
+                    // - delta: top1과의 점수 차이가 너무 크면 제외(=확신 부족)
+                    int maxRank = 2; // top3까지만 허용
+                    double minScore = 0.85;
+                    double maxDelta = 0.03;
+                    double delta = Math.max(0.0, top1.score() - matchScore);
 
-                if (matchIndex < 0 || matchIndex > maxRank || matchScore < minScore || delta > maxDelta) {
-                    isMatchAny = false;
+                    if (matchIndex < 0 || matchIndex > maxRank || matchScore < minScore || delta > maxDelta) {
+                        isMatchAny = false;
+                    }
                 }
-            }
 
-            if (isMatchAny) {
-                String key = buildRecruitItemKey(item);
-                if (!matchedByKey.containsKey(key)) {
-                    matchedByKey.put(key, item);
-                    matched++;
-                    if (!isMatchTop1) matchedTopKOnly++;
+                if (isMatchAny) {
+                    String key = buildRecruitItemKey(item);
+                    if (!matchedByKey.containsKey(key)) {
+                        matchedByKey.put(key, item);
+                        matched++;
+                        if (!isMatchTop1) matchedTopKOnly++;
+                    }
+                    continue;
                 }
-                if (matchedByKey.size() >= displayLimit) break;
-                continue;
-            }
 
-            mismatch++;
-            if (mismatchSamples.size() < 5) {
-                mismatchSamples.add(safeMismatchSample(item, topK));
+                mismatch++;
+                if (mismatchSamples.size() < 5) {
+                    mismatchSamples.add(safeMismatchSample(item, topK));
+                }
             }
         }
 
@@ -1115,7 +1184,7 @@ public class JobService {
         return switch (provider) {
             case WORK24 -> work24Properties.getCache().isEnabled();
             case JOBKOREA -> jobKoreaProperties.getCache().isEnabled();
-            case ALL -> false;
+            case ALL -> work24Properties.getCache().isEnabled() || jobKoreaProperties.getCache().isEnabled();
         };
     }
 
@@ -1123,7 +1192,8 @@ public class JobService {
         return switch (provider) {
             case WORK24 -> work24Properties.getCache().getTtlMinutes();
             case JOBKOREA -> jobKoreaProperties.getCache().getTtlMinutes();
-            case ALL -> 0L;
+            // 왜: 통합 캐시는 둘 중 더 짧은 TTL을 따라가야 "오래된 데이터"가 오래 남는 문제를 줄일 수 있습니다.
+            case ALL -> Math.min(work24Properties.getCache().getTtlMinutes(), jobKoreaProperties.getCache().getTtlMinutes());
         };
     }
 
@@ -1133,6 +1203,23 @@ public class JobService {
             return Integer.parseInt(code.trim());
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    private static final class JobThreadFactory implements ThreadFactory {
+        private final String prefix;
+        private final AtomicInteger seq = new AtomicInteger(1);
+
+        private JobThreadFactory(String prefix) {
+            this.prefix = prefix == null ? "" : prefix;
+        }
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r);
+            t.setName(prefix + seq.getAndIncrement());
+            t.setDaemon(true);
+            return t;
         }
     }
 

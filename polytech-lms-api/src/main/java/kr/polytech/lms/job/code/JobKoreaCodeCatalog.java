@@ -62,6 +62,8 @@ public final class JobKoreaCodeCatalog {
     private static final Lazy<Map<String, List<CodeItem>>> RPCD_BY_PARENT = new Lazy<>(JobKoreaCodeCatalog::loadRpcdByParent);
     private static final Lazy<Map<String, String>> RPCD_TO_PARENT = new Lazy<>(JobKoreaCodeCatalog::loadRpcdToParent);
     private static final Lazy<Map<String, CodeItem>> AREA_BY_CODE = new Lazy<>(JobKoreaCodeCatalog::loadAreaByCode);
+    private static final Lazy<Map<String, String>> RBCD_NAME_BY_CODE = new Lazy<>(JobKoreaCodeCatalog::loadRbcdNameByCode);
+    private static final Lazy<Map<String, String>> RPCD_NAME_BY_CODE = new Lazy<>(JobKoreaCodeCatalog::loadRpcdNameByCode);
 
     public static List<CodeItem> topLevelAreaCodes() {
         List<CodeItem> out = new ArrayList<>();
@@ -104,6 +106,25 @@ public final class JobKoreaCodeCatalog {
         return RPCD_TO_PARENT.get().get(code);
     }
 
+    public static String resolveOccupationDisplayName(String rawCode) {
+        if (rawCode == null) return "";
+        String code = rawCode.trim();
+        if (code.isBlank()) return "";
+
+        // rbcd(대분류)
+        if (code.length() == 5) {
+            return RBCD_NAME_BY_CODE.get().getOrDefault(code, code);
+        }
+
+        // rpcd(소분류)
+        String rpcdName = RPCD_NAME_BY_CODE.get().getOrDefault(code, code);
+        String parent = resolveParentRbcdByRpcd(code);
+        if (parent == null || parent.isBlank()) return rpcdName;
+
+        String rbcdName = RBCD_NAME_BY_CODE.get().getOrDefault(parent, parent);
+        return rbcdName + " / " + rpcdName;
+    }
+
     private static List<CodeItem> loadRbcd() {
         List<String[]> rows = readTsv("jobkorea/rbcd.tsv", 2);
         List<CodeItem> out = new ArrayList<>();
@@ -111,6 +132,25 @@ public final class JobKoreaCodeCatalog {
             out.add(new CodeItem(row[0], normalizeLabel(row[1]), null));
         }
         out.sort(Comparator.comparing(CodeItem::code));
+        return out;
+    }
+
+    private static Map<String, String> loadRbcdNameByCode() {
+        List<String[]> rows = readTsv("jobkorea/rbcd.tsv", 2);
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String[] row : rows) {
+            out.put(row[0], normalizeLabel(row[1]));
+        }
+        return out;
+    }
+
+    private static Map<String, String> loadRpcdNameByCode() {
+        List<String[]> rows = readTsv("jobkorea/rpcd.tsv", 3);
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String[] row : rows) {
+            // row[1] = rpcd, row[2] = name
+            out.put(row[1], normalizeLabel(row[2]));
+        }
         return out;
     }
 
