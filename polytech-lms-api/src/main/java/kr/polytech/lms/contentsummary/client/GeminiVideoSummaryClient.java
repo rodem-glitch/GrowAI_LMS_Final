@@ -39,6 +39,9 @@ public class GeminiVideoSummaryClient {
     private final GeminiGenerateClient geminiGenerateClient;
     private final HttpClient httpClient;
 
+    public record UploadedFile(String fileUri, String mimeType) {
+    }
+
     public GeminiVideoSummaryClient(GeminiProperties properties, ObjectMapper objectMapper, GeminiGenerateClient geminiGenerateClient) {
         this.properties = Objects.requireNonNull(properties);
         this.objectMapper = Objects.requireNonNull(objectMapper);
@@ -52,7 +55,7 @@ public class GeminiVideoSummaryClient {
     /**
      * 영상 파일을 Gemini File API에 업로드하고 file URI를 반환합니다.
      */
-    public String uploadVideo(Path videoFile) throws IOException, InterruptedException {
+    public UploadedFile uploadVideo(Path videoFile) throws IOException, InterruptedException {
         if (!Files.exists(videoFile)) {
             throw new IllegalArgumentException("영상 파일이 존재하지 않습니다: " + videoFile);
         }
@@ -76,7 +79,7 @@ public class GeminiVideoSummaryClient {
             waitForFileActive(fileUri, apiKey);
 
             log.info("Gemini File API 업로드 및 활성화 완료: {}", fileUri);
-            return fileUri;
+            return new UploadedFile(fileUri, mimeType);
         } catch (IOException | InterruptedException e) {
             // 왜: 업로드는 성공했는데(=fileUri가 생김) 이후 단계에서 실패하면,
             // Gemini File API 저장소에 파일이 남아 file_storage_bytes 쿼터를 갉아먹습니다.
@@ -149,6 +152,7 @@ public class GeminiVideoSummaryClient {
         String apiKey = requireApiKey();
         String model = properties.model();
         String safeTitle = title == null ? "" : title.trim();
+        String safeMimeType = (mimeType == null || mimeType.isBlank()) ? "video/mp4" : mimeType.trim();
 
         URI uri = URI.create(properties.baseUrl()
             + "/models/"
@@ -160,7 +164,10 @@ public class GeminiVideoSummaryClient {
         // 왜: 영상 길이가 길수록 "한 문단 요약"에 담아야 할 정보가 늘어나므로,
         // 길이에 비례해 목표 글자 수를 늘릴 수 있도록 목표 길이를 파라미터로 받습니다.
         int safeTargetLength = Math.max(1, targetSummaryLength);
-        String prompt = buildVideoSummaryPrompt(safeTitle, safeTargetLength);
+        boolean audioOnly = safeMimeType.toLowerCase().startsWith("audio/");
+        String prompt = audioOnly
+            ? buildAudioSummaryPrompt(safeTitle, safeTargetLength)
+            : buildVideoSummaryPrompt(safeTitle, safeTargetLength);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("contents", List.of(
@@ -168,7 +175,7 @@ public class GeminiVideoSummaryClient {
                 "role", "user",
                 "parts", List.of(
                     Map.of("file_data", Map.of(
-                        "mime_type", mimeType,
+                        "mime_type", safeMimeType,
                         "file_uri", fileUri
                     )),
                     Map.of("text", prompt)
@@ -198,8 +205,9 @@ public class GeminiVideoSummaryClient {
      * 영상 파일을 업로드하고 바로 요약을 생성합니다 (편의 메서드).
      */
     public RecoContentSummaryDraft uploadAndSummarize(Path videoFile, String title, int targetSummaryLength) throws IOException, InterruptedException {
-        String mimeType = detectMimeType(videoFile);
-        String fileUri = uploadVideo(videoFile);
+        UploadedFile uploaded = uploadVideo(videoFile);
+        String mimeType = uploaded.mimeType();
+        String fileUri = uploaded.fileUri();
         try {
             return summarizeFromVideo(fileUri, title, mimeType, targetSummaryLength);
         } finally {
@@ -322,6 +330,28 @@ public class GeminiVideoSummaryClient {
         }
 
         throw new IllegalStateException("Gemini 파일 활성화 타임아웃 (10분 초과)");
+    }
+
+    private String buildAudioSummaryPrompt(String title, int targetSummaryLength) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("당신은 교육용 콘텐츠를 추천하기 위한 메타데이터를 생성하는 어시스턴트입니다.\n");
+        sb.append("입력 파일은 '화면이 없는 오디오 기반 MP4'일 수 있으니, 음성(대사/강의 내용) 중심으로 분석하세요.\n");
+        sb.append("음성이 영어여도 결과는 한국어로 작성하세요(필요하면 원어를 괄호로 병기).\n");
+        sb.append("오디오를 분석하고, 반드시 JSON만 출력하세요(설명/마크다운/코드블록 금지).\n");
+        sb.append("JSON 스키마\n");
+        sb.append("{\n");
+        sb.append("  \"category_nm\": \"기술분야 키워드 2개(쉼표로 구분)\",\n");
+        sb.append("  \"summary\": \"오디오 내용 요약 약 ").append(targetSummaryLength).append("자(공백 포함, 한국어)\",\n");
+        sb.append("  \"keywords\": [\"키워드\", \"키워드\", \"... 최대 10개\"]\n");
+        sb.append("}\n");
+        sb.append("규칙:\n");
+        sb.append("- category_nm은 정확히 2개 키워드로 구성하고, 너무 일반적인 단어(예: 기술, 강의)만 쓰지 마세요.\n");
+        sb.append("- summary는 1문단으로 작성하고, 가능한 한 구체적인 내용(주제/핵심 포인트/예시)을 포함하세요.\n");
+        sb.append("- keywords는 중복 없이 최대 10개, 가능하면 한국어로 작성하세요.\n");
+        if (!title.isBlank()) {
+            sb.append("\n오디오 제목: ").append(title).append("\n");
+        }
+        return sb.toString();
     }
 
     private String buildVideoSummaryPrompt(String title, int targetSummaryLength) {
@@ -686,7 +716,13 @@ public class GeminiVideoSummaryClient {
 
     private String detectMimeType(Path file) {
         String fileName = file.getFileName().toString().toLowerCase();
-        if (fileName.endsWith(".mp4")) return "video/mp4";
+        if (fileName.endsWith(".mp4")) {
+            // 왜: mp4 확장자라도 video 트랙이 없는 "오디오-only mp4"가 존재합니다.
+            //     이런 파일을 video/mp4로 업로드하면 Gemini File API 활성화 단계에서 실패/타임아웃이 날 수 있어 audio/mp4로 분기합니다.
+            Mp4TrackInspector.TrackTypes tracks = Mp4TrackInspector.inspect(file);
+            if (!tracks.hasVideo() && tracks.hasAudio()) return "audio/mp4";
+            return "video/mp4";
+        }
         if (fileName.endsWith(".mpeg") || fileName.endsWith(".mpg")) return "video/mpeg";
         if (fileName.endsWith(".mov")) return "video/quicktime";
         if (fileName.endsWith(".avi")) return "video/x-msvideo";
