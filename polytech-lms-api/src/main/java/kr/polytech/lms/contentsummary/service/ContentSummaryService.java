@@ -61,6 +61,44 @@ public class ContentSummaryService {
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
     }
 
+    /**
+     * 기존 영상들의 duration_seconds를 백필합니다.
+     * 왜: DB에 이미 있는 영상 중 duration_seconds가 null인 레코드에 대해 Kollus API로 길이를 조회하여 저장합니다.
+     */
+    public int backfillDurations() {
+        List<KollusTranscript> targets = transcriptRepository.findByDurationSecondsIsNull();
+        log.info("영상 길이 백필 시작: 대상 {}건", targets.size());
+        
+        int successCount = 0;
+        int failCount = 0;
+        
+        for (KollusTranscript t : targets) {
+            try {
+                String mediaKey = t.getMediaContentKey();
+                if (mediaKey == null || mediaKey.isBlank()) {
+                    failCount++;
+                    continue;
+                }
+                
+                String token = kollusApiClient.issueMediaToken(mediaKey);
+                KollusApiClient.DownloadInfo info = kollusApiClient.resolveDownloadInfoByMediaToken(token);
+                t.setDurationSeconds(info.totalTimeSeconds());
+                transcriptRepository.save(t);
+                
+                successCount++;
+                if (successCount % 100 == 0) {
+                    log.info("영상 길이 백필 진행 중: {}/{}", successCount, targets.size());
+                }
+            } catch (Exception e) {
+                log.warn("영상 길이 백필 실패: {} - {}", t.getMediaContentKey(), e.getMessage());
+                failCount++;
+            }
+        }
+        
+        log.info("영상 길이 백필 완료: 성공 {}건, 실패 {}건", successCount, failCount);
+        return successCount;
+    }
+
     public KollusWebhookIngestResponse ingestKollusWebhook(Integer siteId, String mediaContentKey, String title) {
         Integer safeSiteId = siteId == null ? 1 : siteId;
         if (mediaContentKey == null || mediaContentKey.isBlank()) {
@@ -265,6 +303,10 @@ public class ContentSummaryService {
             // 1. Kollus에서 영상 다운로드
             String mediaToken = kollusApiClient.issueMediaToken(mediaKey);
             KollusApiClient.DownloadInfo downloadInfo = kollusApiClient.resolveDownloadInfoByMediaToken(mediaToken);
+            
+            // 영상 길이 저장 (비용 분석용)
+            transcript.setDurationSeconds(downloadInfo.totalTimeSeconds());
+            
             kollusMediaDownloader.downloadTo(downloadInfo.downloadUri(), videoFile);
 
             log.info("영상 다운로드 완료: {} ({})", mediaKey, videoFile);
