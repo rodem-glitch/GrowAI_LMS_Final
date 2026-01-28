@@ -1160,6 +1160,9 @@
             <button id="jobTabRecommend" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist">
               교수 추천 <span id="recommendCount" class="job-tab-badge">0</span>
             </button>
+            <button id="jobTabSearchStat" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist" style="display:none">
+              검색어 통계 <span id="searchStatCount" class="job-tab-badge">0</span>
+            </button>
             <button id="jobTabSent" type="button" class="job-tab" role="tab" aria-selected="false" aria-controls="worklist" style="display:none">
               보낸 추천 <span id="sentCount" class="job-tab-badge">0</span>
             </button>
@@ -1241,9 +1244,11 @@
     const jobTabAllBtn = document.getElementById("jobTabAll");
     const jobTabBookmarkBtn = document.getElementById("jobTabBookmark");
     const jobTabRecommendBtn = document.getElementById("jobTabRecommend");
+    const jobTabSearchStatBtn = document.getElementById("jobTabSearchStat");
     const jobTabSentBtn = document.getElementById("jobTabSent");
     const bookmarkCountEl = document.getElementById("bookmarkCount");
     const recommendCountEl = document.getElementById("recommendCount");
+    const searchStatCountEl = document.getElementById("searchStatCount");
     const sentCountEl = document.getElementById("sentCount");
     const jobToastEl = document.getElementById("jobToast");
 
@@ -1285,8 +1290,14 @@
     let sentTotal = 0;
     let sentItems = [];
 
+    // 검색어 통계(교수) 상태
+    let searchStatTotal = 0;
+    let searchStatItems = [];
+    let searchStatCourseCount = 0;
+
     // 교수 모드 여부/데이터
     let isTutorMode = false;
+    let canViewSearchStat = false;
     let tutorCourses = [];
     let currentRecommendItem = null;
 
@@ -1510,6 +1521,12 @@
       sentCountEl.textContent = count.toLocaleString();
     }
 
+    function updateSearchStatCount() {
+      if (!searchStatCountEl) return;
+      const count = Number(searchStatTotal || searchStatItems.length || 0);
+      searchStatCountEl.textContent = count.toLocaleString();
+    }
+
     async function loadRecommendations(force = false) {
       if (!force && (recommendItems && recommendItems.length > 0)) return;
 
@@ -1534,6 +1551,24 @@
       }
 
       updateRecommendCount();
+    }
+
+    async function loadSearchStats(force = false) {
+      // 왜: 교수 화면에서 "내 담당 과목 학생들이 어떤 검색어를 검색했는지(익명)"를 한 번에 조회합니다.
+      // - 과목 선택 UI를 없애고, 서버에서 담당 과목(주강사) 전체를 합쳐 집계합니다.
+      if (!force && searchStatItems && searchStatItems.length > 0) {
+        return;
+      }
+
+      const payload = await fetchMalgnApi(`/api/job_search_stat.jsp?mode=stats&days=30&limit=200`);
+      if (!payload) {
+        throw new Error("검색어 통계를 불러오지 못했습니다.");
+      }
+
+      searchStatCourseCount = Number(payload.course_count || 0);
+      searchStatTotal = Number(payload.total || 0);
+      searchStatItems = Array.isArray(payload.items) ? payload.items : [];
+      updateSearchStatCount();
     }
 
     async function renderRecommendList() {
@@ -1713,6 +1748,67 @@
       }
     }
 
+    async function renderSearchStatList() {
+      // 왜: 교수는 "담당 과목 학생들이 어떤 검색어를 검색했는지(익명)"를 보고 싶어 합니다.
+      // - 검색어를 클릭하면 해당 키워드로 즉시 공고 검색을 수행합니다.
+      workList.innerHTML = renderSkeletons(6);
+      if (paginationWrapper) paginationWrapper.style.display = "none";
+
+      if (!canViewSearchStat) {
+        resultCount.textContent = "(0건)";
+        workList.innerHTML = renderErrorState("검색어 통계는 교수/관리자 계정에서만 볼 수 있습니다.");
+        return;
+      }
+
+      try {
+        searchStatItems = [];
+        searchStatTotal = 0;
+        searchStatCourseCount = 0;
+        updateSearchStatCount();
+
+        await loadSearchStats(true);
+
+        if (!searchStatCourseCount) {
+          resultCount.textContent = "(0개)";
+          workList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="empty-state-icon"><i class="bi bi-bar-chart"></i></div>
+              <h2 class="empty-state-title">담당 과목이 없습니다</h2>
+              <p class="empty-state-description">주강사/보조강사로 맡은 과목이 있어야 학생 검색어 통계를 볼 수 있습니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        resultCount.textContent = `(${Number(searchStatTotal || 0).toLocaleString()}개)`;
+
+        const keywordHtml = (searchStatItems || []).map((row) => {
+          const q = (row.query || "").trim();
+          const cnt = Number(row.cnt || 0);
+          if (!q) return "";
+          return `
+            <button type="button" class="filter-tag search-stat-keyword" data-keyword="${escapeHtml(q)}" aria-label="검색어 '${escapeHtml(q)}'로 공고 검색">
+              ${escapeHtml(q)} <span class="job-tab-badge" style="margin-left:6px;">${cnt.toLocaleString()}</span>
+            </button>
+          `;
+        }).filter((v) => v).join("");
+
+        workList.innerHTML = `
+          <div style="grid-column: 1 / -1;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+              <div class="filter-hint" style="margin:0;">학생 이름은 표시되지 않습니다. (최근 30일 · 담당 과목 ${Number(searchStatCourseCount || 0).toLocaleString()}개)</div>
+            </div>
+            <div class="active-filters" id="searchStatKeywordList">
+              ${keywordHtml || `<span class="filter-tag">최근 30일 동안 검색 기록이 없습니다.</span>`}
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        resultCount.textContent = "(0개)";
+        workList.innerHTML = renderErrorState(`검색어 통계 조회 실패: ${err.message}`);
+      }
+    }
+
     async function loadTutorCourses(force = false) {
       if (!force && tutorCourses && tutorCourses.length > 0) return tutorCourses;
 
@@ -1755,9 +1851,24 @@
       }
     }
 
+    async function detectSearchStatPermission() {
+      // 왜: 검색어 통계는 교수뿐 아니라 관리자도 볼 수 있어야 합니다.
+      // - 추천/보낸추천은 tutor 전용이므로 isTutorMode로 제어하고,
+      //   통계 탭은 실제 권한 API 호출 성공 여부로 노출을 결정합니다.
+      try {
+        const payload = await fetchMalgnApi("/api/job_search_stat.jsp?mode=stats&days=30&limit=1");
+        canViewSearchStat = !!payload;
+      } catch (e) {
+        canViewSearchStat = false;
+      }
+    }
+
     function applyTutorUiVisibility() {
       if (jobTabSentBtn) {
         jobTabSentBtn.style.display = isTutorMode ? "" : "none";
+      }
+      if (jobTabSearchStatBtn) {
+        jobTabSearchStatBtn.style.display = canViewSearchStat ? "" : "none";
       }
     }
 
@@ -1827,11 +1938,13 @@
       const isAll = view === "all";
       const isBookmark = view === "bookmark";
       const isRecommend = view === "recommend";
+      const isStat = view === "stat";
       const isSent = view === "sent";
 
       if (jobTabAllBtn) jobTabAllBtn.setAttribute("aria-selected", isAll ? "true" : "false");
       if (jobTabBookmarkBtn) jobTabBookmarkBtn.setAttribute("aria-selected", isBookmark ? "true" : "false");
       if (jobTabRecommendBtn) jobTabRecommendBtn.setAttribute("aria-selected", isRecommend ? "true" : "false");
+      if (jobTabSearchStatBtn) jobTabSearchStatBtn.setAttribute("aria-selected", isStat ? "true" : "false");
       if (jobTabSentBtn) jobTabSentBtn.setAttribute("aria-selected", isSent ? "true" : "false");
 
       // 왜: 북마크 탭은 DB 목록(최대 200*5)을 그대로 보여주므로, 기존 검색 페이지네이션은 숨깁니다.
@@ -1845,6 +1958,17 @@
       option.textContent = label;
       select.appendChild(option);
       select.value = "";
+    }
+
+    function escapeHtml(text) {
+      // 왜: 검색어 통계에서 사용자가 입력한 문자열을 그대로 HTML에 넣으면 XSS 위험이 있습니다.
+      const s = (text === null || text === undefined) ? "" : String(text);
+      return s
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
     }
 
     function normalizeDeptText(text) {
@@ -2543,6 +2667,14 @@
 
       if (nlQuery) {
         // 왜: 자연어 검색은 필터와 무관하게 통합(ALL)로만 조회합니다. (페이지네이션만 유지)
+        // 왜: 교수 검색어 통계에서 "학생들이 검색했던 키워드"를 보여주려면, 검색 시점에 로그를 남겨야 합니다.
+        // - 폴백 금지: 로그 저장이 실패하면 검색도 실패로 처리되어 원인이 드러나야 합니다.
+        await fetchMalgnApi("/api/job_search_stat.jsp", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+          body: new URLSearchParams({ mode: "log", query: nlQuery })
+        });
+
         params.set("provider", "ALL");
         params.set("q", nlQuery);
         url = `/job/recruits/nl?${params.toString()}`;
@@ -2872,6 +3004,19 @@
 
     // 추천 보내기/카드 클릭 이벤트
     workList.addEventListener("click", async (e) => {
+      // 검색어 통계 키워드 클릭: 해당 키워드로 바로 검색(전체 탭으로 이동)
+      const keywordBtn = e.target.closest(".search-stat-keyword");
+      if (keywordBtn) {
+        e.preventDefault();
+        const keyword = keywordBtn.getAttribute("data-keyword") || "";
+        if (!keyword) return;
+        if (nlQueryInput) nlQueryInput.value = keyword;
+        currentPage = 1;
+        setTab("all");
+        searchWorkList();
+        return;
+      }
+
       const recommendBtn = e.target.closest(".btn-recommend");
       if (recommendBtn) {
         e.preventDefault();
@@ -2917,6 +3062,12 @@
       jobTabRecommendBtn.addEventListener("click", async () => {
         setTab("recommend");
         await renderRecommendList();
+      });
+    }
+    if (jobTabSearchStatBtn) {
+      jobTabSearchStatBtn.addEventListener("click", async () => {
+        setTab("stat");
+        await renderSearchStatList();
       });
     }
     if (jobTabSentBtn) {
@@ -3060,7 +3211,7 @@
       selectByValue(providerSelect, defaultProvider);
     }
 
-    Promise.all([loadOccupationDepth1(), loadRegionCodes(), detectTutorMode(), loadDeptOccupationMap().then((map) => {
+    Promise.all([loadOccupationDepth1(), loadRegionCodes(), detectTutorMode(), detectSearchStatPermission(), loadDeptOccupationMap().then((map) => {
       deptOccupationMap = map;
       populateDeptSelect(map);
     })])
