@@ -1278,6 +1278,8 @@
     const defaultDepth2 = (queryParams.get("depth2") || "").trim();
     const defaultDepth3 = (queryParams.get("depth3") || "").trim();
     const defaultProvider = (queryParams.get("provider") || "").trim();
+    // 권한: 교수자/관리자 여부 (URL 파라미터로 전달받음)
+    const isStaffMode = queryParams.get("staff") === "Y";
     let deptOccupationMap = null;
 
     // 상태 관리
@@ -2265,12 +2267,12 @@
               <button class="btn-detail btn-recommend" type="button" aria-label="${item.title} 추천 보내기">
                 <i class="bi bi-send" aria-hidden="true"></i> 추천 보내기
               </button>
-            ` : `
+            ` : (isStaffMode ? `
               <a href="${detailUrl || '#'}" target="_blank" rel="noopener noreferrer"
                  class="btn-detail" aria-label="${item.title} 상세보기">
                 <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
               </a>
-            `}
+            ` : '')}
           </div>
         </article>
       `;

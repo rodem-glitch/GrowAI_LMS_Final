@@ -57,8 +57,16 @@ if("".equals(deptName) && userId > 0 && uinfo != null) {
 
 // 채용 페이지 URL (같은 도메인 프록시를 사용해서 외부 PC에서도 열리게 합니다)
 String jobUrl = "/api/job_proxy.jsp/job-test.html";
+
+// 권한 파라미터: 관리자(S/A) 또는 교수자(tutor_yn=Y)인 경우 staff=Y
+boolean isStaff = "S".equals(userKind) || "A".equals(userKind);
+if(!isStaff && uinfo != null && "Y".equals(uinfo.s("tutor_yn"))) {
+	isStaff = true;
+}
+jobUrl += "?staff=" + (isStaff ? "Y" : "N");
+
 if(!"".equals(deptName)) {
-	jobUrl += "?dept=" + URLEncoder.encode(deptName, "UTF-8");
+	jobUrl += "&dept=" + URLEncoder.encode(deptName, "UTF-8");
 }
 
 // 레이아웃: blank (전역 네비게이션 제외)
