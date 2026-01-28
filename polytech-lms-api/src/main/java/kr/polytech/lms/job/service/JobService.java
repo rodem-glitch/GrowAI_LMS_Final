@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.polytech.lms.job.classify.JobKoreaOccupationCodeRecommendationService;
 import kr.polytech.lms.job.classify.JobRecruitReclassificationService;
+import kr.polytech.lms.job.classify.JobOccupationQueryRecommendationService;
 import kr.polytech.lms.job.client.JobKoreaClient;
 import kr.polytech.lms.job.client.Work24Client;
 import kr.polytech.lms.job.client.Work24CodeClient;
@@ -69,6 +70,7 @@ public class JobService {
     private final JobKoreaProperties jobKoreaProperties;
     private final JobKoreaOccupationCodeRecommendationService jobKoreaOccupationCodeRecommendationService;
     private final JobRecruitReclassificationService jobRecruitReclassificationService;
+    private final JobOccupationQueryRecommendationService jobOccupationQueryRecommendationService;
     private final ObjectMapper objectMapper;
     private final ExecutorService jobReclassifyExecutor;
 
@@ -81,6 +83,7 @@ public class JobService {
         JobKoreaProperties jobKoreaProperties,
         JobKoreaOccupationCodeRecommendationService jobKoreaOccupationCodeRecommendationService,
         JobRecruitReclassificationService jobRecruitReclassificationService,
+        JobOccupationQueryRecommendationService jobOccupationQueryRecommendationService,
         ObjectMapper objectMapper
     ) {
         this.jobRepository = Objects.requireNonNull(jobRepository);
@@ -91,6 +94,7 @@ public class JobService {
         this.jobKoreaProperties = Objects.requireNonNull(jobKoreaProperties);
         this.jobKoreaOccupationCodeRecommendationService = Objects.requireNonNull(jobKoreaOccupationCodeRecommendationService);
         this.jobRecruitReclassificationService = Objects.requireNonNull(jobRecruitReclassificationService);
+        this.jobOccupationQueryRecommendationService = Objects.requireNonNull(jobOccupationQueryRecommendationService);
         this.objectMapper = Objects.requireNonNull(objectMapper);
         this.jobReclassifyExecutor = Executors.newFixedThreadPool(JOB_RECLASSIFY_THREADS, new JobThreadFactory("job-reclassify-"));
     }
@@ -470,6 +474,137 @@ public class JobService {
     public JobRecruitListResponse getRelatedRecruitments(String occupation, Integer limit, CachePolicy cachePolicy) {
         int safeLimit = normalizeDisplay(limit, 3);
         return getRecruitments(null, occupation, null, null, null, null, 1, safeLimit, cachePolicy);
+    }
+
+    public JobRecruitListResponse getRecruitmentsByNaturalLanguageForAll(
+        String query,
+        String region,
+        String salTp,
+        Integer minPay,
+        Integer maxPay,
+        String education,
+        Integer startPage,
+        Integer display,
+        CachePolicy cachePolicy
+    ) {
+        // 왜: 요청사항 - ALL 제공처에서만 자연어 입력으로 상위 3개 소분류를 뽑아 "합쳐서" 검색합니다.
+        // - 폴백은 넣지 않습니다(문제는 로그/에러로 드러나야 합니다).
+        String q = trimToNull(query);
+        if (q == null) {
+            throw new IllegalArgumentException("자연어 검색(query)이 비어 있습니다.");
+        }
+
+        // 왜: 요청사항 - 자연어 검색은 "필터와 무관하게" 통합(ALL)로만 조회합니다.
+        //      따라서 region/occupation/급여/학력 입력은 모두 무시하고, 페이징(startPage/display)만 사용합니다.
+        JobRecruitSearchCriteria base = normalizeCriteria(null, null, null, null, null, null, startPage, display);
+        CachePolicy safePolicy = cachePolicy == null ? CachePolicy.PREFER_CACHE : cachePolicy;
+
+        // 1) 자연어 → 표준 소분류 코드(top3) 추천
+        List<JobOccupationQueryRecommendationService.RecommendedOccupation> rec = jobOccupationQueryRecommendationService.recommendTopK(q, 3);
+        List<String> codes = rec.stream()
+            .map(JobOccupationQueryRecommendationService.RecommendedOccupation::standardCode)
+            .filter(Objects::nonNull)
+            .map(String::trim)
+            .filter(s -> !s.isBlank())
+            .limit(3)
+            .toList();
+
+        if (codes.isEmpty()) {
+            // recommendTopK에서 이미 예외를 던지지만, 방어적으로 한 번 더 확인합니다.
+            log.error("자연어 검색 추천 코드 0건: query='{}'", q);
+            throw new IllegalStateException("자연어 검색 실패: 추천 코드 0건");
+        }
+
+        log.info("자연어 검색 시작(ALL): query='{}', recommendedCodes={}", q, codes);
+
+        // 2) 상위 3개 코드로 각각 검색(ALL 병합 로직 재사용) 후 합치기
+        // 왜: "합쳐서 검색"은 OR 조건이므로, 각 코드 결과를 합치고 중복을 제거합니다.
+        List<JobRecruitListResponse> parts = new ArrayList<>(codes.size());
+        int totalSum = 0;
+
+        for (String code : codes) {
+            JobRecruitListResponse res = getRecruitments(
+                base.region(),
+                code,
+                null,
+                null,
+                null,
+                null,
+                base.startPage(),
+                base.display(),
+                Provider.ALL,
+                safePolicy
+            );
+            parts.add(res);
+            totalSum += Math.max(0, res == null ? 0 : res.total());
+            log.info(
+                "자연어 검색 부분 결과: query='{}', code={}, total={}, items={}",
+                q,
+                code,
+                (res == null ? 0 : res.total()),
+                (res == null || res.wanted() == null ? 0 : res.wanted().size())
+            );
+        }
+
+        // 3) 결과 합치기(라운드로빈 + 중복 제거) + display 만큼만 반환
+        LinkedHashMap<String, JobRecruitItem> mergedByKey = new LinkedHashMap<>();
+        List<List<JobRecruitItem>> lists = parts.stream()
+            // 왜: 통합(ALL) 결과는 내부적으로 work24를 먼저 붙이고 잡코리아를 뒤에 붙입니다.
+            //      그런데 자연어 검색은 "상위 3개 소분류"를 합쳐서 다시 display로 자르기 때문에,
+            //      앞쪽(Work24)만 계속 뽑혀 잡코리아가 화면에 안 섞이는 문제가 생깁니다.
+            //      그래서 각 코드별 목록에서 work24/jobkorea를 미리 교차(interleave)시켜, 초반에도 잡코리아가 섞이게 만듭니다.
+            .map(r -> JobRecruitInterleaveUtil.interleaveProvidersForAll((r == null || r.wanted() == null) ? List.<JobRecruitItem>of() : r.wanted()))
+            .toList();
+        int[] idx = new int[lists.size()];
+
+        while (mergedByKey.size() < base.display()) {
+            boolean advanced = false;
+            for (int i = 0; i < lists.size(); i++) {
+                List<JobRecruitItem> list = lists.get(i);
+                int cursor = idx[i];
+                if (cursor >= list.size()) continue;
+
+                JobRecruitItem item = list.get(cursor);
+                idx[i] = cursor + 1;
+                advanced = true;
+
+                if (item == null) continue;
+                String key = buildRecruitItemKey(item);
+                if (key.isBlank()) continue;
+                mergedByKey.putIfAbsent(key, item);
+
+                if (mergedByKey.size() >= base.display()) break;
+            }
+            if (!advanced) break;
+        }
+
+        if (mergedByKey.isEmpty()) {
+            log.error("자연어 검색 합친 결과 0건: query='{}', codes={}", q, codes);
+            throw new IllegalStateException("자연어 검색 결과가 0건입니다.");
+        }
+
+        // 최종 요약 로그(디버깅)
+        int jobkoreaCount = 0;
+        int work24Count = 0;
+        for (JobRecruitItem item : mergedByKey.values()) {
+            if (item == null || item.infoSvc() == null) {
+                work24Count++;
+                continue;
+            }
+            String svc = item.infoSvc().trim().toUpperCase();
+            if ("JOBKOREA".equals(svc)) jobkoreaCount++; else work24Count++;
+        }
+        log.info(
+            "자연어 검색 최종 결과(ALL): query='{}', codes={}, totalSum={}, returnedItems={}, jobkorea={}, work24={}",
+            q,
+            codes,
+            totalSum,
+            mergedByKey.size(),
+            jobkoreaCount,
+            work24Count
+        );
+
+        return new JobRecruitListResponse(totalSum, base.startPage(), base.display(), new ArrayList<>(mergedByKey.values()));
     }
 
     private boolean hasWork24OnlyFilters(JobRecruitSearchCriteria criteria) {

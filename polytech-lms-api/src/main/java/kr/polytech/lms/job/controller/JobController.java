@@ -93,6 +93,48 @@ public class JobController {
         }
     }
 
+    @GetMapping("/recruits/nl")
+    public ResponseEntity<?> recruitListByNaturalLanguage(
+        @RequestParam(name = "q", required = false) String query,
+        @RequestParam(name = "region", required = false) String region,
+        @RequestParam(name = "salTp", required = false) String salTp,
+        @RequestParam(name = "minPay", required = false) Integer minPay,
+        @RequestParam(name = "maxPay", required = false) Integer maxPay,
+        @RequestParam(name = "education", required = false) String education,
+        @RequestParam(name = "startPage", required = false) Integer startPage,
+        @RequestParam(name = "display", required = false) Integer display,
+        @RequestParam(name = "provider", required = false) String provider,
+        @RequestParam(name = "cachePolicy", required = false) String cachePolicy
+    ) {
+        // 왜: 요청사항 - 자연어 검색은 통합(ALL)에서만 지원합니다.
+        try {
+            CachePolicy policy = CachePolicy.from(cachePolicy);
+            JobService.Provider safeProvider = JobService.Provider.from(provider);
+            if (safeProvider != JobService.Provider.ALL) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError("자연어 검색은 제공처=통합(ALL)에서만 지원합니다."));
+            }
+
+            JobRecruitListResponse response = jobService.getRecruitmentsByNaturalLanguageForAll(
+                query,
+                null, // 왜: 자연어 검색은 필터와 무관하게 통합(ALL)로만 조회합니다.
+                null,
+                null,
+                null,
+                null,
+                startPage,
+                display,
+                policy
+            );
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiError(e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(e.getMessage()));
+        } catch (DataAccessException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiError(mostSpecificMessage(e)));
+        }
+    }
+
     @GetMapping("/recruits/related")
     public ResponseEntity<?> relatedRecruitList(
         @RequestParam(name = "occupation", required = false) String occupation,
