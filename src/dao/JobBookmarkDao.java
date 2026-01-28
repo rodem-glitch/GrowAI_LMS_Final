@@ -13,6 +13,16 @@ public class JobBookmarkDao extends DataObject {
 		this.PK = "id";
 	}
 
+	private String normalizeProvider(String provider) {
+		// 왜: Work24 쪽은 API에서 infoSvc 값이 `VALIDATION` 등으로 내려오는 케이스가 있어,
+		// DB/화면/삭제 키가 서로 달라지면 “저장 해제가 안 되는” 문제가 생깁니다.
+		// 따라서 현재는 제공처를 (JOBKOREA) vs (그 외=WORK24) 두 그룹으로 정규화합니다.
+		if(provider == null) return "WORK24";
+		String v = provider.trim().toUpperCase();
+		if("JOBKOREA".equals(v)) return "JOBKOREA";
+		return "WORK24";
+	}
+
 	private void ensureSequenceRow() {
 		// 왜: MalgnLMS는 많은 테이블이 AUTO_INCREMENT가 아니라 `tb_sequence`로 ID를 발급합니다.
 		// - 새 테이블을 만들 때 tb_sequence에 행을 안 넣으면 getSequence()가 실패하면서 500이 날 수 있습니다.
@@ -50,13 +60,35 @@ public class JobBookmarkDao extends DataObject {
 		if(wantedAuthNo == null || "".equals(wantedAuthNo.trim())) return false;
 		if(now == null || "".equals(now.trim())) now = Malgn.time("yyyyMMddHHmmss");
 
-		provider = provider.trim().toUpperCase();
+		provider = normalizeProvider(provider);
 		wantedAuthNo = wantedAuthNo.trim();
 
-		DataSet info = this.find(
-			"site_id = ? AND user_id = ? AND provider = ? AND wanted_auth_no = ?",
-			new Object[] { siteId, userId, provider, wantedAuthNo }
-		);
+		// 왜: 과거 데이터에 provider가 WORK24가 아닌 값(예: VALIDATION)으로 저장된 경우가 있어,
+		// 저장 시에도 “WORK24 그룹”을 먼저 찾아서 한 행으로 흡수(정규화)합니다.
+		DataSet info = null;
+		boolean hasInfo = false;
+		if("JOBKOREA".equals(provider)) {
+			info = this.find(
+				"site_id = ? AND user_id = ? AND provider = ? AND wanted_auth_no = ?",
+				new Object[] { siteId, userId, provider, wantedAuthNo }
+			);
+			hasInfo = info.next();
+		} else {
+			DataSet infoWork24 = this.find(
+				"site_id = ? AND user_id = ? AND provider = ? AND wanted_auth_no = ?",
+				new Object[] { siteId, userId, "WORK24", wantedAuthNo }
+			);
+			if(infoWork24.next()) {
+				info = infoWork24;
+				hasInfo = true;
+			} else {
+				info = this.find(
+					"site_id = ? AND user_id = ? AND wanted_auth_no = ? AND provider != ?",
+					new Object[] { siteId, userId, wantedAuthNo, "JOBKOREA" }
+				);
+				hasInfo = info.next();
+			}
+		}
 
 		this.item("wanted_info_url", wantedInfoUrl);
 		this.item("title", title);
@@ -66,8 +98,9 @@ public class JobBookmarkDao extends DataObject {
 		this.item("item_json", itemJson);
 		this.item("status", 1);
 		this.item("mod_date", now);
+		this.item("provider", provider);
 
-		if(info.next()) {
+		if(hasInfo) {
 			// 왜: 소프트삭제(-1) 상태였더라도 다시 저장하면 정상(1)로 되돌립니다.
 			this.item("reg_date", now);
 			return this.update("id = " + info.i("id"));
@@ -90,18 +123,34 @@ public class JobBookmarkDao extends DataObject {
 		if(wantedAuthNo == null || "".equals(wantedAuthNo.trim())) return false;
 		if(now == null || "".equals(now.trim())) now = Malgn.time("yyyyMMddHHmmss");
 
-		provider = provider.trim().toUpperCase();
+		provider = normalizeProvider(provider);
 		wantedAuthNo = wantedAuthNo.trim();
 
-		DataSet info = this.find(
-			"site_id = ? AND user_id = ? AND provider = ? AND wanted_auth_no = ? AND status != -1",
-			new Object[] { siteId, userId, provider, wantedAuthNo }
-		);
+		// 왜: provider 정규화 이전에 저장된 데이터(예: provider=VALIDATION)는
+		// 화면에서는 WORK24로 보이지만, 삭제는 provider 매칭이 안 되어 “해제 불가”가 됩니다.
+		// 그래서 WORK24 그룹은 (provider != JOBKOREA) 전체를 대상으로 멱등 삭제합니다.
+		DataSet info = null;
+		if("JOBKOREA".equals(provider)) {
+			info = this.find(
+				"site_id = ? AND user_id = ? AND provider = ? AND wanted_auth_no = ? AND status != -1",
+				new Object[] { siteId, userId, provider, wantedAuthNo }
+			);
+		} else {
+			info = this.find(
+				"site_id = ? AND user_id = ? AND wanted_auth_no = ? AND provider != ? AND status != -1",
+				new Object[] { siteId, userId, wantedAuthNo, "JOBKOREA" }
+			);
+		}
 		if(!info.next()) return true; // 왜: 이미 없는(또는 삭제된) 상태면 멱등 처리합니다.
 
+		boolean ok = true;
 		this.item("status", -1);
 		this.item("mod_date", now);
-		return this.update("id = " + info.i("id"));
+		do {
+			ok = ok && this.update("id = " + info.i("id"));
+		} while(info.next());
+
+		return ok;
 	}
 
 	public int getCount(int siteId, int userId) {
