@@ -1,4 +1,4 @@
-<%@ page contentType="text/html; charset=utf-8" %><%@ page import="java.io.*" %><%@ page import="java.net.*" %><%@ page import="java.nio.charset.StandardCharsets" %><%@ page import="malgnsoft.json.*" %><%@ include file="init.jsp" %><%
+<%@ page contentType="text/html; charset=utf-8" %><%@ page import="java.io.*" %><%@ page import="java.net.*" %><%@ page import="java.nio.charset.StandardCharsets" %><%@ page import="malgnsoft.json.*" %><%@ include file="init.jsp" %><%@ include file="/kollus/thumb_util.jspf" %><%
 
 //기본키
 String subject = m.rs("subject");
@@ -117,6 +117,21 @@ if("course".equals(searchType) && "vector".equals(mode)) {
 				KollusMediaDao kollusMedia = new KollusMediaDao();
 				HashMap<String, String> thumbCache = new HashMap<String, String>();
 
+				// 왜: 검색 추천 결과의 lessonId(콜러스 키)는 TB_KOLLUS_MEDIA에 없을 수 있습니다(찜/매핑 전).
+				//     tutor_lms/api/kollus_list.jsp처럼 콜러스 API 목록에서 snapshot_url을 추가로 찾아 썸네일을 맞춥니다.
+				HashSet<String> lessonIdSet = new HashSet<String>();
+				recoRows.first();
+				while(recoRows.next()) {
+					String lid = recoRows.s("lessonId");
+					if(!"".equals(lid)) lessonIdSet.add(lid);
+				}
+				recoRows.first();
+
+				HashMap<String, String> kollusThumbMap = new HashMap<String, String>();
+				boolean kollusThumbMapLoaded = false;
+
+				String now = m.time("yyyyMMddHHmmss");
+
 				while(recoRows.next()) {
 					String lessonId = recoRows.s("lessonId");  // 콜러스 영상 키값 (예: "5vcd73vW")
 					if("".equals(lessonId)) continue;
@@ -138,18 +153,17 @@ if("course".equals(searchType) && "vector".equals(mode)) {
 					vectorList.put("play_url", playUrl);
 
 					vectorList.put("duration_conv", "");
-					// 왜: 교수자 LMS와 동일하게 TB_KOLLUS_MEDIA.snapshot_url을 썸네일로 사용합니다.
+					// 왜: 가능하면 TB_KOLLUS_MEDIA를 우선 사용하고, 없으면 콜러스 API에서 가져와 캐싱합니다.
 					String thumbnail = thumbCache.get(lessonId);
 					if(thumbnail == null) {
-						String found = "";
-						DataSet minfo = kollusMedia.find(
-							"site_id = " + siteId + " AND media_content_key = ?",
-							new String[] { lessonId }
-						);
-						if(minfo.next()) {
-							found = minfo.s("snapshot_url");
+						// 1차: DB만 조회(콜러스 API 호출 최소화)
+						String found = kollusThumbResolveAndCache(siteId, lessonId, recoRows.s("title"), now, kollusMedia, kollusThumbMapLoaded ? kollusThumbMap : null);
+						// 2차: DB에 없으면 그때 콜러스 API 목록을 불러와 재시도
+						if("".equals(found) && !kollusThumbMapLoaded) {
+							kollusThumbMap = kollusThumbBuildMap(kollus, siteinfo, siteId, lessonIdSet, 30);
+							kollusThumbMapLoaded = true;
+							found = kollusThumbResolveAndCache(siteId, lessonId, recoRows.s("title"), now, kollusMedia, kollusThumbMap);
 						}
-
 						if("".equals(found)) found = "/html/images/common/noimage_course.gif";
 						thumbCache.put(lessonId, found);
 						thumbnail = found;
@@ -158,7 +172,10 @@ if("course".equals(searchType) && "vector".equals(mode)) {
 				}
 			}
 		}
-	} catch(Exception ignore) {}
+	} catch(Exception e) {
+		// 왜: 추천/검색 서버 장애가 나도 검색(더보기) 화면이 통째로 깨지면 안 되므로, 추천 결과만 비워 둡니다.
+		malgnsoft.util.Malgn.errorLog("검색 추천 동영상(더보기) 조회 실패(site_id=" + siteId + ", user_id=" + userId + "): " + e.getMessage(), e);
+	}
 
 	list = vectorList;
 } else if("post".equals(searchType)) {

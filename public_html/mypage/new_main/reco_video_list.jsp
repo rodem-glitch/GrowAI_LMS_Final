@@ -4,7 +4,8 @@
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="java.util.*" %>
 <%@ page import="malgnsoft.json.*" %>
-<%@ include file="../../init.jsp" %><%
+<%@ include file="../../init.jsp" %>
+<%@ include file="/kollus/thumb_util.jspf" %><%
 
 // 목적: 추천 동영상 목록을 JSON으로 반환 (설정 저장 후 즉시 갱신용)
 
@@ -73,7 +74,23 @@ try {
 		} catch(Exception ignore) {}
 
 		KollusMediaDao kollusMedia = new KollusMediaDao();
+		KollusDao kollus = new KollusDao(siteId);
 		HashMap<String, String> thumbCache = new HashMap<String, String>();
+
+		// 왜: 추천 목록의 lessonId(콜러스 키)는 TB_KOLLUS_MEDIA에 없을 수 있습니다(찜/매핑 전).
+		//     tutor_lms/api/kollus_list.jsp처럼 콜러스 API 목록에서 snapshot_url을 추가로 찾아 썸네일을 맞춥니다.
+		HashSet<String> lessonIdSet = new HashSet<String>();
+		recoRows.first();
+		while(recoRows.next()) {
+			String lid = recoRows.s("lessonId");
+			if(!"".equals(lid)) lessonIdSet.add(lid);
+		}
+		recoRows.first();
+
+		HashMap<String, String> kollusThumbMap = new HashMap<String, String>();
+		boolean kollusThumbMapLoaded = false;
+
+		String now = m.time("yyyyMMddHHmmss");
 
 		while(recoRows.next()) {
 			String lessonId = recoRows.s("lessonId");
@@ -89,13 +106,13 @@ try {
 
 			String thumbnail = thumbCache.get(lessonId);
 			if(thumbnail == null) {
-				String found = "";
-				DataSet minfo = kollusMedia.find(
-					"site_id = " + siteId + " AND media_content_key = ?",
-					new String[] { lessonId }
-				);
-				if(minfo.next()) {
-					found = minfo.s("snapshot_url");
+				// 1차: DB만 조회(콜러스 API 호출 최소화)
+				String found = kollusThumbResolveAndCache(siteId, lessonId, recoRows.s("title"), now, kollusMedia, kollusThumbMapLoaded ? kollusThumbMap : null);
+				// 2차: DB에 없으면 그때 콜러스 API 목록을 불러와 재시도
+				if("".equals(found) && !kollusThumbMapLoaded) {
+					kollusThumbMap = kollusThumbBuildMap(kollus, siteinfo, siteId, lessonIdSet, 30);
+					kollusThumbMapLoaded = true;
+					found = kollusThumbResolveAndCache(siteId, lessonId, recoRows.s("title"), now, kollusMedia, kollusThumbMap);
 				}
 				if("".equals(found)) found = "/html/images/common/noimage_course.gif";
 				thumbCache.put(lessonId, found);
@@ -104,7 +121,9 @@ try {
 			recoVideoList.put("thumbnail", thumbnail);
 		}
 	}
-} catch(Exception ignore) {}
+} catch(Exception e) {
+	malgnsoft.util.Malgn.errorLog("학생 홈 추천 동영상(JSON) 조회 실패(site_id=" + siteId + ", user_id=" + userId + "): " + e.getMessage(), e);
+}
 
 // JSON 출력 (간단하게 문자열 구성)
 StringBuilder outJson = new StringBuilder();
