@@ -20,6 +20,7 @@ import kr.polytech.lms.contentsummary.entity.KollusTranscript;
 import kr.polytech.lms.contentsummary.repository.ContentSummaryRepository;
 import kr.polytech.lms.recocontent.entity.RecoContent;
 import kr.polytech.lms.recocontent.repository.RecoContentRepository;
+import kr.polytech.lms.recocontent.service.RecoContentVectorIndexService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class ContentSummaryService {
     private final ContentTranscriptionProperties transcriptionProperties;
     private final ContentSummaryRepository transcriptRepository;
     private final RecoContentRepository recoContentRepository;
+    private final RecoContentVectorIndexService recoContentVectorIndexService;
 
     public ContentSummaryService(
         KollusApiClient kollusApiClient,
@@ -49,7 +51,8 @@ public class ContentSummaryService {
         GeminiVideoSummaryClient geminiVideoSummaryClient,
         ContentTranscriptionProperties transcriptionProperties,
         ContentSummaryRepository transcriptRepository,
-        RecoContentRepository recoContentRepository
+        RecoContentRepository recoContentRepository,
+        RecoContentVectorIndexService recoContentVectorIndexService
     ) {
         // 왜: 영상 요약은 "외부 API + 대용량 파일" 조합이라 실패 지점이 많습니다. 의존성을 분리해두면 원인 추적이 쉬워집니다.
         this.kollusApiClient = Objects.requireNonNull(kollusApiClient);
@@ -59,6 +62,7 @@ public class ContentSummaryService {
         this.transcriptionProperties = Objects.requireNonNull(transcriptionProperties);
         this.transcriptRepository = Objects.requireNonNull(transcriptRepository);
         this.recoContentRepository = Objects.requireNonNull(recoContentRepository);
+        this.recoContentVectorIndexService = Objects.requireNonNull(recoContentVectorIndexService);
     }
 
     /**
@@ -288,12 +292,26 @@ public class ContentSummaryService {
     private boolean doVideoSummarize(KollusTranscript transcript) {
         Integer siteId = transcript.getSiteId() == null ? 1 : transcript.getSiteId();
         String mediaKey = transcript.getMediaContentKey();
+        String safeMediaKey = mediaKey == null ? "" : mediaKey.trim();
 
         // 왜: 이미 요약이 TB_RECO_CONTENT에 있으면, 다시 비용을 쓰지 않습니다.
-        if (mediaKey != null && recoContentRepository.existsByLessonId(mediaKey.trim())) {
-            transcript.markSummaryDone();
-            transcriptRepository.save(transcript);
-            return true;
+        // 추가 요구사항: 요약 저장 후 "즉시 벡터DB(Qdrant) upsert"까지 완료되어야 추천/검색에 바로 반영됩니다.
+        // - 이전 실행에서 요약 저장은 됐는데 벡터 upsert가 실패했을 수도 있어, 이 경우는 "벡터만" 재시도합니다.
+        if (!safeMediaKey.isBlank()) {
+            Optional<RecoContent> existing = recoContentRepository.findTopByLessonIdOrderByIdDesc(safeMediaKey);
+            if (existing.isPresent()) {
+                RecoContent content = existing.get();
+                if (isVectorIndexTarget(content)) {
+                    upsertRecoContentVector(content, safeMediaKey);
+                } else {
+                    // 왜: 요약이 비어 있는 더미 row(무한 재요약 방지)까지 인덱싱하면 추천 품질이 떨어질 수 있습니다.
+                    log.info("요약 데이터가 비어 있어 벡터 인덱싱을 건너뜁니다. mediaKey={}, recoContentId={}", safeMediaKey, content.getId());
+                }
+
+                transcript.markSummaryDone();
+                transcriptRepository.save(transcript);
+                return true;
+            }
         }
 
         Path workDir = transcriptionProperties.tmpDir().resolve("site-" + siteId).resolve(safeFileName(mediaKey));
@@ -356,6 +374,10 @@ public class ContentSummaryService {
             RecoContent content = new RecoContent(categoryNm, title, summary, keywords);
             content.setLessonId(mediaKey.trim());
             RecoContent saved = recoContentRepository.save(content);
+
+            // 왜: DB에 요약이 저장만 되면 화면에서는 보일 수 있지만,
+            // 추천/벡터검색은 Qdrant를 보므로 "저장 직후 upsert"를 해줘야 바로 반영됩니다.
+            upsertRecoContentVector(saved, safeMediaKey);
 
             transcript.markSummaryDone();
             transcriptRepository.save(transcript);
@@ -469,6 +491,28 @@ public class ContentSummaryService {
         RecoContent content = new RecoContent("기타, 기타", title, "", "");
         content.setLessonId(mediaKey);
         return recoContentRepository.save(content);
+    }
+
+    private static boolean isVectorIndexTarget(RecoContent content) {
+        if (content == null) return false;
+        String summary = content.getSummary();
+        return summary != null && !summary.isBlank();
+    }
+
+    private void upsertRecoContentVector(RecoContent content, String mediaKey) {
+        if (content == null) return;
+
+        try {
+            recoContentVectorIndexService.upsertOne(content);
+            log.info("요약 벡터 인덱싱 완료: mediaKey={}, recoContentId={}", mediaKey, content.getId());
+        } catch (Exception e) {
+            // 왜: 벡터 인덱싱 실패를 성공처럼 처리하면(조용히 무시) 추천/검색이 누락되는데 원인 추적이 매우 어렵습니다.
+            // 여기서는 명확히 실패로 보고, 워커 재시도로 "벡터 upsert"를 다시 시도할 수 있게 합니다.
+            throw new IllegalStateException(
+                "요약 벡터 인덱싱 실패: mediaKey=" + mediaKey + ", recoContentId=" + content.getId(),
+                e
+            );
+        }
     }
 
     private static boolean isSummaryTooShort(String summary, int targetSummaryLength) {
