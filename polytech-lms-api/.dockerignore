@@ -1,0 +1,52 @@
+# Build outputs
+build/
+!build/libs/
+.gradle/
+bin/
+out/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+bootrun-*.log
+
+# Test files
+src/test/
+
+# Documentation
+*.md
+docs/
+
+# Local configuration
+application-local.yml
+application-local.properties
+*.local.*
+
+# Sensitive files
+*.key
+*.pem
+*.p12
+*.jks
+credentials/
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
