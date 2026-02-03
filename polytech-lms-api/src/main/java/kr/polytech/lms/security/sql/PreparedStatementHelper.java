@@ -60,21 +60,35 @@ public final class PreparedStatementHelper {
             return;
         }
 
-        switch (value) {
-            case String s -> stmt.setString(index, s);
-            case Integer i -> stmt.setInt(index, i);
-            case Long l -> stmt.setLong(index, l);
-            case Double d -> stmt.setDouble(index, d);
-            case Float f -> stmt.setFloat(index, f);
-            case Boolean b -> stmt.setBoolean(index, b);
-            case LocalDateTime ldt -> stmt.setTimestamp(index, Timestamp.valueOf(ldt));
-            case LocalDate ld -> stmt.setDate(index, Date.valueOf(ld));
-            case Timestamp ts -> stmt.setTimestamp(index, ts);
-            case Date dt -> stmt.setDate(index, dt);
-            case byte[] bytes -> stmt.setBytes(index, bytes);
-            case Short sh -> stmt.setShort(index, sh);
-            case java.math.BigDecimal bd -> stmt.setBigDecimal(index, bd);
-            default -> stmt.setObject(index, value);
+        // Java 17 호환 타입 분기
+        if (value instanceof String) {
+            stmt.setString(index, (String) value);
+        } else if (value instanceof Integer) {
+            stmt.setInt(index, (Integer) value);
+        } else if (value instanceof Long) {
+            stmt.setLong(index, (Long) value);
+        } else if (value instanceof Double) {
+            stmt.setDouble(index, (Double) value);
+        } else if (value instanceof Float) {
+            stmt.setFloat(index, (Float) value);
+        } else if (value instanceof Boolean) {
+            stmt.setBoolean(index, (Boolean) value);
+        } else if (value instanceof LocalDateTime) {
+            stmt.setTimestamp(index, Timestamp.valueOf((LocalDateTime) value));
+        } else if (value instanceof LocalDate) {
+            stmt.setDate(index, Date.valueOf((LocalDate) value));
+        } else if (value instanceof Timestamp) {
+            stmt.setTimestamp(index, (Timestamp) value);
+        } else if (value instanceof Date) {
+            stmt.setDate(index, (Date) value);
+        } else if (value instanceof byte[]) {
+            stmt.setBytes(index, (byte[]) value);
+        } else if (value instanceof Short) {
+            stmt.setShort(index, (Short) value);
+        } else if (value instanceof java.math.BigDecimal) {
+            stmt.setBigDecimal(index, (java.math.BigDecimal) value);
+        } else {
+            stmt.setObject(index, value);
         }
     }
 
