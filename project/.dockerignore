@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Build outputs (we rebuild in Docker)
+dist
+../public_html
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+Thumbs.db
+*.md
+!README.md
+
+# Environment
+.env
+.env.*
+!.env.example

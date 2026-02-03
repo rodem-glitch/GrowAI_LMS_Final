@@ -11,14 +11,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production=false
+# Install dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build production
-RUN npm run build
+# Ensure vite has execute permission and build
+RUN chmod +x node_modules/.bin/* && npm run build
 
 # Stage 2: Nginx Runtime
 FROM nginx:alpine AS runtime
