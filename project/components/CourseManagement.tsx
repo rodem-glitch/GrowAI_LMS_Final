@@ -36,6 +36,7 @@ import { StudentsTab } from './courseManagement/StudentsTab';
 import { AttendanceTab } from './courseManagement/AttendanceTab';
 import { downloadCsv } from '../utils/csv';
 import { CourseFeedbackReportTab } from './CourseFeedbackReportTab';
+import { sanitizeHtml } from '../lib/security';
 
 
 interface CourseManagementProps {
@@ -3289,7 +3290,7 @@ function QnaTab({ courseId, initialPostId }: { courseId: number; initialPostId?:
               </div>
               <div
                 className="p-4 text-sm text-gray-800 prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: detail.question_content || '' }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(detail.question_content) }}
               />
             </div>
 
