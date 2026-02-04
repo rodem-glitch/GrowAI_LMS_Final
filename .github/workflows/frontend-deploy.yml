@@ -27,9 +27,9 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  REGION: ${{ secrets.GCP_REGION || 'asia-northeast3' }}
+  REGION: ${{ secrets.GCP_REGION || 'asia-northeast1' }}
   SERVICE_NAME: malgnlms-frontend
-  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'asia-northeast3' }}-docker.pkg.dev
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_REGION || 'asia-northeast1' }}-docker.pkg.dev
 
 jobs:
   # ============================================
