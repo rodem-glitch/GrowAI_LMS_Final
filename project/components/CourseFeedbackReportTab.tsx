@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FileText, MessageSquare, Printer } from 'lucide-react';
 import { tutorLmsApi, type TutorCourseRow, type TutorHomeworkReportRow, type TutorQnaReportRow } from '../api/tutorLmsApi';
+import { sanitizeHtml } from '../lib/security';
 
 type CourseInfo = TutorCourseRow & {
   sourceType?: 'haksa' | 'prism';
@@ -667,14 +668,14 @@ export function CourseFeedbackReportTab({ course }: { course: CourseInfo }) {
                     </div>
                     <div
                       className="p-4 text-sm text-gray-800 prose max-w-none"
-                      dangerouslySetInnerHTML={{ __html: row.question_content || '' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(row.question_content) }}
                     />
                     <div className="bg-gray-50 px-4 py-2 border-t border-gray-200 text-sm text-gray-600">
                       답변: {row.answered ? '완료' : '대기'} · {row.answer_reg_date_conv || '-'}
                     </div>
                     <div
                       className="p-4 text-sm text-gray-800 prose max-w-none"
-                      dangerouslySetInnerHTML={{ __html: row.answer_content || '<em>답변이 없습니다.</em>' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(row.answer_content) || '<em>답변이 없습니다.</em>' }}
                     />
                   </div>
                 ))}
