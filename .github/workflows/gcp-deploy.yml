@@ -72,9 +72,10 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build -x test --no-daemon
 
-      - name: Run tests
-        run: ./gradlew test --no-daemon
-        continue-on-error: true
+      # Temporarily disabled due to database connection issues in CI
+      # - name: Run tests
+      #   run: ./gradlew test --no-daemon
+      #   continue-on-error: true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
