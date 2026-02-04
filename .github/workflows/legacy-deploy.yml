@@ -182,7 +182,7 @@ jobs:
       - name: Show deployment URL
         run: |
           echo "🚀 Legacy Deployed to: ${{ steps.deploy.outputs.url }}"
-          echo "deployment_url=${{ steps.deploy.outputs.url }}\" >> $GITHUB_OUTPUT
+          echo "deployment_url=${{ steps.deploy.outputs.url }}" >> $GITHUB_OUTPUT
 
       - name: Health check
         run: |
