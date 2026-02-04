@@ -12,6 +12,10 @@ FROM maven:3.8-openjdk-8 AS build
 
 WORKDIR /build
 
+# Download Servlet API JAR (required for compilation)
+RUN curl -o servlet-api.jar \
+    https://repo1.maven.org/maven2/javax/servlet/javax.servlet-api/3.1.0/javax.servlet-api-3.1.0.jar
+
 # Copy WEB-INF libraries (including malgn-1.13.0.jar)
 COPY public_html/WEB-INF/lib ./lib
 
@@ -21,9 +25,9 @@ COPY src ./src
 # Create output directory for compiled classes
 RUN mkdir -p classes
 
-# Compile Java sources
+# Compile Java sources with Servlet API in classpath
 RUN javac -encoding UTF-8 \
-    -cp "lib/*" \
+    -cp "servlet-api.jar:lib/*" \
     -d classes \
     $(find src -name "*.java")
 
