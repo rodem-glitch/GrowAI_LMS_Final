@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8081
   error:
     # 왜: 에러 응답에 stacktrace가 포함되면 민감정보(키/시크릿/경로)가 노출될 수 있어 차단합니다.
@@ -202,3 +202,9 @@ vector:
     # 왜: 학생 검색/추천에서 후보를 너무 적게 가져오면(상한이 낮으면) 정확한 콘텐츠가 topK 밖으로 밀려 "엉뚱한 결과"가 나올 수 있습니다.
     # - 운영에서 실측하면서 200~500 사이로 조정하는 것을 권장합니다.
     max-top-k: ${VECTOR_SEARCH_MAX_TOP_K:300}
+
+app: # Added new section for application-specific properties
+  encryption:
+    aes:
+      key: ${AES_KEY:01234567890123456789012345678901} # 32-byte key
+      iv: ${AES_IV:0123456789012345} # 16-byte IV

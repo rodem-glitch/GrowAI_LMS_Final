@@ -1,0 +1,449 @@
+/**
+ * Dark Theme Override for Legacy LMS
+ * skin5.css 스타일을 다크 테마로 오버라이드
+ * Version: 1.0.0
+ * Created: 2026-02-07
+ */
+
+/* ========================================
+   1. Base Override
+   ======================================== */
+.theme-dark body {
+  background: var(--color-bg-primary) !important;
+  color: var(--color-text-primary) !important;
+  font-family: var(--font-family) !important;
+}
+
+.theme-dark a {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark a:hover {
+  color: var(--color-accent) !important;
+}
+
+/* ========================================
+   2. Header Override (#header)
+   ======================================== */
+.theme-dark #header {
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.theme-dark #header .util_wrap {
+  background: var(--color-bg-primary) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .util_wrap .util_menu li a {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark .util_wrap .util_menu li a:hover {
+  color: var(--color-accent) !important;
+}
+
+.theme-dark .inner h1.logo img {
+  filter: brightness(0) invert(1);
+}
+
+.theme-dark .menu_wrap #gnb li a {
+  color: var(--color-text-primary) !important;
+}
+
+.theme-dark .menu_wrap #gnb li a:hover,
+.theme-dark .menu_wrap #gnb li.on a {
+  color: var(--color-accent) !important;
+}
+
+.theme-dark .menu_wrap #gnb > li:hover > ul.depth2 {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .menu_wrap #gnb > li:hover > ul.depth2 li a {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark .menu_wrap #gnb > li:hover > ul.depth2 li a:hover {
+  color: var(--color-accent) !important;
+}
+
+/* ========================================
+   3. Container Override (#container)
+   ======================================== */
+.theme-dark #container {
+  background: var(--color-bg-primary) !important;
+}
+
+.theme-dark #container.main {
+  background: var(--color-bg-primary) !important;
+}
+
+/* ========================================
+   4. Footer Override (#footer)
+   ======================================== */
+.theme-dark #footer {
+  background: var(--color-bg-secondary) !important;
+  border-top: 1px solid var(--color-border) !important;
+}
+
+.theme-dark #footer .foot_menu {
+  background: var(--color-bg-tertiary) !important;
+}
+
+.theme-dark .foot_menu .foot_list li a {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark .foot_menu .foot_list li a:hover {
+  color: var(--color-accent) !important;
+}
+
+.theme-dark #footer .copy {
+  color: var(--color-text-muted) !important;
+}
+
+/* ========================================
+   5. Form Elements Override
+   ======================================== */
+.theme-dark input[type=text],
+.theme-dark input[type=password],
+.theme-dark input[type=number],
+.theme-dark input[type=email],
+.theme-dark input[type=search],
+.theme-dark select,
+.theme-dark textarea {
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.theme-dark input:focus,
+.theme-dark select:focus,
+.theme-dark textarea:focus {
+  border-color: var(--color-accent) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+}
+
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: var(--color-text-muted) !important;
+}
+
+/* ========================================
+   6. Button Override
+   ======================================== */
+.theme-dark button,
+.theme-dark .btn,
+.theme-dark input[type=button],
+.theme-dark input[type=submit] {
+  background: var(--color-accent) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--radius-full) !important;
+  padding: 8px 20px !important;
+  font-weight: 600 !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.theme-dark button:hover,
+.theme-dark .btn:hover,
+.theme-dark input[type=button]:hover,
+.theme-dark input[type=submit]:hover {
+  background: var(--color-accent-hover) !important;
+  box-shadow: var(--shadow-glow) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Secondary Button */
+.theme-dark .btn-secondary,
+.theme-dark .btn_gray {
+  background: transparent !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .btn-secondary:hover,
+.theme-dark .btn_gray:hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent) !important;
+  background: transparent !important;
+}
+
+/* ========================================
+   7. Table Override
+   ======================================== */
+.theme-dark table {
+  border-color: var(--color-border) !important;
+}
+
+.theme-dark th {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-dark td {
+  background: var(--color-bg-card) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-dark tr:hover td {
+  background: var(--color-bg-hover) !important;
+}
+
+/* ========================================
+   8. Card & Box Override
+   ======================================== */
+.theme-dark .box,
+.theme-dark .card,
+.theme-dark .panel,
+.theme-dark .content_box,
+.theme-dark .info_box {
+  background: var(--color-bg-card) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-2xl) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.theme-dark .box:hover,
+.theme-dark .card:hover {
+  border-color: var(--color-accent) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* ========================================
+   9. Tab Override
+   ======================================== */
+.theme-dark .tab_menu,
+.theme-dark .tabs {
+  background: var(--color-bg-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+.theme-dark .tab_menu li a,
+.theme-dark .tabs li a {
+  color: var(--color-text-secondary) !important;
+  background: transparent !important;
+}
+
+.theme-dark .tab_menu li.on a,
+.theme-dark .tab_menu li.active a,
+.theme-dark .tabs li.on a,
+.theme-dark .tabs li.active a {
+  color: white !important;
+  background: var(--color-accent) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+/* ========================================
+   10. Sidebar Override
+   ======================================== */
+.theme-dark .left_area,
+.theme-dark .sidebar,
+.theme-dark #lnb {
+  background: var(--color-bg-secondary) !important;
+  border-right: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .left_area a,
+.theme-dark .sidebar a,
+.theme-dark #lnb a {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark .left_area a:hover,
+.theme-dark .sidebar a:hover,
+.theme-dark #lnb a:hover,
+.theme-dark .left_area a.on,
+.theme-dark .sidebar a.on,
+.theme-dark #lnb a.on {
+  color: var(--color-accent) !important;
+  background: var(--color-accent-light) !important;
+}
+
+/* ========================================
+   11. Progress Bar Override
+   ======================================== */
+.theme-dark .progress,
+.theme-dark .progress_bar {
+  background: var(--color-bg-tertiary) !important;
+  border-radius: var(--radius-full) !important;
+}
+
+.theme-dark .progress .bar,
+.theme-dark .progress_bar .bar {
+  background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-gold) 100%) !important;
+}
+
+/* ========================================
+   12. Modal Override
+   ======================================== */
+.theme-dark .modal,
+.theme-dark .popup,
+.theme-dark .layer_popup {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-2xl) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.theme-dark .modal_header,
+.theme-dark .popup_header {
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .modal_footer,
+.theme-dark .popup_footer {
+  border-top: 1px solid var(--color-border) !important;
+}
+
+/* ========================================
+   13. Badge & Label Override
+   ======================================== */
+.theme-dark .badge,
+.theme-dark .label,
+.theme-dark .tag {
+  background: var(--color-accent-light) !important;
+  color: var(--color-accent) !important;
+  border-radius: var(--radius-full) !important;
+  padding: 4px 12px !important;
+}
+
+.theme-dark .badge.success,
+.theme-dark .label.success {
+  background: var(--color-success-bg) !important;
+  color: var(--color-success) !important;
+}
+
+.theme-dark .badge.warning,
+.theme-dark .label.warning {
+  background: var(--color-warning-bg) !important;
+  color: var(--color-warning) !important;
+}
+
+.theme-dark .badge.error,
+.theme-dark .label.error {
+  background: var(--color-error-bg) !important;
+  color: var(--color-error) !important;
+}
+
+/* ========================================
+   14. Text Color Override
+   ======================================== */
+.theme-dark h1, .theme-dark h2, .theme-dark h3,
+.theme-dark h4, .theme-dark h5, .theme-dark h6 {
+  color: var(--color-text-primary) !important;
+}
+
+.theme-dark p,
+.theme-dark span,
+.theme-dark div {
+  color: inherit;
+}
+
+.theme-dark .text-muted,
+.theme-dark .desc,
+.theme-dark .sub_text {
+  color: var(--color-text-muted) !important;
+}
+
+/* ========================================
+   15. Border Override
+   ======================================== */
+.theme-dark hr {
+  border-color: var(--color-border) !important;
+}
+
+.theme-dark .border,
+.theme-dark .bordered {
+  border-color: var(--color-border) !important;
+}
+
+/* ========================================
+   16. New Main Page Override (nm-*)
+   ======================================== */
+.theme-dark .new-main-fullscreen {
+  background: var(--color-bg-primary) !important;
+}
+
+.theme-dark .nm-header {
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.theme-dark .nm-header__logo-text {
+  color: var(--color-text-primary) !important;
+}
+
+.theme-dark .nm-header__nav-item {
+  color: var(--color-text-secondary) !important;
+}
+
+.theme-dark .nm-header__nav-item:hover,
+.theme-dark .nm-header__nav-item.active {
+  color: var(--color-accent) !important;
+}
+
+.theme-dark .nm-card {
+  background: var(--color-bg-card) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-2xl) !important;
+}
+
+.theme-dark .nm-card:hover {
+  border-color: var(--color-accent) !important;
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.theme-dark .nm-section {
+  background: var(--color-bg-primary) !important;
+}
+
+.theme-dark .nm-section__title {
+  color: var(--color-text-primary) !important;
+}
+
+.theme-dark .nm-footer {
+  background: var(--color-bg-secondary) !important;
+  border-top: 1px solid var(--color-border) !important;
+}
+
+/* ========================================
+   17. Scrollbar Override
+   ======================================== */
+.theme-dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.theme-dark ::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb {
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-full);
+}
+
+.theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
+
+/* ========================================
+   18. Selection Override
+   ======================================== */
+.theme-dark ::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+.theme-dark ::-moz-selection {
+  background: var(--color-accent);
+  color: white;
+}

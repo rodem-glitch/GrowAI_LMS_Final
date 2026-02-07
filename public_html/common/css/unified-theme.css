@@ -1,0 +1,456 @@
+/**
+ * GrowAI-LMS Unified Theme
+ * Legacy + Modern 통합 디자인 시스템
+ * Version: 1.0.0
+ * Created: 2026-02-07
+ */
+
+/* ========================================
+   1. Design Tokens (CSS Variables)
+   ======================================== */
+:root {
+  /* Primary Colors (Dark Theme) */
+  --color-bg-primary: #0a0a12;
+  --color-bg-secondary: #1a1a2e;
+  --color-bg-tertiary: #252542;
+  --color-bg-card: #2a2753;
+  --color-bg-hover: #363366;
+
+  /* Accent Colors */
+  --color-accent: #e7005e;
+  --color-accent-hover: #b7094a;
+  --color-accent-light: rgba(231, 0, 94, 0.1);
+  --color-gold: #d4af37;
+  --color-gold-light: #f4e5b8;
+
+  /* Text Colors */
+  --color-text-primary: #f8f9fc;
+  --color-text-secondary: #9194b3;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #0a0a12;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-warning: #f59e0b;
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-error: #ef4444;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-info: #3b82f6;
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* Border & Shadow */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: var(--color-accent);
+  --color-border-light: rgba(255, 255, 255, 0.12);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 20px rgba(231, 0, 94, 0.3);
+  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.3);
+
+  /* Typography */
+  --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.5rem;
+
+  /* Spacing */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 275ms ease;
+  --transition-slow: 300ms ease;
+  --transition-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========================================
+   2. Base Styles (Dark Theme Override)
+   ======================================== */
+.theme-dark,
+body.theme-dark {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+}
+
+.theme-dark .new-main-fullscreen {
+  background: var(--color-bg-primary);
+  min-height: 100vh;
+}
+
+/* ========================================
+   3. Header Component
+   ======================================== */
+.theme-dark .nm-header {
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(20px);
+}
+
+.theme-dark .nm-header__logo-text {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.theme-dark .nm-header__nav-item {
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.theme-dark .nm-header__nav-item:hover,
+.theme-dark .nm-header__nav-item.active {
+  color: var(--color-accent);
+}
+
+/* ========================================
+   4. Navigation
+   ======================================== */
+.theme-dark .nm-nav {
+  background: var(--color-bg-secondary);
+}
+
+.theme-dark .nm-nav__link {
+  color: var(--color-text-secondary);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+
+.theme-dark .nm-nav__link:hover {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.theme-dark .nm-nav__link.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* ========================================
+   5. Card Component
+   ======================================== */
+.theme-dark .card,
+.theme-dark .nm-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--spacing-6);
+  transition: all var(--transition-slow) var(--transition-spring);
+}
+
+.theme-dark .card:hover,
+.theme-dark .nm-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Glass Card */
+.theme-dark .card-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border-light);
+}
+
+/* ========================================
+   6. Button Components
+   ======================================== */
+.theme-dark .btn,
+.theme-dark button {
+  font-family: var(--font-family);
+  font-weight: 600;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+/* Primary Button (Accent) */
+.theme-dark .btn-primary,
+.theme-dark .btn-accent {
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: var(--spacing-3) var(--spacing-6);
+  border-radius: var(--radius-full);
+}
+
+.theme-dark .btn-primary:hover,
+.theme-dark .btn-accent:hover {
+  background: var(--color-accent-hover);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* Secondary Button */
+.theme-dark .btn-secondary {
+  background: transparent;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  padding: var(--spacing-3) var(--spacing-6);
+  border-radius: var(--radius-full);
+}
+
+.theme-dark .btn-secondary:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Ghost Button */
+.theme-dark .btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  padding: var(--spacing-2) var(--spacing-4);
+}
+
+.theme-dark .btn-ghost:hover {
+  color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+/* Gold Button */
+.theme-dark .btn-gold {
+  background: linear-gradient(135deg, var(--color-gold) 0%, #c9a227 100%);
+  color: var(--color-text-inverse);
+  border: none;
+  padding: var(--spacing-3) var(--spacing-6);
+  border-radius: var(--radius-full);
+}
+
+.theme-dark .btn-gold:hover {
+  box-shadow: var(--shadow-gold);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   7. Form Components
+   ======================================== */
+.theme-dark input[type="text"],
+.theme-dark input[type="email"],
+.theme-dark input[type="password"],
+.theme-dark input[type="search"],
+.theme-dark textarea,
+.theme-dark select,
+.theme-dark .form-control {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-3) var(--spacing-4);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
+  transition: border-color var(--transition-fast);
+}
+
+.theme-dark input:focus,
+.theme-dark textarea:focus,
+.theme-dark select:focus,
+.theme-dark .form-control:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-light);
+}
+
+.theme-dark input::placeholder,
+.theme-dark textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ========================================
+   8. Table Component
+   ======================================== */
+.theme-dark table,
+.theme-dark .table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.theme-dark th {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.theme-dark td {
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.theme-dark tr:hover td {
+  background: var(--color-bg-hover);
+}
+
+/* ========================================
+   9. Badge & Tag
+   ======================================== */
+.theme-dark .badge,
+.theme-dark .tag {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.theme-dark .badge-accent {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.theme-dark .badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.theme-dark .badge-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.theme-dark .badge-error {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* ========================================
+   10. Progress Bar
+   ======================================== */
+.theme-dark .progress {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  height: 8px;
+  overflow: hidden;
+}
+
+.theme-dark .progress-bar {
+  background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-gold) 100%);
+  height: 100%;
+  transition: width var(--transition-slow);
+}
+
+/* ========================================
+   11. Modal
+   ======================================== */
+.theme-dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.theme-dark .modal-content {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.theme-dark .modal-header {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-6);
+}
+
+.theme-dark .modal-body {
+  padding: var(--spacing-6);
+}
+
+.theme-dark .modal-footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-4) var(--spacing-6);
+}
+
+/* ========================================
+   12. Sidebar
+   ======================================== */
+.theme-dark .sidebar {
+  background: var(--color-bg-secondary);
+  border-right: 1px solid var(--color-border);
+}
+
+.theme-dark .sidebar-item {
+  padding: var(--spacing-3) var(--spacing-4);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-lg);
+  margin: var(--spacing-1) var(--spacing-2);
+  transition: all var(--transition-normal);
+}
+
+.theme-dark .sidebar-item:hover {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.theme-dark .sidebar-item.active {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* ========================================
+   13. Utility Classes
+   ======================================== */
+.theme-dark .text-accent { color: var(--color-accent); }
+.theme-dark .text-gold { color: var(--color-gold); }
+.theme-dark .text-muted { color: var(--color-text-muted); }
+.theme-dark .text-secondary { color: var(--color-text-secondary); }
+
+.theme-dark .bg-primary { background: var(--color-bg-primary); }
+.theme-dark .bg-secondary { background: var(--color-bg-secondary); }
+.theme-dark .bg-card { background: var(--color-bg-card); }
+
+.theme-dark .border-accent { border-color: var(--color-accent); }
+.theme-dark .border-gold { border-color: var(--color-gold); }
+
+.theme-dark .glow-accent { box-shadow: var(--shadow-glow); }
+.theme-dark .glow-gold { box-shadow: var(--shadow-gold); }
+
+/* ========================================
+   14. Animation Keyframes
+   ======================================== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(231, 0, 94, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(231, 0, 94, 0.5); }
+}
+
+.theme-dark .animate-fadeIn { animation: fadeIn 0.3s ease; }
+.theme-dark .animate-slideUp { animation: slideUp 0.4s var(--transition-spring); }
+.theme-dark .animate-pulse { animation: pulse 2s infinite; }
+.theme-dark .animate-glow { animation: glow 2s infinite; }

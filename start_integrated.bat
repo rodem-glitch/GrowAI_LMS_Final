@@ -5,7 +5,7 @@ color 0A
 
 echo ╔══════════════════════════════════════════════════════════════╗
 echo ║         GrowAI-LMS 통합 서비스 시작                           ║
-echo ║         Backend Integration v1.0                             ║
+echo ║         One-Stop Service v1.0                                ║
 echo ╚══════════════════════════════════════════════════════════════╝
 echo.
 
@@ -47,7 +47,7 @@ echo      [OK] 시작됨 (Port 8080)
 
 :: ========== 4. Backend API ==========
 echo [4/4] Spring Boot Backend API...
-cd /d D:\Real_Backend_Integration\polytech-lms-api
+cd /d D:\Real_one_stop_service\polytech-lms-api
 start "polytech-lms-api" java -Dspring.datasource.url="jdbc:mysql://localhost:3306/lms?useSSL=false&allowPublicKeyRetrieval=true" -Dspring.datasource.username=lms -Dspring.datasource.password=%DB_PASSWORD% -Dspring.ai.google.genai.embedding.api-key=%GOOGLE_API_KEY% -Dgemini.api-key=%GEMINI_API_KEY% -jar build\libs\polytech-lms-api-0.0.1-SNAPSHOT.jar
 timeout /t 3 /nobreak >nul
 echo      [OK] 시작됨 (Port 8081)

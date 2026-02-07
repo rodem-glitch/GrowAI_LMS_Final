@@ -3,6 +3,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@800&display=swap');
 
+/* ===== GrowAI Unified Dark Theme (Phase 1) ===== */
+@import url('/common/css/unified-theme.css');
+@import url('/common/css/dark-override.css');
+
+/* ===== GrowAI Phase 2: Core Components ===== */
+@import url('/common/css/phase2-components.css');
+
+/* ===== GrowAI Phase 3: Page Styles ===== */
+@import url('/common/css/phase3-pages.css');
+
 body{font-family:"Pretendard";font-size:15px;letter-spacing:-0.03em !important;}
 a:link, a:visited, a:active {text-decoration: none;}
 input {outline:none !important;}

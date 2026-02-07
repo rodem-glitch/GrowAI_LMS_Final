@@ -1966,3 +1966,16 @@ if(!Object.keys) Object.keys = function(obj) {
 	for(p in obj) if (Object.prototype.hasOwnProperty.call(obj, p)) keys.push(p);
 	return keys;
 }
+
+// ===== GrowAI Unified Dark Theme (Phase 1) =====
+// 다크 테마 스크립트 동적 로드
+(function() {
+	var darkThemeScript = document.createElement('script');
+	darkThemeScript.src = '/common/js/dark-theme.js';
+	darkThemeScript.async = true;
+	document.head.appendChild(darkThemeScript);
+
+	// 즉시 다크 테마 클래스 적용 (FOUC 방지)
+	document.documentElement.classList.add('theme-dark');
+	if(document.body) document.body.classList.add('theme-dark');
+})();
