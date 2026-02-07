@@ -180,6 +180,28 @@ D:\Real_Backend_Integration\
 
 ---
 
+---
+
+## Phase 5: 서비스 검증 (17:48)
+
+| 서비스 | URL | HTTP | 상태 |
+|--------|-----|------|------|
+| Legacy JSP (학생) | http://localhost:8080/mypage/new_main/index.jsp | 200 | ✅ 정상 |
+| 교수자 LMS (React) | http://localhost:8080/tutor_lms/app/ | 200 | ✅ 정상 |
+| Qdrant API | http://localhost:6333/collections | 200 | ✅ 정상 |
+| MySQL | localhost:3306 | - | ✅ 연결됨 |
+
+### 검증 완료 항목
+
+- [x] Legacy JSP 페이지 렌더링
+- [x] React SPA 로드
+- [x] JNDI DB 연결 (jdbc/malgn)
+- [x] Qdrant Vector DB 응답
+- [x] 정적 파일 서빙 (CSS/JS)
+
+---
+
 **Integration 완료**: 2026-02-07 17:42
-**총 소요 시간**: 약 4분
-**상태**: Production Ready (Backend API Key 제외)
+**검증 완료**: 2026-02-07 17:48
+**총 소요 시간**: 약 10분
+**상태**: ✅ Production Ready (Backend API Key 제외)
