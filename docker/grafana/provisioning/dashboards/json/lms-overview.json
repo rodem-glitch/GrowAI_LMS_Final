@@ -1,0 +1,22 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "lms-overview",
+    "title": "LMS 시스템 개요",
+    "tags": ["lms", "overview"],
+    "timezone": "Asia/Seoul",
+    "schemaVersion": 38,
+    "refresh": "30s",
+    "panels": [
+      {"id": 1, "title": "API 요청/분", "type": "stat", "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4}},
+      {"id": 2, "title": "평균 응답시간", "type": "stat", "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4}},
+      {"id": 3, "title": "에러율", "type": "stat", "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4}},
+      {"id": 4, "title": "JVM 힙 사용률", "type": "stat", "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4}},
+      {"id": 5, "title": "요청 추이", "type": "timeseries", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8}},
+      {"id": 6, "title": "응답 시간", "type": "timeseries", "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8}},
+      {"id": 7, "title": "DB 커넥션", "type": "timeseries", "gridPos": {"x": 0, "y": 12, "w": 12, "h": 6}},
+      {"id": 8, "title": "메모리", "type": "timeseries", "gridPos": {"x": 12, "y": 12, "w": 12, "h": 6}}
+    ]
+  },
+  "overwrite": true
+}

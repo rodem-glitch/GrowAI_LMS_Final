@@ -9,8 +9,19 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Aes256 {
     public static String alg = "AES/CBC/PKCS5Padding";
-    private final String key = "01234567890123456789012345678901";
-    private final String iv = key.substring(0, 16); // 16byte
+    private final String key;
+    private final String iv;
+
+    public Aes256(String key, String iv) {
+        if (key == null || key.length() != 32) {
+            throw new IllegalArgumentException("AES Key must be 32 bytes (256 bits).");
+        }
+        if (iv == null || iv.length() != 16) {
+            throw new IllegalArgumentException("AES IV must be 16 bytes (128 bits).");
+        }
+        this.key = key;
+        this.iv = iv;
+    }
 
     public String encrypt(String text) throws Exception {
         Cipher cipher = Cipher.getInstance(alg);

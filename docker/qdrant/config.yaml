@@ -1,0 +1,52 @@
+# docker/qdrant/config.yaml
+# Qdrant 벡터 데이터베이스 설정
+
+log_level: INFO
+
+storage:
+  # 스토리지 경로
+  storage_path: /qdrant/storage
+  
+  # 스냅샷 경로
+  snapshots_path: /qdrant/snapshots
+  
+  # 성능 설정
+  on_disk_payload: true
+  
+  # 메모리 매핑
+  mmap_threshold: 20000
+  
+  # 인덱싱 설정
+  optimizers:
+    # 세그먼트 병합 임계값
+    default_segment_number: 5
+    max_segment_size: 200000
+    
+    # 인덱싱 임계값
+    indexing_threshold: 20000
+    
+    # 최적화 실행 간격
+    flush_interval_sec: 5
+    
+    # 병렬 처리
+    max_optimization_threads: 2
+
+service:
+  # HTTP 포트
+  http_port: 6333
+  
+  # gRPC 포트
+  grpc_port: 6334
+  
+  # 최대 요청 크기 (10MB)
+  max_request_size_mb: 10
+  
+  # CORS 설정
+  enable_cors: true
+
+# 클러스터 설정 (단일 노드)
+cluster:
+  enabled: false
+
+# 텔레메트리 비활성화
+telemetry_disabled: true

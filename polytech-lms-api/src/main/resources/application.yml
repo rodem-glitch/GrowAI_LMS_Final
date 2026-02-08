@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 8081
   error:
     # 왜: 에러 응답에 stacktrace가 포함되면 민감정보(키/시크릿/경로)가 노출될 수 있어 차단합니다.
@@ -12,6 +12,18 @@ spring:
     import: optional:classpath:application-local.yml
   application:
     name: polytech-lms-api
+  thymeleaf:
+    # 왜: 레거시 JSP를 Thymeleaf로 마이그레이션하기 위한 설정
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    mode: HTML
+  web:
+    resources:
+      # 왜: 정적 리소스(CSS, JS, 이미지) 경로 설정
+      static-locations: classpath:/static/
+  cache:
+    type: caffeine
   datasource:
     # 왜: DB 비밀번호는 코드에 두지 않고(프라이빗 Git이어도) 환경변수로 주입하는 게 안전합니다.
     # - 로컬 개발은 .env(IDE Run Configuration) 또는 OS 환경변수로 설정해 주세요.
@@ -114,6 +126,21 @@ contentsummary:
 # - 외부 호출이므로 토큰을 강력 권장합니다(없으면 로컬에서만 허용).
 #   KOLLUS_WEBHOOK_TOKEN=...
 
+# =========================
+# 학사포털 회원 동기화 (poly_sync.jsp 대체)
+# =========================
+# 왜: 외부 학사시스템(e-poly.kopo.ac.kr)에서 회원 데이터를 HTTP로 받아 로컬 DB에 미러링합니다.
+# - VPN 내부망 접근이 필요하므로, VPN 연결 상태에서만 동작합니다.
+# - 운영 환경에서 enabled=true로 변경해 주세요.
+poly-sync:
+  enabled: ${POLY_SYNC_ENABLED:false}
+  endpoint: ${POLY_SYNC_ENDPOINT:https://e-poly.kopo.ac.kr/main/vpn_test.jsp}
+  http-timeout: ${POLY_SYNC_HTTP_TIMEOUT:PT60S}
+  batch-size: ${POLY_SYNC_BATCH_SIZE:2000}
+  max-retries: ${POLY_SYNC_MAX_RETRIES:3}
+  retry-delay-ms: ${POLY_SYNC_RETRY_DELAY_MS:3000}
+  cron: ${POLY_SYNC_CRON:0 0 1 * * *}
+
 kosis:
   # 왜: KOSIS(통계청) API 키/시크릿은 Git에 올리지 않고 환경변수로 주입합니다.
   # - Windows(PowerShell) 예) `$env:KOSIS_CONSUMER_KEY="..." ; $env:KOSIS_CONSUMER_SECRET="..."`
@@ -202,3 +229,39 @@ vector:
     # 왜: 학생 검색/추천에서 후보를 너무 적게 가져오면(상한이 낮으면) 정확한 콘텐츠가 topK 밖으로 밀려 "엉뚱한 결과"가 나올 수 있습니다.
     # - 운영에서 실측하면서 200~500 사이로 조정하는 것을 권장합니다.
     max-top-k: ${VECTOR_SEARCH_MAX_TOP_K:300}
+
+app: # Added new section for application-specific properties
+  encryption:
+    aes:
+      key: ${AES_KEY:01234567890123456789012345678901} # 32-byte key
+      iv: ${AES_IV:0123456789012345} # 16-byte IV
+
+# =========================
+# GCP 서비스 통합 설정
+# =========================
+gcp:
+  # 왜: GCP 프로젝트 ID와 리전은 모든 API 호출에 필요합니다.
+  project-id: ${GCP_PROJECT_ID:polytech-lms}
+  location: ${GCP_LOCATION:asia-northeast3}
+  # 왜: 서비스 계정 JSON 파일 경로 (없으면 ADC 사용)
+  credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS:}
+
+  # Vertex AI (aiplatform.googleapis.com)
+  vertex-ai:
+    embedding-model: ${GCP_VERTEX_EMBEDDING_MODEL:text-multilingual-embedding-002}
+    text-model: ${GCP_VERTEX_TEXT_MODEL:gemini-1.5-flash}
+
+  # BigQuery (bigquery.googleapis.com) - SFR-006 통계분석
+  bigquery:
+    dataset: ${GCP_BIGQUERY_DATASET:lms_analytics}
+
+  # Text-to-Speech (texttospeech.googleapis.com)
+  tts:
+    language-code: ${GCP_TTS_LANGUAGE:ko-KR}
+    voice-name: ${GCP_TTS_VOICE:ko-KR-Wavenet-A}
+    output-dir: ${GCP_TTS_OUTPUT_DIR:./tts-output}
+
+  # Speech-to-Text (speech.googleapis.com)
+  stt:
+    language-code: ${GCP_STT_LANGUAGE:ko-KR}
+    sample-rate: ${GCP_STT_SAMPLE_RATE:16000}

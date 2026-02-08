@@ -1,0 +1,243 @@
+# docker-compose.yml
+# GrowAI LMS 오픈소스 플랫폼 통합 구성
+# 사용법: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # ============================================
+  # 핵심 서비스
+  # ============================================
+
+  # Spring Boot LMS API
+  lms-api:
+    build:
+      context: ./polytech-lms-api
+      dockerfile: Dockerfile
+    container_name: lms-api
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/lms?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=lms
+      - SPRING_DATASOURCE_PASSWORD=lms_password
+      - REDIS_HOST=redis
+      - OPENSEARCH_URL=http://opensearch:9200
+      - PREDICTIONIO_URL=http://predictionio:7070
+      - BBB_URL=http://bbb:8100/bigbluebutton
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: lms-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=lms
+      - MYSQL_USER=lms
+      - MYSQL_PASSWORD=lms_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    networks:
+      - lms-network
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  # Redis 캐시
+  redis:
+    image: redis:7-alpine
+    container_name: lms-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lms-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Nginx 리버스 프록시
+  nginx:
+    image: nginx:alpine
+    container_name: lms-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./public_html:/var/www/html
+    depends_on:
+      - lms-api
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # ============================================
+  # 오픈소스 플랫폼 서비스
+  # ============================================
+
+  # OpenSearch (채용 매칭)
+  opensearch:
+    image: opensearchproject/opensearch:2.11.0
+    container_name: lms-opensearch
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # OpenSearch Dashboards
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.11.0
+    container_name: lms-opensearch-dashboards
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      - opensearch
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # Apache Superset (학습 분석 대시보드)
+  superset:
+    image: apache/superset:latest
+    container_name: lms-superset
+    ports:
+      - "8088:8088"
+    environment:
+      - SUPERSET_SECRET_KEY=your_secret_key_here
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    volumes:
+      - superset_data:/app/superset_home
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # BigBlueButton (화상 강의) - 경량 버전
+  # 프로덕션에서는 별도 서버 권장
+  greenlight:
+    image: bigbluebutton/greenlight:v3
+    container_name: lms-greenlight
+    ports:
+      - "8100:80"
+    environment:
+      - BIGBLUEBUTTON_ENDPOINT=https://your-bbb-server.com/bigbluebutton/
+      - BIGBLUEBUTTON_SECRET=your_bbb_secret
+      - SECRET_KEY_BASE=your_secret_key_base
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # ============================================
+  # 모니터링 서비스
+  # ============================================
+
+  # Prometheus (메트릭 수집)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: lms-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # Grafana (대시보드)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: lms-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # Loki (로그 수집)
+  loki:
+    image: grafana/loki:latest
+    container_name: lms-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+  # Promtail (로그 전송)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: lms-promtail
+    volumes:
+      - ./docker/promtail/promtail.yml:/etc/promtail/promtail.yml
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/promtail.yml
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+# ============================================
+# 네트워크
+# ============================================
+networks:
+  lms-network:
+    driver: bridge
+
+# ============================================
+# 볼륨
+# ============================================
+volumes:
+  mysql_data:
+  redis_data:
+  opensearch_data:
+  superset_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

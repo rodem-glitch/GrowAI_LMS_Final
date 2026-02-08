@@ -1,0 +1,64 @@
+# Qdrant Vector Database Configuration
+# GrowAI-LMS Service Integration
+# Created: 2026-02-07
+
+# Connection Settings
+qdrant:
+  host: localhost
+  port: 6333
+  grpc_port: 6334
+
+# Collections Configuration
+collections:
+  lms_contents:
+    description: "학습 콘텐츠 벡터 (동영상, 문서, 퀴즈)"
+    vector_size: 768
+    distance: Cosine
+    on_disk_payload: true
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+
+  lms_courses:
+    description: "교육과정 벡터 (과정명, 설명, 목표)"
+    vector_size: 768
+    distance: Cosine
+    on_disk_payload: true
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+
+  lms_users:
+    description: "사용자 프로필 벡터 (학습이력, 관심분야)"
+    vector_size: 768
+    distance: Cosine
+    on_disk_payload: true
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+
+  lms_recommendations:
+    description: "AI 추천 벡터 (협업필터링, 콘텐츠기반)"
+    vector_size: 768
+    distance: Cosine
+    on_disk_payload: true
+    hnsw_config:
+      m: 16
+      ef_construct: 100
+
+# Embedding Model (Google GenAI)
+embedding:
+  model: text-embedding-004
+  dimensions: 768
+
+# Performance Settings
+performance:
+  indexing_threshold: 20000
+  max_segment_size: null
+  flush_interval_sec: 5
+
+# API Endpoints
+api:
+  dashboard: http://localhost:6333/dashboard
+  rest: http://localhost:6333
+  grpc: localhost:6334

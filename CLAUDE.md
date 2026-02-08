@@ -1,81 +1,176 @@
-# CLAUDE.md (MalgnLMS 에이전트 강제 규칙)
+# CLAUDE.md - GrowAILMS 프로젝트 설정
 
-왜 이 문서가 필요한가?
-- 이 저장소는 **실제 서비스 제품**이라서, “대충 수정”이 큰 장애로 이어질 수 있습니다.
-- 그래서 에이전트가 매번 같은 기준(최소 변경, 검증, 보고)으로 작업하도록 **강제로** 절차를 고정합니다.
+> 이 파일은 Claude Code가 프로젝트를 이해하는 데 사용됩니다.
 
----
+## 프로젝트 개요
 
-## 1) 필독 순서(강제)
-에이전트는 작업을 시작하기 전에 아래 문서를 **반드시** 순서대로 따릅니다.
-1. `AGENTS.md` (저장소 최상위 규칙)
-2. `CLAUDE.md` (현재 문서)
-3. `claude/README.md` (강제 규칙 세트의 사용법)
-4. 작업 대상 폴더의 하위 `AGENTS.md` (있으면 그 규칙이 최우선)
+**GrowAILMS**는 한국폴리텍대학 학습관리시스템(LMS) 고도화 프로젝트입니다.
+MalgnLMS 레거시 시스템을 현대적인 기술 스택으로 마이그레이션합니다.
 
-> 중요: `CLAUDE.md` 및 `claude/` 폴더는 에이전트가 임의로 삭제/정리하면 안 됩니다.
+## 기술 스택
 
----
+### Target Stack (GrowAILMS)
+- **Backend**: Java 17 + Spring Boot 3.2 + eGovFrame 4.2
+- **ORM**: MyBatis 3.5
+- **인증**: JWT + Keycloak
+- **캐시**: Redis
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **컨테이너**: Docker Compose
+- **웹서버**: Nginx
 
-## 2) 기본 작업 흐름(강제)
-작업 종류(버그/기능/화면)와 관계없이, 아래 순서를 기본으로 지킵니다.
+### Source Stack (MalgnLMS)
+- **Backend**: Java 8 + Malgnsoft DataObject Framework
+- **ORM**: Custom DAO Pattern
+- **Frontend**: JSP + jQuery
+- **위치**: D:\WorkSpace\MalgnLMS-main_new\MalgnLMS-main
 
-1) 문제를 한 문장으로 정리
-- “어느 화면에서”, “어떤 값이”, “왜/언제” 이상한지 짧게 정리합니다.
+## 디렉토리 구조
 
-2) 원인을 코드/DB로 확인
-- 추측으로 고치지 말고, `rg`로 관련 파일을 찾고 실제 흐름(입력 → 조회 → 출력)을 따라갑니다.
-- DB가 관련되면 “어느 테이블/컬럼이 진짜 기준값인지”를 먼저 확정합니다.
+```
+src/main/java/kr/ac/kopo/growai/lms/
+├── config/          # Spring 설정
+├── controller/      # REST API 컨트롤러
+├── service/         # 비즈니스 로직 (@Service)
+├── mapper/          # MyBatis Mapper 인터페이스
+├── domain/          # Entity/DTO
+└── common/
+    ├── constants/   # Enum 상수
+    ├── security/    # JWT 필터
+    └── exception/   # 예외 처리
 
-3) 해결은 ‘최소 변경’으로 설계
-- 큰 구조 변경/대규모 리팩터링은 사용자 요청 없이는 하지 않습니다.
-- 레거시 구조(JSP+DAO+템플릿) 관례를 깨지 않습니다.
+src/main/resources/
+├── mapper/          # MyBatis XML
+├── application.yml
+└── application-dev.yml
 
-4) 구현
-- 새로 추가/수정한 로직에는 **한글 주석으로 “왜”**를 설명합니다.
+src/main/frontend/   # React 프론트엔드
+├── src/
+│   ├── pages/
+│   ├── components/
+│   ├── services/
+│   └── stores/
+└── package.json
+```
 
-5) 검증(필수)
-- 변경한 화면/기능을 최소 1회는 실제 동작으로 확인합니다.
-- 가능한 경우 DB도 함께 확인합니다(조회/저장 결과가 맞는지).
+## 변환 규칙
 
-6) 결과 보고(필수)
-- “무엇을/왜/어디를” 바꿨는지, “어떻게 확인했는지”를 짧게 보고합니다.
+### 1. DAO → Service 변환
 
----
+**Source (MalgnLMS)**:
+```java
+public class CourseDao extends DataObject {
+    public CourseDao() {
+        this.table = "LM_COURSE";
+        this.pkey = "id";
+    }
+    
+    public DataSet find(int id) {
+        return query("SELECT * FROM " + table + " WHERE id = ?", id);
+    }
+}
+```
 
-## 2-1) 규칙 문서(강제)
-에이전트는 작업 중 아래 문서를 “체크리스트”처럼 사용합니다.
-- 기본 체크리스트: `claude/rules/00-core.md`
-- 보안 체크: `claude/rules/security.md`
-- 커밋/브랜치/메시지: `claude/rules/git-workflow.md`
-- 테스트/검증: `claude/rules/testing.md`
-- 코드 스타일: `claude/rules/coding-style.md`
-- 공통 패턴: `claude/rules/patterns.md`
+**Target (GrowAILMS)**:
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class CourseService {
+    
+    private final CourseMapper courseMapper;
+    
+    @Cacheable(value = "course", key = "#id")
+    public Optional<Course> findById(Long id, Long siteId) {
+        return Optional.ofNullable(courseMapper.selectById(id, siteId));
+    }
+}
+```
 
----
+### 2. 코드 배열 → Enum 변환
 
-## 3) MalgnLMS 레거시 체크리스트(자주 터지는 포인트)
-- `status` 관례: `1=정상`, `0=중지`, `-1=삭제` (테이블마다 다를 수 있으니 항상 확인)
-- 멀티사이트: 대부분 `site_id`가 있으니 조회/수정 시 누락하지 않습니다.
-- 화면 렌더링: JSP에서 `p.setVar()/p.setLoop()` → 템플릿(`.html`)에서 출력됩니다.
-- “학사(정규)”는 커리큘럼 JSON 등 외부/연계 데이터가 끼어 있을 수 있어, **DB의 기준값과 동기화**가 필요할 수 있습니다.
+**Source**:
+```java
+String[] statusList = {"1=>정상", "0=>중지"};
+```
 
----
+**Target**:
+```java
+@Getter
+@RequiredArgsConstructor
+public enum Status implements CodeEnum {
+    ACTIVE("1", "정상"),
+    INACTIVE("0", "중지");
+    
+    private final String code;
+    private final String label;
+}
+```
 
-## 4) 빌드/산출물 규칙(강제)
-- `project/`(React) 코드를 변경했으면 작업 끝에 **반드시** 아래를 실행합니다.
-  - `cd project && npm run build`
-- 빌드 산출물(`public_html/tutor_lms/app`)이 갱신되는지 `git status`로 확인합니다.
+### 3. JSP → React 변환
 
----
+**Source (JSP)**:
+```jsp
+<table>
+    <c:forEach var="item" items="${list}">
+        <tr><td>${item.courseNm}</td></tr>
+    </c:forEach>
+</table>
+```
 
-## 5) 안전/보안(강제)
-- 비밀번호/토큰/키를 코드/문서/로그에 남기지 않습니다.
-- SQL은 가능하면 파라미터 바인딩을 사용하고, 불가피할 때는 입력값을 안전하게 처리합니다.
+**Target (React + TypeScript)**:
+```tsx
+const CourseList: React.FC = () => {
+    const { data: courses } = useCourses();
+    
+    return (
+        <table className="min-w-full">
+            {courses?.map(item => (
+                <tr key={item.id}>
+                    <td>{item.courseNm}</td>
+                </tr>
+            ))}
+        </table>
+    );
+};
+```
 
----
+## 시큐어코딩 규칙
 
-## 6) 문서 삭제 금지(강제)
-- `AGENTS.md`, `CLAUDE.md`, `claude/` 아래 문서는 “에이전트 작업 품질을 강제”하는 장치입니다.
-- 에이전트는 이 문서들을 임의로 삭제/이동/대규모 변경하지 않습니다.
-- 변경이 필요하면 반드시 사용자에게 먼저 이유를 설명하고 승인받습니다.
+1. **SQL Injection 방지**: MyBatis `#{}` 바인딩만 사용 (`${}` 금지)
+2. **XSS 방지**: 입력값 검증, HTML 이스케이프
+3. **로깅**: 민감정보(비밀번호, 주민번호) 로그 출력 금지
+4. **인증**: 모든 API에 JWT 토큰 검증
+
+## 명령어
+
+```bash
+# 컴파일
+mvn compile
+
+# 테스트
+mvn test
+
+# 실행
+mvn spring-boot:run
+
+# Docker 빌드
+docker-compose up -d
+
+# 프론트엔드 개발
+cd src/main/frontend && npm run dev
+```
+
+## 변환 우선순위
+
+1. **Priority 1 (Core)**: CourseDao, CourseUserDao, LessonDao, UserDao
+2. **Priority 2 (Auth)**: UserLoginDao, AuthDao, TokenDao
+3. **Priority 3 (Business)**: OrderDao, PaymentDao, BoardDao
+4. **Priority 4 (Others)**: 나머지 DAO
+
+## 주의사항
+
+- 모든 코드는 **한국어 주석** 포함
+- 파일 상단에 **경로 주석** 필수
+- 행안부 **시큐어코딩 가이드** 준수
+- **멀티테넌시**: 모든 쿼리에 `site_id` 조건 포함

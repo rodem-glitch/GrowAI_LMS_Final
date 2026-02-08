@@ -1,0 +1,70 @@
+{
+  "description": "LMS_PROFESSOR_VIEW - 교수정보 뷰테이블 (11개 컬럼)",
+  "data": [
+    {
+      "MEMBER_KEY": "P2026001",
+      "PROF_ID": "prof001",
+      "KOR_NAME": "김교수",
+      "COURSE_CODE": "CSE101-2026-1",
+      "PROF_ORDER": 1,
+      "ROLE": "담당교수",
+      "DEPT_CODE": "CSE",
+      "DEPT_NAME": "컴퓨터소프트웨어과",
+      "CAMPUS_CODE": "SEOUL",
+      "PHONE": "010-9876-5432",
+      "EMAIL": "prof001@kopo.ac.kr"
+    },
+    {
+      "MEMBER_KEY": "P2026002",
+      "PROF_ID": "prof002",
+      "KOR_NAME": "이교수",
+      "COURSE_CODE": "CSE201-2026-1",
+      "PROF_ORDER": 1,
+      "ROLE": "담당교수",
+      "DEPT_CODE": "CSE",
+      "DEPT_NAME": "컴퓨터소프트웨어과",
+      "CAMPUS_CODE": "SEOUL",
+      "PHONE": "010-8765-4321",
+      "EMAIL": "prof002@kopo.ac.kr"
+    },
+    {
+      "MEMBER_KEY": "P2026003",
+      "PROF_ID": "prof003",
+      "KOR_NAME": "박교수",
+      "COURSE_CODE": "ME101-2026-1",
+      "PROF_ORDER": 1,
+      "ROLE": "담당교수",
+      "DEPT_CODE": "ME",
+      "DEPT_NAME": "기계설계과",
+      "CAMPUS_CODE": "INCHEON",
+      "PHONE": "010-7654-3210",
+      "EMAIL": "prof003@kopo.ac.kr"
+    },
+    {
+      "MEMBER_KEY": "P2026004",
+      "PROF_ID": "prof004",
+      "KOR_NAME": "최교수",
+      "COURSE_CODE": "AI301-2026-1",
+      "PROF_ORDER": 1,
+      "ROLE": "담당교수",
+      "DEPT_CODE": "AI",
+      "DEPT_NAME": "인공지능소프트웨어과",
+      "CAMPUS_CODE": "SEOUL",
+      "PHONE": "010-6543-2109",
+      "EMAIL": "prof004@kopo.ac.kr"
+    },
+    {
+      "MEMBER_KEY": "P2026001",
+      "PROF_ID": "prof001",
+      "KOR_NAME": "김교수",
+      "COURSE_CODE": "CSE201-2026-1",
+      "PROF_ORDER": 2,
+      "ROLE": "부담당교수",
+      "DEPT_CODE": "CSE",
+      "DEPT_NAME": "컴퓨터소프트웨어과",
+      "CAMPUS_CODE": "SEOUL",
+      "PHONE": "010-9876-5432",
+      "EMAIL": "prof001@kopo.ac.kr"
+    }
+  ]
+}

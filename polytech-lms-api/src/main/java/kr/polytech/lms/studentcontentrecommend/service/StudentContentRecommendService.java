@@ -67,10 +67,14 @@ public class StudentContentRecommendService {
             filterExpression
         );
 
+        Map<String, Integer> kollusKeyToLmsLessonIdMap = buildKollusKeyToLmsLessonIdMapping(results);
+        Map<String, LessonStudyStatus> statusByLessonId = fetchLessonStudyStatus(safe.userId(), safe.siteId(), kollusKeyToLmsLessonIdMap);
+
         return postProcessResults(
             results,
             safe.userId(),
             safe.siteId(),
+            statusByLessonId,
             desiredTopK,
             safe.excludeEnrolledOrDefault(),
             safe.excludeWatchedOrDefault(),
@@ -104,8 +108,11 @@ public class StudentContentRecommendService {
             rerankByTitleMatch(query, vectorResults)
         );
 
+        Map<String, Integer> kollusKeyToLmsLessonIdMap = buildKollusKeyToLmsLessonIdMapping(results);
+        Map<String, LessonStudyStatus> statusByLessonId = fetchLessonStudyStatus(safe.userId(), safe.siteId(), kollusKeyToLmsLessonIdMap);
+
         // 왜: 검색은 기본적으로 전체에서 찾되, 가능하면 "내가 본/수강한/완료한" 표시를 같이 내려줍니다.
-        return postProcessResults(results, safe.userId(), safe.siteId(), desiredTopK, false, false, false);
+        return postProcessResults(results, safe.userId(), safe.siteId(), statusByLessonId, desiredTopK, false, false, false);
     }
 
     private int computeSearchFetchTopK(int desiredTopK) {
@@ -293,14 +300,16 @@ public class StudentContentRecommendService {
         }
         meta.put("category_nm", content.getCategoryNm());
         meta.put("title", content.getTitle());
-        meta.put("keywords", content.getKeywords());
+        if (content.getKeywords() != null) { // Check for null before adding
+            meta.put("keywords", content.getKeywords());
+        }
         return meta;
     }
 
     private record TitleMatchScore(int tier, int tokenMatches) {}
 
     private TitleMatchScore computeTitleMatchScore(String normalizedQuery, List<String> tokens, String title) {
-        if (normalizedQuery == null || normalizedQuery.isBlank() || title == null || title.isBlank()) {
+        if (normalizedQuery == null || normalizedQuery.isBlank() || title == null || title == null) {
             return new TitleMatchScore(0, 0);
         }
 
@@ -389,12 +398,12 @@ public class StudentContentRecommendService {
         List<VectorSearchResult> results,
         Long userId,
         Integer siteId,
+        Map<String, LessonStudyStatus> statusByLessonId, // This is the parameter
         int desiredTopK,
         boolean excludeEnrolled,
         boolean excludeWatched,
         boolean excludeCompleted
     ) {
-        Map<String, LessonStudyStatus> statusByLessonId = fetchLessonStudyStatus(userId, siteId);
         Map<Long, RecoContent> contentById = fetchRecoContentsById(results);
         Set<String> seenLessonIds = new HashSet<>();
         List<StudentVideoRecommendResponse> out = new ArrayList<>();
@@ -497,6 +506,21 @@ public class StudentContentRecommendService {
         return map;
     }
 
+    private Map<String, Integer> buildKollusKeyToLmsLessonIdMapping(List<VectorSearchResult> results) {
+        Set<String> kollusMediaKeys = new HashSet<>();
+        for (VectorSearchResult result : results) {
+            if (result == null || result.metadata() == null) continue;
+            String lessonId = toStringValue(result.metadata().get("lesson_id"));
+            if (lessonId != null) {
+                kollusMediaKeys.add(lessonId);
+            }
+        }
+        // TODO: 실제 Kollus media key to LMS lesson ID 매핑 로직 구현
+        // 현재는 LM_LESSON의 START_URL/SHORT_URL 파싱 등을 통해 Kollus MEDIA_CONTENT_KEY를 추출해야 합니다.
+        // 이 부분은 복잡하므로 별도 메서드에서 처리하고, 여기서는 빈 맵을 반환합니다.
+        return fetchKollusMediaKeyToLmsLessonIdMapping(kollusMediaKeys);
+    }
+
     private Long toLong(Object value) {
         if (value == null) return null;
         if (value instanceof Number n) return n.longValue();
@@ -523,11 +547,76 @@ public class StudentContentRecommendService {
         return Math.max(desiredTopK, Math.min(buffered, 300));
     }
 
-    private Map<String, LessonStudyStatus> fetchLessonStudyStatus(Long userId, Integer siteId) {
+    private Map<String, Integer> fetchKollusMediaKeyToLmsLessonIdMapping(Set<String> kollusMediaContentKeys) {
+        if (kollusMediaContentKeys == null || kollusMediaContentKeys.isEmpty()) {
+            return Map.of();
+        }
+
+        // 왜: TB_RECO_CONTENT.lesson_id (Kollus media content key)를
+        // LM_LESSON.ID (LMS 내부 lesson ID)로 매핑하는 로직이 필요합니다.
+        // 현재는 이 매핑 로직이 명확하지 않으므로 빈 Map을 반환합니다.
+        // 추후 LM_KOLLUS_FILE 테이블 또는 LM_LESSON의 START_URL/SHORT_URL 파싱 등을 통해
+        // Kollus media content key와 LM_LESSON.ID를 연결하는 구현이 필요합니다.
+        // 예시: LM_LESSON 테이블에서 START_URL/SHORT_URL을 파싱하여 Kollus MEDIA_CONTENT_KEY를 추출
+        //       -> 추출된 키와 LM_LESSON.ID를 매핑하는 Map을 구성
+        return Map.of();
+    }
+
+    private Map<String, LessonStudyStatus> fetchLessonStudyStatus(
+        Long userId,
+        Integer siteId,
+        Map<String, Integer> kollusKeyToLmsLessonIdMap
+    ) {
         // 왜: 콜러스 영상은 외부 콘텐츠라서 기존 LMS DB(LM_COURSE_PROGRESS)에 학습 기록이 없습니다.
         // 추후 콜러스 시청 기록을 별도 테이블로 관리하게 되면, 여기서 조회하면 됩니다.
         // 현재는 빈 Map을 반환하여 수강/시청/완료 상태 표시 없이 추천만 합니다.
-        return Map.of();
+        if (userId == null || siteId == null || kollusKeyToLmsLessonIdMap == null || kollusKeyToLmsLessonIdMap.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<Integer> lmsLessonIds = new HashSet<>(kollusKeyToLmsLessonIdMap.values());
+        if (lmsLessonIds.isEmpty()) {
+            return Map.of();
+        }
+
+        // 왜: LM_KOLLUS_LOG는 LMS_LESSON.ID를 기준으로 학습 기록을 남깁니다.
+        // LM_KOLLUS_LOG의 PLAYTIME을 기준으로 시청 여부/완료 여부를 판단합니다.
+        // 실제 구현 시에는 Kollus의 상세한 시청 기록 API 또는 별도 테이블과 연동해야 합니다.
+        String sql = """
+            SELECT
+                LESSON_ID,
+                MAX(PLAYTIME) AS total_playtime,
+                MAX(REG_DATE) AS last_reg_date
+            FROM LM_KOLLUS_LOG
+            WHERE USER_ID = ? AND SITE_ID = ? AND LESSON_ID IN (%s)
+            GROUP BY LESSON_ID
+            """.formatted(lmsLessonIds.stream().map(Object::toString).collect(java.util.stream.Collectors.joining(",")));
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, userId, siteId);
+
+        Map<Integer, LessonStudyStatus> statusByLmsLessonId = new HashMap<>();
+        for (Map<String, Object> row : rows) {
+            Integer lessonId = (Integer) row.get("LESSON_ID");
+            Integer totalPlaytime = (Integer) row.get("total_playtime");
+            String lastRegDate = (String) row.get("last_reg_date");
+
+            // TODO: Kollus 영상의 총 길이를 알 수 없어, 임시로 PLAYTIME > 0이면 시청 중, 일정 시간 이상이면 완료로 판단합니다.
+            // 실제 구현 시에는 Kollus API를 통해 영상의 총 길이를 가져와야 합니다.
+            boolean watched = totalPlaytime != null && totalPlaytime > 0;
+            boolean completed = totalPlaytime != null && totalPlaytime > 60; // 예시: 60초 이상 시청 시 완료
+
+            statusByLmsLessonId.put(lessonId, new LessonStudyStatus(false, watched, completed, lastRegDate));
+        }
+
+        Map<String, LessonStudyStatus> result = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : kollusKeyToLmsLessonIdMap.entrySet()) {
+            String kollusKey = entry.getKey();
+            Integer lmsLessonId = entry.getValue();
+            if (statusByLmsLessonId.containsKey(lmsLessonId)) {
+                result.put(kollusKey, statusByLmsLessonId.get(lmsLessonId));
+            }
+        }
+        return result;
     }
 
     private record LessonStudyStatus(

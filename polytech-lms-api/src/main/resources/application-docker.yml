@@ -1,0 +1,135 @@
+# application-docker.yml
+# Docker 환경용 설정
+
+server:
+  port: 8081
+  servlet:
+    context-path: /
+  tomcat:
+    max-threads: 200
+    min-spare-threads: 20
+    max-connections: 10000
+    accept-count: 100
+
+spring:
+  application:
+    name: polytech-lms-api
+
+  # 데이터소스
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/lms?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul}
+    username: ${SPRING_DATASOURCE_USERNAME:lms}
+    password: ${SPRING_DATASOURCE_PASSWORD:lms_password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: LmsHikariPool
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+      timeout: 3000
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # 캐시
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000
+
+# Actuator 엔드포인트
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# 로깅
+logging:
+  level:
+    root: INFO
+    kr.polytech.lms: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /var/log/lms/application.log
+    max-size: 100MB
+    max-history: 30
+
+# 오픈소스 플랫폼 설정
+opensearch:
+  url: ${OPENSEARCH_URL:http://opensearch:9200}
+  username: admin
+  password: admin
+  enabled: true
+
+predictionio:
+  event-server-url: ${PREDICTIONIO_URL:http://predictionio:7070}
+  engine-url: http://predictionio:8000
+  access-key: ${PREDICTIONIO_ACCESS_KEY:}
+  enabled: true
+
+bigbluebutton:
+  url: ${BBB_URL:http://bbb:8100/bigbluebutton}
+  secret: ${BBB_SECRET:}
+  enabled: true
+
+openedx:
+  base-url: ${OPENEDX_URL:http://openedx:8000}
+  client-id: ${OPENEDX_CLIENT_ID:}
+  client-secret: ${OPENEDX_CLIENT_SECRET:}
+  enabled: false
+
+superset:
+  url: http://superset:8088
+  admin-username: admin
+  admin-password: admin
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-for-jwt-signing}
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+# 보안 설정
+security:
+  rate-limit:
+    enabled: true
+    requests-per-minute: 100
+  cors:
+    allowed-origins: "*"
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS

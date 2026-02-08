@@ -1,0 +1,213 @@
+# docker-compose.ai.yml
+# GrowAI LMS 온프레미스 AI 서비스 구성
+# 사용법: docker-compose -f docker-compose.yml -f docker-compose.ai.yml up -d
+
+version: '3.8'
+
+services:
+  # ============================================
+  # AI 추론 서비스 (vLLM + Gemma 2)
+  # ============================================
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: lms-vllm
+    ports:
+      - "8000:8000"
+    volumes:
+      - vllm_cache:/root/.cache/huggingface
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    command: >
+      --model google/gemma-2-9b-it
+      --dtype auto
+      --api-key token-abc123
+      --max-model-len 8192
+      --gpu-memory-utilization 0.90
+      --tensor-parallel-size 1
+      --host 0.0.0.0
+      --port 8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # ============================================
+  # 임베딩 서비스 (BGE-M3)
+  # ============================================
+
+  embedding:
+    image: ghcr.io/huggingface/text-embeddings-inference:1.2
+    container_name: lms-embedding
+    ports:
+      - "8001:80"
+    volumes:
+      - embedding_cache:/data
+    environment:
+      - MODEL_ID=BAAI/bge-m3
+      - REVISION=main
+      - MAX_CLIENT_BATCH_SIZE=32
+      - MAX_BATCH_TOKENS=16384
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # KoSimCSE 대안 (한국어 특화)
+  embedding-ko:
+    image: ghcr.io/huggingface/text-embeddings-inference:1.2
+    container_name: lms-embedding-ko
+    ports:
+      - "8002:80"
+    volumes:
+      - embedding_ko_cache:/data
+    environment:
+      - MODEL_ID=BM-K/KoSimCSE-roberta-multitask
+      - REVISION=main
+      - MAX_CLIENT_BATCH_SIZE=32
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - lms-network
+    restart: unless-stopped
+    profiles:
+      - korean
+
+  # ============================================
+  # 벡터 데이터베이스 (Qdrant)
+  # ============================================
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: lms-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+      - ./docker/qdrant/config.yaml:/qdrant/config/production.yaml
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+    networks:
+      - lms-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Milvus 대안 (대규모 클러스터용)
+  milvus-standalone:
+    image: milvusdb/milvus:v2.3.4
+    container_name: lms-milvus
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      - lms-network
+    restart: unless-stopped
+    profiles:
+      - milvus
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: lms-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+    volumes:
+      - etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    networks:
+      - lms-network
+    profiles:
+      - milvus
+
+  minio:
+    image: minio/minio:latest
+    container_name: lms-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+    command: server /data --console-address ":9001"
+    networks:
+      - lms-network
+    profiles:
+      - milvus
+
+  # ============================================
+  # GPU 모니터링
+  # ============================================
+
+  nvidia-dcgm-exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:3.1.7-3.1.4-ubuntu20.04
+    container_name: lms-dcgm-exporter
+    ports:
+      - "9400:9400"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - lms-network
+    restart: unless-stopped
+
+networks:
+  lms-network:
+    external: true
+
+volumes:
+  vllm_cache:
+  embedding_cache:
+  embedding_ko_cache:
+  qdrant_data:
+  milvus_data:
+  etcd_data:
+  minio_data:
