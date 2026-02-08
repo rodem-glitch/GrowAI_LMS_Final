@@ -166,10 +166,12 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/malgnlms/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          env_vars: |
+            SPRING_PROFILES_ACTIVE=prod
           flags: |
             --allow-unauthenticated
-            --cpu=1
-            --memory=1Gi
+            --cpu=2
+            --memory=2Gi
             --min-instances=0
             --max-instances=10
             --concurrency=80
