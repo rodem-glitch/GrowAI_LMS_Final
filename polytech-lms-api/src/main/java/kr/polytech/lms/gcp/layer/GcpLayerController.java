@@ -251,8 +251,8 @@ public class GcpLayerController {
     /**
      * 전체 GCP 서비스 Health Check
      */
-    @GetMapping("/health")
-    public ResponseEntity<?> healthCheck() {
+    @GetMapping("/layer-health")
+    public ResponseEntity<?> layerHealthCheck() {
         return ResponseEntity.ok(Map.of(
             "status", "UP",
             "layers", Map.of(
