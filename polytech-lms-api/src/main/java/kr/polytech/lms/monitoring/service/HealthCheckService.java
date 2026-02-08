@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component("externalServices")
+@ConditionalOnProperty(name = "monitoring.health.external.enabled", havingValue = "true", matchIfMissing = false)
 @RequiredArgsConstructor
 public class HealthCheckService implements HealthIndicator {
 

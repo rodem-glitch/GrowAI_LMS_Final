@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component("aiServices")
+@ConditionalOnProperty(name = "ai.health.enabled", havingValue = "true", matchIfMissing = false)
 @RequiredArgsConstructor
 public class AiHealthIndicator implements HealthIndicator {
 
