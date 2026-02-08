@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN chmod -R +x node_modules/.bin && npx tsc && npx vite build
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine

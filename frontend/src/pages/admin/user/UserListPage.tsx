@@ -7,8 +7,16 @@ const types = ['전체', '학생', '교수자', '관리자'];
 const users = [
   { id: 1, userId: 'admin', name: '시스템관리자', type: 'ADMIN', campus: '본부', status: 'ACTIVE' },
   { id: 2, userId: 'prof001', name: '김교수', type: 'INSTRUCTOR', campus: '서울강서', status: 'ACTIVE' },
-  { id: 4, userId: 'student001', name: '박학생', type: 'STUDENT', campus: '서울강서', status: 'ACTIVE' },
-  { id: 5, userId: 'student002', name: '최학생', type: 'STUDENT', campus: '인천', status: 'ACTIVE' },
+  { id: 3, userId: 'student001', name: '박학생', type: 'STUDENT', campus: '서울강서', status: 'ACTIVE' },
+  { id: 4, userId: 'student002', name: '최학생', type: 'STUDENT', campus: '인천', status: 'ACTIVE' },
+  { id: 5, userId: 'admin003', name: '강관리', type: 'ADMIN', campus: '본부', status: 'ACTIVE' },
+  { id: 6, userId: 'prof005', name: '노교수', type: 'INSTRUCTOR', campus: '성남', status: 'ACTIVE' },
+  { id: 7, userId: 'std005', name: '문학생', type: 'STUDENT', campus: '대전', status: 'INACTIVE' },
+  { id: 8, userId: 'std006', name: '배학생', type: 'STUDENT', campus: '부산', status: 'ACTIVE' },
+  { id: 9, userId: 'prof006', name: '안교수', type: 'INSTRUCTOR', campus: '광주', status: 'SUSPENDED' },
+  { id: 10, userId: 'std007', name: '유학생', type: 'STUDENT', campus: '인천', status: 'ACTIVE' },
+  { id: 11, userId: 'std008', name: '장학생', type: 'STUDENT', campus: '서울강서', status: 'INACTIVE' },
+  { id: 12, userId: 'std009', name: '진학생', type: 'STUDENT', campus: '성남', status: 'ACTIVE' },
 ];
 
 const typeMap: Record<string, string> = { ADMIN: '관리자', INSTRUCTOR: '교수자', STUDENT: '학생' };

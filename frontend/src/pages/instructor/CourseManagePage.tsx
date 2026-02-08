@@ -6,6 +6,12 @@ const courses = [
   { id: 1, title: 'Python 프로그래밍 기초', code: 'CS101', students: 35, avgProgress: 65, completion: 12, pending: 5 },
   { id: 2, title: '데이터베이스 설계', code: 'CS201', students: 28, avgProgress: 45, completion: 5, pending: 3 },
   { id: 3, title: '웹 개발 실무', code: 'WEB101', students: 38, avgProgress: 55, completion: 8, pending: 8 },
+  { id: 4, title: 'Java 프로그래밍 심화', code: 'CS401', students: 42, avgProgress: 72, completion: 18, pending: 3 },
+  { id: 5, title: '네트워크 보안', code: 'CS402', students: 31, avgProgress: 38, completion: 4, pending: 7 },
+  { id: 6, title: '모바일 앱 개발', code: 'CS403', students: 45, avgProgress: 60, completion: 15, pending: 6 },
+  { id: 7, title: '클라우드 컴퓨팅', code: 'CS404', students: 27, avgProgress: 85, completion: 22, pending: 1 },
+  { id: 8, title: '소프트웨어 공학', code: 'CS405', students: 33, avgProgress: 50, completion: 8, pending: 5 },
+  { id: 9, title: '임베디드 시스템', code: 'CS406', students: 25, avgProgress: 30, completion: 0, pending: 2 },
 ];
 
 export default function CourseManagePage() {

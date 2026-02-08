@@ -8,6 +8,14 @@ const students = [
   { id: 2, name: '최학생', studentNo: '2024002', progress: 72, attendance: 88, grade: 'B+', status: '정상' },
   { id: 3, name: '정학생', studentNo: '2024003', progress: 45, attendance: 70, grade: 'C', status: '주의' },
   { id: 4, name: '이학생', studentNo: '2024004', progress: 30, attendance: 55, grade: 'D', status: '위험' },
+  { id: 5, name: '강민수', studentNo: '2023005', progress: 92, attendance: 98, grade: 'A+', status: '우수' },
+  { id: 6, name: '노준혁', studentNo: '2023006', progress: 67, attendance: 82, grade: 'B+', status: '수강중' },
+  { id: 7, name: '문서연', studentNo: '2023007', progress: 100, attendance: 100, grade: 'A+', status: '우수' },
+  { id: 8, name: '배지훈', studentNo: '2023008', progress: 55, attendance: 75, grade: 'B', status: '수강중' },
+  { id: 9, name: '안소희', studentNo: '2023009', progress: 78, attendance: 60, grade: 'B+', status: '지각경고' },
+  { id: 10, name: '유태영', studentNo: '2023010', progress: 88, attendance: 93, grade: 'A', status: '수강중' },
+  { id: 11, name: '장하늘', studentNo: '2023011', progress: 40, attendance: 65, grade: 'C+', status: '지각경고' },
+  { id: 12, name: '진수민', studentNo: '2023012', progress: 20, attendance: 72, grade: 'B', status: '수강중' },
 ];
 
 export default function StudentManagePage() {

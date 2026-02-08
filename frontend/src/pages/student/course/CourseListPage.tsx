@@ -11,6 +11,18 @@ const courses = [
   { id: 4, title: '웹 개발 실무', category: '웹개발', instructor: '김교수', campus: '서울강서', enrolled: 38, maxStudents: 40, credit: 3 },
   { id: 5, title: '정보보안 개론', category: '보안', instructor: '박교수', campus: '대전', enrolled: 20, maxStudents: 35, credit: 3 },
   { id: 6, title: '딥러닝 실습', category: 'AI/ML', instructor: '이교수', campus: '인천', enrolled: 18, maxStudents: 25, credit: 3 },
+  { id: 7, title: 'Java 프로그래밍 심화', category: '프로그래밍', instructor: '최교수', campus: '성남', enrolled: 32, maxStudents: 40, credit: 3 },
+  { id: 8, title: 'Spring Framework 실습', category: '웹개발', instructor: '최교수', campus: '성남', enrolled: 27, maxStudents: 35, credit: 3 },
+  { id: 9, title: '네트워크 보안', category: '보안', instructor: '정교수', campus: '대전', enrolled: 24, maxStudents: 40, credit: 3 },
+  { id: 10, title: '모바일 앱 개발(Android)', category: '프로그래밍', instructor: '강교수', campus: '부산', enrolled: 36, maxStudents: 45, credit: 3 },
+  { id: 11, title: 'IoT 프로그래밍', category: '프로그래밍', instructor: '한교수', campus: '광주', enrolled: 19, maxStudents: 30, credit: 2 },
+  { id: 12, title: '빅데이터 분석', category: 'AI/ML', instructor: '조교수', campus: '서울강서', enrolled: 42, maxStudents: 50, credit: 3 },
+  { id: 13, title: '클라우드 컴퓨팅(AWS)', category: '웹개발', instructor: '박교수', campus: '인천', enrolled: 30, maxStudents: 40, credit: 3 },
+  { id: 14, title: '소프트웨어 공학', category: '프로그래밍', instructor: '김교수', campus: '서울강서', enrolled: 45, maxStudents: 55, credit: 3 },
+  { id: 15, title: '임베디드 시스템', category: '프로그래밍', instructor: '한교수', campus: '광주', enrolled: 17, maxStudents: 30, credit: 2 },
+  { id: 16, title: '리눅스 시스템 관리', category: '보안', instructor: '정교수', campus: '대전', enrolled: 25, maxStudents: 35, credit: 2 },
+  { id: 17, title: 'UI/UX 디자인 실습', category: '웹개발', instructor: '강교수', campus: '부산', enrolled: 33, maxStudents: 40, credit: 2 },
+  { id: 18, title: '블록체인 기초', category: '보안', instructor: '조교수', campus: '성남', enrolled: 21, maxStudents: 35, credit: 2 },
 ];
 
 export default function CourseListPage() {
