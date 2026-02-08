@@ -1,0 +1,724 @@
+/* ==========================================================================
+ * globals.css — GrowAILMS Design System
+ * 디자인 가이드 JSON 기반 전역 스타일 시트
+ * MidCheck.tsx 패턴 추출 → 재사용 가능 컴포넌트 클래스
+ * ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+ * 1. Root Variables — Design Tokens as CSS Custom Properties
+ * ========================================================================== */
+
+:root {
+  /* --- Primary (Blue → Indigo) --- */
+  --color-primary-50:  #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary: var(--color-primary-600);
+
+  /* --- Secondary (Purple → Violet) --- */
+  --color-secondary-50:  #faf5ff;
+  --color-secondary-100: #f3e8ff;
+  --color-secondary-200: #e9d5ff;
+  --color-secondary-300: #d8b4fe;
+  --color-secondary-400: #c084fc;
+  --color-secondary-500: #a855f7;
+  --color-secondary-600: #9333ea;
+  --color-secondary-700: #7e22ce;
+  --color-secondary-800: #6b21a8;
+  --color-secondary-900: #581c87;
+  --color-secondary: var(--color-secondary-600);
+
+  /* --- Success (Emerald) --- */
+  --color-success-50:  #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success: var(--color-success-500);
+
+  /* --- Warning (Amber) --- */
+  --color-warning-50:  #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning: var(--color-warning-500);
+
+  /* --- Danger (Red) --- */
+  --color-danger-50:  #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger: var(--color-danger-500);
+
+  /* --- Info (Cyan) --- */
+  --color-info-50:  #ecfeff;
+  --color-info-100: #cffafe;
+  --color-info-400: #22d3ee;
+  --color-info-500: #06b6d4;
+  --color-info: var(--color-info-500);
+
+  /* --- Surface --- */
+  --surface-default: #ffffff;
+  --surface-muted:   #f9fafb;
+  --surface-subtle:  #f3f4f6;
+  --surface-border:  #e5e7eb;
+
+  /* --- Surface Dark --- */
+  --surface-dark:      #0f172a;
+  --surface-dark-card: #1e293b;
+  --surface-dark-muted:#334155;
+
+  /* --- Content (Text) --- */
+  --content-default:   #111827;
+  --content-secondary: #4b5563;
+  --content-muted:     #9ca3af;
+  --content-subtle:    #6b7280;
+  --content-inverse:   #ffffff;
+
+  /* --- KOPO Brand --- */
+  --kopo-blue:  #004990;
+  --kopo-light: #0066cc;
+  --kopo-dark:  #003366;
+
+  /* --- Shadows --- */
+  --shadow-card:       0 2px 8px rgba(16, 24, 40, 0.06);
+  --shadow-card-hover: 0 8px 24px rgba(16, 24, 40, 0.1);
+  --shadow-primary:    0 10px 15px -3px rgba(59, 130, 246, 0.25);
+  --shadow-secondary:  0 10px 15px -3px rgba(168, 85, 247, 0.3);
+  --shadow-success:    0 10px 15px -3px rgba(16, 185, 129, 0.25);
+  --shadow-ring:       0 0 0 2px rgba(59, 130, 246, 0.2);
+
+  /* --- Border Radius --- */
+  --radius-sm:  0.375rem;
+  --radius-md:  0.5rem;
+  --radius-lg:  0.75rem;
+  --radius-xl:  1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Spacing --- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+
+  /* --- Transitions --- */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
+
+  /* --- Typography --- */
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto,
+    'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+}
+
+/* --- Dark Mode Variables --- */
+.dark,
+[data-theme="dark"] {
+  --surface-default:   #0f172a;
+  --surface-muted:     #1e293b;
+  --surface-subtle:    #334155;
+  --surface-border:    #475569;
+
+  --content-default:   #f1f5f9;
+  --content-secondary: #cbd5e1;
+  --content-muted:     #64748b;
+  --content-subtle:    #94a3b8;
+  --content-inverse:   #0f172a;
+
+  --shadow-card:       0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+
+/* ==========================================================================
+ * 2. Base Reset — @layer base
+ * ========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -moz-tab-size: 4;
+    tab-size: 4;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--content-default);
+    background-color: var(--surface-default);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 기본 요소 초기화 */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img, svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  button {
+    cursor: pointer;
+    font: inherit;
+  }
+
+  input, textarea, select {
+    font: inherit;
+  }
+
+  /* 스크롤바 (Webkit) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--surface-subtle);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--content-muted);
+    border-radius: var(--radius-full);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--content-subtle);
+  }
+
+  /* Focus visible (접근성) */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+
+/* ==========================================================================
+ * 3. Component Classes — @layer components
+ *    MidCheck.tsx 반복 패턴을 재사용 가능 클래스로 추출
+ * ========================================================================== */
+
+@layer components {
+
+  /* ---------------------------------------------------------------
+   * 3.1  Page Container
+   * --------------------------------------------------------------- */
+  .page-container {
+    @apply max-w-7xl mx-auto px-6 py-8;
+  }
+
+  .page-header {
+    @apply max-w-7xl mx-auto px-6 py-4;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.2  Cards
+   * --------------------------------------------------------------- */
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 p-6 shadow-card;
+  }
+
+  .card-hover {
+    @apply bg-white rounded-xl border border-gray-200 p-6 shadow-card
+           hover:shadow-card-hover transition-shadow;
+  }
+
+  .card-compact {
+    @apply bg-white rounded-xl border border-gray-200 p-4 shadow-sm
+           hover:shadow-md transition-shadow;
+  }
+
+  .card-dark {
+    @apply bg-slate-900 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden;
+  }
+
+  .card-muted {
+    @apply bg-gray-50 rounded-lg p-3;
+  }
+
+  .card-inset {
+    @apply bg-gray-100 rounded-lg border border-gray-200 p-3;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.3  Buttons
+   * --------------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           font-medium rounded-lg transition-all
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  .btn-primary {
+    @apply btn btn-md
+           bg-gradient-to-r from-blue-600 to-indigo-600 text-white
+           hover:from-blue-700 hover:to-indigo-700
+           shadow-lg shadow-blue-500/25;
+  }
+
+  .btn-secondary {
+    @apply btn btn-md
+           bg-gray-100 text-gray-700
+           hover:bg-gray-200;
+  }
+
+  .btn-ghost {
+    @apply btn btn-md
+           text-gray-500 hover:text-gray-700
+           hover:bg-gray-100;
+  }
+
+  .btn-danger {
+    @apply btn btn-md
+           bg-red-100 text-red-700
+           hover:bg-red-200;
+  }
+
+  .btn-success {
+    @apply btn btn-md
+           bg-green-100 text-green-700
+           hover:bg-green-200;
+  }
+
+  .btn-play {
+    @apply btn
+           bg-gradient-to-br from-purple-500 to-indigo-600 text-white
+           hover:from-purple-600 hover:to-indigo-700
+           shadow-xl shadow-purple-500/30;
+  }
+
+  .btn-dark {
+    @apply btn btn-md
+           bg-slate-800 text-white
+           hover:bg-slate-700;
+  }
+
+  .btn-icon {
+    @apply w-9 h-9 rounded-full flex items-center justify-center
+           transition-all;
+  }
+
+  .btn-icon-sm {
+    @apply w-8 h-8 rounded-full flex items-center justify-center
+           transition-colors;
+  }
+
+  .btn-disabled {
+    @apply w-full px-4 py-2 bg-gray-200 text-gray-400 rounded-lg
+           cursor-not-allowed flex items-center justify-center gap-2;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.4  Badges / Tags
+   * --------------------------------------------------------------- */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1
+           rounded-full text-xs font-medium;
+  }
+
+  .badge-sm {
+    @apply inline-flex items-center gap-1 px-2 py-0.5
+           rounded-full text-[10px] font-medium;
+  }
+
+  .badge-micro {
+    @apply px-1.5 py-0.5 rounded text-[10px] font-medium;
+  }
+
+  /* Badge semantic colors */
+  .badge-success  { @apply bg-green-100 text-green-700; }
+  .badge-info     { @apply bg-blue-100 text-blue-700; }
+  .badge-warning  { @apply bg-yellow-100 text-yellow-700; }
+  .badge-danger   { @apply bg-red-100 text-red-700; }
+  .badge-purple   { @apply bg-purple-100 text-purple-700; }
+  .badge-gray     { @apply bg-gray-100 text-gray-600; }
+  .badge-orange   { @apply bg-orange-100 text-orange-700; }
+
+  /* ---------------------------------------------------------------
+   * 3.5  Status Indicators
+   * --------------------------------------------------------------- */
+  .status-dot {
+    @apply w-3 h-3 rounded-full shrink-0;
+  }
+
+  .status-completed  { @apply bg-emerald-500; }
+  .status-inprogress { @apply bg-blue-500; }
+  .status-pending    { @apply bg-amber-500; }
+  .status-blocked    { @apply bg-red-500; }
+
+  .status-ring-completed  { @apply bg-emerald-500/10 border border-emerald-500/30; }
+  .status-ring-inprogress { @apply bg-blue-500/10 border border-blue-500/30; }
+
+  /* ---------------------------------------------------------------
+   * 3.6  Alerts / Notices
+   * --------------------------------------------------------------- */
+  .alert {
+    @apply p-3 rounded-lg border flex items-start gap-2;
+  }
+
+  .alert-info    { @apply bg-blue-50 border-blue-100 text-blue-700; }
+  .alert-success { @apply bg-emerald-50 border-emerald-200 text-emerald-700; }
+  .alert-warning { @apply bg-amber-50 border-amber-200 text-amber-700; }
+  .alert-danger  { @apply bg-red-50 border-red-200 text-red-700; }
+  .alert-purple  { @apply bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-100 text-purple-700; }
+  .alert-orange  { @apply bg-gradient-to-r from-orange-50 to-amber-50 border-orange-100 text-orange-700; }
+
+  /* ---------------------------------------------------------------
+   * 3.7  Form Inputs
+   * --------------------------------------------------------------- */
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg
+           focus:ring-2 focus:ring-primary/20 focus:border-primary
+           outline-none transition-all;
+  }
+
+  .input-with-icon {
+    @apply w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg
+           focus:ring-2 focus:ring-primary/20 focus:border-primary
+           outline-none transition-all;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.8  Tables
+   * --------------------------------------------------------------- */
+  .table-container {
+    @apply w-full border border-gray-200 rounded-lg overflow-hidden;
+  }
+
+  .table-head {
+    @apply bg-gray-50;
+  }
+
+  .table-th {
+    @apply px-3 py-2 text-left text-xs font-semibold text-gray-500;
+  }
+
+  .table-th-center {
+    @apply px-3 py-2 text-center text-xs font-semibold text-gray-500;
+  }
+
+  .table-row {
+    @apply border-t border-gray-100 text-[11px] text-gray-600;
+  }
+
+  .table-td {
+    @apply px-3 py-2 text-left;
+  }
+
+  .table-td-center {
+    @apply px-3 py-2 text-center;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.9  Video Player Shell (Dark Surface)
+   * --------------------------------------------------------------- */
+  .player-shell {
+    @apply bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700;
+  }
+
+  .player-toolbar {
+    @apply flex items-center justify-between px-4 py-2 bg-slate-800
+           border-b border-slate-700;
+  }
+
+  .player-traffic-dot {
+    @apply w-3 h-3 rounded-full;
+  }
+
+  .player-controls {
+    @apply px-4 py-3 bg-slate-800 border-t border-slate-700;
+  }
+
+  .player-progress-track {
+    @apply relative h-1.5 bg-slate-700 rounded-full;
+  }
+
+  .player-progress-fill {
+    @apply absolute h-full bg-gradient-to-r from-purple-500 to-indigo-500
+           rounded-full transition-all;
+  }
+
+  .player-badge {
+    @apply px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.10  Stat Card (Dashboard)
+   * --------------------------------------------------------------- */
+  .stat-card {
+    @apply bg-white rounded-xl border border-gray-200 p-4
+           shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .stat-value {
+    @apply text-xl font-bold text-gray-900;
+  }
+
+  .stat-label {
+    @apply text-xs text-gray-500;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.11  Progress Bar
+   * --------------------------------------------------------------- */
+  .progress-track {
+    @apply h-2 bg-gray-100 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-purple-500 to-indigo-500
+           rounded-full transition-all duration-500;
+  }
+
+  .progress-fill-success {
+    @apply h-full bg-gradient-to-r from-emerald-500 to-emerald-400
+           rounded-full transition-all duration-500;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.12  Tinted Surfaces (Gradient backgrounds)
+   * --------------------------------------------------------------- */
+  .surface-tint-purple {
+    @apply bg-gradient-to-r from-purple-50 to-indigo-50
+           border border-purple-100 rounded-lg;
+  }
+
+  .surface-tint-orange {
+    @apply bg-gradient-to-r from-orange-50 to-amber-50
+           border border-orange-100 rounded-lg;
+  }
+
+  .surface-tint-cyan {
+    @apply bg-gradient-to-r from-cyan-500/10 to-purple-500/10
+           border border-cyan-500/30 rounded-lg;
+  }
+
+  .surface-tint-indigo {
+    @apply bg-indigo-50 border border-indigo-100 rounded-lg;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.13  Divider / Section Separator
+   * --------------------------------------------------------------- */
+  .section-divider {
+    @apply mt-10 pt-6 border-t border-gray-200;
+  }
+
+  /* ---------------------------------------------------------------
+   * 3.14  Navigation / Filter Bar
+   * --------------------------------------------------------------- */
+  .filter-bar {
+    @apply flex items-center gap-3 flex-wrap;
+  }
+
+  .filter-chip {
+    @apply flex items-center gap-1 px-2.5 py-1
+           rounded-full text-xs font-medium cursor-pointer
+           transition-all;
+  }
+
+  .filter-chip-active {
+    @apply bg-blue-100 text-blue-700;
+  }
+
+  .filter-chip-inactive {
+    @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
+  }
+}
+
+
+/* ==========================================================================
+ * 4. Utilities — @layer utilities
+ * ========================================================================== */
+
+@layer utilities {
+  /* 텍스트 줄임 (single line) */
+  .text-truncate {
+    @apply overflow-hidden text-ellipsis whitespace-nowrap;
+  }
+
+  /* 텍스트 줄임 (multi line) */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Hide scrollbar but keep scroll */
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Backdrop blur overlay */
+  .overlay-blur {
+    @apply absolute inset-0 bg-slate-900/90 backdrop-blur-sm
+           flex flex-col items-center justify-center;
+  }
+
+  /* AI Banner gradient */
+  .bg-ai-banner {
+    @apply bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600;
+  }
+
+  /* Animated loading shimmer */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--surface-subtle) 25%,
+      var(--surface-muted) 50%,
+      var(--surface-subtle) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+
+/* ==========================================================================
+ * 5. Keyframe Animations (CSS-only, tailwind.config.js 보완)
+ * ========================================================================== */
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+
+/* ==========================================================================
+ * 6. Dark Mode Overrides
+ * ========================================================================== */
+
+.dark .card,
+.dark .card-hover,
+.dark .card-compact {
+  @apply bg-gray-800 border-gray-700 text-gray-100;
+}
+
+.dark .card-muted {
+  @apply bg-gray-800/50;
+}
+
+.dark .table-container {
+  @apply border-gray-700;
+}
+
+.dark .table-head {
+  @apply bg-gray-800;
+}
+
+.dark .table-row {
+  @apply border-gray-700 text-gray-300;
+}
+
+.dark .stat-card {
+  @apply bg-gray-800 border-gray-700;
+}
+
+.dark .stat-value {
+  @apply text-gray-100;
+}
+
+.dark .input,
+.dark .input-with-icon {
+  @apply bg-gray-800 border-gray-600 text-gray-100
+         placeholder-gray-500;
+}
+
+.dark .btn-secondary {
+  @apply bg-gray-700 text-gray-200 hover:bg-gray-600;
+}
+
+.dark .progress-track {
+  @apply bg-gray-700;
+}
+
+.dark .alert-info    { @apply bg-blue-900/30 border-blue-800 text-blue-300; }
+.dark .alert-success { @apply bg-emerald-900/30 border-emerald-800 text-emerald-300; }
+.dark .alert-warning { @apply bg-amber-900/30 border-amber-800 text-amber-300; }
+.dark .alert-danger  { @apply bg-red-900/30 border-red-800 text-red-300; }
+
+
+/* ==========================================================================
+ * 7. Print Styles
+ * ========================================================================== */
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .card, .card-hover, .card-compact {
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  .btn, .btn-primary, .btn-secondary,
+  .filter-bar, .player-shell {
+    display: none !important;
+  }
+}

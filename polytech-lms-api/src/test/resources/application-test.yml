@@ -1,0 +1,53 @@
+# application-test.yml
+# 테스트 환경 설정
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# vLLM 설정 (테스트용)
+vllm:
+  url: ${VLLM_URL:http://localhost:8000}
+  model: google/gemma-2-9b-it
+  enabled: ${VLLM_ENABLED:false}
+  max-tokens: 512
+  temperature: 0.7
+
+# 임베딩 설정 (테스트용)
+embedding:
+  url: ${EMBEDDING_URL:http://localhost:8001}
+  model: BAAI/bge-m3
+  enabled: ${EMBEDDING_ENABLED:false}
+  batch-size: 8
+  dimension: 1024
+
+# Qdrant 설정 (테스트용)
+qdrant:
+  url: ${QDRANT_URL:http://localhost:6333}
+  enabled: ${QDRANT_ENABLED:false}
+  collection: test_collection
+
+# 로깅
+logging:
+  level:
+    root: WARN
+    kr.polytech.lms: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN

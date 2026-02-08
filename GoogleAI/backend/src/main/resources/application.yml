@@ -1,0 +1,141 @@
+# ============================================
+# epoly AI Backend - Application Configuration
+# 한국폴리텍대학 AI LMS 백엔드
+# ============================================
+# 왜: 모든 민감 정보(API 키, DB 비밀번호 등)는 환경변수로 외부화합니다.
+# - 로컬 개발: .env 파일 또는 IDE Run Configuration에서 설정
+# - 운영: Docker 환경변수 또는 Secret Manager로 주입
+
+server:
+  port: 8081
+  error:
+    # 왜: 에러 응답에 stacktrace가 포함되면 민감정보(키/시크릿/경로)가 노출될 수 있어 차단합니다.
+    include-stacktrace: never
+    include-exception: false
+
+spring:
+  application:
+    name: epoly-ai-backend
+  config:
+    # 왜: 개인 PC별(DB/키) 설정을 Git에 올리지 않기 위해 local 파일을 선택적으로 불러옵니다.
+    import: optional:classpath:application-local.yml
+
+  # ── DataSource (MySQL) ────────────────────────────────────────
+  datasource:
+    # 왜: DB 비밀번호는 코드에 두지 않고 환경변수로 주입하는 게 안전합니다.
+    url: ${DB_URL:jdbc:mysql://localhost:3306/epoly_ai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 30000
+
+  # ── JPA / Hibernate ───────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+
+  # ── Cache (Caffeine) ──────────────────────────────────────────
+  cache:
+    type: caffeine
+
+  # ── Spring AI ─────────────────────────────────────────────────
+  ai:
+    # 왜: 추천(유사도 검색)은 "임베딩 모델 + 벡터 DB" 조합이 표준입니다.
+    model:
+      embedding:
+        text: google-genai
+    google:
+      genai:
+        embedding:
+          api-key: ${GOOGLE_API_KEY:}
+          text:
+            options:
+              # 왜: gemini-embedding-001은 한국어 입력에 안정적입니다.
+              model: ${GOOGLE_EMBEDDING_MODEL:gemini-embedding-001}
+              task-type: ${GOOGLE_EMBEDDING_TASK:RETRIEVAL_DOCUMENT}
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST:localhost}
+        port: ${QDRANT_GRPC_PORT:6334}
+        api-key: ${QDRANT_API_KEY:}
+        collection-name: ${QDRANT_COLLECTION:epoly_ai_vectors}
+        use-tls: ${QDRANT_USE_TLS:false}
+        initialize-schema: ${QDRANT_INIT_SCHEMA:true}
+
+# ── Gemini Chat / 요약 설정 ───────────────────────────────────────
+# 왜: 요약/키워드 생성은 Gemini REST API를 직접 호출합니다.
+gemini:
+  api-key: ${GEMINI_API_KEY:${GOOGLE_API_KEY:}}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+  model: ${GEMINI_MODEL:gemini-2.0-flash}
+  temperature: ${GEMINI_TEMPERATURE:0.3}
+  max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:4096}
+  http-timeout: ${GEMINI_HTTP_TIMEOUT:PT60S}
+
+# ── JWT 인증 설정 ─────────────────────────────────────────────────
+jwt:
+  # 왜: JWT 시크릿 키는 반드시 환경변수로 주입해야 합니다. 기본값은 개발 전용입니다.
+  secret: ${JWT_SECRET:epoly-ai-dev-secret-key-change-in-production-min-256-bits-required!!}
+  # 왜: 토큰 만료 시간 (밀리초) - 기본 24시간
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# ── CORS 설정 ─────────────────────────────────────────────────────
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# ── 학사포털 회원 동기화 (poly_sync.jsp 대체) ────────────────────────
+# 왜: 외부 학사시스템(e-poly.kopo.ac.kr)에서 회원 데이터를 HTTP로 받아 로컬 DB에 미러링합니다.
+poly-sync:
+  enabled: ${POLY_SYNC_ENABLED:false}
+  endpoint: ${POLY_SYNC_ENDPOINT:https://e-poly.kopo.ac.kr/main/vpn_test.jsp}
+  http-timeout: ${POLY_SYNC_HTTP_TIMEOUT:PT60S}
+  batch-size: ${POLY_SYNC_BATCH_SIZE:2000}
+  max-retries: ${POLY_SYNC_MAX_RETRIES:3}
+  retry-delay-ms: ${POLY_SYNC_RETRY_DELAY_MS:3000}
+  cron: ${POLY_SYNC_CRON:0 0 1 * * *}
+
+# ── GCP 서비스 통합 설정 ──────────────────────────────────────────
+gcp:
+  project-id: ${GCP_PROJECT_ID:polytech-lms}
+  location: ${GCP_LOCATION:asia-northeast3}
+  credentials-path: ${GOOGLE_APPLICATION_CREDENTIALS:}
+
+# ── Vector Search 설정 ────────────────────────────────────────────
+vector:
+  search:
+    max-top-k: ${VECTOR_SEARCH_MAX_TOP_K:300}
+
+# ── 암호화 설정 ───────────────────────────────────────────────────
+app:
+  encryption:
+    aes:
+      key: ${AES_KEY:01234567890123456789012345678901}
+      iv: ${AES_IV:0123456789012345}
+
+# ── Actuator ──────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ── Logging ───────────────────────────────────────────────────────
+logging:
+  level:
+    root: INFO
+    kr.polytech.epoly: DEBUG
+    org.springframework.ai: INFO
+    org.hibernate.SQL: DEBUG

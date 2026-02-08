@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- polytech-lms-android/app/src/main/res/layout/custom_player_controls.xml -->
+<!-- ExoPlayer 커스텀 컨트롤러 레이아웃 -->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 중앙 재생/일시정지 버튼 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- 뒤로 10초 -->
+        <ImageButton
+            android:id="@id/exo_rew"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_rew"
+            android:contentDescription="10초 뒤로"
+            app:tint="@android:color/white" />
+
+        <!-- 재생/일시정지 -->
+        <ImageButton
+            android:id="@id/exo_play_pause"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginHorizontal="32dp"
+            android:background="@drawable/circle_button_bg"
+            android:src="@android:drawable/ic_media_play"
+            android:padding="16dp"
+            android:contentDescription="재생/일시정지"
+            app:tint="@android:color/white" />
+
+        <!-- 앞으로 10초 -->
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_ff"
+            android:contentDescription="10초 앞으로"
+            app:tint="@android:color/white" />
+    </LinearLayout>
+
+    <!-- 하단 시간 바 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 시크 바 -->
+        <androidx.media3.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:played_color="#E53935"
+            app:unplayed_color="#66FFFFFF"
+            app:buffered_color="#99FFFFFF"
+            app:scrubber_color="#E53935"
+            app:scrubber_enabled_size="16dp"
+            app:scrubber_disabled_size="12dp"
+            app:scrubber_dragged_size="20dp"
+            app:bar_height="4dp" />
+
+        <!-- 시간 표시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@id/exo_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:text="00:00" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@id/exo_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:text="00:00" />
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>

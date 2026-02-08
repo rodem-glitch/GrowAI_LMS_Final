@@ -1,0 +1,16 @@
+# docker/grafana/provisioning/dashboards/dashboards.yml
+# Grafana 대시보드 프로비저닝
+
+apiVersion: 1
+
+providers:
+  - name: 'LMS Dashboards'
+    orgId: 1
+    folder: 'LMS'
+    folderUid: 'lms'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

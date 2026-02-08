@@ -1,0 +1,796 @@
+/**
+ * Phase 3: 페이지별 Light 테마 (교수자 페이지 동일)
+ * Legacy JSP 페이지 스타일 오버라이드
+ * Version: 2.0.0
+ * Updated: 2026-02-08 - Dark → Light 테마 전환
+ */
+
+/* ========================================
+   1. 로그인 페이지
+   ======================================== */
+/* 메인 로그인 랩퍼 */
+.main_wrap_login {
+  background: #f9fafb !important;
+  min-height: 100vh !important;
+}
+
+.login_body {
+  background: #f9fafb !important;
+}
+
+.login_box {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+.log_form {
+  background: transparent !important;
+}
+
+.log_tit {
+  color: #111827 !important;
+}
+
+.log_tit b {
+  color: #2b58e6 !important;
+}
+
+.log_tt {
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+
+.log_area {
+  background: transparent !important;
+}
+
+/* 로그인 입력 필드 */
+.log_in {
+  background: transparent !important;
+}
+
+.ip_id,
+.ip_pass {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  margin-bottom: 12px !important;
+}
+
+.ip_id input,
+.ip_pass input {
+  background: transparent !important;
+  border: none !important;
+  color: #111827 !important;
+  padding: 14px 16px !important;
+}
+
+.ip_id input::placeholder,
+.ip_pass input::placeholder {
+  color: #9ca3af !important;
+}
+
+.ip_id input:focus,
+.ip_pass input:focus {
+  outline: none !important;
+}
+
+.ip_id:focus-within,
+.ip_pass:focus-within {
+  border-color: #2b58e6 !important;
+  box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.1) !important;
+}
+
+/* 로그인 버튼 */
+.ip_submit input,
+.button.login {
+  background: #2b58e6 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  padding: 14px 32px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.275s ease !important;
+  width: 100% !important;
+}
+
+.ip_submit input:hover,
+.button.login:hover {
+  background: #1e45c9 !important;
+  box-shadow: 0 0 20px rgba(43, 88, 230, 0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 아이디 저장 체크박스 */
+.save_label {
+  color: #4b5563 !important;
+}
+
+.save_label input[type="checkbox"] {
+  accent-color: #2b58e6 !important;
+}
+
+/* 소셜 로그인 */
+.log_oauth {
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding-top: 20px !important;
+  margin-top: 20px !important;
+}
+
+.log_oauth_title {
+  color: #4b5563 !important;
+  display: block !important;
+  margin-bottom: 12px !important;
+}
+
+.log_oauth_list li {
+  display: inline-block !important;
+  margin: 0 8px !important;
+}
+
+.log_oauth_list li a {
+  display: block !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  transition: transform 0.2s !important;
+}
+
+.log_oauth_list li a:hover {
+  transform: scale(1.1) !important;
+}
+
+/* 본인인증 로그인 */
+.log_auth {
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding-top: 20px !important;
+  margin-top: 20px !important;
+}
+
+.log_auth_title {
+  color: #4b5563 !important;
+  display: block !important;
+  margin-bottom: 12px !important;
+}
+
+.button.login_auth {
+  background: transparent !important;
+  color: #111827 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 9999px !important;
+  padding: 12px 24px !important;
+}
+
+.button.login_auth:hover {
+  border-color: #2b58e6 !important;
+  color: #2b58e6 !important;
+}
+
+/* ========================================
+   2. 마이페이지 공통
+   ======================================== */
+.mypage_wrap,
+.mypage_body,
+#mypage_container {
+  background: #f9fafb !important;
+}
+
+.mypage_header {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.mypage_title {
+  color: #111827 !important;
+}
+
+.mypage_subtitle {
+  color: #4b5563 !important;
+}
+
+/* 사이드바 */
+.mypage_sidebar,
+.left_menu,
+.snb {
+  background: #ffffff !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.mypage_sidebar a,
+.left_menu a,
+.snb a {
+  color: #4b5563 !important;
+  padding: 12px 16px !important;
+  display: block !important;
+  transition: all 0.2s !important;
+}
+
+.mypage_sidebar a:hover,
+.left_menu a:hover,
+.snb a:hover,
+.mypage_sidebar a.on,
+.left_menu a.on,
+.snb a.on {
+  color: #2b58e6 !important;
+  background: rgba(43, 88, 230, 0.1) !important;
+}
+
+/* ========================================
+   3. 콘텐츠 영역
+   ======================================== */
+.content_area,
+.content_body,
+.contet_area,
+#contet_area {
+  background: #f9fafb !important;
+}
+
+.content_title,
+.page_title {
+  color: #111827 !important;
+  border-bottom: 2px solid #2b58e6 !important;
+}
+
+.content_title em,
+.page_title em {
+  color: #2b58e6 !important;
+}
+
+/* 경로 (Breadcrumb) */
+.path,
+.path_list {
+  background: transparent !important;
+}
+
+.path li,
+.path_list li {
+  color: #4b5563 !important;
+}
+
+.path li:last-child,
+.path_list li:last-child {
+  color: #111827 !important;
+}
+
+/* ========================================
+   4. 수강 목록/과정 카드
+   ======================================== */
+.course_list,
+.lecture_list {
+  background: transparent !important;
+}
+
+.course_item,
+.lecture_item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1rem !important;
+  padding: 20px !important;
+  margin-bottom: 16px !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.course_item:hover,
+.lecture_item:hover {
+  border-color: #2b58e6 !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+.course_title,
+.lecture_title {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+.course_info,
+.lecture_info {
+  color: #4b5563 !important;
+}
+
+.course_meta,
+.lecture_meta {
+  color: #9ca3af !important;
+}
+
+/* 수강 상태 배지 */
+.course_status,
+.status_badge {
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.course_status.ing,
+.status_badge.ing {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+}
+
+.course_status.complete,
+.status_badge.complete {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+}
+
+.course_status.wait,
+.status_badge.wait {
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: #f59e0b !important;
+}
+
+/* 진도율 바 */
+.progress_wrap,
+.course_progress {
+  background: #e5e7eb !important;
+  border-radius: 9999px !important;
+  height: 8px !important;
+  overflow: hidden !important;
+}
+
+.progress_bar,
+.course_progress_bar {
+  background: linear-gradient(90deg, #2b58e6 0%, #6366f1 100%) !important;
+  height: 100% !important;
+  border-radius: 9999px !important;
+}
+
+/* ========================================
+   5. 게시판/테이블
+   ======================================== */
+.board_list,
+.type_list {
+  background: transparent !important;
+}
+
+.board_list table,
+.type_list table {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.board_list th,
+.type_list th {
+  background: #f3f4f6 !important;
+  color: #4b5563 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  font-weight: 600 !important;
+}
+
+.board_list td,
+.type_list td {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.board_list tr:hover td,
+.type_list tr:hover td {
+  background: #f3f4f6 !important;
+}
+
+.board_list .subject a,
+.type_list .subject a {
+  color: #111827 !important;
+}
+
+.board_list .subject a:hover,
+.type_list .subject a:hover {
+  color: #2b58e6 !important;
+}
+
+/* 페이징 */
+.paging,
+.pagination {
+  background: transparent !important;
+}
+
+.paging a,
+.pagination a {
+  background: #ffffff !important;
+  color: #4b5563 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  margin: 0 4px !important;
+}
+
+.paging a:hover,
+.pagination a:hover {
+  border-color: #2b58e6 !important;
+  color: #2b58e6 !important;
+}
+
+.paging a.on,
+.paging .current,
+.pagination a.on,
+.pagination .current {
+  background: #2b58e6 !important;
+  color: white !important;
+  border-color: #2b58e6 !important;
+}
+
+/* ========================================
+   6. 장바구니/결제
+   ======================================== */
+.cart_list,
+.order_list {
+  background: transparent !important;
+}
+
+.cart_item,
+.order_item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1rem !important;
+  padding: 20px !important;
+}
+
+.cart_total,
+.order_total {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1rem !important;
+  padding: 24px !important;
+}
+
+.cart_total .price,
+.order_total .price {
+  color: #2b58e6 !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+}
+
+/* ========================================
+   7. 회원정보 수정
+   ======================================== */
+.modify_wrap,
+.member_form {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1.5rem !important;
+  padding: 32px !important;
+}
+
+.modify_wrap th,
+.member_form th {
+  background: transparent !important;
+  color: #4b5563 !important;
+  text-align: left !important;
+  padding: 16px 0 !important;
+}
+
+.modify_wrap td,
+.member_form td {
+  background: transparent !important;
+  color: #111827 !important;
+  padding: 16px 0 !important;
+}
+
+/* ========================================
+   8. 메시지/알림
+   ======================================== */
+.message_list {
+  background: transparent !important;
+}
+
+.message_item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+.message_item:hover {
+  border-color: #2b58e6 !important;
+}
+
+.message_item.unread {
+  border-left: 3px solid #2b58e6 !important;
+}
+
+.message_title {
+  color: #111827 !important;
+}
+
+.message_date {
+  color: #9ca3af !important;
+}
+
+/* ========================================
+   9. 수료증/인증서
+   ======================================== */
+.certificate_wrap {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1.5rem !important;
+}
+
+.certificate_list .item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+}
+
+.certificate_list .item:hover {
+  border-color: #d4af37 !important;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* ========================================
+   10. 쿠폰
+   ======================================== */
+.coupon_list {
+  background: transparent !important;
+}
+
+.coupon_item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.coupon_item::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 4px !important;
+  height: 100% !important;
+  background: #2b58e6 !important;
+}
+
+.coupon_name {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+.coupon_discount {
+  color: #2b58e6 !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+.coupon_expire {
+  color: #9ca3af !important;
+}
+
+/* ========================================
+   11. 팝업/레이어
+   ======================================== */
+.layer_popup,
+.popup_wrap,
+.modal_wrap {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+}
+
+.layer_popup .header,
+.popup_wrap .header,
+.modal_wrap .header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding: 20px 24px !important;
+}
+
+.layer_popup .title,
+.popup_wrap .title,
+.modal_wrap .title {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+.layer_popup .close,
+.popup_wrap .close,
+.modal_wrap .close {
+  color: #4b5563 !important;
+}
+
+.layer_popup .close:hover,
+.popup_wrap .close:hover,
+.modal_wrap .close:hover {
+  color: #2b58e6 !important;
+}
+
+.layer_popup .body,
+.popup_wrap .body,
+.modal_wrap .body {
+  padding: 24px !important;
+  color: #111827 !important;
+}
+
+.layer_popup .footer,
+.popup_wrap .footer,
+.modal_wrap .footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  padding: 16px 24px !important;
+}
+
+/* ========================================
+   12. 검색 영역
+   ======================================== */
+.search_wrap,
+.search_area {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 20px !important;
+  margin-bottom: 24px !important;
+}
+
+.search_wrap input[type="text"],
+.search_area input[type="text"] {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+  color: #111827 !important;
+  padding: 10px 14px !important;
+}
+
+.search_wrap input[type="text"]:focus,
+.search_area input[type="text"]:focus {
+  border-color: #2b58e6 !important;
+}
+
+.search_wrap select,
+.search_area select {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important;
+  color: #111827 !important;
+  padding: 10px 14px !important;
+}
+
+.search_wrap .btn_search,
+.search_area .btn_search {
+  background: #2b58e6 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+}
+
+/* ========================================
+   13. 알림/안내 박스
+   ======================================== */
+.notice_box,
+.info_box,
+.alert_box {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 16px 20px !important;
+  color: #4b5563 !important;
+}
+
+.notice_box.warning,
+.alert_box.warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.notice_box.error,
+.alert_box.error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.notice_box.success,
+.alert_box.success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.notice_box.info,
+.alert_box.info {
+  border-left: 4px solid #2b58e6 !important;
+}
+
+/* ========================================
+   14. Empty State
+   ======================================== */
+.empty,
+.no_data,
+.nodata {
+  background: #f3f4f6 !important;
+  border: 1px dashed rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 60px 20px !important;
+  text-align: center !important;
+  color: #9ca3af !important;
+}
+
+.empty .icon,
+.no_data .icon,
+.nodata .icon {
+  color: #cbced4 !important;
+  font-size: 48px !important;
+  margin-bottom: 16px !important;
+}
+
+/* ========================================
+   15. 레이아웃 공통
+   ======================================== */
+/* 컨테이너 */
+#container,
+#container.main,
+.container {
+  background: #f9fafb !important;
+}
+
+/* 헤더 */
+#header {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+#header .inner {
+  background: transparent !important;
+}
+
+/* 푸터 */
+#footer {
+  background: #f3f4f6 !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+#footer .foot_menu {
+  background: #f3f4f6 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+#footer .foot_list li a {
+  color: #4b5563 !important;
+}
+
+#footer .foot_list li a:hover {
+  color: #2b58e6 !important;
+}
+
+#footer .copy {
+  color: #9ca3af !important;
+}
+
+/* ========================================
+   16. 반응형 (Mobile)
+   ======================================== */
+@media screen and (max-width: 768px) {
+  .login_box {
+    margin: 20px !important;
+    padding: 24px !important;
+  }
+
+  .course_item,
+  .lecture_item {
+    padding: 16px !important;
+  }
+
+  .paging a,
+  .pagination a {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ========================================
+   17. 인쇄 스타일
+   ======================================== */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .nm-header,
+  .nm-footer,
+  #header,
+  #footer,
+  .sidebar,
+  .left_menu {
+    display: none !important;
+  }
+}

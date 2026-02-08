@@ -1,0 +1,547 @@
+/**
+ * Phase 2: 핵심 컴포넌트 Light 테마 (교수자 페이지 동일)
+ * index.jsp 인라인 스타일 오버라이드
+ * Version: 2.0.0
+ * Updated: 2026-02-08
+ */
+
+/* ========================================
+   1. 전역 배경 (최우선)
+   ======================================== */
+.new-main-fullscreen {
+  background: #f9fafb !important;
+  color: #111827 !important;
+}
+
+html.theme-dark,
+body.theme-dark {
+  background: #f9fafb !important;
+}
+
+/* ========================================
+   2. Header 컴포넌트
+   ======================================== */
+.nm-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.nm-header__logo-text {
+  color: #111827 !important;
+}
+
+.nm-header__nav-item {
+  color: #4b5563 !important;
+}
+
+.nm-header__nav-item:hover {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+}
+
+.nm-header__nav-item.active {
+  color: #2b58e6 !important;
+  font-weight: 600;
+}
+
+/* 드롭다운 */
+.nm-header__dropdown-toggle {
+  color: #4b5563 !important;
+}
+
+.nm-header__dropdown-toggle:hover {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+}
+
+.nm-header__dropdown-menu {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+.nm-header__dropdown-item {
+  color: #4b5563 !important;
+}
+
+.nm-header__dropdown-item:hover {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+}
+
+/* 아이콘 버튼 */
+.nm-header__icon-btn {
+  color: #4b5563 !important;
+}
+
+.nm-header__icon-btn:hover {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+}
+
+/* 프로필 */
+.nm-header__profile {
+  border: 2px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.nm-header__profile:hover {
+  border-color: #2b58e6 !important;
+}
+
+/* ========================================
+   3. Hero 섹션
+   ======================================== */
+.nm-hero {
+  background: linear-gradient(135deg, #f3f3f5 0%, #e9ebef 100%) !important;
+}
+
+.nm-hero__title {
+  color: #111827 !important;
+}
+
+.nm-hero__subtitle {
+  color: #4b5563 !important;
+}
+
+/* ========================================
+   4. Card 컴포넌트
+   ======================================== */
+.nm-card,
+.course-card,
+.video-card,
+.stat-card,
+.notice-card,
+.qna-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.nm-card:hover,
+.course-card:hover,
+.video-card:hover {
+  border-color: #2b58e6 !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.nm-card__title,
+.course-card__title,
+.video-card__title {
+  color: #111827 !important;
+}
+
+.nm-card__desc,
+.course-card__desc,
+.video-card__desc {
+  color: #4b5563 !important;
+}
+
+/* 카드 메타 정보 */
+.nm-card__meta,
+.course-card__meta {
+  color: #9ca3af !important;
+}
+
+/* ========================================
+   5. Button 컴포넌트
+   ======================================== */
+/* Primary Button */
+.nm-btn,
+.btn-primary,
+.nm-btn--primary {
+  background: #2b58e6 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  transition: all 0.275s ease !important;
+}
+
+.nm-btn:hover,
+.btn-primary:hover,
+.nm-btn--primary:hover {
+  background: #1e45c9 !important;
+  box-shadow: 0 0 20px rgba(43, 88, 230, 0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Secondary Button */
+.nm-btn--secondary,
+.btn-secondary {
+  background: transparent !important;
+  color: #111827 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  border-radius: 9999px !important;
+}
+
+.nm-btn--secondary:hover,
+.btn-secondary:hover {
+  border-color: #2b58e6 !important;
+  color: #2b58e6 !important;
+  background: rgba(43, 88, 230, 0.05) !important;
+}
+
+/* Ghost Button */
+.nm-btn--ghost,
+.btn-ghost {
+  background: transparent !important;
+  color: #4b5563 !important;
+  border: none !important;
+}
+
+.nm-btn--ghost:hover,
+.btn-ghost:hover {
+  color: #2b58e6 !important;
+  background: rgba(43, 88, 230, 0.1) !important;
+}
+
+/* Gold Button */
+.nm-btn--gold,
+.btn-gold {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.nm-btn--gold:hover,
+.btn-gold:hover {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2) !important;
+}
+
+/* ========================================
+   6. Tab 컴포넌트
+   ======================================== */
+.nm-tabs {
+  background: #f3f4f6 !important;
+  border-radius: 12px !important;
+  padding: 4px !important;
+}
+
+.nm-tabs__item {
+  color: #4b5563 !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s !important;
+}
+
+.nm-tabs__item:hover {
+  color: #111827 !important;
+}
+
+.nm-tabs__item.active {
+  background: #2b58e6 !important;
+  color: white !important;
+}
+
+/* 필터 탭 */
+.nm-filter-tab,
+.filter-tab {
+  background: transparent !important;
+  color: #4b5563 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 9999px !important;
+}
+
+.nm-filter-tab:hover,
+.filter-tab:hover {
+  border-color: #2b58e6 !important;
+  color: #2b58e6 !important;
+}
+
+.nm-filter-tab.active,
+.filter-tab.active {
+  background: #2b58e6 !important;
+  color: white !important;
+  border-color: #2b58e6 !important;
+}
+
+/* ========================================
+   7. Form 컴포넌트
+   ======================================== */
+.nm-input,
+.nm-search__input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+select {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  color: #111827 !important;
+  padding: 12px 16px !important;
+}
+
+.nm-input:focus,
+.nm-search__input:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #2b58e6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(43, 88, 230, 0.1) !important;
+}
+
+.nm-input::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* 검색창 */
+.nm-search {
+  background: #f3f4f6 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+}
+
+.nm-search__btn {
+  color: #4b5563 !important;
+}
+
+.nm-search__btn:hover {
+  color: #2b58e6 !important;
+}
+
+/* ========================================
+   8. Section 컴포넌트
+   ======================================== */
+.nm-section {
+  background: #ffffff !important;
+}
+
+.nm-section__title {
+  color: #111827 !important;
+}
+
+.nm-section__subtitle {
+  color: #4b5563 !important;
+}
+
+.nm-section--alt {
+  background: #f3f4f6 !important;
+}
+
+/* ========================================
+   9. Badge 컴포넌트
+   ======================================== */
+.nm-badge,
+.badge,
+.label {
+  background: rgba(43, 88, 230, 0.1) !important;
+  color: #2b58e6 !important;
+  border-radius: 9999px !important;
+  padding: 4px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.nm-badge--success,
+.badge-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+}
+
+.nm-badge--warning,
+.badge-warning {
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: #f59e0b !important;
+}
+
+.nm-badge--gold {
+  background: rgba(212, 175, 55, 0.1) !important;
+  color: #d4af37 !important;
+}
+
+/* ========================================
+   10. Progress Bar
+   ======================================== */
+.nm-progress,
+.progress-bar {
+  background: #e5e7eb !important;
+  border-radius: 9999px !important;
+  height: 8px !important;
+  overflow: hidden !important;
+}
+
+.nm-progress__bar,
+.progress-bar__fill {
+  background: linear-gradient(90deg, #2b58e6 0%, #6366f1 100%) !important;
+  border-radius: 9999px !important;
+}
+
+/* ========================================
+   11. Footer
+   ======================================== */
+.nm-footer,
+#footer {
+  background: #f3f4f6 !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.nm-footer__text {
+  color: #9ca3af !important;
+}
+
+.nm-footer__link {
+  color: #4b5563 !important;
+}
+
+.nm-footer__link:hover {
+  color: #2b58e6 !important;
+}
+
+/* ========================================
+   12. 스크롤바
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbced4;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2b58e6;
+}
+
+/* ========================================
+   13. 선택 영역
+   ======================================== */
+::selection {
+  background: #2b58e6;
+  color: white;
+}
+
+::-moz-selection {
+  background: #2b58e6;
+  color: white;
+}
+
+/* ========================================
+   14. 링크 스타일
+   ======================================== */
+a {
+  color: #4b5563;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #2b58e6;
+}
+
+/* ========================================
+   15. 테이블
+   ======================================== */
+table {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+th {
+  background: #f3f4f6 !important;
+  color: #4b5563 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+td {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+tr:hover td {
+  background: #f3f4f6 !important;
+}
+
+/* ========================================
+   16. 공지사항/QnA 리스트
+   ======================================== */
+.nm-list-item,
+.notice-item,
+.qna-item {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 16px !important;
+  margin-bottom: 8px !important;
+}
+
+.nm-list-item:hover,
+.notice-item:hover,
+.qna-item:hover {
+  border-color: #2b58e6 !important;
+}
+
+.nm-list-item__title {
+  color: #111827 !important;
+}
+
+.nm-list-item__date {
+  color: #9ca3af !important;
+}
+
+/* ========================================
+   17. 모바일 메뉴
+   ======================================== */
+.nm-mobile-menu {
+  background: #ffffff !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.nm-mobile-menu__item {
+  color: #4b5563 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.nm-mobile-menu__item:hover {
+  color: #2b58e6 !important;
+  background: rgba(43, 88, 230, 0.05) !important;
+}
+
+/* ========================================
+   18. 토스트/알림
+   ======================================== */
+.nm-toast,
+.toast,
+.notification {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #111827 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* ========================================
+   19. 로딩 스피너
+   ======================================== */
+.nm-spinner,
+.spinner,
+.loading {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-top-color: #2b58e6 !important;
+}
+
+/* ========================================
+   20. Empty State
+   ======================================== */
+.nm-empty,
+.empty-state {
+  color: #9ca3af !important;
+}
+
+.nm-empty__icon {
+  color: #cbced4 !important;
+}

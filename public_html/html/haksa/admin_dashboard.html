@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드 - 한국폴리텍대학 LMS</title>
+    <link rel="stylesheet" href="../../common/css/unified-theme.css">
+    <style>
+        :root {
+            --primary-color: #dc2626;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+
+        .btn {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .chart-placeholder {
+            height: 200px;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .log-item {
+            padding: 12px;
+            border-left: 3px solid var(--warning-color);
+            margin-bottom: 8px;
+            background: #fffbeb;
+            border-radius: 0 6px 6px 0;
+            font-size: 14px;
+        }
+
+        .log-item.danger {
+            border-left-color: var(--danger-color);
+            background: #fef2f2;
+        }
+
+        .log-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .sync-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-dot.success { background: var(--success-color); }
+        .sync-dot.warning { background: var(--warning-color); }
+        .sync-dot.danger { background: var(--danger-color); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1 class="page-title">관리자 대시보드</h1>
+            <div>
+                <button class="btn btn-success" onclick="syncAll()">전체 동기화</button>
+                <button class="btn btn-outline" onclick="location.reload()">새로고침</button>
+            </div>
+        </header>
+
+        <!-- 통계 카드 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>전체 강좌</h3>
+                <div class="stat-value" id="totalCourses">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>전체 학생</h3>
+                <div class="stat-value" id="totalStudents">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>전체 교수</h3>
+                <div class="stat-value" id="totalProfessors">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>부정행위 탐지</h3>
+                <div class="stat-value" id="fraudAttempts">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>활성 세션</h3>
+                <div class="stat-value" id="activeSessions">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>오늘 출석체크</h3>
+                <div class="stat-value" id="todayAttendance">-</div>
+            </div>
+        </div>
+
+        <!-- 동기화 상태 -->
+        <div class="section">
+            <h2 class="section-title">
+                학사포털 연동 상태
+                <div class="sync-status">
+                    <span class="sync-dot success" id="syncDot"></span>
+                    <span id="syncStatusText">정상 연결됨</span>
+                </div>
+            </h2>
+            <div class="data-table" style="margin-top: 16px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>연동 항목</th>
+                            <th>마지막 동기화</th>
+                            <th>상태</th>
+                            <th>동기화된 건수</th>
+                            <th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody id="syncTable">
+                        <tr>
+                            <td>개설정보 (LMS_COURSE_VIEW)</td>
+                            <td id="courseSyncTime">-</td>
+                            <td><span class="badge badge-success">정상</span></td>
+                            <td id="courseSyncCount">-</td>
+                            <td><button class="btn btn-outline" onclick="syncItem('courses')">동기화</button></td>
+                        </tr>
+                        <tr>
+                            <td>강의계획서</td>
+                            <td>2026-02-08 08:00:00</td>
+                            <td><span class="badge badge-success">정상</span></td>
+                            <td>5건</td>
+                            <td><button class="btn btn-outline" onclick="syncItem('syllabus')">동기화</button></td>
+                        </tr>
+                        <tr>
+                            <td>회원정보 (LMS_MEMBER_VIEW)</td>
+                            <td>2026-02-08 07:00:00</td>
+                            <td><span class="badge badge-success">정상</span></td>
+                            <td>10건</td>
+                            <td><button class="btn btn-outline" onclick="syncItem('members')">동기화</button></td>
+                        </tr>
+                        <tr>
+                            <td>수강정보 (LMS_STUDENT_VIEW)</td>
+                            <td>2026-02-08 07:00:00</td>
+                            <td><span class="badge badge-success">정상</span></td>
+                            <td>5건</td>
+                            <td><button class="btn btn-outline" onclick="syncItem('students')">동기화</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="two-col">
+            <!-- 부정행위 탐지 로그 -->
+            <div class="section">
+                <h2 class="section-title">
+                    부정행위 탐지 로그
+                    <button class="btn btn-outline" onclick="loadFraudLogs()">새로고침</button>
+                </h2>
+                <div id="fraudLogs">
+                    <div class="log-item">
+                        <div><strong>동시 접속 감지</strong> - S2026001 (홍길동)</div>
+                        <div class="log-time">2026-02-08 10:23:45</div>
+                    </div>
+                    <div class="log-item danger">
+                        <div><strong>외부 IP 접속</strong> - S2026002 (김영희)</div>
+                        <div class="log-time">2026-02-08 09:15:30</div>
+                    </div>
+                    <div class="log-item">
+                        <div><strong>비정상 학습패턴</strong> - S2026003 (이철수)</div>
+                        <div class="log-time">2026-02-08 08:45:12</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 부정행위 통계 -->
+            <div class="section">
+                <h2 class="section-title">부정행위 유형별 통계</h2>
+                <div class="chart-placeholder" id="fraudChart">
+                    차트 영역 (Chart.js 연동 예정)
+                </div>
+                <table class="data-table" style="margin-top: 16px;">
+                    <thead>
+                        <tr>
+                            <th>유형</th>
+                            <th>건수</th>
+                            <th>비율</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fraudStats">
+                        <tr>
+                            <td>동시 접속</td>
+                            <td id="statConcurrent">5</td>
+                            <td>33%</td>
+                        </tr>
+                        <tr>
+                            <td>외부 IP</td>
+                            <td id="statExternalIp">7</td>
+                            <td>47%</td>
+                        </tr>
+                        <tr>
+                            <td>비정상 행동</td>
+                            <td id="statAbnormal">3</td>
+                            <td>20%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 강좌 목록 -->
+        <div class="section">
+            <h2 class="section-title">
+                전체 강좌 현황
+                <button class="btn btn-primary" onclick="lockAllCriteria()">전체 성적기준 잠금</button>
+            </h2>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>강좌코드</th>
+                        <th>강좌명</th>
+                        <th>학과</th>
+                        <th>담당교수</th>
+                        <th>수강생</th>
+                        <th>과정구분</th>
+                        <th>성적기준</th>
+                        <th>상태</th>
+                    </tr>
+                </thead>
+                <tbody id="courseList">
+                    <tr>
+                        <td colspan="8" class="loading">
+                            <div class="spinner"></div>
+                            데이터를 불러오는 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/haksa';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadDashboard();
+            await loadCourses();
+            await loadFraudStats();
+        });
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/dashboard/admin`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('totalCourses').textContent = data.totalCourses || 0;
+
+                    const syncStatus = data.syncStatus || {};
+                    document.getElementById('courseSyncTime').textContent = syncStatus.lastSyncTime || '-';
+                    document.getElementById('courseSyncCount').textContent = (syncStatus.syncedCourses || 0) + '건';
+
+                    const fraudStats = data.fraudStatistics || {};
+                    document.getElementById('fraudAttempts').textContent = fraudStats.totalAttempts || 0;
+                    document.getElementById('statConcurrent').textContent = fraudStats.concurrentSessions || 0;
+                    document.getElementById('statExternalIp').textContent = fraudStats.externalIp || 0;
+                    document.getElementById('statAbnormal').textContent = fraudStats.abnormalBehavior || 0;
+                }
+
+                // Mock 추가 데이터
+                document.getElementById('totalStudents').textContent = '4';
+                document.getElementById('totalProfessors').textContent = '4';
+                document.getElementById('activeSessions').textContent = '12';
+                document.getElementById('todayAttendance').textContent = '45';
+
+            } catch (error) {
+                console.error('대시보드 로드 실패:', error);
+            }
+        }
+
+        async function loadCourses() {
+            const tbody = document.getElementById('courseList');
+
+            try {
+                const response = await fetch(`${API_BASE}/courses`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const courses = result.data || [];
+
+                    if (courses.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8">강좌가 없습니다.</td></tr>';
+                        return;
+                    }
+
+                    const rows = await Promise.all(courses.map(async c => {
+                        // 학위/비학위 정보 조회
+                        let degreeInfo = { groupName: '-', isDegree: true };
+                        try {
+                            const degResp = await fetch(`${API_BASE}/grade/degree/${c.COURSE_CODE}`);
+                            degreeInfo = await degResp.json();
+                        } catch (e) {}
+
+                        // 성적 기준 잠금 여부
+                        let criteriaLocked = false;
+                        try {
+                            const critResp = await fetch(`${API_BASE}/grade/criteria/${c.COURSE_CODE}`);
+                            const critData = await critResp.json();
+                            criteriaLocked = critData.isLocked;
+                        } catch (e) {}
+
+                        return `
+                            <tr>
+                                <td>${c.COURSE_CODE}</td>
+                                <td>${c.COURSE_NAME || '-'}</td>
+                                <td>${c.DEPT_NAME || '-'}</td>
+                                <td>${c.PROFESSOR_NAME || '-'}</td>
+                                <td>-</td>
+                                <td><span class="badge ${degreeInfo.isDegree ? 'badge-info' : 'badge-warning'}">${degreeInfo.groupName || '-'}</span></td>
+                                <td><span class="badge ${criteriaLocked ? 'badge-danger' : 'badge-success'}">${criteriaLocked ? '잠김' : '수정가능'}</span></td>
+                                <td><span class="badge badge-success">진행중</span></td>
+                            </tr>
+                        `;
+                    }));
+
+                    tbody.innerHTML = rows.join('');
+                }
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="8">데이터 로드 실패</td></tr>';
+            }
+        }
+
+        async function loadFraudStats() {
+            try {
+                const response = await fetch(`${API_BASE}/antifraud/statistics`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const stats = result.data;
+                    document.getElementById('fraudAttempts').textContent = stats.totalAttempts || 0;
+                }
+            } catch (error) {
+                console.log('부정행위 통계 로드 실패');
+            }
+        }
+
+        async function loadFraudLogs() {
+            const container = document.getElementById('fraudLogs');
+
+            try {
+                const response = await fetch(`${API_BASE}/antifraud/logs?limit=10`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const logs = result.data || [];
+                    container.innerHTML = logs.map(log => `
+                        <div class="log-item ${log.fraud_type === 'EXTERNAL_IP' ? 'danger' : ''}">
+                            <div><strong>${getFraudTypeLabel(log.fraud_type)}</strong> - ${log.member_key}</div>
+                            <div class="log-time">${log.detected_at}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.log('로그 로드 실패');
+            }
+        }
+
+        function getFraudTypeLabel(type) {
+            const labels = {
+                'CONCURRENT_SESSION': '동시 접속 감지',
+                'EXTERNAL_IP': '외부 IP 접속',
+                'ABNORMAL_BEHAVIOR': '비정상 학습패턴',
+                'NEW_DEVICE': '새 디바이스 접속'
+            };
+            return labels[type] || type;
+        }
+
+        async function syncAll() {
+            alert('전체 동기화를 시작합니다...');
+
+            try {
+                const response = await fetch(`${API_BASE}/courses/sync`, { method: 'POST' });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`동기화 완료: ${result.syncedCount}건`);
+                    location.reload();
+                } else {
+                    alert('동기화 실패: ' + (result.reason || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                alert('동기화 중 오류 발생');
+            }
+        }
+
+        async function syncItem(item) {
+            alert(`${item} 동기화를 시작합니다...`);
+            // 실제 동기화 API 호출
+            setTimeout(() => {
+                alert('동기화 완료');
+                location.reload();
+            }, 1000);
+        }
+
+        async function lockAllCriteria() {
+            if (!confirm('모든 강좌의 성적 기준을 잠금 처리하시겠습니까?\n잠금 후에는 교수자가 성적 기준을 수정할 수 없습니다.')) {
+                return;
+            }
+
+            try {
+                const coursesResp = await fetch(`${API_BASE}/courses`);
+                const coursesResult = await coursesResp.json();
+
+                if (coursesResult.success) {
+                    for (const course of coursesResult.data) {
+                        await fetch(`${API_BASE}/grade/criteria/${course.COURSE_CODE}/lock`, { method: 'POST' });
+                    }
+                    alert('전체 성적 기준이 잠금 처리되었습니다.');
+                    location.reload();
+                }
+            } catch (error) {
+                alert('잠금 처리 중 오류 발생');
+            }
+        }
+    </script>
+</body>
+</html>

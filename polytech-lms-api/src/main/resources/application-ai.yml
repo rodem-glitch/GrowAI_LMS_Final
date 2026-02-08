@@ -1,0 +1,105 @@
+# application-ai.yml
+# 온프레미스 AI 서비스 설정
+
+# ============================================
+# vLLM 설정 (Gemma 2)
+# ============================================
+vllm:
+  url: ${VLLM_URL:http://localhost:8000}
+  model: ${VLLM_MODEL:google/gemma-2-9b-it}
+  enabled: ${VLLM_ENABLED:true}
+  max-tokens: 2048
+  temperature: 0.7
+  top-p: 0.9
+  timeout: 60
+  max-concurrent-requests: 10
+  retry-count: 3
+  gpu-memory-utilization: 90
+
+# ============================================
+# 임베딩 서비스 설정 (BGE-M3)
+# ============================================
+embedding:
+  url: ${EMBEDDING_URL:http://localhost:8001}
+  model: ${EMBEDDING_MODEL:BAAI/bge-m3}
+  enabled: ${EMBEDDING_ENABLED:true}
+  batch-size: 32
+  dimension: 1024
+  # 한국어 특화 모델 (대안)
+  korean:
+    url: ${EMBEDDING_KO_URL:http://localhost:8002}
+    model: BM-K/KoSimCSE-roberta-multitask
+    enabled: false
+
+# ============================================
+# Qdrant 벡터 DB 설정
+# ============================================
+qdrant:
+  url: ${QDRANT_URL:http://localhost:6333}
+  enabled: ${QDRANT_ENABLED:true}
+  collection: lms_documents
+  # 컬렉션 설정
+  collections:
+    learning-content:
+      name: lms_learning_content
+      dimension: 1024
+      distance: Cosine
+    job-postings:
+      name: lms_job_postings
+      dimension: 1024
+      distance: Cosine
+
+# ============================================
+# RAG 설정
+# ============================================
+rag:
+  # 검색 설정
+  search:
+    top-k: 5
+    min-score: 0.5
+    max-context-length: 4000
+  # 프롬프트 설정
+  prompts:
+    system: |
+      당신은 한국폴리텍대학의 AI 학습 도우미입니다.
+      학생들의 질문에 친절하고 정확하게 답변해주세요.
+      기술 용어는 쉽게 풀어서 설명하고, 실습 예제를 포함해주세요.
+      답변은 한국어로 작성하세요.
+
+# ============================================
+# 성능 최적화 설정
+# ============================================
+ai:
+  performance:
+    # 캐시 설정
+    cache:
+      enabled: true
+      ttl-minutes: 30
+      max-size: 1000
+    # 배치 처리
+    batch:
+      enabled: true
+      size: 32
+      timeout-ms: 5000
+    # 동시성 제어
+    concurrency:
+      max-requests: 20
+      queue-size: 100
+
+# ============================================
+# 모니터링 설정
+# ============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,ai
+  endpoint:
+    ai:
+      enabled: true
+
+# GPU 모니터링
+gpu:
+  monitoring:
+    enabled: true
+    dcgm-exporter-url: http://localhost:9400/metrics

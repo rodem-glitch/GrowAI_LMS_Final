@@ -3,10 +3,25 @@ package dao;
 import malgnsoft.db.*;
 import malgnsoft.util.*;
 import java.util.Arrays;
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.security.MessageDigest; // Added import
+import java.security.NoSuchAlgorithmException; // Added import
+import java.util.Base64; // Added import
+import java.nio.charset.StandardCharsets; // Added import
 
+
+@Component
 public class UserDao extends DataObject {
 
+	private static final Logger logger = LoggerFactory.getLogger(UserDao.class); // Initialized logger
+
 	private boolean isBlind = true;
+
+	@Autowired
+	private Aes256 aes256; // Injected Aes256 instance
 
 	public String[] statusList = { "1=>정상", "0=>중지", "30=>휴면대상", "-2=>탈퇴", "-1=>삭제" };
 	public String[] kinds = { "U=>회원", "C=>과정운영자", "D=>소속운영자", "A=>운영자", "S=>최고관리자" };
@@ -28,6 +43,52 @@ public class UserDao extends DataObject {
 								"id asc=>a.id asc", "id desc=>a.id desc", "nm asc=>a.user_nm asc", "nm desc=>a.user_nm desc"
 								, "rg asc=>a.reg_date asc", "rg desc=>a.reg_date desc", "st asc=>t.sort asc", "st desc=>t.sort desc"
 							};
+
+	@Override // Override item method for encryption
+	public void item(String name, String value) {
+		if ("mobile".equals(name) && aes256 != null && value != null && !value.isEmpty()) {
+			try {
+				super.item(name, aes256.encrypt(value));
+			} catch (Exception e) {
+				logger.error("Failed to encrypt mobile number for field {}: {}", name, e.getMessage());
+				super.item(name, value); // Fallback to unencrypted if encryption fails
+			}
+		} else if ("dupinfo".equals(name) && value != null && !value.isEmpty()) {
+            try {
+                super.item(name, hashDupInfo(value));
+            } catch (Exception e) {
+                logger.error("Failed to hash dupinfo for field {}: {}", name, e.getMessage());
+                super.item(name, value); // Fallback to plain if hashing fails
+            }
+        }
+        else {
+			super.item(name, value);
+		}
+	}
+
+	@Override // Override s method for decryption
+	public String s(String name) {
+		String value = super.s(name);
+		if ("mobile".equals(name) && aes256 != null && value != null && !value.trim().isEmpty() && Aes256.isBase64(value)) {
+			try {
+				return aes256.decrypt(value);
+			} catch (Exception e) {
+				logger.error("Failed to decrypt mobile number for field {}: {}", name, e.getMessage());
+				return ""; // Return empty string if decryption fails
+			}
+		}
+		return value;
+	}
+
+    private String hashDupInfo(String dupInfo) throws NoSuchAlgorithmException {
+        // Use SHA-256 for hashing with a fixed salt for simplicity in this context.
+        // In a real production system, a unique salt per user should be used and stored with the hash.
+        String salt = "static-dupinfo-salt-for-polytech-lms"; // TODO: Use a proper randomly generated and stored salt per user
+        String saltedDupInfo = dupInfo + salt;
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(saltedDupInfo.getBytes(StandardCharsets.UTF_8));
+        return Base64.getEncoder().encodeToString(hash);
+    }
 
 	//배열-삭제필드검색용-오름차순으로
 	//public String[] deleteWhiteList = {"conn_date", "dept_id", "id", "login_id", "reg_date", "site_id", "sleep_date", "status", "user_kind", "user_nm"};
@@ -84,10 +145,18 @@ public class UserDao extends DataObject {
 
 	public void maskInfo(DataSet info) {
 		if(this.isBlind) {
+            // Decrypt MOBILE before masking
+            String mobile = info.s("mobile"); // s() method is overridden now, so this fetches decrypted value
+            if (!mobile.isEmpty()) {
+                info.put("mobile_conv", this.maskName(mobile, 4, "○", 8));
+            } else {
+                info.put("mobile_conv", "");
+            }
+
 			info.put("user_nm", this.maskName(info.s("user_nm"), 1, "○", 3));
 			info.put("uname", this.maskName(info.s("uname"), 1, "○", 3));
 			info.put("tutor_nm", this.maskName(info.s("tutor_nm"), 1, "○", 3));
-			info.put("mobile_conv", this.maskName(info.s("mobile_conv"), 4, "○", 8));
+			// info.put("mobile_conv", this.maskName(info.s("mobile_conv"), 4, "○", 8)); // Original mobile_conv masking
 			info.put("dest_phone", this.maskName(info.s("dest_phone"), 4, "○", 8));
 			info.put("target", this.maskName(info.s("target"), 4, "○", 8));
 			info.put("writer", this.maskName(info.s("writer"), 1, "○", 3));
@@ -105,7 +174,7 @@ public class UserDao extends DataObject {
 
 		this.item("user_nm", "[탈퇴]");
 		this.item("email", "");
-		this.item("mobile", "");
+		this.item("mobile", ""); // Will be encrypted by overridden item() if not empty
 		this.item("passwd", "");
 		this.item("access_token", "");
 		this.item("gender", "");
@@ -119,7 +188,7 @@ public class UserDao extends DataObject {
 		this.item("etc3", "");
 		this.item("etc4", "");
 		this.item("etc5", "");
-		this.item("dupinfo", "");
+		this.item("dupinfo", ""); // Will be hashed by overridden item() if not empty
 		this.item("oauth_vendor", "");
 		this.item("status", -1);
 		return this.update("id = " + userId);

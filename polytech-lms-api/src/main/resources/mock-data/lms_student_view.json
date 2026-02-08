@@ -1,0 +1,65 @@
+{
+  "description": "LMS_STUDENT_VIEW - 수강생 뷰테이블 (10개 컬럼)",
+  "data": [
+    {
+      "MEMBER_KEY": "S2026001",
+      "STUDENT_NO": "20260001",
+      "COURSE_CODE": "CSE101-2026-1",
+      "BUNBAN_CODE": "A",
+      "ENROLL_DATE": "2026-02-20",
+      "STATUS": "1",
+      "PROGRESS": 45.5,
+      "ATTENDANCE_RATE": 100,
+      "MIDTERM_SCORE": null,
+      "FINAL_SCORE": null
+    },
+    {
+      "MEMBER_KEY": "S2026002",
+      "STUDENT_NO": "20260002",
+      "COURSE_CODE": "CSE101-2026-1",
+      "BUNBAN_CODE": "A",
+      "ENROLL_DATE": "2026-02-20",
+      "STATUS": "1",
+      "PROGRESS": 60.0,
+      "ATTENDANCE_RATE": 95,
+      "MIDTERM_SCORE": null,
+      "FINAL_SCORE": null
+    },
+    {
+      "MEMBER_KEY": "S2026003",
+      "STUDENT_NO": "20260003",
+      "COURSE_CODE": "CSE101-2026-1",
+      "BUNBAN_CODE": "B",
+      "ENROLL_DATE": "2026-02-20",
+      "STATUS": "1",
+      "PROGRESS": 30.0,
+      "ATTENDANCE_RATE": 85,
+      "MIDTERM_SCORE": null,
+      "FINAL_SCORE": null
+    },
+    {
+      "MEMBER_KEY": "S2026001",
+      "STUDENT_NO": "20260001",
+      "COURSE_CODE": "CSE201-2026-1",
+      "BUNBAN_CODE": "A",
+      "ENROLL_DATE": "2026-02-20",
+      "STATUS": "1",
+      "PROGRESS": 55.0,
+      "ATTENDANCE_RATE": 100,
+      "MIDTERM_SCORE": null,
+      "FINAL_SCORE": null
+    },
+    {
+      "MEMBER_KEY": "S2026004",
+      "STUDENT_NO": "20260004",
+      "COURSE_CODE": "ME101-2026-1",
+      "BUNBAN_CODE": "A",
+      "ENROLL_DATE": "2026-02-20",
+      "STATUS": "1",
+      "PROGRESS": 70.0,
+      "ATTENDANCE_RATE": 90,
+      "MIDTERM_SCORE": null,
+      "FINAL_SCORE": null
+    }
+  ]
+}
