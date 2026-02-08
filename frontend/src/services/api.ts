@@ -371,4 +371,13 @@ export const dataApi = {
     api.get('/data/haksa/sync-status').then(r => r.data.data),
 };
 
+// ── Recommendation Engine API (Apache PredictionIO) ──
+export const recommendationApi = {
+  dashboard: () => api.get('/recommendation/dashboard'),
+  courses: (userId: number, limit = 10, category = '') =>
+    api.get('/recommendation/courses', { params: { userId, limit, category: category || undefined } }),
+  contents: (userId: number) => api.get('/recommendation/contents', { params: { userId } }),
+  trainingStatus: () => api.get('/recommendation/training-status'),
+};
+
 export default api;
