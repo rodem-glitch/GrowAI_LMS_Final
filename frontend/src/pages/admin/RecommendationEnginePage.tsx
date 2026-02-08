@@ -1,0 +1,78 @@
+// pages/admin/RecommendationEnginePage.tsx — Apache PredictionIO 추천 엔진 대시보드
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Brain, Zap, Target, TrendingUp, RefreshCw, BookOpen, Users, BarChart3, Star, Tag, Activity } from 'lucide-react';
+import { recommendationApi } from '@/services/api';
+
+export default function RecommendationEnginePage() {
+  const [userId, setUserId] = useState(1);
+  const [category, setCategory] = useState('');
+  const [limit, setLimit] = useState(10);
+
+  const { data: dashboard, isLoading: loadingDash } = useQuery({
+    queryKey: ['recommendation-dashboard'],
+    queryFn: () => recommendationApi.dashboard().then(r => r.data.data),
+  });
+
+  const { data: courses, isLoading: loadingCourses, refetch } = useQuery({
+    queryKey: ['recommendation-courses', userId, limit, category],
+    queryFn: () => recommendationApi.courses(userId, limit, category).then(r => r.data.data),
+  });
+
+  const { data: contents } = useQuery({
+    queryKey: ['recommendation-contents', userId],
+    queryFn: () => recommendationApi.contents(userId).then(r => r.data.data),
+  });
+
+  const { data: trainingStatus } = useQuery({
+    queryKey: ['recommendation-training'],
+    queryFn: () => recommendationApi.trainingStatus().then(r => r.data.data),
+  });
+
+  const statusColor = (s: string) =>
+    s === 'READY' ? 'text-green-400' : s === 'TRAINING' ? 'text-yellow-400' : s === 'STANDALONE' ? 'text-blue-400' : 'text-red-400';
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Brain className="w-7 h-7 text-purple-400" />
+            개인 맞춤형 추천 엔진 (Apache PredictionIO)
+          </h1>
+          <p className="text-gray-400 mt-1">교육 이력 기반 협업 필터링 + 콘텐츠 추천</p>
+        </div>
+        <button onClick={() => refetch()} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+          <RefreshCw className="w-4 h-4" /> 새로고침
+        </button>
+      </div>
+
+      {/* 엔진 상태 + KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {trainingStatus && (
+          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-5 h-5 text-purple-400" />
+              <span className="text-gray-400 text-sm">엔진 상태</span>
+            </div>
+            <p className={`text-xl font-bold ${statusColor(trainingStatus.status)}`}>{trainingStatus.status}</p>
+            <p className="text-xs text-gray-500 mt-1">v{trainingStatus.version} | 정확도 {(trainingStatus.modelAccuracy * 100).toFixed(1)}%</p>
+          </div>
+        )}
+        {[
+          { icon: Users, label: '총 사용자', value: trainingStatus?.totalUsers || 0, color: 'text-blue-400' },
+          { icon: BookOpen, label: '총 아이템', value: trainingStatus?.totalItems || 0, color: 'text-green-400' },
+          { icon: Zap, label: '총 이벤트', value: trainingStatus?.totalEvents || 0, color: 'text-yellow-400' },
+          { icon: Target, label: 'CTR', value: dashboard ? (dashboard.avgClickThroughRate * 100).toFixed(1) + '%' : '-', color: 'text-pink-400' },
+        ].map((kpi, i) => (
+          <div key={i} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+            <div className="flex items-center gap-2 mb-2">
+              <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
+              <span className="text-gray-400 text-sm">{kpi.label}</span>
+            </div>
+            <p className="text-xl font-bold text-white">{kpi.value}</p>
+          </div>
+        ))}
+      </div>
+

@@ -625,3 +625,4 @@ public class StudentContentRecommendService {
         Boolean completed,
         String lastDate
     ) {}
+}

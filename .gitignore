@@ -61,3 +61,15 @@ config/api-keys.yaml
 통계 화면.pptx
 tmp_stats_pptx2
 통계
+
+# Local state files
+nul
+docs/nul
+.qdrant-initialized
+
+# Storage (user uploads)
+storage/
+
+# Claude local settings
+docs/.claude/
+.claude/settings.local.json

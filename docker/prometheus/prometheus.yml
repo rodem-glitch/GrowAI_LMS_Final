@@ -1,0 +1,47 @@
+# docker/prometheus/prometheus.yml
+# Prometheus 설정
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # Prometheus 자체 모니터링
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Spring Boot Actuator 메트릭
+  - job_name: 'lms-api'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['lms-api:8081']
+    scrape_interval: 10s
+
+  # MySQL Exporter
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql-exporter:9104']
+
+  # Redis Exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # OpenSearch
+  - job_name: 'opensearch'
+    static_configs:
+      - targets: ['opensearch:9200']
+    metrics_path: '/_prometheus/metrics'
+
+  # Node Exporter (서버 리소스)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']

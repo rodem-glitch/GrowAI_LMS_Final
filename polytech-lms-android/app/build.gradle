@@ -1,0 +1,120 @@
+// polytech-lms-android/app/build.gradle
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
+}
+
+android {
+    namespace 'kr.polytech.lms'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "kr.polytech.lms"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // ExoPlayer 설정
+        buildConfigField "String", "LMS_API_BASE_URL", "\"https://api.polytech.ac.kr/v1\""
+        buildConfigField "String", "VIDEO_CDN_URL", "\"https://cdn.polytech.ac.kr/videos\""
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        viewBinding true
+        dataBinding true
+        buildConfig true
+    }
+}
+
+dependencies {
+    // AndroidX Core
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0'
+
+    // ============================================
+    // ExoPlayer - Google 공식 미디어 플레이어
+    // 렌더링 성능: ★★★★★
+    // 유지보수 편리성: ★★★★★
+    // 구글 지원, 모바일 최적화
+    // ============================================
+    def exoplayer_version = "1.2.1"
+
+    // ExoPlayer 핵심 라이브러리
+    implementation "androidx.media3:media3-exoplayer:$exoplayer_version"
+
+    // DASH 스트리밍 지원
+    implementation "androidx.media3:media3-exoplayer-dash:$exoplayer_version"
+
+    // HLS 스트리밍 지원 (m3u8)
+    implementation "androidx.media3:media3-exoplayer-hls:$exoplayer_version"
+
+    // Smooth Streaming 지원
+    implementation "androidx.media3:media3-exoplayer-smoothstreaming:$exoplayer_version"
+
+    // RTSP 지원
+    implementation "androidx.media3:media3-exoplayer-rtsp:$exoplayer_version"
+
+    // 기본 UI 컴포넌트
+    implementation "androidx.media3:media3-ui:$exoplayer_version"
+
+    // 세션 관리 (백그라운드 재생)
+    implementation "androidx.media3:media3-session:$exoplayer_version"
+
+    // 다운로드 기능
+    implementation "androidx.media3:media3-datasource:$exoplayer_version"
+
+    // IMA (Interactive Media Ads) - 광고 지원
+    implementation "androidx.media3:media3-exoplayer-ima:$exoplayer_version"
+
+    // DI - Hilt
+    implementation 'com.google.dagger:hilt-android:2.48.1'
+    kapt 'com.google.dagger:hilt-android-compiler:2.48.1'
+
+    // Network
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    // Room Database (오프라인 학습 진도 저장)
+    implementation 'androidx.room:room-runtime:2.6.1'
+    implementation 'androidx.room:room-ktx:2.6.1'
+    kapt 'androidx.room:room-compiler:2.6.1'
+
+    // Testing
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
