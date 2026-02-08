@@ -7,13 +7,36 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * BigBlueButton 화상강의 설정
  */
 @ConfigurationProperties(prefix = "bbb")
-public record BigBlueButtonProperties(
-    String baseUrl,
-    String secret,
-    boolean enabled
-) {
-    public BigBlueButtonProperties {
-        if (baseUrl == null) baseUrl = "http://localhost:8090/bigbluebutton";
-        if (enabled == false) enabled = false;
+public class BigBlueButtonProperties {
+
+    private String baseUrl;
+    private String secret;
+    private boolean enabled;
+
+    public BigBlueButtonProperties() {
+    }
+
+    public String baseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = (baseUrl == null) ? "http://localhost:8090/bigbluebutton" : baseUrl;
+    }
+
+    public String secret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
+    }
+
+    public boolean enabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

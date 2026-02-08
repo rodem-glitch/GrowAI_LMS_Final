@@ -7,20 +7,64 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 왜: 요약/키워드 생성은 외부 LLM API 호출이 필요하고, 키/모델/타임아웃은 환경마다 달라서 설정으로 분리합니다.
  */
 @ConfigurationProperties(prefix = "gemini")
-public record GeminiProperties(
-    String baseUrl,
-    String apiKey,
-    String model,
-    Double temperature,
-    Integer maxOutputTokens,
-    Duration httpTimeout
-) {
-    public GeminiProperties {
-        baseUrl = normalizeBaseUrl(baseUrl, "https://generativelanguage.googleapis.com/v1beta");
-        model = (model == null || model.isBlank()) ? "gemini-3-flash-preview" : model.trim();
-        temperature = temperature == null ? 0.2d : temperature;
-        maxOutputTokens = maxOutputTokens == null ? 2048 : maxOutputTokens;
-        httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;
+public class GeminiProperties {
+
+    private String baseUrl;
+    private String apiKey;
+    private String model;
+    private Double temperature;
+    private Integer maxOutputTokens;
+    private Duration httpTimeout;
+
+    public GeminiProperties() {
+    }
+
+    public String baseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = normalizeBaseUrl(baseUrl, "https://generativelanguage.googleapis.com/v1beta");
+    }
+
+    public String apiKey() {
+        return apiKey;
+    }
+
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    public String model() {
+        return model;
+    }
+
+    public void setModel(String model) {
+        this.model = (model == null || model.isBlank()) ? "gemini-3-flash-preview" : model.trim();
+    }
+
+    public Double temperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature == null ? 0.2d : temperature;
+    }
+
+    public Integer maxOutputTokens() {
+        return maxOutputTokens;
+    }
+
+    public void setMaxOutputTokens(Integer maxOutputTokens) {
+        this.maxOutputTokens = maxOutputTokens == null ? 2048 : maxOutputTokens;
+    }
+
+    public Duration httpTimeout() {
+        return httpTimeout;
+    }
+
+    public void setHttpTimeout(Duration httpTimeout) {
+        this.httpTimeout = httpTimeout == null ? Duration.ofMinutes(5) : httpTimeout;
     }
 
     private static String normalizeBaseUrl(String baseUrl, String defaultValue) {
@@ -35,4 +79,3 @@ public record GeminiProperties(
         return url;
     }
 }
-

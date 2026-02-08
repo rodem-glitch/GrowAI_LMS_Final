@@ -10,36 +10,73 @@ import java.time.Duration;
  * poly_sync.jsp 동등 구현을 위한 프로퍼티
  */
 @ConfigurationProperties(prefix = "poly-sync")
-public record PolySyncProperties(
+public class PolySyncProperties {
+
+    private boolean enabled;
+    private String endpoint;
+    private Duration httpTimeout;
+    private int batchSize;
+    private int maxRetries;
+    private long retryDelayMs;
+
+    public PolySyncProperties() {
+    }
+
     /** 동기화 활성화 여부 */
-    boolean enabled,
+    public boolean enabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
     /** 학사포털 VPN 엔드포인트 (예: https://e-poly.kopo.ac.kr/main/vpn_test.jsp) */
-    String endpoint,
-    /** HTTP 요청 타임아웃 */
-    Duration httpTimeout,
-    /** 배치 사이즈 (fetchPolyRaw의 한번 조회 건수) */
-    int batchSize,
-    /** 재시도 횟수 */
-    int maxRetries,
-    /** 재시도 간 대기(ms) */
-    long retryDelayMs
-) {
-    public PolySyncProperties {
-        // 기본값 설정
+    public String endpoint() {
+        return endpoint;
+    }
+
+    public void setEndpoint(String endpoint) {
         if (endpoint == null || endpoint.isBlank()) {
-            endpoint = "https://e-poly.kopo.ac.kr/main/vpn_test.jsp";
+            this.endpoint = "https://e-poly.kopo.ac.kr/main/vpn_test.jsp";
+        } else {
+            this.endpoint = endpoint;
         }
-        if (httpTimeout == null) {
-            httpTimeout = Duration.ofSeconds(60);
-        }
-        if (batchSize <= 0) {
-            batchSize = 2000;
-        }
-        if (maxRetries <= 0) {
-            maxRetries = 3;
-        }
-        if (retryDelayMs <= 0) {
-            retryDelayMs = 3000;
-        }
+    }
+
+    /** HTTP 요청 타임아웃 */
+    public Duration httpTimeout() {
+        return httpTimeout;
+    }
+
+    public void setHttpTimeout(Duration httpTimeout) {
+        this.httpTimeout = (httpTimeout == null) ? Duration.ofSeconds(60) : httpTimeout;
+    }
+
+    /** 배치 사이즈 (fetchPolyRaw의 한번 조회 건수) */
+    public int batchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = (batchSize <= 0) ? 2000 : batchSize;
+    }
+
+    /** 재시도 횟수 */
+    public int maxRetries() {
+        return maxRetries;
+    }
+
+    public void setMaxRetries(int maxRetries) {
+        this.maxRetries = (maxRetries <= 0) ? 3 : maxRetries;
+    }
+
+    /** 재시도 간 대기(ms) */
+    public long retryDelayMs() {
+        return retryDelayMs;
+    }
+
+    public void setRetryDelayMs(long retryDelayMs) {
+        this.retryDelayMs = (retryDelayMs <= 0) ? 3000 : retryDelayMs;
     }
 }
