@@ -12,6 +12,9 @@ spring:
   application:
     name: polytech-lms-api
 
+  main:
+    allow-bean-definition-overriding: true
+
   # 외부 서비스 자동 구성 비활성화 (Cloud Run 초기 배포용)
   autoconfigure:
     exclude:
