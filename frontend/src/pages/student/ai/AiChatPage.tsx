@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Sparkles, User } from 'lucide-react';
 import { aiApi } from '../../../services/api';
+import { extractErrorMessage } from '@/utils/errorHandler';
 import { useTranslation } from '@/i18n';
 
 interface Message { role: 'user' | 'assistant'; content: string; }
@@ -25,17 +26,16 @@ export default function AiChatPage() {
     setLoading(true);
     try {
       const res = await aiApi.chat(userMsg, sessionId);
-      const data = res.data?.data;
-      if (data) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-        if (data.sessionId) setSessionId(data.sessionId);
+      const body = res.data;
+      if (body?.success && body.data?.response) {
+        setMessages(prev => [...prev, { role: 'assistant', content: body.data.response }]);
+        if (body.data.sessionId) setSessionId(body.data.sessionId);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: '죄송합니다. 응답을 받지 못했습니다. 다시 시도해주세요.' }]);
+        const msg = body?.message || '응답을 받지 못했습니다. 다시 시도해주세요.';
+        setMessages(prev => [...prev, { role: 'assistant', content: msg }]);
       }
     } catch (err: any) {
-      const errMsg = err?.response?.status === 401
-        ? '로그인이 필요합니다. 로그인 후 다시 이용해주세요.'
-        : '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+      const errMsg = extractErrorMessage(err);
       setMessages(prev => [...prev, { role: 'assistant', content: errMsg }]);
     } finally {
       setLoading(false);

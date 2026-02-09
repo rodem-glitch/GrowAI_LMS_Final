@@ -16,7 +16,9 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ErrorResponse {
 
+    private final boolean success;
     private final String errorId;
+    private final String errorCode;
     private final int status;
     private final String error;
     private final String message;
@@ -26,7 +28,9 @@ public class ErrorResponse {
     private final LocalDateTime timestamp;
 
     private ErrorResponse(Builder builder) {
+        this.success = false;
         this.errorId = builder.errorId;
+        this.errorCode = builder.errorCode;
         this.status = builder.status;
         this.error = builder.error;
         this.message = builder.message;
@@ -38,8 +42,16 @@ public class ErrorResponse {
         return new Builder();
     }
 
+    public boolean isSuccess() {
+        return success;
+    }
+
     public String getErrorId() {
         return errorId;
+    }
+
+    public String getErrorCode() {
+        return errorCode;
     }
 
     public int getStatus() {
@@ -64,6 +76,7 @@ public class ErrorResponse {
 
     public static class Builder {
         private String errorId;
+        private String errorCode;
         private int status;
         private String error;
         private String message;
@@ -72,6 +85,11 @@ public class ErrorResponse {
 
         public Builder errorId(String errorId) {
             this.errorId = errorId;
+            return this;
+        }
+
+        public Builder errorCode(String errorCode) {
+            this.errorCode = errorCode;
             return this;
         }
 

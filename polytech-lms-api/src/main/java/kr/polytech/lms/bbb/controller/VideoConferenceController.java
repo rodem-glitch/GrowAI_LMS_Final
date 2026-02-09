@@ -2,11 +2,13 @@
 package kr.polytech.lms.bbb.controller;
 
 import kr.polytech.lms.bbb.client.BigBlueButtonClient;
+import kr.polytech.lms.security.error.ExternalServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -36,12 +38,18 @@ public class VideoConferenceController {
 
         log.info("화상강의실 생성: roomName={}, meetingId={}", roomName, meetingId);
 
-        Map<String, Object> result = bbbClient.createMeeting(meetingId, roomName, attendeePw, moderatorPw);
-        result.put("meetingId", meetingId);
-        result.put("attendeePassword", attendeePw);
-        result.put("moderatorPassword", moderatorPw);
-
-        return ResponseEntity.ok(result);
+        try {
+            Map<String, Object> result = bbbClient.createMeeting(meetingId, roomName, attendeePw, moderatorPw);
+            result.put("meetingId", meetingId);
+            result.put("attendeePassword", attendeePw);
+            result.put("moderatorPassword", moderatorPw);
+            return ResponseEntity.ok(Map.of("success", true, "data", result,
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("화상강의실 생성 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_001",
+                "화상 강의 방 생성에 실패했습니다.", e);
+        }
     }
 
     /**
@@ -56,12 +64,17 @@ public class VideoConferenceController {
 
         log.info("강의실 참여 URL 생성: meetingId={}, userName={}", meetingId, userName);
 
-        String joinUrl = bbbClient.getJoinUrl(meetingId, userName, password, isModerator);
-
-        return ResponseEntity.ok(Map.of(
-            "joinUrl", joinUrl,
-            "meetingId", meetingId
-        ));
+        try {
+            String joinUrl = bbbClient.getJoinUrl(meetingId, userName, password, isModerator);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of("joinUrl", joinUrl, "meetingId", meetingId),
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("참여 URL 생성 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "화상 강의 방을 찾을 수 없습니다.", e);
+        }
     }
 
     /**
@@ -70,7 +83,15 @@ public class VideoConferenceController {
     @GetMapping("/rooms/{meetingId}")
     public ResponseEntity<Map<String, Object>> getRoomInfo(@PathVariable String meetingId) {
         log.info("강의실 정보 조회: {}", meetingId);
-        return ResponseEntity.ok(bbbClient.getMeetingInfo(meetingId));
+        try {
+            Map<String, Object> info = bbbClient.getMeetingInfo(meetingId);
+            return ResponseEntity.ok(Map.of("success", true, "data", info,
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("강의실 정보 조회 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "화상 강의 방을 찾을 수 없습니다.", e);
+        }
     }
 
     /**
@@ -81,7 +102,15 @@ public class VideoConferenceController {
             @PathVariable String meetingId,
             @RequestParam String moderatorPassword) {
         log.info("강의실 종료: {}", meetingId);
-        return ResponseEntity.ok(bbbClient.endMeeting(meetingId, moderatorPassword));
+        try {
+            Map<String, Object> result = bbbClient.endMeeting(meetingId, moderatorPassword);
+            return ResponseEntity.ok(Map.of("success", true, "data", result,
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("강의실 종료 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "화상 강의 방을 찾을 수 없습니다.", e);
+        }
     }
 
     /**
@@ -90,7 +119,15 @@ public class VideoConferenceController {
     @GetMapping("/rooms")
     public ResponseEntity<Map<String, Object>> getActiveRooms() {
         log.info("활성 강의실 목록 조회");
-        return ResponseEntity.ok(bbbClient.getMeetings());
+        try {
+            Map<String, Object> rooms = bbbClient.getMeetings();
+            return ResponseEntity.ok(Map.of("success", true, "data", rooms,
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("활성 강의실 목록 조회 실패", e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "화상 강의 목록 조회에 실패했습니다.", e);
+        }
     }
 
     /**
@@ -99,7 +136,15 @@ public class VideoConferenceController {
     @GetMapping("/rooms/{meetingId}/recordings")
     public ResponseEntity<Map<String, Object>> getRecordings(@PathVariable String meetingId) {
         log.info("녹화 목록 조회: {}", meetingId);
-        return ResponseEntity.ok(bbbClient.getRecordings(meetingId));
+        try {
+            Map<String, Object> recordings = bbbClient.getRecordings(meetingId);
+            return ResponseEntity.ok(Map.of("success", true, "data", recordings,
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("녹화 목록 조회 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "녹화 목록 조회에 실패했습니다.", e);
+        }
     }
 
     /**
@@ -107,11 +152,17 @@ public class VideoConferenceController {
      */
     @GetMapping("/rooms/{meetingId}/status")
     public ResponseEntity<Map<String, Object>> getRoomStatus(@PathVariable String meetingId) {
-        boolean running = bbbClient.isMeetingRunning(meetingId);
-        return ResponseEntity.ok(Map.of(
-            "meetingId", meetingId,
-            "running", running
-        ));
+        try {
+            boolean running = bbbClient.isMeetingRunning(meetingId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "data", Map.of("meetingId", meetingId, "running", running),
+                "timestamp", LocalDateTime.now().toString()));
+        } catch (Exception e) {
+            log.error("강의실 상태 확인 실패: meetingId={}", meetingId, e);
+            throw new ExternalServiceException("BigBlueButton", "CONFERENCE_002",
+                "화상 강의 방을 찾을 수 없습니다.", e);
+        }
     }
 
     private String generatePassword() {

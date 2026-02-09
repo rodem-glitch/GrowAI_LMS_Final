@@ -35,6 +35,101 @@ public class SecureExceptionHandler {
     private static final String NOT_FOUND_MESSAGE = "요청한 리소스를 찾을 수 없습니다.";
 
     /**
+     * 외부 서비스 연결 실패 예외 처리
+     */
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ErrorResponse> handleExternalServiceException(
+            ExternalServiceException ex, HttpServletRequest request) {
+
+        String errorId = generateErrorId();
+        logger.error("External service failure [{}]: service={}, errorCode={}",
+                errorId, ex.getServiceName(), ex.getErrorCode());
+
+        ErrorResponse response = ErrorResponse.builder()
+                .errorId(errorId)
+                .errorCode(ex.getErrorCode())
+                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
+                .error(HttpStatus.SERVICE_UNAVAILABLE.getReasonPhrase())
+                .message(ex.getUserMessage())
+                .path(sanitizePath(request.getRequestURI()))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    /**
+     * NullPointerException (안전하지 않은 타입 캐스팅 등)
+     */
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<ErrorResponse> handleNullPointerException(
+            NullPointerException ex, HttpServletRequest request) {
+
+        String errorId = generateErrorId();
+        logger.error("Null pointer [{}]: uri={}, msg={}", errorId,
+                sanitizePath(request.getRequestURI()), ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.builder()
+                .errorId(errorId)
+                .errorCode("VALIDATION_001")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("필수 입력값이 누락되었거나 형식이 올바르지 않습니다.")
+                .path(sanitizePath(request.getRequestURI()))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * ClassCastException (타입 불일치)
+     */
+    @ExceptionHandler(ClassCastException.class)
+    public ResponseEntity<ErrorResponse> handleClassCastException(
+            ClassCastException ex, HttpServletRequest request) {
+
+        String errorId = generateErrorId();
+        logger.error("Type cast error [{}]: uri={}", errorId,
+                sanitizePath(request.getRequestURI()));
+
+        ErrorResponse response = ErrorResponse.builder()
+                .errorId(errorId)
+                .errorCode("VALIDATION_001")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("입력값이 유효하지 않습니다.")
+                .path(sanitizePath(request.getRequestURI()))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * IllegalArgumentException
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+
+        String errorId = generateErrorId();
+        logger.warn("Illegal argument [{}]: {}", errorId, ex.getMessage());
+
+        ErrorResponse response = ErrorResponse.builder()
+                .errorId(errorId)
+                .errorCode("VALIDATION_001")
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("입력값이 유효하지 않습니다.")
+                .path(sanitizePath(request.getRequestURI()))
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
      * 일반적인 예외 처리
      */
     @ExceptionHandler(Exception.class)
@@ -44,6 +139,7 @@ public class SecureExceptionHandler {
 
         ErrorResponse response = ErrorResponse.builder()
                 .errorId(errorId)
+                .errorCode("SERVER_001")
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
                 .message(GENERIC_ERROR_MESSAGE)
