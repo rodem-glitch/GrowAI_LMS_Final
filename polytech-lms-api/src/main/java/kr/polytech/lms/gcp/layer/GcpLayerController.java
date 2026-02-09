@@ -443,7 +443,7 @@ public class GcpLayerController {
             @RequestParam(defaultValue = "50") int limit) {
         log.info("감사 이벤트 조회: userId={}, limit={}", userId, limit);
         try {
-            Map<String, Object> events = infraLayer.getAuditEvents(userId, limit);
+            var events = infraLayer.getAuditEvents(userId, limit);
             return ResponseEntity.ok(Map.of(
                 "success", true, "data", events,
                 "timestamp", LocalDateTime.now().toString()));
